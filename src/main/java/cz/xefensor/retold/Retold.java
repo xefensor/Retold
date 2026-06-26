@@ -31,6 +31,8 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import cz.xefensor.retold.event.RetoldGameEvents;
+
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
 public class Retold {
@@ -86,6 +88,8 @@ public class Retold {
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        NeoForge.EVENT_BUS.register(RetoldGameEvents.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
