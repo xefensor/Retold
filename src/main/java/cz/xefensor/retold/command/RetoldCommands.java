@@ -9,6 +9,8 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldCommands {
     private RetoldCommands() {
@@ -29,6 +31,14 @@ public final class RetoldCommands {
                                                         IntegerArgumentType.getInteger(context, "stage")
                                                 ))
                                         )
+                                )
+                        )
+                        .then(Commands.literal("sky")
+                                .then(Commands.literal("get")
+                                        .executes(context -> getEndSkySeed(context.getSource()))
+                                )
+                                .then(Commands.literal("randomize")
+                                        .executes(context -> randomizeEndSkySeed(context.getSource()))
                                 )
                         )
         );
@@ -59,5 +69,35 @@ public final class RetoldCommands {
         );
 
         return stage.getId();
+    }
+
+    private static int getEndSkySeed(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        long seed = RetoldWorldData.get(level).getEndSkySeed();
+
+        source.sendSuccess(
+                () -> Component.literal("Current Retold End sky seed: " + seed),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int randomizeEndSkySeed(CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        RetoldWorldData data = RetoldWorldData.get(level);
+
+        data.randomizeEndSkySeed();
+
+        PacketDistributor.sendToAllPlayers(
+                new RetoldEndSkySeedSyncPayload(data.getEndSkySeed())
+        );
+
+        source.sendSuccess(
+                () -> Component.literal("Randomized Retold End sky seed: " + data.getEndSkySeed()),
+                true
+        );
+
+        return 1;
     }
 }

@@ -20,5 +20,13 @@ public final class RetoldNetworking {
                     RetoldClientStage.setStage(stage);
                 }
         );
+
+        registrar.playToClient(
+                RetoldEndSkySeedSyncPayload.TYPE,
+                RetoldEndSkySeedSyncPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    cz.xefensor.retold.client.sky.RetoldClientEndSky.setSeed(payload.seed());
+                }
+        );
     }
 }

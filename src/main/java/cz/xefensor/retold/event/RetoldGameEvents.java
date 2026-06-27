@@ -35,6 +35,7 @@ import cz.xefensor.retold.network.RetoldStageSyncPayload;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -222,13 +223,17 @@ public final class RetoldGameEvents {
             return;
         }
 
-        RetoldWorldStage stage = RetoldWorldData
-                .get((ServerLevel) serverPlayer.level())
-                .getStage();
+        ServerLevel level = (ServerLevel) serverPlayer.level();
+        RetoldWorldData data = RetoldWorldData.get(level);
 
         PacketDistributor.sendToPlayer(
                 serverPlayer,
-                new RetoldStageSyncPayload(stage.getId())
+                new RetoldStageSyncPayload(data.getStage().getId())
+        );
+
+        PacketDistributor.sendToPlayer(
+                serverPlayer,
+                new RetoldEndSkySeedSyncPayload(data.getEndSkySeed())
         );
     }
 }
