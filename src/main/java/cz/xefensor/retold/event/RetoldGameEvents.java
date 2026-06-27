@@ -29,6 +29,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import cz.xefensor.retold.undead.RetoldUndeadSunFear;
 import net.minecraft.world.entity.PathfinderMob;
+import cz.xefensor.retold.enderman.RetoldEndermanBehavior;
+import net.minecraft.world.entity.monster.EnderMan;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -184,6 +186,29 @@ public final class RetoldGameEvents {
 
         if (stage == RetoldWorldStage.STAGE_1) {
             event.setSpawnCancelled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEndermanTickPost(EntityTickEvent.Post event) {
+        Entity entity = event.getEntity();
+
+        if (entity.level().isClientSide()) {
+            return;
+        }
+
+        if (!(entity instanceof EnderMan enderman)) {
+            return;
+        }
+
+        if (!(entity.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        RetoldWorldStage stage = RetoldWorldData.get(serverLevel).getStage();
+
+        if (stage == RetoldWorldStage.STAGE_2 || stage == RetoldWorldStage.STAGE_3) {
+            RetoldEndermanBehavior.disableEyeContactAggro(enderman);
         }
     }
 }
