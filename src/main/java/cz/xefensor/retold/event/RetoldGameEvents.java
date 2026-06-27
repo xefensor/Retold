@@ -96,6 +96,8 @@ public final class RetoldGameEvents {
             return;
         }
 
+        preventEndGatewayGeneration(dragonFight);
+
         if (dragonFight.hasPreviouslyKilledDragon()) {
             RetoldWorldData data = RetoldWorldData.get(endLevel);
 
@@ -323,5 +325,10 @@ public final class RetoldGameEvents {
         crystal.setShowBottom(false);
 
         level.addFreshEntity(crystal);
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void preventEndGatewayGeneration(EnderDragonFight dragonFight) {
+        dragonFight.removeAllGateways();
     }
 }
