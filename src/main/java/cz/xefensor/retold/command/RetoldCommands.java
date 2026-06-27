@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
+import cz.xefensor.retold.stage.RetoldStageManager;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -50,7 +51,7 @@ public final class RetoldCommands {
         ServerLevel level = source.getLevel();
 
         RetoldWorldStage stage = RetoldWorldStage.getStageFromId(stageId);
-        RetoldWorldData.get(level).setStage(stage);
+        RetoldStageManager.setStage(level, stage);
 
         source.sendSuccess(
                 () -> Component.literal("Set Retold stage to: " + stage.getId()),
