@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.end.EnderDragonFight;
-import net.minecraft.world.level.dimension.end.EnderDragonFight;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -27,7 +26,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.animal.golem.IronGolem;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -160,5 +159,24 @@ public final class RetoldGameEvents {
 
         event.setCancellationResult(InteractionResult.SUCCESS);
         event.setCanceled(true);
+    }
+
+    @SubscribeEvent
+    public static void onIronGolemFinalizeSpawn(FinalizeSpawnEvent event) {
+        if (!(event.getEntity() instanceof IronGolem)) {
+            return;
+        }
+
+        if (event.getSpawnType() != EntitySpawnReason.STRUCTURE && event.getSpawnType() != EntitySpawnReason.MOB_SUMMONED) {
+            return;
+        }
+
+        ServerLevel serverLevel = event.getLevel().getLevel();
+
+        RetoldWorldStage stage = RetoldWorldData.get(serverLevel).getStage();
+
+        if (stage == RetoldWorldStage.STAGE_1) {
+            event.setSpawnCancelled(true);
+        }
     }
 }
