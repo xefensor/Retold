@@ -27,6 +27,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.minecraft.world.entity.animal.golem.IronGolem;
+import cz.xefensor.retold.undead.RetoldUndeadSunFear;
+import net.minecraft.world.entity.PathfinderMob;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -57,6 +59,11 @@ public final class RetoldGameEvents {
 
         if (stage == RetoldWorldStage.STAGE_2) {
             entity.clearFire();
+
+            if (entity instanceof PathfinderMob pathfinderMob) {
+                RetoldUndeadSunFear.removeSunFearGoals(pathfinderMob);
+            }
+
             return;
         }
 
@@ -98,7 +105,7 @@ public final class RetoldGameEvents {
             return;
         }
 
-        if (event.getSpawnType() != EntitySpawnReason.NATURAL) {
+        if (event.getSpawnType() != EntitySpawnReason.NATURAL && event.getSpawnType() != EntitySpawnReason.SPAWNER) {
             return;
         }
 
