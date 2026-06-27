@@ -5,6 +5,9 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import cz.xefensor.retold.network.RetoldStageSyncPayload;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 
 public final class RetoldStageManager {
     private RetoldStageManager() {
@@ -35,16 +38,32 @@ public final class RetoldStageManager {
             RetoldWorldStage newStage
     ) {
         if (newStage == RetoldWorldStage.STAGE_2) {
-            server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("The Ender Dragon has fallen. The world has entered Stage 2."),
-                    false
-            );
+            playStage2TransitionSound(server);
         }
+    }
 
-        if (newStage == RetoldWorldStage.STAGE_3) {
-            server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("The world has been restored. The undead begin to fade."),
-                    false
+    private static void playStage2TransitionSound(MinecraftServer server) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (!(player.level() instanceof ServerLevel level)) {
+                continue;
+            }
+
+            level.playSound(
+                    null,
+                    player.blockPosition(),
+                    SoundEvents.END_PORTAL_SPAWN,
+                    SoundSource.MASTER,
+                    1.2F,
+                    0.55F
+            );
+
+            level.playSound(
+                    null,
+                    player.blockPosition(),
+                    SoundEvents.WITHER_SPAWN,
+                    SoundSource.MASTER,
+                    0.5F,
+                    0.65F
             );
         }
     }
