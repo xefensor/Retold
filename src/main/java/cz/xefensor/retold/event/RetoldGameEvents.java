@@ -36,6 +36,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
+import net.minecraft.world.phys.AABB;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -93,17 +96,13 @@ public final class RetoldGameEvents {
             return;
         }
 
-        if (!dragonFight.hasPreviouslyKilledDragon()) {
-            return;
+        if (dragonFight.hasPreviouslyKilledDragon()) {
+            RetoldWorldData data = RetoldWorldData.get(endLevel);
+
+            if (data.getStage() == RetoldWorldStage.STAGE_1) {
+                RetoldStageManager.setStage(endLevel, RetoldWorldStage.STAGE_2);
+            }
         }
-
-        RetoldWorldData data = RetoldWorldData.get(endLevel);
-
-        if (data.getStage() != RetoldWorldStage.STAGE_1) {
-            return;
-        }
-
-        RetoldStageManager.setStage(endLevel, RetoldWorldStage.STAGE_2);
     }
 
     @SubscribeEvent
@@ -235,5 +234,94 @@ public final class RetoldGameEvents {
                 serverPlayer,
                 new RetoldEndSkySeedSyncPayload(data.getEndSkySeed())
         );
+    }
+
+    @SubscribeEvent
+    public static void onEndCrystalUsedNearExitPortal(PlayerInteractEvent.RightClickBlock event) {
+        if (event.getHand() != InteractionHand.MAIN_HAND) {
+            return;
+        }
+
+        if (event.getLevel().isClientSide()) {
+            return;
+        }
+
+        if (!(event.getLevel() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        if (serverLevel.dimension() != Level.END) {
+            return;
+        }
+
+        ItemStack stack = event.getItemStack();
+
+        if (!stack.is(Items.END_CRYSTAL)) {
+            return;
+        }
+
+        RetoldWorldStage stage = RetoldWorldData.get(serverLevel).getStage();
+
+        if (stage == RetoldWorldStage.STAGE_1) {
+            return;
+        }
+
+        BlockPos clickedPos = event.getPos();
+
+        if (!isNearEndExitPortal(clickedPos)) {
+            return;
+        }
+
+        if (!canPlaceEndCrystalOn(serverLevel, clickedPos)) {
+            return;
+        }
+
+        BlockPos crystalPos = clickedPos.above();
+
+        if (!canPlaceEndCrystalAt(serverLevel, crystalPos)) {
+            event.setCancellationResult(InteractionResult.FAIL);
+            event.setCanceled(true);
+            return;
+        }
+
+        placeEndCrystalWithoutDragonRespawn(serverLevel, crystalPos);
+
+        if (!event.getEntity().isCreative()) {
+            stack.shrink(1);
+        }
+
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
+    }
+
+    private static boolean isNearEndExitPortal(BlockPos pos) {
+        return Math.abs(pos.getX()) <= 8
+                && Math.abs(pos.getZ()) <= 8;
+    }
+
+    private static boolean canPlaceEndCrystalOn(ServerLevel level, BlockPos pos) {
+        return level.getBlockState(pos).is(Blocks.BEDROCK)
+                || level.getBlockState(pos).is(Blocks.OBSIDIAN);
+    }
+
+    private static boolean canPlaceEndCrystalAt(ServerLevel level, BlockPos pos) {
+        if (!level.isEmptyBlock(pos)) {
+            return false;
+        }
+
+        return level.noCollision(new AABB(pos));
+    }
+
+    private static void placeEndCrystalWithoutDragonRespawn(ServerLevel level, BlockPos pos) {
+        EndCrystal crystal = new EndCrystal(
+                level,
+                pos.getX() + 0.5,
+                pos.getY(),
+                pos.getZ() + 0.5
+        );
+
+        crystal.setShowBottom(false);
+
+        level.addFreshEntity(crystal);
     }
 }
