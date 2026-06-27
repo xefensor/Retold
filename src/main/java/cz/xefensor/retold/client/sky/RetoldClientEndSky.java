@@ -20,11 +20,13 @@ public final class RetoldClientEndSky {
 
         seed = newSeed;
         texture = RetoldGeneratedEndSkyTexture.generateAndRegister(newSeed);
+        RetoldEndSkyPatcher.patchSkyRendererTexture(newSeed);
     }
 
     public static Identifier getTexture() {
         if (texture == null) {
             texture = RetoldGeneratedEndSkyTexture.generateAndRegister(seed);
+            RetoldEndSkyPatcher.patchSkyRendererTexture(seed);
         }
 
         return texture;
