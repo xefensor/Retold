@@ -1,0 +1,12 @@
+{
+  "type": "retold:central_end_island_mask",
+  "radius": 512,
+  "outside_value": -1000.0,
+  "argument": {
+    "type": "minecraft:add",
+    "argument1": {
+      "type": "minecraft:end_islands"
+    },
+    "argument2": "minecraft:end/base_3d_noise"
+  }
+}

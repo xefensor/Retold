@@ -34,13 +34,8 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 import cz.xefensor.retold.event.RetoldGameEvents;
 import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.client.RetoldClientEvents;
-import cz.xefensor.retold.event.RetoldGameEvents;
-import cz.xefensor.retold.network.RetoldNetworking;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.common.NeoForge;
+import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
@@ -77,6 +72,8 @@ public class Retold {
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Retold(IEventBus modEventBus, ModContainer modContainer) {
+        RetoldWorldgenRegistries.register(modEventBus);
+
         modEventBus.addListener(RetoldNetworking::registerPayloads);
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
