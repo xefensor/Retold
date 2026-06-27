@@ -31,6 +31,10 @@ import cz.xefensor.retold.undead.RetoldUndeadSunFear;
 import net.minecraft.world.entity.PathfinderMob;
 import cz.xefensor.retold.enderman.RetoldEndermanBehavior;
 import net.minecraft.world.entity.monster.EnderMan;
+import cz.xefensor.retold.network.RetoldStageSyncPayload;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -210,5 +214,21 @@ public final class RetoldGameEvents {
         if (stage == RetoldWorldStage.STAGE_2 || stage == RetoldWorldStage.STAGE_3) {
             RetoldEndermanBehavior.disableEyeContactAggro(enderman);
         }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        RetoldWorldStage stage = RetoldWorldData
+                .get((ServerLevel) serverPlayer.level())
+                .getStage();
+
+        PacketDistributor.sendToPlayer(
+                serverPlayer,
+                new RetoldStageSyncPayload(stage.getId())
+        );
     }
 }

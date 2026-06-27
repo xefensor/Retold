@@ -3,6 +3,8 @@ package cz.xefensor.retold.stage;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import cz.xefensor.retold.network.RetoldStageSyncPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldStageManager {
     private RetoldStageManager() {
@@ -17,6 +19,11 @@ public final class RetoldStageManager {
         }
 
         data.setStage(newStage);
+
+        PacketDistributor.sendToAllPlayers(
+                new RetoldStageSyncPayload(newStage.getId())
+        );
+
         onStageChanged(level.getServer(), oldStage, newStage);
 
         return true;
