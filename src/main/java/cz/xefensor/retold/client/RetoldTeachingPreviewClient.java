@@ -5,13 +5,23 @@ public final class RetoldTeachingPreviewClient {
     }
 
     private static boolean active = false;
-    private static String label = "Learn";
-    private static String tooltip = "Place an item into the teaching slot, then click Learn.";
+    private static String buttonLabel = "Learn";
+    private static String status = "Status: Place item into slot";
+    private static String cost = "Cost: -";
+    private static String tooltip = "Place an item into the teaching slot.";
     private static Runnable refreshCallback;
 
-    public static void set(boolean newActive, String newLabel, String newTooltip) {
+    public static void set(
+            boolean newActive,
+            String newButtonLabel,
+            String newStatus,
+            String newCost,
+            String newTooltip
+    ) {
         active = newActive;
-        label = newLabel;
+        buttonLabel = newButtonLabel;
+        status = newStatus;
+        cost = newCost;
         tooltip = newTooltip;
 
         if (refreshCallback != null) {
@@ -23,8 +33,16 @@ public final class RetoldTeachingPreviewClient {
         return active;
     }
 
-    public static String label() {
-        return label;
+    public static String buttonLabel() {
+        return buttonLabel;
+    }
+
+    public static String status() {
+        return status;
+    }
+
+    public static String cost() {
+        return cost;
     }
 
     public static String tooltip() {
@@ -41,7 +59,9 @@ public final class RetoldTeachingPreviewClient {
 
     public static void reset() {
         active = false;
-        label = "Learn";
-        tooltip = "Place an item into the teaching slot, then click Learn.";
+        buttonLabel = "Learn";
+        status = "Status: Place item into slot";
+        cost = "Cost: -";
+        tooltip = "Place an item into the teaching slot.";
     }
 }

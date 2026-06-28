@@ -60,7 +60,9 @@ public final class RetoldNetworking {
                 (payload, context) -> {
                     RetoldTeachingPreviewClient.set(
                             payload.active(),
-                            payload.label(),
+                            payload.buttonLabel(),
+                            payload.status(),
+                            payload.cost(),
                             payload.tooltip()
                     );
                 }
