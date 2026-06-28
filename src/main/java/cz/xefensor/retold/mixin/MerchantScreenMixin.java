@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import net.minecraft.client.gui.components.StringWidget;
 
 @Mixin(MerchantScreen.class)
 public abstract class MerchantScreenMixin extends AbstractContainerScreen<MerchantMenu> {
@@ -24,7 +25,7 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
     private Button retold$learnButton;
 
     @Unique
-    private Button retold$titleWidget;
+    private StringWidget retold$titleLabel;
 
     private MerchantScreenMixin(MerchantMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -34,20 +35,14 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
     private void retold$addTeachingWidgets(CallbackInfo ci) {
         RetoldTeachingPreviewClient.reset();
 
-        this.retold$titleWidget = Button.builder(
-                Component.literal("Teaching"),
-                button -> {
-                }
-        ).bounds(
+        this.retold$titleLabel = new StringWidget(
                 this.leftPos + RetoldTeachingGui.PANEL_X,
                 this.topPos + RetoldTeachingGui.TITLE_Y,
                 RetoldTeachingGui.PANEL_WIDTH,
-                20
-        ).tooltip(Tooltip.create(
-                Component.literal("Place an item into the slot below to ask the villager for its recipe.")
-        )).build();
-
-        this.retold$titleWidget.active = false;
+                20,
+                Component.literal("Teaching"),
+                this.font
+        );
 
         this.retold$learnButton = Button.builder(
                 Component.literal(RetoldTeachingPreviewClient.label()),
@@ -61,7 +56,7 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
                 Component.literal(RetoldTeachingPreviewClient.tooltip())
         )).build();
 
-        this.addRenderableWidget(this.retold$titleWidget);
+        this.addRenderableWidget(this.retold$titleLabel);
         this.addRenderableWidget(this.retold$learnButton);
 
         RetoldTeachingPreviewClient.setRefreshCallback(this::retold$updateLearnButton);
