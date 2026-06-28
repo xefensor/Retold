@@ -19,6 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import cz.xefensor.retold.villager.RetoldTeachingGui;
 import cz.xefensor.retold.villager.RetoldVillagerTeaching;
 import net.minecraft.server.level.ServerPlayer;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(MerchantMenu.class)
 public abstract class MerchantMenuTeachingSlotMixin extends AbstractContainerMenu implements RetoldTeachingSlotMenu {
@@ -124,5 +125,43 @@ public abstract class MerchantMenuTeachingSlotMixin extends AbstractContainerMen
         if (this.retold$player instanceof ServerPlayer serverPlayer) {
             RetoldVillagerTeaching.sendPreviewToClient(serverPlayer);
         }
+    }
+
+    @Inject(method = "quickMoveStack", at = @At("HEAD"), cancellable = true)
+    private void retold$quickMoveTeachingSlot(
+            Player player,
+            int index,
+            CallbackInfoReturnable<ItemStack> cir
+    ) {
+        if (index != this.retold$teachingSlotIndex) {
+            return;
+        }
+
+        Slot slot = this.slots.get(index);
+
+        if (!slot.hasItem()) {
+            cir.setReturnValue(ItemStack.EMPTY);
+            return;
+        }
+
+        ItemStack stackInSlot = slot.getItem();
+        ItemStack originalStack = stackInSlot.copy();
+
+        // Vanilla merchant menu má player inventory před naším teaching slotem.
+        // Proto přesouváme do rozsahu 3 až teachingSlotIndex.
+        if (!this.moveItemStackTo(stackInSlot, 3, this.retold$teachingSlotIndex, true)) {
+            cir.setReturnValue(ItemStack.EMPTY);
+            return;
+        }
+
+        if (stackInSlot.isEmpty()) {
+            slot.set(ItemStack.EMPTY);
+        } else {
+            slot.setChanged();
+        }
+
+        this.retold$sendTeachingPreview();
+
+        cir.setReturnValue(originalStack);
     }
 }
