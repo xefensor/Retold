@@ -13,15 +13,30 @@ import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
+import net.minecraft.world.item.crafting.SingleItemRecipe;
+import net.minecraft.world.item.crafting.SingleRecipeInput;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public final class RetoldRecipeBookEvents {
     private RetoldRecipeBookEvents() {
     }
+
+    private static final Set<RecipeType<?>> COOKING_RECIPE_TYPES = Set.of(
+            RecipeType.SMELTING,
+            RecipeType.BLASTING,
+            RecipeType.SMOKING,
+            RecipeType.CAMPFIRE_COOKING
+    );
+
+    private static final Set<RecipeType<?>> OUTPUT_ONLY_RECIPE_TYPES = Set.of(
+            RecipeType.STONECUTTING,
+            RecipeType.SMITHING
+    );
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
@@ -45,29 +60,39 @@ public final class RetoldRecipeBookEvents {
                 event.getInventory()
         );
 
-        if (recipe.isEmpty()) {
+        if (recipe.isPresent()) {
+            markAndUnlockRecipe(serverPlayer, recipe.get());
+            lockUnknownRecipes(serverPlayer);
             return;
         }
 
-        if (!(serverPlayer.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
-        data.markCrafted(serverPlayer, recipe.get().id());
-
-        unlockRecipeSilently(serverPlayer, recipe.get());
+        // Fallback pro bloky, které nedávají 2x2 / 3x3 crafting grid.
+        // Typicky stonecutter / smithing apod. Tam NeoForge event nedává přesný RecipeInput,
+        // takže to hledáme podle výsledného itemu.
+        markAndUnlockRecipesByResult(
+                serverPlayer,
+                event.getCrafting(),
+                OUTPUT_ONLY_RECIPE_TYPES
+        );
 
         lockUnknownRecipes(serverPlayer);
     }
 
-    private static void unlockRecipeSilently(
-            ServerPlayer player,
-            RecipeHolder<CraftingRecipe> recipe
-    ) {
-        player.getRecipeBook().add(recipe.id());
-        player.getRecipeBook().removeHighlight(recipe.id());
-        player.getRecipeBook().sendInitialRecipeBook(player);
+    @SubscribeEvent
+    public static void onItemSmelted(PlayerEvent.ItemSmeltedEvent event) {
+        Player player = event.getEntity();
+
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        markAndUnlockRecipesByResult(
+                serverPlayer,
+                event.getSmelting(),
+                COOKING_RECIPE_TYPES
+        );
+
+        lockUnknownRecipes(serverPlayer);
     }
 
     @SubscribeEvent
@@ -121,13 +146,81 @@ public final class RetoldRecipeBookEvents {
                 .getRecipeFor(RecipeType.CRAFTING, input, serverLevel);
     }
 
-    private static void lockUnknownRecipes(ServerPlayer player) {
+    private static void markAndUnlockRecipesByResult(
+            ServerPlayer player,
+            ItemStack craftedResult,
+            Set<RecipeType<?>> allowedTypes
+    ) {
+        if (craftedResult.isEmpty()) {
+            return;
+        }
+
         if (!(player.level() instanceof ServerLevel serverLevel)) {
             return;
         }
 
         MinecraftServer server = serverLevel.getServer();
 
+        for (RecipeHolder<?> recipe : server.getRecipeManager().getRecipes()) {
+            if (!allowedTypes.contains(recipe.value().getType())) {
+                continue;
+            }
+
+            ItemStack recipeResult = getRecipeResult(recipe);
+
+            if (recipeResult.isEmpty()) {
+                continue;
+            }
+
+            if (!ItemStack.isSameItemSameComponents(recipeResult, craftedResult)) {
+                continue;
+            }
+
+            markAndUnlockRecipe(player, recipe);
+        }
+    }
+
+    private static ItemStack getRecipeResult(RecipeHolder<?> recipe) {
+        if (recipe.value() instanceof AbstractCookingRecipe cookingRecipe) {
+            return cookingRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
+        }
+
+        if (recipe.value() instanceof SingleItemRecipe singleItemRecipe) {
+            return singleItemRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
+        }
+
+        return ItemStack.EMPTY;
+    }
+
+    private static void markAndUnlockRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
+        data.markCrafted(player, recipe.id());
+
+        unlockRecipeSilently(player, recipe);
+    }
+
+    private static void unlockRecipeSilently(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        player.getRecipeBook().add(recipe.id());
+        player.getRecipeBook().removeHighlight(recipe.id());
+        player.getRecipeBook().sendInitialRecipeBook(player);
+    }
+
+    private static void lockUnknownRecipes(ServerPlayer player) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        MinecraftServer server = serverLevel.getServer();
         RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
 
         List<RecipeHolder<?>> recipesToLock = new ArrayList<>();
