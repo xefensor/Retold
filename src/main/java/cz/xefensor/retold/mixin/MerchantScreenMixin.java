@@ -33,6 +33,9 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
     @Unique
     private StringWidget retold$costLabel;
 
+    @Unique
+    private Button retold$panelWidget;
+
     private MerchantScreenMixin(MerchantMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
@@ -41,8 +44,21 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
     private void retold$addTeachingWidgets(CallbackInfo ci) {
         RetoldTeachingPreviewClient.reset();
 
-        this.retold$titleLabel = new StringWidget(
+        this.retold$panelWidget = Button.builder(
+                Component.empty(),
+                button -> {
+                }
+        ).bounds(
                 this.leftPos + RetoldTeachingGui.PANEL_X,
+                this.topPos + RetoldTeachingGui.PANEL_Y,
+                RetoldTeachingGui.PANEL_WIDTH + 12,
+                RetoldTeachingGui.PANEL_HEIGHT
+        ).build();
+
+        this.retold$panelWidget.active = false;
+
+        this.retold$titleLabel = new StringWidget(
+                this.leftPos + RetoldTeachingGui.PANEL_X  + 6,
                 this.topPos + RetoldTeachingGui.TITLE_Y,
                 RetoldTeachingGui.PANEL_WIDTH,
                 20,
@@ -51,18 +67,18 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
         );
 
         this.retold$statusLabel = new StringWidget(
-                this.leftPos + RetoldTeachingGui.PANEL_X,
+                this.leftPos + RetoldTeachingGui.PANEL_X + 6,
                 this.topPos + RetoldTeachingGui.STATUS_Y,
-                RetoldTeachingGui.PANEL_WIDTH,
+                RetoldTeachingGui.PANEL_WIDTH - 12,
                 12,
                 Component.literal(RetoldTeachingPreviewClient.status()),
                 this.font
         );
 
         this.retold$costLabel = new StringWidget(
-                this.leftPos + RetoldTeachingGui.PANEL_X,
+                this.leftPos + RetoldTeachingGui.PANEL_X + 6,
                 this.topPos + RetoldTeachingGui.COST_Y,
-                RetoldTeachingGui.PANEL_WIDTH,
+                RetoldTeachingGui.PANEL_WIDTH - 12,
                 12,
                 Component.literal(RetoldTeachingPreviewClient.cost()),
                 this.font
@@ -72,14 +88,15 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
                 Component.literal(RetoldTeachingPreviewClient.buttonLabel()),
                 button -> ClientPacketDistributor.sendToServer(new RetoldLearnRecipePayload())
         ).bounds(
-                this.leftPos + RetoldTeachingGui.PANEL_X,
+                this.leftPos + RetoldTeachingGui.BUTTON_X,
                 this.topPos + RetoldTeachingGui.BUTTON_Y,
-                RetoldTeachingGui.PANEL_WIDTH,
+                RetoldTeachingGui.BUTTON_WIDTH,
                 20
         ).tooltip(Tooltip.create(
                 Component.literal(RetoldTeachingPreviewClient.tooltip())
         )).build();
 
+        this.addRenderableWidget(this.retold$panelWidget);
         this.addRenderableWidget(this.retold$titleLabel);
         this.addRenderableWidget(this.retold$statusLabel);
         this.addRenderableWidget(this.retold$costLabel);
