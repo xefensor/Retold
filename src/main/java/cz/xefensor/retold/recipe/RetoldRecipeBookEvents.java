@@ -210,9 +210,7 @@ public final class RetoldRecipeBookEvents {
             ServerPlayer player,
             RecipeHolder<?> recipe
     ) {
-        player.getRecipeBook().add(recipe.id());
-        player.getRecipeBook().removeHighlight(recipe.id());
-        player.getRecipeBook().sendInitialRecipeBook(player);
+        player.getRecipeBook().addRecipes(List.of(recipe), player);
     }
 
     private static void lockUnknownRecipes(ServerPlayer player) {
