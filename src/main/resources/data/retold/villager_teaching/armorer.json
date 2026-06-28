@@ -1,6 +1,7 @@
 {
   "profession": "minecraft:armorer",
   "default_emerald_cost": 4,
+  "default_villager_xp_reward": 2,
   "recipes": [
     {
       "id": "minecraft:iron_helmet"

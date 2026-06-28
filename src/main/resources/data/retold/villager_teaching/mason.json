@@ -1,6 +1,7 @@
 {
   "profession": "minecraft:mason",
   "default_emerald_cost": 2,
+  "default_villager_xp_reward": 2,
   "recipes": [
     {
       "id": "minecraft:brick_wall"

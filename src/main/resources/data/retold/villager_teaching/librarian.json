@@ -1,6 +1,7 @@
 {
   "profession": "minecraft:librarian",
   "default_emerald_cost": 3,
+  "default_villager_xp_reward": 2,
   "recipes": [
     {
       "id": "minecraft:book"

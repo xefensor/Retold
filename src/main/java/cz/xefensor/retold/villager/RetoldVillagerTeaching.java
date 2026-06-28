@@ -22,6 +22,10 @@ import net.minecraft.world.item.crafting.SingleItemRecipe;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.item.trading.Merchant;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.world.entity.npc.villager.VillagerData;
+import cz.xefensor.retold.mixin.VillagerInvoker;
+import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
+import net.minecraft.world.entity.npc.villager.VillagerData;
 
 import java.util.Optional;
 
@@ -36,7 +40,9 @@ public final class RetoldVillagerTeaching {
             String cost,
             String tooltip,
             RecipeHolder<?> recipe,
-            int emeraldCost
+            int emeraldCost,
+            Villager villager,
+            int villagerXpReward
     ) {
     }
 
@@ -51,6 +57,11 @@ public final class RetoldVillagerTeaching {
 
         takeEmeralds(player, preview.emeraldCost());
         RetoldRecipeBookEvents.markKnownAndUnlockRecipe(player, preview.recipe());
+
+        if (player.level() instanceof ServerLevel serverLevel) {
+            rewardVillagerTeachingXp(serverLevel, preview.villager(), preview.villagerXpReward());
+            syncOpenMerchantMenu(player, preview.villager());
+        }
 
         actionBar(player, "Learned recipe.");
         sendPreviewToClient(player);
@@ -169,6 +180,8 @@ public final class RetoldVillagerTeaching {
             );
         }
 
+        int villagerXpReward = teachingEntry.villagerXpRewardFor(recipeId, emeraldCost);
+
         RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
 
         if (data.hasKnown(player, recipe.id())) {
@@ -179,7 +192,9 @@ public final class RetoldVillagerTeaching {
                     "Cost: " + emeraldText(emeraldCost),
                     "You already know this recipe.",
                     recipe,
-                    emeraldCost
+                    emeraldCost,
+                    villager,
+                    villagerXpReward
             );
         }
 
@@ -191,7 +206,9 @@ public final class RetoldVillagerTeaching {
                     "Cost: " + emeraldText(emeraldCost),
                     "You need " + emeraldText(emeraldCost) + ".",
                     recipe,
-                    emeraldCost
+                    emeraldCost,
+                    villager,
+                    villagerXpReward
             );
         }
 
@@ -202,7 +219,9 @@ public final class RetoldVillagerTeaching {
                 "Cost: " + emeraldText(emeraldCost),
                 "Pay " + emeraldText(emeraldCost) + " to learn this recipe.",
                 recipe,
-                emeraldCost
+                emeraldCost,
+                villager,
+                villagerXpReward
         );
     }
 
@@ -219,7 +238,9 @@ public final class RetoldVillagerTeaching {
                 cost,
                 tooltip,
                 null,
-                -1
+                -1,
+                null,
+                0
         );
     }
 
@@ -329,5 +350,53 @@ public final class RetoldVillagerTeaching {
 
     private static void actionBar(ServerPlayer player, String message) {
         player.sendSystemMessage(Component.literal(message), true);
+    }
+
+    private static void rewardVillagerTeachingXp(ServerLevel serverLevel, Villager villager, int amount) {
+        if (villager == null || amount <= 0) {
+            return;
+        }
+
+        villager.setVillagerXp(villager.getVillagerXp() + amount);
+
+        while (canVillagerLevelUp(villager)) {
+            int currentLevel = villager.getVillagerData().level();
+
+            villager.setVillagerData(
+                    villager.getVillagerData().withLevel(currentLevel + 1)
+            );
+
+            ((VillagerInvoker) villager).retold$updateTrades(serverLevel);
+        }
+    }
+
+    private static boolean canVillagerLevelUp(Villager villager) {
+        int currentLevel = villager.getVillagerData().level();
+
+        if (!VillagerData.canLevelUp(currentLevel)) {
+            return false;
+        }
+
+        int nextLevel = currentLevel + 1;
+        return villager.getVillagerXp() >= VillagerData.getMinXpPerLevel(nextLevel);
+    }
+
+    private static void syncOpenMerchantMenu(ServerPlayer player, Villager villager) {
+        if (!(player.containerMenu instanceof MerchantMenu merchantMenu)) {
+            return;
+        }
+
+        int villagerLevel = villager.getVillagerData().level();
+
+        player.connection.send(new ClientboundMerchantOffersPacket(
+                merchantMenu.containerId,
+                villager.getOffers(),
+                villagerLevel,
+                villager.getVillagerXp(),
+                VillagerData.canLevelUp(villagerLevel),
+                true
+        ));
+
+        merchantMenu.broadcastChanges();
     }
 }

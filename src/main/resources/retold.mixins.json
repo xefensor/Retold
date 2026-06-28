@@ -9,7 +9,8 @@
     "EndDragonFightMixin",
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
-    "MerchantMenuTeachingSlotMixin"
+    "MerchantMenuTeachingSlotMixin",
+    "VillagerInvoker"
   ],
   "client": [
     "MerchantScreenMixin"
