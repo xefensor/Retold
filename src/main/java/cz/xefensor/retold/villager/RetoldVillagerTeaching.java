@@ -25,6 +25,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import cz.xefensor.retold.network.RetoldTeachingPreviewPayload;
 import net.neoforged.neoforge.network.PacketDistributor;
+import cz.xefensor.retold.villager.RetoldTeachingSlotMenu;
 
 import java.util.Optional;
 
@@ -185,10 +186,10 @@ public final class RetoldVillagerTeaching {
             return preview(false, "Learn Recipe", "Only villagers can teach recipes.");
         }
 
-        ItemStack shownItem = player.getMainHandItem();
+        ItemStack shownItem = getShownItem(player);
 
         if (shownItem.isEmpty()) {
-            return preview(false, "Hold Item", "Hold the item you want to learn a recipe for.");
+            return preview(false, "Place Item", "Place the item you want to learn a recipe for into the teaching slot.");
         }
 
         Identifier professionId = villager.getVillagerData().profession()
@@ -261,5 +262,13 @@ public final class RetoldVillagerTeaching {
 
     private static TeachingPreview preview(boolean active, String label, String tooltip) {
         return new TeachingPreview(active, label, tooltip, null, -1);
+    }
+
+    private static ItemStack getShownItem(ServerPlayer player) {
+        if (player.containerMenu instanceof RetoldTeachingSlotMenu teachingSlotMenu) {
+            return teachingSlotMenu.retold$getTeachingItem();
+        }
+
+        return ItemStack.EMPTY;
     }
 }

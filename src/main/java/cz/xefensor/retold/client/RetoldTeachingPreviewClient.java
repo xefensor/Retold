@@ -5,8 +5,8 @@ public final class RetoldTeachingPreviewClient {
     }
 
     private static boolean active = false;
-    private static String label = "Checking...";
-    private static String tooltip = "Checking villager teaching...";
+    private static String label = "Learn";
+    private static String tooltip = "Place an item into the teaching slot, then click Learn.";
     private static Runnable refreshCallback;
 
     public static void set(boolean newActive, String newLabel, String newTooltip) {
@@ -41,7 +41,7 @@ public final class RetoldTeachingPreviewClient {
 
     public static void reset() {
         active = false;
-        label = "Checking...";
-        tooltip = "Checking villager teaching...";
+        label = "Learn";
+        tooltip = "Place an item into the teaching slot, then click Learn.";
     }
 }

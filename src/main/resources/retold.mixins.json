@@ -8,7 +8,8 @@
     "NoVillageNearWorldSpawnMixin",
     "EndDragonFightMixin",
     "EndGatewayGenerationMixin",
-    "MerchantMenuAccessor"
+    "MerchantMenuAccessor",
+    "MerchantMenuTeachingSlotMixin"
   ],
   "client": [
     "MerchantScreenMixin"
