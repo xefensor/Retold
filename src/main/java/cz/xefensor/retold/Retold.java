@@ -36,6 +36,7 @@ import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.client.RetoldClientEvents;
 import net.neoforged.fml.loading.FMLEnvironment;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
+import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
@@ -100,6 +101,7 @@ public class Retold {
             RetoldClientEvents.register(modEventBus);
         }
         NeoForge.EVENT_BUS.register(RetoldGameEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
