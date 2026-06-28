@@ -5,7 +5,8 @@
   "mixins": [
     "ServerRecipeBookMixin",
     "AdvancementVisibilityEvaluatorMixin",
-    "NoVillageNearWorldSpawnMixin"
+    "NoVillageNearWorldSpawnMixin",
+    "EndDragonFightMixin"
   ],
   "client": [],
   "injectors": {

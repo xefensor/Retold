@@ -39,7 +39,6 @@ import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.phys.AABB;
-import cz.xefensor.retold.dragon.RetoldEndExitFountain;
 
 public final class RetoldGameEvents {
     private RetoldGameEvents() {
@@ -98,7 +97,6 @@ public final class RetoldGameEvents {
         }
 
         preventEndGatewayGeneration(dragonFight);
-        RetoldEndExitFountain.hideUntilDragonKilled(endLevel, dragonFight);
 
         if (dragonFight.hasPreviouslyKilledDragon()) {
             RetoldWorldData data = RetoldWorldData.get(endLevel);
