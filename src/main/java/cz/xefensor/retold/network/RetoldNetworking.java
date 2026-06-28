@@ -6,6 +6,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import cz.xefensor.retold.villager.RetoldVillagerTeaching;
 import net.minecraft.server.level.ServerPlayer;
+import cz.xefensor.retold.client.RetoldTeachingPreviewClient;
+import cz.xefensor.retold.villager.RetoldVillagerTeaching;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class RetoldNetworking {
     private RetoldNetworking() {
@@ -38,6 +41,28 @@ public final class RetoldNetworking {
                     if (context.player() instanceof ServerPlayer player) {
                         RetoldVillagerTeaching.tryTeachHeldItemRecipe(player);
                     }
+                }
+        );
+
+        registrar.playToServer(
+                RetoldRequestTeachingPreviewPayload.TYPE,
+                RetoldRequestTeachingPreviewPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    if (context.player() instanceof ServerPlayer player) {
+                        RetoldVillagerTeaching.sendPreviewToClient(player);
+                    }
+                }
+        );
+
+        registrar.playToClient(
+                RetoldTeachingPreviewPayload.TYPE,
+                RetoldTeachingPreviewPayload.STREAM_CODEC,
+                (payload, context) -> {
+                    RetoldTeachingPreviewClient.set(
+                            payload.active(),
+                            payload.label(),
+                            payload.tooltip()
+                    );
                 }
         );
     }

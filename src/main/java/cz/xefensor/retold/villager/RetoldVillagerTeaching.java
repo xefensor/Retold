@@ -23,6 +23,8 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import cz.xefensor.retold.network.RetoldTeachingPreviewPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.Optional;
 
@@ -31,88 +33,19 @@ public final class RetoldVillagerTeaching {
     }
 
     public static void tryTeachHeldItemRecipe(ServerPlayer player) {
-        if (!(player.containerMenu instanceof MerchantMenu merchantMenu)) {
-            actionBar(player, "You need to talk to a villager.");
+        TeachingPreview preview = createTeachingPreview(player);
+
+        if (!preview.active()) {
+            actionBar(player, preview.tooltip());
+            sendPreviewToClient(player);
             return;
         }
 
-        Merchant merchant = ((MerchantMenuAccessor) merchantMenu).retold$getTrader();
+        takeEmeralds(player, preview.emeraldCost());
+        RetoldRecipeBookEvents.markKnownAndUnlockRecipe(player, preview.recipe());
 
-        if (!(merchant instanceof Villager villager)) {
-            actionBar(player, "Only villagers can teach recipes.");
-            return;
-        }
-
-        Holder<VillagerProfession> profession = villager.getVillagerData().profession();
-
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        ItemStack shownItem = player.getMainHandItem();
-
-        if (shownItem.isEmpty()) {
-            actionBar(player, "Show the villager an item first.");
-            return;
-        }
-
-        Identifier professionId = profession.unwrapKey()
-                .map(key -> key.identifier())
-                .orElse(null);
-
-        if (professionId == null) {
-            actionBar(player, "This villager has no known profession.");
-            return;
-        }
-
-        Optional<RetoldVillagerTeachingEntry> teachingEntryOptional =
-                RetoldVillagerTeachingReloadListener.get(professionId);
-
-        if (teachingEntryOptional.isEmpty()) {
-            actionBar(player, "This villager cannot teach recipes.");
-            return;
-        }
-
-        RetoldVillagerTeachingEntry teachingEntry = teachingEntryOptional.get();
-
-        Optional<RecipeHolder<?>> recipeOptional = findTeachableRecipeByResult(
-                player,
-                shownItem,
-                teachingEntry
-        );
-
-        if (recipeOptional.isEmpty()) {
-            actionBar(player, "This villager does not know this recipe.");
-            return;
-        }
-
-        RecipeHolder<?> recipe = recipeOptional.get();
-        Identifier recipeId = recipe.id().identifier();
-
-        int emeraldCost = teachingEntry.emeraldCostFor(recipeId);
-
-        if (emeraldCost < 0) {
-            actionBar(player, "This villager does not know this recipe.");
-            return;
-        }
-
-        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-
-        if (data.hasKnown(player, recipe.id())) {
-            actionBar(player, "You already know this recipe.");
-            return;
-        }
-
-        if (!hasEmeralds(player, emeraldCost)) {
-            actionBar(player, "You need " + emeraldText(emeraldCost) + ".");
-            return;
-        }
-
-        takeEmeralds(player, emeraldCost);
-        RetoldRecipeBookEvents.markKnownAndUnlockRecipe(player, recipe);
-
-        actionBar(player, "Learned recipe for " + shownItem.getHoverName().getString()
-                + " for " + emeraldText(emeraldCost) + ".");
+        actionBar(player, "Learned recipe for " + preview.recipe().id().identifier() + ".");
+        sendPreviewToClient(player);
     }
 
     private static Optional<RecipeHolder<?>> findTeachableRecipeByResult(
@@ -213,5 +146,120 @@ public final class RetoldVillagerTeaching {
 
     private static String emeraldText(int amount) {
         return amount == 1 ? "1 emerald" : amount + " emeralds";
+    }
+
+    private record TeachingPreview(
+            boolean active,
+            String label,
+            String tooltip,
+            RecipeHolder<?> recipe,
+            int emeraldCost
+    ) {
+    }
+
+    public static void sendPreviewToClient(ServerPlayer player) {
+        TeachingPreview preview = createTeachingPreview(player);
+
+        PacketDistributor.sendToPlayer(
+                player,
+                new RetoldTeachingPreviewPayload(
+                        preview.active(),
+                        preview.label(),
+                        preview.tooltip()
+                )
+        );
+    }
+
+    private static TeachingPreview createTeachingPreview(ServerPlayer player) {
+        if (!(player.containerMenu instanceof MerchantMenu merchantMenu)) {
+            return preview(false, "Learn Recipe", "You need to talk to a villager.");
+        }
+
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return preview(false, "Learn Recipe", "This can only be used on the server.");
+        }
+
+        Merchant merchant = ((MerchantMenuAccessor) merchantMenu).retold$getTrader();
+
+        if (!(merchant instanceof Villager villager)) {
+            return preview(false, "Learn Recipe", "Only villagers can teach recipes.");
+        }
+
+        ItemStack shownItem = player.getMainHandItem();
+
+        if (shownItem.isEmpty()) {
+            return preview(false, "Hold Item", "Hold the item you want to learn a recipe for.");
+        }
+
+        Identifier professionId = villager.getVillagerData().profession()
+                .unwrapKey()
+                .map(key -> key.identifier())
+                .orElse(null);
+
+        if (professionId == null) {
+            return preview(false, "Learn Recipe", "This villager has no known profession.");
+        }
+
+        Optional<RetoldVillagerTeachingEntry> teachingEntryOptional =
+                RetoldVillagerTeachingReloadListener.get(professionId);
+
+        if (teachingEntryOptional.isEmpty()) {
+            return preview(false, "Learn Recipe", "This villager cannot teach recipes.");
+        }
+
+        RetoldVillagerTeachingEntry teachingEntry = teachingEntryOptional.get();
+
+        Optional<RecipeHolder<?>> recipeOptional = findTeachableRecipeByResult(
+                player,
+                shownItem,
+                teachingEntry
+        );
+
+        if (recipeOptional.isEmpty()) {
+            return preview(false, "Unknown Recipe", "This villager does not know this recipe.");
+        }
+
+        RecipeHolder<?> recipe = recipeOptional.get();
+        Identifier recipeId = recipe.id().identifier();
+
+        int emeraldCost = teachingEntry.emeraldCostFor(recipeId);
+
+        if (emeraldCost < 0) {
+            return preview(false, "Unknown Recipe", "This villager does not know this recipe.");
+        }
+
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
+
+        if (data.hasKnown(player, recipe.id())) {
+            return new TeachingPreview(
+                    false,
+                    "Already Known",
+                    "You already know this recipe.",
+                    recipe,
+                    emeraldCost
+            );
+        }
+
+        if (!hasEmeralds(player, emeraldCost)) {
+            return new TeachingPreview(
+                    false,
+                    "Need " + emeraldText(emeraldCost),
+                    "You need " + emeraldText(emeraldCost) + ".",
+                    recipe,
+                    emeraldCost
+            );
+        }
+
+        return new TeachingPreview(
+                true,
+                "Learn: " + shownItem.getHoverName().getString(),
+                "Pay " + emeraldText(emeraldCost) + " to learn this recipe.",
+                recipe,
+                emeraldCost
+        );
+    }
+
+    private static TeachingPreview preview(boolean active, String label, String tooltip) {
+        return new TeachingPreview(active, label, tooltip, null, -1);
     }
 }
