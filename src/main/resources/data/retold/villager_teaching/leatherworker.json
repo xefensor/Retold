@@ -1,0 +1,36 @@
+{
+  "profession": "minecraft:leatherworker",
+  "default_emerald_cost": 2,
+  "recipes": [
+    {
+      "id": "minecraft:leather_helmet"
+    },
+    {
+      "id": "minecraft:leather_chestplate"
+    },
+    {
+      "id": "minecraft:leather_leggings"
+    },
+    {
+      "id": "minecraft:leather_boots"
+    },
+    {
+      "id": "minecraft:item_frame"
+    },
+    {
+      "id": "minecraft:glow_item_frame",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:book"
+    },
+    {
+      "id": "minecraft:cauldron",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:bundle",
+      "emerald_cost": 3
+    }
+  ]
+}

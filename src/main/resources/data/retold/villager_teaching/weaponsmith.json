@@ -1,0 +1,54 @@
+{
+  "profession": "minecraft:weaponsmith",
+  "default_emerald_cost": 4,
+  "recipes": [
+    {
+      "id": "minecraft:wooden_sword"
+    },
+    {
+      "id": "minecraft:stone_sword"
+    },
+    {
+      "id": "minecraft:iron_sword",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:golden_sword",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:diamond_sword",
+      "emerald_cost": 14
+    },
+    {
+      "id": "minecraft:wooden_axe"
+    },
+    {
+      "id": "minecraft:stone_axe"
+    },
+    {
+      "id": "minecraft:iron_axe",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:golden_axe",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:diamond_axe",
+      "emerald_cost": 12
+    },
+    {
+      "id": "minecraft:shield",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:crossbow",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:grindstone",
+      "emerald_cost": 2
+    }
+  ]
+}

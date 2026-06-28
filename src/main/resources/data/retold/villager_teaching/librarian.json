@@ -1,0 +1,30 @@
+{
+  "profession": "minecraft:librarian",
+  "default_emerald_cost": 3,
+  "recipes": [
+    {
+      "id": "minecraft:book"
+    },
+    {
+      "id": "minecraft:bookshelf"
+    },
+    {
+      "id": "minecraft:lectern"
+    },
+    {
+      "id": "minecraft:writable_book"
+    },
+    {
+      "id": "minecraft:enchanting_table",
+      "emerald_cost": 12
+    },
+    {
+      "id": "minecraft:paper",
+      "emerald_cost": 1
+    },
+    {
+      "id": "minecraft:cartography_table",
+      "emerald_cost": 2
+    }
+  ]
+}

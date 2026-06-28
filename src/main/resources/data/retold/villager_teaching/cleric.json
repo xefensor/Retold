@@ -1,0 +1,36 @@
+{
+  "profession": "minecraft:cleric",
+  "default_emerald_cost": 3,
+  "recipes": [
+    {
+      "id": "minecraft:brewing_stand"
+    },
+    {
+      "id": "minecraft:blaze_powder"
+    },
+    {
+      "id": "minecraft:fermented_spider_eye"
+    },
+    {
+      "id": "minecraft:magma_cream"
+    },
+    {
+      "id": "minecraft:glistering_melon_slice"
+    },
+    {
+      "id": "minecraft:golden_carrot"
+    },
+    {
+      "id": "minecraft:ender_eye",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:enchanting_table",
+      "emerald_cost": 12
+    },
+    {
+      "id": "minecraft:respawn_anchor",
+      "emerald_cost": 8
+    }
+  ]
+}

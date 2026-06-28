@@ -1,0 +1,63 @@
+{
+  "profession": "minecraft:butcher",
+  "default_emerald_cost": 1,
+  "recipes": [
+    {
+      "id": "minecraft:rabbit_stew",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:suspicious_stew",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:smoker",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:cooked_beef"
+    },
+    {
+      "id": "minecraft:cooked_beef_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_beef_from_campfire_cooking"
+    },
+    {
+      "id": "minecraft:cooked_porkchop"
+    },
+    {
+      "id": "minecraft:cooked_porkchop_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_porkchop_from_campfire_cooking"
+    },
+    {
+      "id": "minecraft:cooked_chicken"
+    },
+    {
+      "id": "minecraft:cooked_chicken_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_chicken_from_campfire_cooking"
+    },
+    {
+      "id": "minecraft:cooked_mutton"
+    },
+    {
+      "id": "minecraft:cooked_mutton_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_mutton_from_campfire_cooking"
+    },
+    {
+      "id": "minecraft:cooked_rabbit"
+    },
+    {
+      "id": "minecraft:cooked_rabbit_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_rabbit_from_campfire_cooking"
+    }
+  ]
+}

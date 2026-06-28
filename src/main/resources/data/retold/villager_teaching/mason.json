@@ -6,10 +6,82 @@
       "id": "minecraft:brick_wall"
     },
     {
+      "id": "minecraft:bricks"
+    },
+    {
+      "id": "minecraft:brick_stairs"
+    },
+    {
+      "id": "minecraft:brick_slab"
+    },
+    {
+      "id": "minecraft:stone_bricks"
+    },
+    {
+      "id": "minecraft:stone_brick_stairs"
+    },
+    {
+      "id": "minecraft:stone_brick_slab"
+    },
+    {
       "id": "minecraft:stone_brick_wall"
     },
     {
-      "id": "minecraft:polished_andesite_wall",
+      "id": "minecraft:polished_andesite"
+    },
+    {
+      "id": "minecraft:polished_andesite_stairs"
+    },
+    {
+      "id": "minecraft:polished_andesite_slab"
+    },
+    {
+      "id": "minecraft:polished_andesite_wall"
+    },
+    {
+      "id": "minecraft:polished_diorite"
+    },
+    {
+      "id": "minecraft:polished_diorite_stairs"
+    },
+    {
+      "id": "minecraft:polished_diorite_slab"
+    },
+    {
+      "id": "minecraft:polished_diorite_wall"
+    },
+    {
+      "id": "minecraft:polished_granite"
+    },
+    {
+      "id": "minecraft:polished_granite_stairs"
+    },
+    {
+      "id": "minecraft:polished_granite_slab"
+    },
+    {
+      "id": "minecraft:polished_granite_wall"
+    },
+    {
+      "id": "minecraft:chiseled_stone_bricks",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:cut_sandstone"
+    },
+    {
+      "id": "minecraft:cut_red_sandstone"
+    },
+    {
+      "id": "minecraft:quartz_block",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:smooth_quartz",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:stonecutter",
       "emerald_cost": 3
     }
   ]

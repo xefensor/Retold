@@ -1,0 +1,35 @@
+{
+  "profession": "minecraft:fisherman",
+  "default_emerald_cost": 1,
+  "recipes": [
+    {
+      "id": "minecraft:fishing_rod",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:barrel"
+    },
+    {
+      "id": "minecraft:campfire",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:cooked_cod"
+    },
+    {
+      "id": "minecraft:cooked_cod_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_cod_from_campfire_cooking"
+    },
+    {
+      "id": "minecraft:cooked_salmon"
+    },
+    {
+      "id": "minecraft:cooked_salmon_from_smoking"
+    },
+    {
+      "id": "minecraft:cooked_salmon_from_campfire_cooking"
+    }
+  ]
+}

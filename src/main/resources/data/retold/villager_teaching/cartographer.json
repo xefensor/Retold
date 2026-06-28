@@ -1,0 +1,39 @@
+{
+  "profession": "minecraft:cartographer",
+  "default_emerald_cost": 2,
+  "recipes": [
+    {
+      "id": "minecraft:paper"
+    },
+    {
+      "id": "minecraft:map",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:compass",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:cartography_table"
+    },
+    {
+      "id": "minecraft:item_frame"
+    },
+    {
+      "id": "minecraft:glow_item_frame",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:banner_pattern_flower",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:banner_pattern_field_masoned",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:banner_pattern_bordure_indented",
+      "emerald_cost": 4
+    }
+  ]
+}

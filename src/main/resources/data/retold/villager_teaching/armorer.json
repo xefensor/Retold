@@ -1,0 +1,63 @@
+{
+  "profession": "minecraft:armorer",
+  "default_emerald_cost": 4,
+  "recipes": [
+    {
+      "id": "minecraft:iron_helmet"
+    },
+    {
+      "id": "minecraft:iron_chestplate",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:iron_leggings",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:iron_boots"
+    },
+    {
+      "id": "minecraft:golden_helmet",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:golden_chestplate",
+      "emerald_cost": 6
+    },
+    {
+      "id": "minecraft:golden_leggings",
+      "emerald_cost": 6
+    },
+    {
+      "id": "minecraft:golden_boots",
+      "emerald_cost": 5
+    },
+    {
+      "id": "minecraft:diamond_helmet",
+      "emerald_cost": 12
+    },
+    {
+      "id": "minecraft:diamond_chestplate",
+      "emerald_cost": 16
+    },
+    {
+      "id": "minecraft:diamond_leggings",
+      "emerald_cost": 14
+    },
+    {
+      "id": "minecraft:diamond_boots",
+      "emerald_cost": 10
+    },
+    {
+      "id": "minecraft:shield"
+    },
+    {
+      "id": "minecraft:anvil",
+      "emerald_cost": 8
+    },
+    {
+      "id": "minecraft:blast_furnace",
+      "emerald_cost": 3
+    }
+  ]
+}

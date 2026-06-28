@@ -1,0 +1,82 @@
+{
+  "profession": "minecraft:toolsmith",
+  "default_emerald_cost": 3,
+  "recipes": [
+    {
+      "id": "minecraft:wooden_pickaxe"
+    },
+    {
+      "id": "minecraft:wooden_axe"
+    },
+    {
+      "id": "minecraft:wooden_shovel"
+    },
+    {
+      "id": "minecraft:wooden_hoe"
+    },
+    {
+      "id": "minecraft:stone_pickaxe"
+    },
+    {
+      "id": "minecraft:stone_axe"
+    },
+    {
+      "id": "minecraft:stone_shovel"
+    },
+    {
+      "id": "minecraft:stone_hoe"
+    },
+    {
+      "id": "minecraft:iron_pickaxe",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:iron_axe",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:iron_shovel"
+    },
+    {
+      "id": "minecraft:iron_hoe"
+    },
+    {
+      "id": "minecraft:golden_pickaxe",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:golden_axe",
+      "emerald_cost": 4
+    },
+    {
+      "id": "minecraft:golden_shovel"
+    },
+    {
+      "id": "minecraft:golden_hoe"
+    },
+    {
+      "id": "minecraft:diamond_pickaxe",
+      "emerald_cost": 12
+    },
+    {
+      "id": "minecraft:diamond_axe",
+      "emerald_cost": 10
+    },
+    {
+      "id": "minecraft:diamond_shovel",
+      "emerald_cost": 8
+    },
+    {
+      "id": "minecraft:diamond_hoe",
+      "emerald_cost": 8
+    },
+    {
+      "id": "minecraft:smithing_table",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:grindstone",
+      "emerald_cost": 2
+    }
+  ]
+}

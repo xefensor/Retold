@@ -11,6 +11,40 @@
     },
     {
       "id": "minecraft:cookie"
+    },
+    {
+      "id": "minecraft:pumpkin_pie",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:beetroot_soup",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:mushroom_stew",
+      "emerald_cost": 2
+    },
+    {
+      "id": "minecraft:rabbit_stew",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:hay_block"
+    },
+    {
+      "id": "minecraft:wheat"
+    },
+    {
+      "id": "minecraft:melon"
+    },
+    {
+      "id": "minecraft:pumpkin_seeds"
+    },
+    {
+      "id": "minecraft:melon_seeds"
+    },
+    {
+      "id": "minecraft:composter"
     }
   ]
 }
