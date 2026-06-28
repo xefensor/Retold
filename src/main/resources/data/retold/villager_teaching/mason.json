@@ -1,0 +1,16 @@
+{
+  "profession": "minecraft:mason",
+  "default_emerald_cost": 2,
+  "recipes": [
+    {
+      "id": "minecraft:brick_wall"
+    },
+    {
+      "id": "minecraft:stone_brick_wall"
+    },
+    {
+      "id": "minecraft:polished_andesite_wall",
+      "emerald_cost": 3
+    }
+  ]
+}

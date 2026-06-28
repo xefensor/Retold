@@ -7,9 +7,12 @@
     "AdvancementVisibilityEvaluatorMixin",
     "NoVillageNearWorldSpawnMixin",
     "EndDragonFightMixin",
-    "EndGatewayGenerationMixin"
+    "EndGatewayGenerationMixin",
+    "MerchantMenuAccessor"
   ],
-  "client": [],
+  "client": [
+    "MerchantScreenMixin"
+  ],
   "injectors": {
     "defaultRequire": 1
   },

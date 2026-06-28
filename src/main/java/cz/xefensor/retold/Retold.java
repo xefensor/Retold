@@ -38,6 +38,8 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
+import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
@@ -104,6 +106,7 @@ public class Retold {
         NeoForge.EVENT_BUS.register(RetoldGameEvents.class);
         NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
         NeoForge.EVENT_BUS.register(RetoldWorldSpawnCache.class);
+        NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {
@@ -131,5 +134,12 @@ public class Retold {
     public void onServerStarting(ServerStartingEvent event) {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+    }
+
+    private void addServerReloadListeners(AddServerReloadListenersEvent event) {
+        event.addListener(
+                RetoldVillagerTeachingReloadListener.ID,
+                new RetoldVillagerTeachingReloadListener()
+        );
     }
 }

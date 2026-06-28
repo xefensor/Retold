@@ -200,10 +200,17 @@ public final class RetoldRecipeBookEvents {
             return;
         }
 
-        RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
-        data.markCrafted(player, recipe.id());
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
+        data.markKnown(player, recipe.id());
 
         unlockRecipeSilently(player, recipe);
+    }
+
+    public static void markKnownAndUnlockRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        markAndUnlockRecipe(player, recipe);
     }
 
     private static void unlockRecipeSilently(
@@ -219,7 +226,7 @@ public final class RetoldRecipeBookEvents {
         }
 
         MinecraftServer server = serverLevel.getServer();
-        RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
 
         List<RecipeHolder<?>> recipesToLock = new ArrayList<>();
 
@@ -228,7 +235,7 @@ public final class RetoldRecipeBookEvents {
                 continue;
             }
 
-            if (data.hasCrafted(player, recipe.id())) {
+            if (data.hasKnown(player, recipe.id())) {
                 continue;
             }
 

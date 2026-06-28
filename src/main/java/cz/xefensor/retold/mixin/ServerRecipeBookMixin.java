@@ -1,6 +1,6 @@
 package cz.xefensor.retold.mixin;
 
-import cz.xefensor.retold.recipe.RetoldCraftedRecipeData;
+import cz.xefensor.retold.recipe.RetoldKnownRecipeData;
 import net.minecraft.network.protocol.game.ClientboundRecipeBookAddPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -45,7 +45,7 @@ public abstract class ServerRecipeBookMixin {
             return;
         }
 
-        RetoldCraftedRecipeData data = RetoldCraftedRecipeData.get(serverLevel);
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
 
         List<ClientboundRecipeBookAddPacket.Entry> entries = new ArrayList<>();
         int added = 0;
@@ -53,7 +53,7 @@ public abstract class ServerRecipeBookMixin {
         for (RecipeHolder<?> recipe : recipes) {
             ResourceKey<Recipe<?>> recipeId = recipe.id();
 
-            if (!data.hasCrafted(player, recipeId)) {
+            if (!data.hasKnown(player, recipeId)) {
                 continue;
             }
 

@@ -1,0 +1,16 @@
+{
+  "profession": "minecraft:farmer",
+  "default_emerald_cost": 1,
+  "recipes": [
+    {
+      "id": "minecraft:bread"
+    },
+    {
+      "id": "minecraft:cake",
+      "emerald_cost": 3
+    },
+    {
+      "id": "minecraft:cookie"
+    }
+  ]
+}

@@ -19,33 +19,33 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class RetoldCraftedRecipeData extends SavedData {
-    public static final SavedDataType<RetoldCraftedRecipeData> TYPE = new SavedDataType<>(
+public class RetoldKnownRecipeData extends SavedData {
+    public static final SavedDataType<RetoldKnownRecipeData> TYPE = new SavedDataType<>(
             Identifier.fromNamespaceAndPath(Retold.MODID, "crafted_recipes"),
-            RetoldCraftedRecipeData::new,
+            RetoldKnownRecipeData::new,
             Codec.unboundedMap(Codec.STRING, Codec.STRING.listOf())
                     .xmap(
-                            RetoldCraftedRecipeData::new,
-                            RetoldCraftedRecipeData::toSerializedMap
+                            RetoldKnownRecipeData::new,
+                            RetoldKnownRecipeData::toSerializedMap
                     )
     );
 
-    private final Map<UUID, Set<String>> craftedRecipesByPlayer = new HashMap<>();
+    private final Map<UUID, Set<String>> knownRecipesByPlayer = new HashMap<>();
 
-    public RetoldCraftedRecipeData() {
+    public RetoldKnownRecipeData() {
     }
 
-    private RetoldCraftedRecipeData(Map<String, List<String>> savedData) {
+    private RetoldKnownRecipeData(Map<String, List<String>> savedData) {
         for (Map.Entry<String, List<String>> entry : savedData.entrySet()) {
             UUID playerId = UUID.fromString(entry.getKey());
-            craftedRecipesByPlayer.put(playerId, new HashSet<>(entry.getValue()));
+            knownRecipesByPlayer.put(playerId, new HashSet<>(entry.getValue()));
         }
     }
 
     private Map<String, List<String>> toSerializedMap() {
         Map<String, List<String>> savedData = new HashMap<>();
 
-        for (Map.Entry<UUID, Set<String>> entry : craftedRecipesByPlayer.entrySet()) {
+        for (Map.Entry<UUID, Set<String>> entry : knownRecipesByPlayer.entrySet()) {
             savedData.put(
                     entry.getKey().toString(),
                     new ArrayList<>(entry.getValue())
@@ -55,8 +55,8 @@ public class RetoldCraftedRecipeData extends SavedData {
         return savedData;
     }
 
-    public boolean hasCrafted(ServerPlayer player, ResourceKey<Recipe<?>> recipeId) {
-        Set<String> craftedRecipes = craftedRecipesByPlayer.get(player.getUUID());
+    public boolean hasKnown(ServerPlayer player, ResourceKey<Recipe<?>> recipeId) {
+        Set<String> craftedRecipes = knownRecipesByPlayer.get(player.getUUID());
 
         if (craftedRecipes == null) {
             return false;
@@ -65,8 +65,8 @@ public class RetoldCraftedRecipeData extends SavedData {
         return craftedRecipes.contains(recipeId.identifier().toString());
     }
 
-    public boolean markCrafted(ServerPlayer player, ResourceKey<Recipe<?>> recipeId) {
-        Set<String> craftedRecipes = craftedRecipesByPlayer.computeIfAbsent(
+    public boolean markKnown(ServerPlayer player, ResourceKey<Recipe<?>> recipeId) {
+        Set<String> craftedRecipes = knownRecipesByPlayer.computeIfAbsent(
                 player.getUUID(),
                 ignored -> new HashSet<>()
         );
@@ -87,7 +87,7 @@ public class RetoldCraftedRecipeData extends SavedData {
         );
     }
 
-    public static RetoldCraftedRecipeData get(ServerLevel level) {
+    public static RetoldKnownRecipeData get(ServerLevel level) {
         return level.getServer().getDataStorage().computeIfAbsent(TYPE);
     }
 }
