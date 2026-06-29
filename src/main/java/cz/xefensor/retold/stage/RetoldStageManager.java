@@ -22,6 +22,7 @@ public final class RetoldStageManager {
         }
 
         data.setStage(newStage);
+        RetoldStageRuntime.setOverworldStage(newStage);
 
         PacketDistributor.sendToAllPlayers(
                 new RetoldStageSyncPayload(newStage.getId())

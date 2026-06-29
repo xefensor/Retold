@@ -1,5 +1,8 @@
 package cz.xefensor.retold;
 
+import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
+import cz.xefensor.retold.worldgen.delayed.RetoldChunkEditEvents;
+import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureRetrogen;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -58,8 +61,9 @@ public class Retold {
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public Retold(IEventBus modEventBus, ModContainer modContainer) {
-        RetoldWorldgenRegistries.register(modEventBus);
 
+        RetoldWorldgenRegistries.register(modEventBus);
+        RetoldAttachments.register(modEventBus);
         modEventBus.addListener(RetoldNetworking::registerPayloads);
         // Register the commonSetup method for modloading
         modEventBus.addListener(this::commonSetup);
@@ -86,6 +90,8 @@ public class Retold {
         NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
         NeoForge.EVENT_BUS.register(RetoldWorldSpawnCache.class);
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
+        NeoForge.EVENT_BUS.register(RetoldChunkEditEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldDelayedStructureRetrogen.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

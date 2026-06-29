@@ -10,7 +10,8 @@
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
     "MerchantMenuTeachingSlotMixin",
-    "VillagerInvoker"
+    "VillagerInvoker",
+    "DelayedStructureGenerationMixin"
   ],
   "client": [
     "MerchantScreenMixin"

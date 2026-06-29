@@ -1,6 +1,7 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.command.RetoldCommands;
+import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.undead.RetoldUndead;
@@ -84,6 +85,14 @@ public final class RetoldGameEvents {
 
     @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
+        ServerLevel overworld = event.getServer().getLevel(Level.OVERWORLD);
+
+        if (overworld != null) {
+            RetoldStageRuntime.setOverworldStage(
+                    RetoldWorldData.get(overworld).getStage()
+            );
+        }
+
         ServerLevel endLevel = event.getServer().getLevel(Level.END);
 
         if (endLevel == null) {
