@@ -1,5 +1,6 @@
 package cz.xefensor.retold.worldgen.delayed;
 
+import cz.xefensor.retold.Retold;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -59,6 +60,13 @@ public final class RetoldChunkEditEvents {
         RetoldChunkStructureData newData = oldData.withPlayerEdit();
 
         if (newData != oldData) {
+            Retold.LOGGER.info(
+                    "Player edit counted in chunk [{}, {}], now {} / {}",
+                    chunk.getPos().x(),
+                    chunk.getPos().z(),
+                    newData.playerEditCount(),
+                    RetoldChunkStructureData.EDITED_THRESHOLD
+            );
             chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
         }
     }

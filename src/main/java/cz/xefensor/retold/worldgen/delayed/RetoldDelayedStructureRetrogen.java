@@ -1,5 +1,6 @@
 package cz.xefensor.retold.worldgen.delayed;
 
+import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
@@ -38,7 +39,16 @@ public final class RetoldDelayedStructureRetrogen {
             return;
         }
 
-        enqueue(event.getChunk().getPos());
+        ChunkAccess chunk = event.getChunk();
+
+        RetoldChunkStructureData data =
+                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+        if (!data.hasAnyDeferredStructures()) {
+            return;
+        }
+
+        enqueue(chunk.getPos());
     }
 
     @SubscribeEvent
@@ -79,40 +89,40 @@ public final class RetoldDelayedStructureRetrogen {
         RetoldChunkStructureData data =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (data.isEditedByPlayer()) {
-            markAllDelayedStructuresChecked(chunk, data);
+        if (!data.hasAnyDeferredStructures()) {
             return;
         }
 
         RetoldChunkStructureData newData = data;
 
-        for (String structureId : RetoldDelayedStructureIds.ALL) {
+        if (data.isEditedByPlayer()) {
+            for (String structureId : data.deferredStructures()) {
+                newData = newData.withChecked(structureId);
+                newData = newData.withoutDeferred(structureId);
+
+                Retold.LOGGER.info(
+                        "Skipped deferred structure {} at chunk [{}, {}] because chunk is edited",
+                        structureId,
+                        pos.x(),
+                        pos.z()
+                );
+            }
+
+            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
+            return;
+        }
+
+        for (String structureId : data.deferredStructures()) {
             if (newData.hasChecked(structureId)) {
+                newData = newData.withoutDeferred(structureId);
                 continue;
             }
 
-            boolean generated = tryRetrogenStructure(level, pos, structureId);
+            RetrogenResult result = tryRetrogenStructure(level, pos, structureId);
 
-            // Important:
-            // Mark checked even if generated == false.
-            // Otherwise this same chunk gets retried forever.
-            newData = newData.withChecked(structureId);
-        }
-
-        if (newData != data) {
-            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
-        }
-    }
-
-    private static void markAllDelayedStructuresChecked(
-            ChunkAccess chunk,
-            RetoldChunkStructureData data
-    ) {
-        RetoldChunkStructureData newData = data;
-
-        for (String structureId : RetoldDelayedStructureIds.ALL) {
-            if (!newData.hasChecked(structureId)) {
+            if (result == RetrogenResult.SUCCESS || result == RetrogenResult.PERMANENT_SKIP) {
                 newData = newData.withChecked(structureId);
+                newData = newData.withoutDeferred(structureId);
             }
         }
 
@@ -121,21 +131,30 @@ public final class RetoldDelayedStructureRetrogen {
         }
     }
 
-    private static boolean tryRetrogenStructure(
+    private static RetrogenResult tryRetrogenStructure(
             ServerLevel level,
             ChunkPos pos,
             String structureId
     ) {
-        // Phase 8 only tracks that the chunk was checked.
-        // Actual mansion/outpost placement comes later.
+        // Next phase:
+        // Actually place/generate the structure here.
+        //
+        // For now, keep the deferred candidate saved by returning TRY_LATER.
+        // This prevents your test world from permanently losing candidates.
 
-        cz.xefensor.retold.Retold.LOGGER.debug(
-                "Retold delayed structure retrogen check: {} at chunk [{}, {}]",
+        Retold.LOGGER.info(
+                "Deferred structure {} is waiting for real placement at chunk [{}, {}]",
                 structureId,
                 pos.x(),
                 pos.z()
         );
 
-        return false;
+        return RetrogenResult.TRY_LATER;
+    }
+
+    private enum RetrogenResult {
+        SUCCESS,
+        PERMANENT_SKIP,
+        TRY_LATER
     }
 }

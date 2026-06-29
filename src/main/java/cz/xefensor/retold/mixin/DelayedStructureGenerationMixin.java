@@ -1,8 +1,12 @@
 package cz.xefensor.retold.mixin;
 
+import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.worldgen.RetoldStructureTags;
+import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
+import cz.xefensor.retold.worldgen.delayed.RetoldChunkStructureData;
+import cz.xefensor.retold.worldgen.delayed.RetoldStructureIdHelper;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.SectionPos;
 import net.minecraft.resources.ResourceKey;
@@ -27,7 +31,7 @@ public abstract class DelayedStructureGenerationMixin {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void retold$blockDelayedStructuresBeforeStage2(
+    private void retold$deferDelayedStructuresBeforeStage2(
             StructureSet.StructureSelectionEntry entry,
             StructureManager structureManager,
             RegistryAccess registryAccess,
@@ -38,7 +42,7 @@ public abstract class DelayedStructureGenerationMixin {
             ChunkPos chunkPos,
             SectionPos sectionPos,
             ResourceKey dimension,
-            CallbackInfoReturnable<Boolean> cir
+            CallbackInfoReturnable cir
     ) {
         if (dimension != Level.OVERWORLD) {
             return;
@@ -48,8 +52,28 @@ public abstract class DelayedStructureGenerationMixin {
             return;
         }
 
-        if (!RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_2)) {
-            cir.setReturnValue(false);
+        if (RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_2)) {
+            return;
         }
+
+        String structureId = RetoldStructureIdHelper.getStructureId(entry.structure());
+
+        RetoldChunkStructureData oldData =
+                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+        RetoldChunkStructureData newData = oldData.withDeferred(structureId);
+
+        if (newData != oldData) {
+            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
+
+            Retold.LOGGER.info(
+                    "Deferred delayed structure {} at chunk [{}, {}]",
+                    structureId,
+                    chunkPos.x(),
+                    chunkPos.z()
+            );
+        }
+
+        cir.setReturnValue(false);
     }
 }

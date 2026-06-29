@@ -9,12 +9,13 @@ import java.util.Set;
 
 public record RetoldChunkStructureData(
         int playerEditCount,
-        Set<String> checkedStructures
+        Set<String> checkedStructures,
+        Set<String> deferredStructures
 ) {
     public static final int EDITED_THRESHOLD = 16;
 
     public static final RetoldChunkStructureData EMPTY =
-            new RetoldChunkStructureData(0, Set.of());
+            new RetoldChunkStructureData(0, Set.of(), Set.of());
 
     public static final Codec<RetoldChunkStructureData> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
@@ -23,14 +24,23 @@ public record RetoldChunkStructureData(
 
                     Codec.STRING.listOf()
                             .optionalFieldOf("checked_structures", List.of())
-                            .forGetter(data -> List.copyOf(data.checkedStructures()))
-            ).apply(instance, (editCount, checkedList) ->
-                    new RetoldChunkStructureData(editCount, new HashSet<>(checkedList))
+                            .forGetter(data -> List.copyOf(data.checkedStructures())),
+
+                    Codec.STRING.listOf()
+                            .optionalFieldOf("deferred_structures", List.of())
+                            .forGetter(data -> List.copyOf(data.deferredStructures()))
+            ).apply(instance, (editCount, checkedList, deferredList) ->
+                    new RetoldChunkStructureData(
+                            editCount,
+                            new HashSet<>(checkedList),
+                            new HashSet<>(deferredList)
+                    )
             ));
 
     public RetoldChunkStructureData {
         playerEditCount = Math.max(0, Math.min(playerEditCount, EDITED_THRESHOLD));
         checkedStructures = Set.copyOf(checkedStructures);
+        deferredStructures = Set.copyOf(deferredStructures);
     }
 
     public boolean isEditedByPlayer() {
@@ -44,7 +54,8 @@ public record RetoldChunkStructureData(
 
         return new RetoldChunkStructureData(
                 playerEditCount + 1,
-                checkedStructures
+                checkedStructures,
+                deferredStructures
         );
     }
 
@@ -56,6 +67,48 @@ public record RetoldChunkStructureData(
         HashSet<String> copy = new HashSet<>(checkedStructures);
         copy.add(structureId);
 
-        return new RetoldChunkStructureData(playerEditCount, copy);
+        return new RetoldChunkStructureData(
+                playerEditCount,
+                copy,
+                deferredStructures
+        );
+    }
+
+    public boolean hasDeferred(String structureId) {
+        return deferredStructures.contains(structureId);
+    }
+
+    public RetoldChunkStructureData withDeferred(String structureId) {
+        if (deferredStructures.contains(structureId)) {
+            return this;
+        }
+
+        HashSet<String> copy = new HashSet<>(deferredStructures);
+        copy.add(structureId);
+
+        return new RetoldChunkStructureData(
+                playerEditCount,
+                checkedStructures,
+                copy
+        );
+    }
+
+    public RetoldChunkStructureData withoutDeferred(String structureId) {
+        if (!deferredStructures.contains(structureId)) {
+            return this;
+        }
+
+        HashSet<String> copy = new HashSet<>(deferredStructures);
+        copy.remove(structureId);
+
+        return new RetoldChunkStructureData(
+                playerEditCount,
+                checkedStructures,
+                copy
+        );
+    }
+
+    public boolean hasAnyDeferredStructures() {
+        return !deferredStructures.isEmpty();
     }
 }
