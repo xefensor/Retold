@@ -26,7 +26,7 @@ public final class RetoldStageManager {
         RetoldStageRuntime.setOverworldStage(newStage);
 
         if (newStage.getId() >= RetoldWorldStage.STAGE_2.getId()) {
-            RetoldDelayedStructureRetrogen.enqueueDeferredChunksAroundPlayers(level);
+            RetoldDelayedStructureRetrogen.queueKnownDeferredChunksForStage(level);
         }
 
         PacketDistributor.sendToAllPlayers(

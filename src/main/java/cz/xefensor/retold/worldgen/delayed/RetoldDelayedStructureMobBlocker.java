@@ -1,8 +1,6 @@
 package cz.xefensor.retold.worldgen.delayed;
 
 import cz.xefensor.retold.Retold;
-import cz.xefensor.retold.stage.RetoldStageRuntime;
-import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
@@ -23,7 +21,7 @@ public final class RetoldDelayedStructureMobBlocker {
             ConcurrentHashMap.newKeySet();
 
     // Outpost spawn area can extend outside the exact start chunk.
-    // 6 chunks = 96 blocks radius, intentionally a bit generous.
+    // 6 chunks = 96 blocks radius, intentionally generous.
     private static final int OUTPOST_BLOCK_RADIUS_CHUNKS = 6;
 
     private RetoldDelayedStructureMobBlocker() {
@@ -112,39 +110,23 @@ public final class RetoldDelayedStructureMobBlocker {
         int entityChunkX = ((int) Math.floor(entity.getX())) >> 4;
         int entityChunkZ = ((int) Math.floor(entity.getZ())) >> 4;
 
-        boolean nearSuppressedOutpost =
-                isNearSuppressedOutpost(entityChunkX, entityChunkZ);
-
-        if (nearSuppressedOutpost) {
-            event.setCanceled(true);
-
-            Retold.LOGGER.debug(
-                    "Blocked pillager spawn near permanently suppressed outpost at chunk [{}, {}]",
-                    entityChunkX,
-                    entityChunkZ
-            );
-
-            return;
-        }
-
         boolean nearDeferredOutpost =
                 isNearDeferredOutpost(entityChunkX, entityChunkZ);
 
-        if (!nearDeferredOutpost) {
+        boolean nearSuppressedOutpost =
+                isNearSuppressedOutpost(entityChunkX, entityChunkZ);
+
+        if (!nearDeferredOutpost && !nearSuppressedOutpost) {
             return;
         }
 
-        // Outposts unlock only in Stage 3.
-        // Until then, invisible/deferred outposts must not spawn pillagers.
-        if (!RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_3)) {
-            event.setCanceled(true);
+        event.setCanceled(true);
 
-            Retold.LOGGER.debug(
-                    "Blocked pre-Stage-3 pillager spawn near deferred outpost at chunk [{}, {}]",
-                    entityChunkX,
-                    entityChunkZ
-            );
-        }
+        Retold.LOGGER.debug(
+                "Blocked pillager spawn near delayed/suppressed outpost at chunk [{}, {}]",
+                entityChunkX,
+                entityChunkZ
+        );
     }
 
     private static boolean isPillager(Entity entity) {

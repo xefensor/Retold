@@ -5,35 +5,64 @@ import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.StructureManager;
-import net.minecraft.world.level.levelgen.structure.BoundingBox;
-import net.minecraft.world.level.levelgen.structure.StructureStart;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.List;
 
 public final class RetoldDelayedStructureRetrogen {
     private static final Queue<ChunkPos> QUEUE = new ArrayDeque<>();
     private static final Set<Long> QUEUED = new HashSet<>();
 
+    // Chunks where Stage 1 definitely deferred some delayed structure.
+    // This fixes already-loaded chunks after stage switching.
+    private static final Set<Long> KNOWN_DEFERRED_CHUNKS = new HashSet<>();
+
+    private static final Map<Long, ChunkPos> RETRY_POSITIONS = new HashMap<>();
+    private static final Map<Long, Integer> RETRY_TICKS = new HashMap<>();
+
     private static final int CHUNKS_PER_TICK = 2;
+    private static final int RETRY_DELAY_TICKS = 40;
 
-    private static final int PLAYER_SCAN_CHUNK_RADIUS = 12;
-    private static final int PLAYER_SCAN_INTERVAL_TICKS = 40;
-
-    private static int ticksUntilPlayerScan = 0;
+    private static int currentTick = 0;
 
     private RetoldDelayedStructureRetrogen() {
+    }
+
+    public static void rememberDeferredChunk(ChunkPos pos) {
+        KNOWN_DEFERRED_CHUNKS.add(packChunk(pos.x(), pos.z()));
+    }
+
+    public static void queueKnownDeferredChunksForStage(ServerLevel level) {
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+
+        for (long packed : Set.copyOf(KNOWN_DEFERRED_CHUNKS)) {
+            int chunkX = unpackChunkX(packed);
+            int chunkZ = unpackChunkZ(packed);
+
+            if (!level.hasChunk(chunkX, chunkZ)) {
+                continue;
+            }
+
+            enqueue(new ChunkPos(chunkX, chunkZ));
+        }
     }
 
     @SubscribeEvent
@@ -50,20 +79,27 @@ public final class RetoldDelayedStructureRetrogen {
             return;
         }
 
-        ChunkAccess chunk = event.getChunk();
+        ChunkAccess loadedChunk = event.getChunk();
+        ChunkPos pos = loadedChunk.getPos();
 
         RetoldChunkStructureData data =
-                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+                loadedChunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (!data.hasAnyDeferredStructures()) {
-            return;
+        if (data.hasAnyDeferredStructures()) {
+            rememberDeferredChunk(pos);
         }
 
-        enqueue(chunk.getPos());
+        boolean retryLater = processChunk(level, pos);
+
+        if (retryLater) {
+            scheduleRetry(pos);
+        }
     }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        currentTick++;
+
         ServerLevel overworld = event.getServer().getLevel(Level.OVERWORLD);
 
         if (overworld == null) {
@@ -74,60 +110,78 @@ public final class RetoldDelayedStructureRetrogen {
             return;
         }
 
-        ticksUntilPlayerScan--;
-
-        if (ticksUntilPlayerScan <= 0) {
-            ticksUntilPlayerScan = PLAYER_SCAN_INTERVAL_TICKS;
-            enqueueDeferredChunksAroundPlayers(overworld);
-        }
+        enqueueDueRetries();
 
         for (int i = 0; i < CHUNKS_PER_TICK && !QUEUE.isEmpty(); i++) {
             ChunkPos pos = QUEUE.poll();
-            QUEUED.remove(pos.getWorldPosition().asLong());
+            QUEUED.remove(packChunk(pos.x(), pos.z()));
 
-            processChunk(overworld, pos);
-        }
-    }
+            boolean retryLater = processChunk(overworld, pos);
 
-    public static void enqueueDeferredChunksAroundPlayers(ServerLevel level) {
-        for (ServerPlayer player : level.players()) {
-            ChunkPos playerChunk = player.chunkPosition();
-
-            for (int dx = -PLAYER_SCAN_CHUNK_RADIUS; dx <= PLAYER_SCAN_CHUNK_RADIUS; dx++) {
-                for (int dz = -PLAYER_SCAN_CHUNK_RADIUS; dz <= PLAYER_SCAN_CHUNK_RADIUS; dz++) {
-                    int chunkX = playerChunk.x() + dx;
-                    int chunkZ = playerChunk.z() + dz;
-
-                    if (!level.hasChunk(chunkX, chunkZ)) {
-                        continue;
-                    }
-
-                    ChunkAccess chunk = level.getChunk(chunkX, chunkZ);
-
-                    RetoldChunkStructureData data =
-                            chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
-
-                    if (!data.hasAnyDeferredStructures()) {
-                        continue;
-                    }
-
-                    enqueue(chunk.getPos());
-                }
+            if (retryLater) {
+                scheduleRetry(pos);
             }
         }
     }
 
+    private static void enqueueDueRetries() {
+        for (long key : Set.copyOf(RETRY_TICKS.keySet())) {
+            int retryTick = RETRY_TICKS.getOrDefault(key, Integer.MAX_VALUE);
+
+            if (retryTick > currentTick) {
+                continue;
+            }
+
+            ChunkPos pos = RETRY_POSITIONS.remove(key);
+            RETRY_TICKS.remove(key);
+
+            if (pos != null) {
+                enqueue(pos);
+            }
+        }
+    }
+
+    private static void scheduleRetry(ChunkPos pos) {
+        long key = packChunk(pos.x(), pos.z());
+
+        RETRY_POSITIONS.put(key, pos);
+        RETRY_TICKS.put(key, currentTick + RETRY_DELAY_TICKS);
+    }
+
+    public static void enqueueForPossibleRetrogen(
+            ServerLevel level,
+            ChunkPos pos
+    ) {
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+
+        if (!RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_2)) {
+            return;
+        }
+
+        if (!level.hasChunk(pos.x(), pos.z())) {
+            return;
+        }
+
+        boolean retryLater = processChunk(level, pos);
+
+        if (retryLater) {
+            scheduleRetry(pos);
+        }
+    }
+
     private static void enqueue(ChunkPos pos) {
-        long key = pos.getWorldPosition().asLong();
+        long key = packChunk(pos.x(), pos.z());
 
         if (QUEUED.add(key)) {
             QUEUE.add(pos);
         }
     }
 
-    private static void processChunk(ServerLevel level, ChunkPos pos) {
+    private static boolean processChunk(ServerLevel level, ChunkPos pos) {
         if (!level.hasChunk(pos.x(), pos.z())) {
-            return;
+            return false;
         }
 
         ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
@@ -135,30 +189,10 @@ public final class RetoldDelayedStructureRetrogen {
         RetoldChunkStructureData data =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (!data.hasAnyDeferredStructures()) {
-            return;
-        }
-
         RetoldChunkStructureData newData = data;
+        boolean retryLater = false;
 
-        if (data.isEditedByPlayer()) {
-            for (String structureId : Set.copyOf(data.deferredStructures())) {
-                newData = newData.withChecked(structureId);
-                newData = newData.withoutDeferred(structureId);
-
-                Retold.LOGGER.info(
-                        "Skipped deferred structure {} at chunk [{}, {}] because chunk is edited",
-                        structureId,
-                        pos.x(),
-                        pos.z()
-                );
-            }
-
-            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
-            return;
-        }
-
-        for (String structureId : Set.copyOf(data.deferredStructures())) {
+        for (String structureId : RetoldDelayedStructureIds.ALL) {
             if (!RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
                 continue;
             }
@@ -168,7 +202,22 @@ public final class RetoldDelayedStructureRetrogen {
                 continue;
             }
 
-            RetrogenResult result = tryRetrogenStructure(level, pos, structureId);
+            List<StructureStart> starts =
+                    findVanillaStartsForStructure(level, pos, structureId);
+
+            boolean hasDeferred = newData.hasDeferred(structureId);
+
+            if (!hasDeferred && starts.isEmpty()) {
+                continue;
+            }
+
+            RetrogenResult result =
+                    tryRetrogenStructure(level, pos, structureId, starts, hasDeferred);
+
+            if (result == RetrogenResult.TRY_LATER) {
+                retryLater = true;
+                continue;
+            }
 
             if (result == RetrogenResult.SUCCESS) {
                 RetoldDelayedStructureMobBlocker.forgetDeferredStructure(structureId, pos);
@@ -176,6 +225,8 @@ public final class RetoldDelayedStructureRetrogen {
                 newData = newData.withChecked(structureId);
                 newData = newData.withoutDeferred(structureId);
                 newData = newData.withoutMobSuppressed(structureId);
+
+                KNOWN_DEFERRED_CHUNKS.remove(packChunk(pos.x(), pos.z()));
             }
 
             if (result == RetrogenResult.PERMANENT_SKIP) {
@@ -187,29 +238,93 @@ public final class RetoldDelayedStructureRetrogen {
 
                 newData = newData.withChecked(structureId);
                 newData = newData.withoutDeferred(structureId);
+
+                KNOWN_DEFERRED_CHUNKS.remove(packChunk(pos.x(), pos.z()));
             }
         }
 
         if (newData != data) {
             chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
         }
+
+        return retryLater;
     }
 
     private static RetrogenResult tryRetrogenStructure(
             ServerLevel level,
             ChunkPos pos,
-            String structureId
+            String structureId,
+            List<StructureStart> starts,
+            boolean hasDeferred
     ) {
         ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
 
         RetoldChunkStructureData chunkData =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (!chunkData.hasDeferred(structureId)) {
+        if (chunkData.isEditedByPlayer()) {
+            Retold.LOGGER.info(
+                    "Skipping vanilla retrogen for {} in chunk [{}, {}] because this chunk is edited",
+                    structureId,
+                    pos.x(),
+                    pos.z()
+            );
+
             return RetrogenResult.PERMANENT_SKIP;
         }
 
+        if (starts.isEmpty()) {
+            if (hasDeferred) {
+                Retold.LOGGER.debug(
+                        "No vanilla StructureStart found yet for deferred {} in chunk [{}, {}]",
+                        structureId,
+                        pos.x(),
+                        pos.z()
+                );
+
+                return RetrogenResult.TRY_LATER;
+            }
+
+            return RetrogenResult.NO_ACTION;
+        }
+
+        if (RetoldClientChunkTracker.isSentToAnyPlayer(pos)) {
+            return RetrogenResult.TRY_LATER;
+        }
+
+        boolean placedAny = false;
+
+        for (StructureStart start : starts) {
+            if (!start.isValid()) {
+                continue;
+            }
+
+            placeVanillaStructureStartInChunk(level, start, pos);
+            placedAny = true;
+        }
+
+        if (!placedAny) {
+            return RetrogenResult.TRY_LATER;
+        }
+
+        Retold.LOGGER.info(
+                "Vanilla-retrogen placed chunk part of {} in chunk [{}, {}]",
+                structureId,
+                pos.x(),
+                pos.z()
+        );
+
+        return RetrogenResult.SUCCESS;
+    }
+
+    private static List<StructureStart> findVanillaStartsForStructure(
+            ServerLevel level,
+            ChunkPos pos,
+            String structureId
+    ) {
         StructureManager structureManager = level.structureManager();
+
+        List<StructureStart> result = new ArrayList<>();
 
         List<StructureStart> starts = structureManager.startsForStructure(
                 pos,
@@ -230,46 +345,9 @@ public final class RetoldDelayedStructureRetrogen {
                 }
         );
 
-        if (starts.isEmpty()) {
-            Retold.LOGGER.warn(
-                    "No vanilla StructureStart found for deferred {} in chunk [{}, {}]",
-                    structureId,
-                    pos.x(),
-                    pos.z()
-            );
+        result.addAll(starts);
 
-            return RetrogenResult.TRY_LATER;
-        }
-
-        boolean placedAny = false;
-
-        for (StructureStart start : starts) {
-            if (!start.isValid()) {
-                continue;
-            }
-
-            RetrogenResult safety = checkWholeStructureAreaSafe(level, start);
-
-            if (safety != RetrogenResult.SUCCESS) {
-                return safety;
-            }
-
-            placeVanillaStructureStartInChunk(level, start, pos);
-            placedAny = true;
-        }
-
-        if (!placedAny) {
-            return RetrogenResult.TRY_LATER;
-        }
-
-        Retold.LOGGER.info(
-                "Vanilla-retrogen placed {} in chunk [{}, {}]",
-                structureId,
-                pos.x(),
-                pos.z()
-        );
-
-        return RetrogenResult.SUCCESS;
+        return result;
     }
 
     private static void placeVanillaStructureStartInChunk(
@@ -314,43 +392,23 @@ public final class RetoldDelayedStructureRetrogen {
         );
     }
 
-    private static RetrogenResult checkWholeStructureAreaSafe(
-            ServerLevel level,
-            StructureStart start
-    ) {
-        BoundingBox box = start.getBoundingBox();
+    private static long packChunk(int chunkX, int chunkZ) {
+        return ((long) chunkX & 4294967295L)
+                | (((long) chunkZ & 4294967295L) << 32);
+    }
 
-        Iterable<ChunkPos> touchedChunks =
-                box.intersectingChunks()::iterator;
+    private static int unpackChunkX(long packed) {
+        return (int) packed;
+    }
 
-        for (ChunkPos touchedChunkPos : touchedChunks) {
-            if (!level.hasChunk(touchedChunkPos.x(), touchedChunkPos.z())) {
-                return RetrogenResult.TRY_LATER;
-            }
-
-            ChunkAccess touchedChunk =
-                    level.getChunk(touchedChunkPos.x(), touchedChunkPos.z());
-
-            RetoldChunkStructureData data =
-                    touchedChunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
-
-            if (data.isEditedByPlayer()) {
-                Retold.LOGGER.info(
-                        "Skipping vanilla retrogen because touched chunk [{}, {}] is edited",
-                        touchedChunkPos.x(),
-                        touchedChunkPos.z()
-                );
-
-                return RetrogenResult.PERMANENT_SKIP;
-            }
-        }
-
-        return RetrogenResult.SUCCESS;
+    private static int unpackChunkZ(long packed) {
+        return (int) (packed >> 32);
     }
 
     private enum RetrogenResult {
         SUCCESS,
         PERMANENT_SKIP,
-        TRY_LATER
+        TRY_LATER,
+        NO_ACTION
     }
 }
