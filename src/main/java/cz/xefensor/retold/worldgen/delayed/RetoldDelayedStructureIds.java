@@ -1,5 +1,7 @@
 package cz.xefensor.retold.worldgen.delayed;
 
+import cz.xefensor.retold.stage.RetoldWorldStage;
+
 import java.util.List;
 
 public final class RetoldDelayedStructureIds {
@@ -13,4 +15,12 @@ public final class RetoldDelayedStructureIds {
             WOODLAND_MANSION,
             PILLAGER_OUTPOST
     );
+
+    public static RetoldWorldStage requiredStage(String structureId) {
+        if (PILLAGER_OUTPOST.equals(structureId)) {
+            return RetoldWorldStage.STAGE_3;
+        }
+
+        return RetoldWorldStage.STAGE_2;
+    }
 }

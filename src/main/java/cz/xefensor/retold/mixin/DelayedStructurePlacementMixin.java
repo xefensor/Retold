@@ -2,10 +2,10 @@ package cz.xefensor.retold.mixin;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
-import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
 import cz.xefensor.retold.worldgen.delayed.RetoldChunkStructureData;
 import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureHelper;
+import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureIds;
 import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureMobBlocker;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -32,7 +32,7 @@ public abstract class DelayedStructurePlacementMixin {
             at = @At("HEAD"),
             cancellable = true
     )
-    private void retold$cancelDelayedStructurePlacementInStage1(
+    private void retold$cancelDelayedStructurePlacementBeforeRequiredStage(
             WorldGenLevel worldGenLevel,
             StructureManager structureManager,
             ChunkGenerator chunkGenerator,
@@ -47,10 +47,6 @@ public abstract class DelayedStructurePlacementMixin {
             return;
         }
 
-        if (RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_2)) {
-            return;
-        }
-
         StructureStart start = (StructureStart) (Object) this;
         Structure structure = start.getStructure();
 
@@ -58,7 +54,14 @@ public abstract class DelayedStructurePlacementMixin {
             return;
         }
 
-        retold$markChunkDeferred(worldGenLevel, level, chunkPos, structure);
+        String structureId =
+                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
+
+        if (RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
+            return;
+        }
+
+        retold$markChunkDeferred(worldGenLevel, chunkPos, structureId);
 
         ci.cancel();
     }
@@ -66,13 +69,9 @@ public abstract class DelayedStructurePlacementMixin {
     @Unique
     private static void retold$markChunkDeferred(
             WorldGenLevel worldGenLevel,
-            ServerLevel level,
             ChunkPos chunkPos,
-            Structure structure
+            String structureId
     ) {
-        String structureId =
-                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
-
         ChunkAccess chunk;
 
         try {

@@ -1,6 +1,8 @@
 package cz.xefensor.retold.worldgen.delayed;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.stage.RetoldStageRuntime;
+import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
@@ -15,6 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class RetoldDelayedStructureMobBlocker {
     private static final Set<Long> DEFERRED_OUTPOST_CHUNKS =
+            ConcurrentHashMap.newKeySet();
+
+    private static final Set<Long> SUPPRESSED_OUTPOST_CHUNKS =
             ConcurrentHashMap.newKeySet();
 
     // Outpost spawn area can extend outside the exact start chunk.
@@ -50,6 +55,17 @@ public final class RetoldDelayedStructureMobBlocker {
         DEFERRED_OUTPOST_CHUNKS.remove(packChunk(pos.x(), pos.z()));
     }
 
+    public static void rememberSuppressedStructure(
+            String structureId,
+            ChunkPos pos
+    ) {
+        if (!RetoldDelayedStructureIds.PILLAGER_OUTPOST.equals(structureId)) {
+            return;
+        }
+
+        SUPPRESSED_OUTPOST_CHUNKS.add(packChunk(pos.x(), pos.z()));
+    }
+
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
         if (!(event.getLevel() instanceof ServerLevel level)) {
@@ -65,9 +81,15 @@ public final class RetoldDelayedStructureMobBlocker {
         RetoldChunkStructureData data =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (data.hasDeferred(RetoldDelayedStructureIds.PILLAGER_OUTPOST)
-                || data.hasMobSuppressed(RetoldDelayedStructureIds.PILLAGER_OUTPOST)) {
+        if (data.hasDeferred(RetoldDelayedStructureIds.PILLAGER_OUTPOST)) {
             rememberDeferredOutpostChunk(chunk.getPos());
+        }
+
+        if (data.hasMobSuppressed(RetoldDelayedStructureIds.PILLAGER_OUTPOST)) {
+            rememberSuppressedStructure(
+                    RetoldDelayedStructureIds.PILLAGER_OUTPOST,
+                    chunk.getPos()
+            );
         }
     }
 
@@ -90,17 +112,39 @@ public final class RetoldDelayedStructureMobBlocker {
         int entityChunkX = ((int) Math.floor(entity.getX())) >> 4;
         int entityChunkZ = ((int) Math.floor(entity.getZ())) >> 4;
 
-        if (!isNearDeferredOutpost(entityChunkX, entityChunkZ)) {
+        boolean nearSuppressedOutpost =
+                isNearSuppressedOutpost(entityChunkX, entityChunkZ);
+
+        if (nearSuppressedOutpost) {
+            event.setCanceled(true);
+
+            Retold.LOGGER.debug(
+                    "Blocked pillager spawn near permanently suppressed outpost at chunk [{}, {}]",
+                    entityChunkX,
+                    entityChunkZ
+            );
+
             return;
         }
 
-        event.setCanceled(true);
+        boolean nearDeferredOutpost =
+                isNearDeferredOutpost(entityChunkX, entityChunkZ);
 
-        Retold.LOGGER.debug(
-                "Blocked Stage 1 pillager spawn near deferred outpost at chunk [{}, {}]",
-                entityChunkX,
-                entityChunkZ
-        );
+        if (!nearDeferredOutpost) {
+            return;
+        }
+
+        // Outposts unlock only in Stage 3.
+        // Until then, invisible/deferred outposts must not spawn pillagers.
+        if (!RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_3)) {
+            event.setCanceled(true);
+
+            Retold.LOGGER.debug(
+                    "Blocked pre-Stage-3 pillager spawn near deferred outpost at chunk [{}, {}]",
+                    entityChunkX,
+                    entityChunkZ
+            );
+        }
     }
 
     private static boolean isPillager(Entity entity) {
@@ -111,7 +155,22 @@ public final class RetoldDelayedStructureMobBlocker {
             int chunkX,
             int chunkZ
     ) {
-        for (long packed : DEFERRED_OUTPOST_CHUNKS) {
+        return isNearAnyOutpostChunk(DEFERRED_OUTPOST_CHUNKS, chunkX, chunkZ);
+    }
+
+    private static boolean isNearSuppressedOutpost(
+            int chunkX,
+            int chunkZ
+    ) {
+        return isNearAnyOutpostChunk(SUPPRESSED_OUTPOST_CHUNKS, chunkX, chunkZ);
+    }
+
+    private static boolean isNearAnyOutpostChunk(
+            Set<Long> source,
+            int chunkX,
+            int chunkZ
+    ) {
+        for (long packed : source) {
             int outpostChunkX = unpackChunkX(packed);
             int outpostChunkZ = unpackChunkZ(packed);
 

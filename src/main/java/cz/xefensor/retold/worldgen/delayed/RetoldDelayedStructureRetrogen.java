@@ -159,6 +159,10 @@ public final class RetoldDelayedStructureRetrogen {
         }
 
         for (String structureId : Set.copyOf(data.deferredStructures())) {
+            if (!RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
+                continue;
+            }
+
             if (newData.hasChecked(structureId)) {
                 newData = newData.withoutDeferred(structureId);
                 continue;
@@ -176,7 +180,8 @@ public final class RetoldDelayedStructureRetrogen {
 
             if (result == RetrogenResult.PERMANENT_SKIP) {
                 if (RetoldDelayedStructureIds.PILLAGER_OUTPOST.equals(structureId)) {
-                    RetoldDelayedStructureMobBlocker.rememberDeferredStructure(structureId, pos);
+                    RetoldDelayedStructureMobBlocker.forgetDeferredStructure(structureId, pos);
+                    RetoldDelayedStructureMobBlocker.rememberSuppressedStructure(structureId, pos);
                     newData = newData.withMobSuppressed(structureId);
                 }
 
