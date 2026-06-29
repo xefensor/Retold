@@ -32,6 +32,7 @@ public final class RetoldDelayedStructureRetrogen {
     // Chunks where Stage 1 definitely deferred some delayed structure.
     // This fixes already-loaded chunks after stage switching.
     private static final Set<Long> KNOWN_DEFERRED_CHUNKS = new HashSet<>();
+    private static final Set<String> SUPPRESSED_STRUCTURE_STARTS = new HashSet<>();
 
     private static final Map<Long, ChunkPos> RETRY_POSITIONS = new HashMap<>();
     private static final Map<Long, Integer> RETRY_TICKS = new HashMap<>();
@@ -262,17 +263,6 @@ public final class RetoldDelayedStructureRetrogen {
         RetoldChunkStructureData chunkData =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (chunkData.isEditedByPlayer()) {
-            Retold.LOGGER.info(
-                    "Skipping vanilla retrogen for {} in chunk [{}, {}] because this chunk is edited",
-                    structureId,
-                    pos.x(),
-                    pos.z()
-            );
-
-            return RetrogenResult.PERMANENT_SKIP;
-        }
-
         if (starts.isEmpty()) {
             if (hasDeferred) {
                 Retold.LOGGER.debug(
@@ -288,15 +278,44 @@ public final class RetoldDelayedStructureRetrogen {
             return RetrogenResult.NO_ACTION;
         }
 
-        if (RetoldClientChunkTracker.isSentToAnyPlayer(pos)) {
-            return RetrogenResult.TRY_LATER;
-        }
-
         boolean placedAny = false;
 
         for (StructureStart start : starts) {
             if (!start.isValid()) {
                 continue;
+            }
+
+            String startKey = getStructureStartKey(structureId, start);
+
+            if (SUPPRESSED_STRUCTURE_STARTS.contains(startKey)) {
+                markLoadedTouchedChunksHandled(level, start, structureId, true);
+
+                Retold.LOGGER.debug(
+                        "Skipping {} in chunk [{}, {}] because whole structure start is suppressed",
+                        structureId,
+                        pos.x(),
+                        pos.z()
+                );
+
+                return RetrogenResult.PERMANENT_SKIP;
+            }
+
+            if (hasAnyEditedLoadedTouchedChunk(level, start)) {
+                SUPPRESSED_STRUCTURE_STARTS.add(startKey);
+                markLoadedTouchedChunksHandled(level, start, structureId, true);
+
+                Retold.LOGGER.info(
+                        "Suppressing whole {} because one touched chunk is edited. Current chunk [{}, {}]",
+                        structureId,
+                        pos.x(),
+                        pos.z()
+                );
+
+                return RetrogenResult.PERMANENT_SKIP;
+            }
+
+            if (RetoldClientChunkTracker.isSentToAnyPlayer(pos)) {
+                return RetrogenResult.TRY_LATER;
             }
 
             placeVanillaStructureStartInChunk(level, start, pos);
@@ -315,6 +334,109 @@ public final class RetoldDelayedStructureRetrogen {
         );
 
         return RetrogenResult.SUCCESS;
+    }
+
+    private static boolean hasAnyEditedLoadedTouchedChunk(
+            ServerLevel level,
+            StructureStart start
+    ) {
+        for (ChunkPos touchedChunkPos : getTouchedChunks(start)) {
+            if (!level.hasChunk(touchedChunkPos.x(), touchedChunkPos.z())) {
+                continue;
+            }
+
+            ChunkAccess touchedChunk =
+                    level.getChunk(touchedChunkPos.x(), touchedChunkPos.z());
+
+            RetoldChunkStructureData data =
+                    touchedChunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+            if (data.isEditedByPlayer()) {
+                Retold.LOGGER.info(
+                        "Touched chunk [{}, {}] is edited, whole delayed structure will be skipped",
+                        touchedChunkPos.x(),
+                        touchedChunkPos.z()
+                );
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void markLoadedTouchedChunksHandled(
+            ServerLevel level,
+            StructureStart start,
+            String structureId,
+            boolean permanentlySkipped
+    ) {
+        for (ChunkPos touchedChunkPos : getTouchedChunks(start)) {
+            if (!level.hasChunk(touchedChunkPos.x(), touchedChunkPos.z())) {
+                continue;
+            }
+
+            ChunkAccess touchedChunk =
+                    level.getChunk(touchedChunkPos.x(), touchedChunkPos.z());
+
+            RetoldChunkStructureData oldData =
+                    touchedChunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+            RetoldChunkStructureData newData = oldData
+                    .withChecked(structureId)
+                    .withoutDeferred(structureId);
+
+            if (permanentlySkipped
+                    && RetoldDelayedStructureIds.PILLAGER_OUTPOST.equals(structureId)) {
+                newData = newData.withMobSuppressed(structureId);
+
+                RetoldDelayedStructureMobBlocker.forgetDeferredStructure(
+                        structureId,
+                        touchedChunkPos
+                );
+
+                RetoldDelayedStructureMobBlocker.rememberSuppressedStructure(
+                        structureId,
+                        touchedChunkPos
+                );
+            } else {
+                newData = newData.withoutMobSuppressed(structureId);
+
+                RetoldDelayedStructureMobBlocker.forgetDeferredStructure(
+                        structureId,
+                        touchedChunkPos
+                );
+            }
+
+            if (newData != oldData) {
+                touchedChunk.setData(
+                        RetoldAttachments.CHUNK_STRUCTURE_DATA.get(),
+                        newData
+                );
+            }
+
+            KNOWN_DEFERRED_CHUNKS.remove(packChunk(touchedChunkPos.x(), touchedChunkPos.z()));
+        }
+    }
+
+    private static List<ChunkPos> getTouchedChunks(StructureStart start) {
+        List<ChunkPos> result = new ArrayList<>();
+
+        Iterable<ChunkPos> touchedChunks =
+                start.getBoundingBox().intersectingChunks()::iterator;
+
+        for (ChunkPos touchedChunkPos : touchedChunks) {
+            result.add(touchedChunkPos);
+        }
+
+        return result;
+    }
+
+    private static String getStructureStartKey(
+            String structureId,
+            StructureStart start
+    ) {
+        return structureId + "|" + start.getBoundingBox().toString();
     }
 
     private static List<StructureStart> findVanillaStartsForStructure(
