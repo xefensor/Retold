@@ -45,6 +45,7 @@ import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureMobBlocker;
 import cz.xefensor.retold.worldgen.delayed.RetoldClientChunkTracker;
+import cz.xefensor.retold.worldgen.delayed.RetoldRetrogenDropBlocker;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
@@ -96,6 +97,7 @@ public class Retold {
         NeoForge.EVENT_BUS.register(RetoldDelayedStructureRetrogen.class);
         NeoForge.EVENT_BUS.register(RetoldDelayedStructureMobBlocker.class);
         NeoForge.EVENT_BUS.register(RetoldClientChunkTracker.class);
+        NeoForge.EVENT_BUS.register(RetoldRetrogenDropBlocker.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

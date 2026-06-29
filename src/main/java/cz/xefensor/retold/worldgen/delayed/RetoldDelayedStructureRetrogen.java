@@ -485,14 +485,20 @@ public final class RetoldDelayedStructureRetrogen {
 
         long randomSeed = level.getSeed() ^ chunkLong;
 
-        start.placeInChunk(
-                level,
-                level.structureManager(),
-                level.getChunkSource().getGenerator(),
-                RandomSource.create(randomSeed),
-                writableArea,
-                chunkPos
-        );
+        RetoldRetrogenDropBlocker.beginChunk(chunkPos);
+
+        try {
+            start.placeInChunk(
+                    level,
+                    level.structureManager(),
+                    level.getChunkSource().getGenerator(),
+                    RandomSource.create(randomSeed),
+                    writableArea,
+                    chunkPos
+            );
+        } finally {
+            RetoldRetrogenDropBlocker.endChunk(chunkPos);
+        }
     }
 
     private static BoundingBox getChunkWritableArea(
