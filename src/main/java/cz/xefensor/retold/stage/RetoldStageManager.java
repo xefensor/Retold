@@ -8,6 +8,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureRetrogen;
 
 public final class RetoldStageManager {
     private RetoldStageManager() {
@@ -23,6 +24,10 @@ public final class RetoldStageManager {
 
         data.setStage(newStage);
         RetoldStageRuntime.setOverworldStage(newStage);
+
+        if (newStage.getId() >= RetoldWorldStage.STAGE_2.getId()) {
+            RetoldDelayedStructureRetrogen.enqueueDeferredChunksAroundPlayers(level);
+        }
 
         PacketDistributor.sendToAllPlayers(
                 new RetoldStageSyncPayload(newStage.getId())
