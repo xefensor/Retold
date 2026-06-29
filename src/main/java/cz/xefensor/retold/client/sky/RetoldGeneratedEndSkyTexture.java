@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 import java.util.Random;
 
 public final class RetoldGeneratedEndSkyTexture {
-    private static final int SIZE = 256;
+    private static final int SIZE = 128;
 
     private static DynamicTexture currentTexture;
 
