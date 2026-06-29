@@ -166,8 +166,19 @@ public final class RetoldDelayedStructureRetrogen {
 
             RetrogenResult result = tryRetrogenStructure(level, pos, structureId);
 
-            if (result == RetrogenResult.SUCCESS || result == RetrogenResult.PERMANENT_SKIP) {
+            if (result == RetrogenResult.SUCCESS) {
                 RetoldDelayedStructureMobBlocker.forgetDeferredStructure(structureId, pos);
+
+                newData = newData.withChecked(structureId);
+                newData = newData.withoutDeferred(structureId);
+                newData = newData.withoutMobSuppressed(structureId);
+            }
+
+            if (result == RetrogenResult.PERMANENT_SKIP) {
+                if (RetoldDelayedStructureIds.PILLAGER_OUTPOST.equals(structureId)) {
+                    RetoldDelayedStructureMobBlocker.rememberDeferredStructure(structureId, pos);
+                    newData = newData.withMobSuppressed(structureId);
+                }
 
                 newData = newData.withChecked(structureId);
                 newData = newData.withoutDeferred(structureId);

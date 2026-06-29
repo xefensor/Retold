@@ -1,8 +1,6 @@
 package cz.xefensor.retold.worldgen.delayed;
 
 import cz.xefensor.retold.Retold;
-import cz.xefensor.retold.stage.RetoldStageRuntime;
-import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
@@ -67,7 +65,8 @@ public final class RetoldDelayedStructureMobBlocker {
         RetoldChunkStructureData data =
                 chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
 
-        if (data.hasDeferred(RetoldDelayedStructureIds.PILLAGER_OUTPOST)) {
+        if (data.hasDeferred(RetoldDelayedStructureIds.PILLAGER_OUTPOST)
+                || data.hasMobSuppressed(RetoldDelayedStructureIds.PILLAGER_OUTPOST)) {
             rememberDeferredOutpostChunk(chunk.getPos());
         }
     }
@@ -79,10 +78,6 @@ public final class RetoldDelayedStructureMobBlocker {
         }
 
         if (level.dimension() != Level.OVERWORLD) {
-            return;
-        }
-
-        if (RetoldStageRuntime.isAtLeast(RetoldWorldStage.STAGE_2)) {
             return;
         }
 

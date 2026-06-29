@@ -10,12 +10,13 @@ import java.util.Set;
 public record RetoldChunkStructureData(
         int playerEditCount,
         Set<String> checkedStructures,
-        Set<String> deferredStructures
+        Set<String> deferredStructures,
+        Set<String> mobSuppressedStructures
 ) {
     public static final int EDITED_THRESHOLD = 16;
 
     public static final RetoldChunkStructureData EMPTY =
-            new RetoldChunkStructureData(0, Set.of(), Set.of());
+            new RetoldChunkStructureData(0, Set.of(), Set.of(), Set.of());
 
     public static final Codec<RetoldChunkStructureData> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
@@ -28,12 +29,17 @@ public record RetoldChunkStructureData(
 
                     Codec.STRING.listOf()
                             .optionalFieldOf("deferred_structures", List.of())
-                            .forGetter(data -> List.copyOf(data.deferredStructures()))
-            ).apply(instance, (editCount, checkedList, deferredList) ->
+                            .forGetter(data -> List.copyOf(data.deferredStructures())),
+
+                    Codec.STRING.listOf()
+                            .optionalFieldOf("mob_suppressed_structures", List.of())
+                            .forGetter(data -> List.copyOf(data.mobSuppressedStructures()))
+            ).apply(instance, (editCount, checkedList, deferredList, suppressedList) ->
                     new RetoldChunkStructureData(
                             editCount,
                             new HashSet<>(checkedList),
-                            new HashSet<>(deferredList)
+                            new HashSet<>(deferredList),
+                            new HashSet<>(suppressedList)
                     )
             ));
 
@@ -41,6 +47,7 @@ public record RetoldChunkStructureData(
         playerEditCount = Math.max(0, Math.min(playerEditCount, EDITED_THRESHOLD));
         checkedStructures = Set.copyOf(checkedStructures);
         deferredStructures = Set.copyOf(deferredStructures);
+        mobSuppressedStructures = Set.copyOf(mobSuppressedStructures);
     }
 
     public boolean isEditedByPlayer() {
@@ -55,7 +62,8 @@ public record RetoldChunkStructureData(
         return new RetoldChunkStructureData(
                 playerEditCount + 1,
                 checkedStructures,
-                deferredStructures
+                deferredStructures,
+                mobSuppressedStructures
         );
     }
 
@@ -64,13 +72,18 @@ public record RetoldChunkStructureData(
     }
 
     public RetoldChunkStructureData withChecked(String structureId) {
+        if (checkedStructures.contains(structureId)) {
+            return this;
+        }
+
         HashSet<String> copy = new HashSet<>(checkedStructures);
         copy.add(structureId);
 
         return new RetoldChunkStructureData(
                 playerEditCount,
                 copy,
-                deferredStructures
+                deferredStructures,
+                mobSuppressedStructures
         );
     }
 
@@ -89,7 +102,8 @@ public record RetoldChunkStructureData(
         return new RetoldChunkStructureData(
                 playerEditCount,
                 checkedStructures,
-                copy
+                copy,
+                mobSuppressedStructures
         );
     }
 
@@ -104,11 +118,48 @@ public record RetoldChunkStructureData(
         return new RetoldChunkStructureData(
                 playerEditCount,
                 checkedStructures,
-                copy
+                copy,
+                mobSuppressedStructures
         );
     }
 
     public boolean hasAnyDeferredStructures() {
         return !deferredStructures.isEmpty();
+    }
+
+    public boolean hasMobSuppressed(String structureId) {
+        return mobSuppressedStructures.contains(structureId);
+    }
+
+    public RetoldChunkStructureData withMobSuppressed(String structureId) {
+        if (mobSuppressedStructures.contains(structureId)) {
+            return this;
+        }
+
+        HashSet<String> copy = new HashSet<>(mobSuppressedStructures);
+        copy.add(structureId);
+
+        return new RetoldChunkStructureData(
+                playerEditCount,
+                checkedStructures,
+                deferredStructures,
+                copy
+        );
+    }
+
+    public RetoldChunkStructureData withoutMobSuppressed(String structureId) {
+        if (!mobSuppressedStructures.contains(structureId)) {
+            return this;
+        }
+
+        HashSet<String> copy = new HashSet<>(mobSuppressedStructures);
+        copy.remove(structureId);
+
+        return new RetoldChunkStructureData(
+                playerEditCount,
+                checkedStructures,
+                deferredStructures,
+                copy
+        );
     }
 }
