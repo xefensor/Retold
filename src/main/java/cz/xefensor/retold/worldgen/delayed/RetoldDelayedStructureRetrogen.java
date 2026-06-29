@@ -4,26 +4,23 @@ import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
-import com.mojang.brigadier.ParseResults;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.phys.Vec2;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Queue;
 import java.util.Set;
+import java.util.List;
 
 public final class RetoldDelayedStructureRetrogen {
     private static final Queue<ChunkPos> QUEUE = new ArrayDeque<>();
@@ -92,221 +89,6 @@ public final class RetoldDelayedStructureRetrogen {
         }
     }
 
-    private static void enqueue(ChunkPos pos) {
-        long key = pos.getWorldPosition().asLong();
-
-        if (QUEUED.add(key)) {
-            QUEUE.add(pos);
-        }
-    }
-
-    private static void processChunk(ServerLevel level, ChunkPos pos) {
-        if (!level.hasChunk(pos.x(), pos.z())) {
-            return;
-        }
-
-        ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
-
-        RetoldChunkStructureData data =
-                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
-
-        if (!data.hasAnyDeferredStructures()) {
-            return;
-        }
-
-        RetoldChunkStructureData newData = data;
-
-        if (data.isEditedByPlayer()) {
-            for (String structureId : data.deferredStructures()) {
-                newData = newData.withChecked(structureId);
-                newData = newData.withoutDeferred(structureId);
-
-                Retold.LOGGER.info(
-                        "Skipped deferred structure {} at chunk [{}, {}] because chunk is edited",
-                        structureId,
-                        pos.x(),
-                        pos.z()
-                );
-            }
-
-            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
-            return;
-        }
-
-        for (String structureId : data.deferredStructures()) {
-            if (newData.hasChecked(structureId)) {
-                newData = newData.withoutDeferred(structureId);
-                continue;
-            }
-
-            RetrogenResult result = tryRetrogenStructure(level, pos, structureId);
-
-            if (result == RetrogenResult.SUCCESS || result == RetrogenResult.PERMANENT_SKIP) {
-                newData = newData.withChecked(structureId);
-                newData = newData.withoutDeferred(structureId);
-            }
-        }
-
-        if (newData != data) {
-            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
-        }
-    }
-
-    private static RetrogenResult tryRetrogenStructure(
-            ServerLevel level,
-            ChunkPos pos,
-            String structureId
-    ) {
-        if (RetoldDelayedStructureIds.WOODLAND_MANSION.equals(structureId)) {
-            Retold.LOGGER.info(
-                    "Woodland mansion retrogen is still deferred at chunk [{}, {}]",
-                    pos.x(),
-                    pos.z()
-            );
-
-            return RetrogenResult.TRY_LATER;
-        }
-
-        if (RetoldDelayedStructureIds.PILLAGER_OUTPOST.equals(structureId)) {
-            return tryPlacePillagerOutpost(level, pos);
-        }
-
-        Retold.LOGGER.warn(
-                "Unknown deferred structure {} at chunk [{}, {}], skipping permanently",
-                structureId,
-                pos.x(),
-                pos.z()
-        );
-
-        return RetrogenResult.PERMANENT_SKIP;
-    }
-
-    private static RetrogenResult tryPlacePillagerOutpost(
-            ServerLevel level,
-            ChunkPos pos
-    ) {
-        RetrogenResult safety = checkChunkAreaSafe(level, pos, 2);
-
-        if (safety != RetrogenResult.SUCCESS) {
-            return safety;
-        }
-
-        BlockPos placePos = getSurfacePositionForChunk(level, pos);
-
-        boolean placed = runPlaceStructureCommand(
-                level,
-                RetoldDelayedStructureIds.PILLAGER_OUTPOST,
-                placePos
-        );
-
-        if (!placed) {
-            Retold.LOGGER.warn(
-                    "Failed to place pillager outpost at chunk [{}, {}], position {}",
-                    pos.x(),
-                    pos.z(),
-                    placePos
-            );
-
-            return RetrogenResult.TRY_LATER;
-        }
-
-        Retold.LOGGER.info(
-                "Placed deferred pillager outpost at chunk [{}, {}], position {}",
-                pos.x(),
-                pos.z(),
-                placePos
-        );
-
-        return RetrogenResult.SUCCESS;
-    }
-
-    private static RetrogenResult checkChunkAreaSafe(
-            ServerLevel level,
-            ChunkPos center,
-            int radius
-    ) {
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                int chunkX = center.x() + dx;
-                int chunkZ = center.z() + dz;
-
-                if (!level.hasChunk(chunkX, chunkZ)) {
-                    return RetrogenResult.TRY_LATER;
-                }
-
-                ChunkAccess chunk = level.getChunk(chunkX, chunkZ);
-
-                RetoldChunkStructureData data =
-                        chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
-
-                if (data.isEditedByPlayer()) {
-                    Retold.LOGGER.info(
-                            "Skipping deferred structure near chunk [{}, {}] because chunk [{}, {}] is edited",
-                            center.x(),
-                            center.z(),
-                            chunkX,
-                            chunkZ
-                    );
-
-                    return RetrogenResult.PERMANENT_SKIP;
-                }
-            }
-        }
-
-        return RetrogenResult.SUCCESS;
-    }
-
-    private static BlockPos getSurfacePositionForChunk(
-            ServerLevel level,
-            ChunkPos pos
-    ) {
-        int x = pos.x() * 16 + 8;
-        int z = pos.z() * 16 + 8;
-        int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
-
-        return new BlockPos(x, y, z);
-    }
-
-    private static boolean runPlaceStructureCommand(
-            ServerLevel level,
-            String structureId,
-            BlockPos pos
-    ) {
-        MinecraftServer server = level.getServer();
-
-        CommandSourceStack source = server
-                .createCommandSourceStack()
-                .withLevel(level)
-                .withPosition(Vec3.atCenterOf(pos))
-                .withSuppressedOutput();
-
-        String command = "place structure "
-                + structureId
-                + " "
-                + pos.getX()
-                + " "
-                + pos.getY()
-                + " "
-                + pos.getZ();
-
-        try {
-            ParseResults<CommandSourceStack> parsed =
-                    server.getCommands().getDispatcher().parse(command, source);
-
-            server.getCommands().performCommand(parsed, command);
-
-            return true;
-        } catch (Exception exception) {
-            Retold.LOGGER.error(
-                    "Exception while running delayed structure command: {}",
-                    command,
-                    exception
-            );
-
-            return false;
-        }
-    }
-
     public static void enqueueDeferredChunksAroundPlayers(ServerLevel level) {
         for (ServerPlayer player : level.players()) {
             ChunkPos playerChunk = player.chunkPosition();
@@ -333,6 +115,221 @@ public final class RetoldDelayedStructureRetrogen {
                 }
             }
         }
+    }
+
+    private static void enqueue(ChunkPos pos) {
+        long key = pos.getWorldPosition().asLong();
+
+        if (QUEUED.add(key)) {
+            QUEUE.add(pos);
+        }
+    }
+
+    private static void processChunk(ServerLevel level, ChunkPos pos) {
+        if (!level.hasChunk(pos.x(), pos.z())) {
+            return;
+        }
+
+        ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
+
+        RetoldChunkStructureData data =
+                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+        if (!data.hasAnyDeferredStructures()) {
+            return;
+        }
+
+        RetoldChunkStructureData newData = data;
+
+        if (data.isEditedByPlayer()) {
+            for (String structureId : Set.copyOf(data.deferredStructures())) {
+                newData = newData.withChecked(structureId);
+                newData = newData.withoutDeferred(structureId);
+
+                Retold.LOGGER.info(
+                        "Skipped deferred structure {} at chunk [{}, {}] because chunk is edited",
+                        structureId,
+                        pos.x(),
+                        pos.z()
+                );
+            }
+
+            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
+            return;
+        }
+
+        for (String structureId : Set.copyOf(data.deferredStructures())) {
+            if (newData.hasChecked(structureId)) {
+                newData = newData.withoutDeferred(structureId);
+                continue;
+            }
+
+            RetrogenResult result = tryRetrogenStructure(level, pos, structureId);
+
+            if (result == RetrogenResult.SUCCESS || result == RetrogenResult.PERMANENT_SKIP) {
+                RetoldDelayedStructureMobBlocker.forgetDeferredStructure(structureId, pos);
+
+                newData = newData.withChecked(structureId);
+                newData = newData.withoutDeferred(structureId);
+            }
+        }
+
+        if (newData != data) {
+            chunk.setData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get(), newData);
+        }
+    }
+
+    private static RetrogenResult tryRetrogenStructure(
+            ServerLevel level,
+            ChunkPos pos,
+            String structureId
+    ) {
+        ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
+
+        RetoldChunkStructureData chunkData =
+                chunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+        if (!chunkData.hasDeferred(structureId)) {
+            return RetrogenResult.PERMANENT_SKIP;
+        }
+
+        StructureManager structureManager = level.structureManager();
+
+        List<StructureStart> starts = structureManager.startsForStructure(
+                pos,
+                structure -> {
+                    if (!RetoldDelayedStructureHelper.isDelayedStructure(
+                            level.registryAccess(),
+                            structure
+                    )) {
+                        return false;
+                    }
+
+                    String id = RetoldDelayedStructureHelper.getStructureId(
+                            level.registryAccess(),
+                            structure
+                    );
+
+                    return structureId.equals(id);
+                }
+        );
+
+        if (starts.isEmpty()) {
+            Retold.LOGGER.warn(
+                    "No vanilla StructureStart found for deferred {} in chunk [{}, {}]",
+                    structureId,
+                    pos.x(),
+                    pos.z()
+            );
+
+            return RetrogenResult.TRY_LATER;
+        }
+
+        boolean placedAny = false;
+
+        for (StructureStart start : starts) {
+            if (!start.isValid()) {
+                continue;
+            }
+
+            RetrogenResult safety = checkWholeStructureAreaSafe(level, start);
+
+            if (safety != RetrogenResult.SUCCESS) {
+                return safety;
+            }
+
+            placeVanillaStructureStartInChunk(level, start, pos);
+            placedAny = true;
+        }
+
+        if (!placedAny) {
+            return RetrogenResult.TRY_LATER;
+        }
+
+        Retold.LOGGER.info(
+                "Vanilla-retrogen placed {} in chunk [{}, {}]",
+                structureId,
+                pos.x(),
+                pos.z()
+        );
+
+        return RetrogenResult.SUCCESS;
+    }
+
+    private static void placeVanillaStructureStartInChunk(
+            ServerLevel level,
+            StructureStart start,
+            ChunkPos chunkPos
+    ) {
+        BoundingBox writableArea = getChunkWritableArea(level, chunkPos);
+
+        long chunkLong =
+                ((long) chunkPos.x() & 4294967295L)
+                        | (((long) chunkPos.z() & 4294967295L) << 32);
+
+        long randomSeed = level.getSeed() ^ chunkLong;
+
+        start.placeInChunk(
+                level,
+                level.structureManager(),
+                level.getChunkSource().getGenerator(),
+                RandomSource.create(randomSeed),
+                writableArea,
+                chunkPos
+        );
+    }
+
+    private static BoundingBox getChunkWritableArea(
+            ServerLevel level,
+            ChunkPos chunkPos
+    ) {
+        int minX = chunkPos.getMinBlockX();
+        int minZ = chunkPos.getMinBlockZ();
+        int maxX = chunkPos.getMaxBlockX();
+        int maxZ = chunkPos.getMaxBlockZ();
+
+        return new BoundingBox(
+                minX,
+                level.getMinY(),
+                minZ,
+                maxX,
+                level.getMaxY() - 1,
+                maxZ
+        );
+    }
+
+    private static RetrogenResult checkWholeStructureAreaSafe(
+            ServerLevel level,
+            StructureStart start
+    ) {
+        BoundingBox box = start.getBoundingBox();
+
+        Iterable<ChunkPos> touchedChunks =
+                box.intersectingChunks()::iterator;
+
+        for (ChunkPos touchedChunkPos : touchedChunks) {
+            if (!level.hasChunk(touchedChunkPos.x(), touchedChunkPos.z())) {
+                return RetrogenResult.TRY_LATER;
+            }
+
+            ChunkAccess touchedChunk =
+                    level.getChunk(touchedChunkPos.x(), touchedChunkPos.z());
+
+            RetoldChunkStructureData data =
+                    touchedChunk.getData(RetoldAttachments.CHUNK_STRUCTURE_DATA.get());
+
+            if (data.isEditedByPlayer()) {
+                Retold.LOGGER.info(
+                        "Skipping vanilla retrogen because touched chunk [{}, {}] is edited",
+                        touchedChunkPos.x(),
+                        touchedChunkPos.z()
+                );
+
+                return RetrogenResult.PERMANENT_SKIP;
+            }
+        }
+
+        return RetrogenResult.SUCCESS;
     }
 
     private enum RetrogenResult {

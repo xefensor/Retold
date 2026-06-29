@@ -43,6 +43,7 @@ import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureMobBlocker;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(Retold.MODID)
@@ -92,6 +93,7 @@ public class Retold {
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
         NeoForge.EVENT_BUS.register(RetoldChunkEditEvents.class);
         NeoForge.EVENT_BUS.register(RetoldDelayedStructureRetrogen.class);
+        NeoForge.EVENT_BUS.register(RetoldDelayedStructureMobBlocker.class);
     }
 
     private void commonSetup(FMLCommonSetupEvent event) {

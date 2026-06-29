@@ -11,7 +11,7 @@
     "MerchantMenuAccessor",
     "MerchantMenuTeachingSlotMixin",
     "VillagerInvoker",
-    "DelayedStructureGenerationMixin"
+    "DelayedStructurePlacementMixin"
   ],
   "client": [
     "MerchantScreenMixin"
