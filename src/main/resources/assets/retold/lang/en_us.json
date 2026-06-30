@@ -1,13 +1,2 @@
 {
-  "itemGroup.retold": "Example Mod Tab",
-  "block.retold.example_block": "Example Block",
-  "item.retold.example_item": "Example Item",
-
-  "retold.configuration.title": "Retold Configs",
-  "retold.configuration.section.retold.common.toml": "Retold Configs",
-  "retold.configuration.section.retold.common.toml.title": "Retold Configs",
-  "retold.configuration.items": "Item List",
-  "retold.configuration.logDirtBlock": "Log Dirt Block",
-  "retold.configuration.magicNumberIntroduction": "Magic Number Text",
-  "retold.configuration.magicNumber": "Magic Number"
 }
