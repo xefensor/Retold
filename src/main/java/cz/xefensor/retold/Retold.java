@@ -9,6 +9,9 @@ import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.worldgen.delayed.*;
+import cz.xefensor.retold.aender.RetoldAenderAttachments;
+import cz.xefensor.retold.aender.RetoldAenderStabilizerEvents;
+import cz.xefensor.retold.registry.RetoldBlocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -23,6 +26,8 @@ public final class Retold {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public Retold(IEventBus modEventBus) {
+        RetoldBlocks.register(modEventBus);
+        RetoldAenderAttachments.register(modEventBus);
         RetoldWorldgenRegistries.register(modEventBus);
         RetoldAttachments.register(modEventBus);
 
@@ -48,6 +53,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldClientChunkTracker.class);
         NeoForge.EVENT_BUS.register(RetoldRetrogenDropBlocker.class);
         NeoForge.EVENT_BUS.register(RetoldPatrolStageEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldAenderStabilizerEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
