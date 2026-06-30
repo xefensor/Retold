@@ -23,81 +23,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(StructureStart.class)
 public abstract class DelayedStructurePlacementMixin {
 
-    @Inject(
-            method = "placeInChunk",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void retold$cancelDelayedStructurePlacementBeforeRequiredStage(
-            WorldGenLevel worldGenLevel,
-            StructureManager structureManager,
-            ChunkGenerator chunkGenerator,
-            RandomSource random,
-            BoundingBox boundingBox,
-            ChunkPos chunkPos,
-            CallbackInfo ci
-    ) {
-        ServerLevel level = worldGenLevel.getLevel();
-
-        if (level.dimension() != Level.OVERWORLD) {
-            return;
-        }
-
-        StructureStart start = (StructureStart) (Object) this;
-        Structure structure = start.getStructure();
-
-        if (!RetoldDelayedStructureHelper.isDelayedStructure(level.registryAccess(), structure)) {
-            return;
-        }
-
-        String structureId =
-                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
-
-        if (RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
-            return;
-        }
-
-        retold$markChunkDeferred(worldGenLevel, chunkPos, structureId);
-
-        ci.cancel();
-    }
-
-    @Inject(
-            method = "placeInChunk",
-            at = @At("TAIL")
-    )
-    private void retold$markDelayedStructurePlacedNormally(
-            WorldGenLevel worldGenLevel,
-            StructureManager structureManager,
-            ChunkGenerator chunkGenerator,
-            RandomSource random,
-            BoundingBox boundingBox,
-            ChunkPos chunkPos,
-            CallbackInfo ci
-    ) {
-        ServerLevel level = worldGenLevel.getLevel();
-
-        if (level.dimension() != Level.OVERWORLD) {
-            return;
-        }
-
-        StructureStart start = (StructureStart) (Object) this;
-        Structure structure = start.getStructure();
-
-        if (!RetoldDelayedStructureHelper.isDelayedStructure(level.registryAccess(), structure)) {
-            return;
-        }
-
-        String structureId =
-                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
-
-        if (!RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
-            return;
-        }
-
-        retold$markChunkChecked(worldGenLevel, chunkPos, structureId);
-    }
-
     @Unique
     private static void retold$markChunkDeferred(
             WorldGenLevel worldGenLevel,
@@ -181,5 +106,80 @@ public abstract class DelayedStructurePlacementMixin {
                     chunkPos.z()
             );
         }
+    }
+
+    @Inject(
+            method = "placeInChunk",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void retold$cancelDelayedStructurePlacementBeforeRequiredStage(
+            WorldGenLevel worldGenLevel,
+            StructureManager structureManager,
+            ChunkGenerator chunkGenerator,
+            RandomSource random,
+            BoundingBox boundingBox,
+            ChunkPos chunkPos,
+            CallbackInfo ci
+    ) {
+        ServerLevel level = worldGenLevel.getLevel();
+
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+
+        StructureStart start = (StructureStart) (Object) this;
+        Structure structure = start.getStructure();
+
+        if (!RetoldDelayedStructureHelper.isDelayedStructure(level.registryAccess(), structure)) {
+            return;
+        }
+
+        String structureId =
+                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
+
+        if (RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
+            return;
+        }
+
+        retold$markChunkDeferred(worldGenLevel, chunkPos, structureId);
+
+        ci.cancel();
+    }
+
+    @Inject(
+            method = "placeInChunk",
+            at = @At("TAIL")
+    )
+    private void retold$markDelayedStructurePlacedNormally(
+            WorldGenLevel worldGenLevel,
+            StructureManager structureManager,
+            ChunkGenerator chunkGenerator,
+            RandomSource random,
+            BoundingBox boundingBox,
+            ChunkPos chunkPos,
+            CallbackInfo ci
+    ) {
+        ServerLevel level = worldGenLevel.getLevel();
+
+        if (level.dimension() != Level.OVERWORLD) {
+            return;
+        }
+
+        StructureStart start = (StructureStart) (Object) this;
+        Structure structure = start.getStructure();
+
+        if (!RetoldDelayedStructureHelper.isDelayedStructure(level.registryAccess(), structure)) {
+            return;
+        }
+
+        String structureId =
+                RetoldDelayedStructureHelper.getStructureId(level.registryAccess(), structure);
+
+        if (!RetoldStageRuntime.isAtLeast(RetoldDelayedStructureIds.requiredStage(structureId))) {
+            return;
+        }
+
+        retold$markChunkChecked(worldGenLevel, chunkPos, structureId);
     }
 }

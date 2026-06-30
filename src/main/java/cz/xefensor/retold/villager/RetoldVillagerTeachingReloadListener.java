@@ -26,6 +26,10 @@ public final class RetoldVillagerTeachingReloadListener
         );
     }
 
+    public static Optional<RetoldVillagerTeachingEntry> get(Identifier professionId) {
+        return Optional.ofNullable(entriesByProfession.get(professionId));
+    }
+
     @Override
     protected void apply(
             Map<Identifier, RetoldVillagerTeachingEntry> loadedEntries,
@@ -41,9 +45,5 @@ public final class RetoldVillagerTeachingReloadListener
         entriesByProfession = Map.copyOf(byProfession);
 
         Retold.LOGGER.info("Loaded {} villager teaching entries", entriesByProfession.size());
-    }
-
-    public static Optional<RetoldVillagerTeachingEntry> get(Identifier professionId) {
-        return Optional.ofNullable(entriesByProfession.get(professionId));
     }
 }

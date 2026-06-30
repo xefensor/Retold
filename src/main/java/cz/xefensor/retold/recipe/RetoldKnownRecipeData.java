@@ -11,13 +11,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 public class RetoldKnownRecipeData extends SavedData {
     public static final SavedDataType<RetoldKnownRecipeData> TYPE = new SavedDataType<>(
@@ -40,6 +34,17 @@ public class RetoldKnownRecipeData extends SavedData {
             UUID playerId = UUID.fromString(entry.getKey());
             knownRecipesByPlayer.put(playerId, new HashSet<>(entry.getValue()));
         }
+    }
+
+    public static ResourceKey<Recipe<?>> recipeKeyFromString(String id) {
+        return ResourceKey.create(
+                Registries.RECIPE,
+                Identifier.parse(id)
+        );
+    }
+
+    public static RetoldKnownRecipeData get(ServerLevel level) {
+        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
     }
 
     private Map<String, List<String>> toSerializedMap() {
@@ -78,16 +83,5 @@ public class RetoldKnownRecipeData extends SavedData {
         }
 
         return added;
-    }
-
-    public static ResourceKey<Recipe<?>> recipeKeyFromString(String id) {
-        return ResourceKey.create(
-                Registries.RECIPE,
-                Identifier.parse(id)
-        );
-    }
-
-    public static RetoldKnownRecipeData get(ServerLevel level) {
-        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
     }
 }

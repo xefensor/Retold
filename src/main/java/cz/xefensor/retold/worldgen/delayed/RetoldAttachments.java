@@ -9,12 +9,8 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import java.util.function.Supplier;
 
 public final class RetoldAttachments {
-    private RetoldAttachments() {
-    }
-
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Retold.MODID);
-
     public static final Supplier<AttachmentType<RetoldChunkStructureData>> CHUNK_STRUCTURE_DATA =
             ATTACHMENT_TYPES.register(
                     "chunk_structure_data",
@@ -23,6 +19,9 @@ public final class RetoldAttachments {
                             .serialize(RetoldChunkStructureData.CODEC.fieldOf("data"))
                             .build()
             );
+
+    private RetoldAttachments() {
+    }
 
     public static void register(IEventBus modEventBus) {
         ATTACHMENT_TYPES.register(modEventBus);

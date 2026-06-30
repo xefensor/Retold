@@ -1,45 +1,31 @@
 package cz.xefensor.retold.villager;
 
 import cz.xefensor.retold.mixin.MerchantMenuAccessor;
+import cz.xefensor.retold.mixin.VillagerInvoker;
 import cz.xefensor.retold.network.RetoldTeachingPreviewPayload;
 import cz.xefensor.retold.recipe.RetoldKnownRecipeData;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.recipe.RetoldRecipeResultHelper;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.trading.Merchant;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.minecraft.world.entity.npc.villager.VillagerData;
-import cz.xefensor.retold.mixin.VillagerInvoker;
-import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
-import cz.xefensor.retold.recipe.RetoldRecipeResultHelper;
-import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.Optional;
 
 public final class RetoldVillagerTeaching {
     private RetoldVillagerTeaching() {
-    }
-
-    private record TeachingPreview(
-            boolean active,
-            String buttonLabel,
-            String status,
-            String cost,
-            String tooltip,
-            RecipeHolder<?> recipe,
-            int emeraldCost,
-            Villager villager,
-            int villagerXpReward
-    ) {
     }
 
     public static void tryTeachHeldItemRecipe(ServerPlayer player) {
@@ -407,5 +393,18 @@ public final class RetoldVillagerTeaching {
         ));
 
         merchantMenu.broadcastChanges();
+    }
+
+    private record TeachingPreview(
+            boolean active,
+            String buttonLabel,
+            String status,
+            String cost,
+            String tooltip,
+            RecipeHolder<?> recipe,
+            int emeraldCost,
+            Villager villager,
+            int villagerXpReward
+    ) {
     }
 }

@@ -1,14 +1,13 @@
 package cz.xefensor.retold.stage;
 
-import net.minecraft.network.chat.Component;
+import cz.xefensor.retold.network.RetoldStageSyncPayload;
+import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureRetrogen;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import cz.xefensor.retold.network.RetoldStageSyncPayload;
-import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureRetrogen;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldStageManager {
     private RetoldStageManager() {

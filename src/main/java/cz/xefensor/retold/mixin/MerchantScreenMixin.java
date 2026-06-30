@@ -58,7 +58,7 @@ public abstract class MerchantScreenMixin extends AbstractContainerScreen<Mercha
         this.retold$panelWidget.active = false;
 
         this.retold$titleLabel = new StringWidget(
-                this.leftPos + RetoldTeachingGui.PANEL_X  + 6,
+                this.leftPos + RetoldTeachingGui.PANEL_X + 6,
                 this.topPos + RetoldTeachingGui.TITLE_Y,
                 RetoldTeachingGui.PANEL_WIDTH,
                 20,

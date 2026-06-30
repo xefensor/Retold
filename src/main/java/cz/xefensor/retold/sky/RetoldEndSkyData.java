@@ -38,6 +38,14 @@ public class RetoldEndSkyData extends SavedData {
         setDirty();
     }
 
+    public static RetoldEndSkyData get(ServerLevel level) {
+        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
+    }
+
+    private static long generateSeed() {
+        return ThreadLocalRandom.current().nextLong();
+    }
+
     public long getSeed() {
         return seed;
     }
@@ -45,13 +53,5 @@ public class RetoldEndSkyData extends SavedData {
     public void randomizeSeed() {
         this.seed = generateSeed();
         setDirty();
-    }
-
-    public static RetoldEndSkyData get(ServerLevel level) {
-        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
-    }
-
-    private static long generateSeed() {
-        return ThreadLocalRandom.current().nextLong();
     }
 }

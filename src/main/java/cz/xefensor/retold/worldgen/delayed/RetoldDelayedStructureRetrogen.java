@@ -4,7 +4,6 @@ import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -16,14 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 public final class RetoldDelayedStructureRetrogen {
     private static final Queue<ChunkPos> QUEUE = new ArrayDeque<>();
@@ -436,7 +428,7 @@ public final class RetoldDelayedStructureRetrogen {
             String structureId,
             StructureStart start
     ) {
-        return structureId + "|" + start.getBoundingBox().toString();
+        return structureId + "|" + start.getBoundingBox();
     }
 
     private static List<StructureStart> findVanillaStartsForStructure(

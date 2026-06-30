@@ -20,7 +20,7 @@ public final class RetoldPlayerSyncEvents {
             return;
         }
 
-        ServerLevel level = (ServerLevel) serverPlayer.level();
+        ServerLevel level = serverPlayer.level();
 
         RetoldWorldData worldData = RetoldWorldData.get(level);
         RetoldEndSkyData endSkyData = RetoldEndSkyData.get(level);

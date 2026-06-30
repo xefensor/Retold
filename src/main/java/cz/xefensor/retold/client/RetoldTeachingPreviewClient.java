@@ -1,15 +1,14 @@
 package cz.xefensor.retold.client;
 
 public final class RetoldTeachingPreviewClient {
-    private RetoldTeachingPreviewClient() {
-    }
-
     private static boolean active = false;
     private static String buttonLabel = "Learn";
     private static String status = "Status: Place item into slot";
     private static String cost = "Cost: -";
     private static String tooltip = "Place an item into the teaching slot.";
     private static Runnable refreshCallback;
+    private RetoldTeachingPreviewClient() {
+    }
 
     public static void set(
             boolean newActive,

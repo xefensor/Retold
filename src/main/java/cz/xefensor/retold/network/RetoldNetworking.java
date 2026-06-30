@@ -1,14 +1,12 @@
 package cz.xefensor.retold.network;
 
+import cz.xefensor.retold.client.RetoldTeachingPreviewClient;
 import cz.xefensor.retold.client.stage.RetoldClientStage;
 import cz.xefensor.retold.stage.RetoldWorldStage;
+import cz.xefensor.retold.villager.RetoldVillagerTeaching;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import cz.xefensor.retold.villager.RetoldVillagerTeaching;
-import net.minecraft.server.level.ServerPlayer;
-import cz.xefensor.retold.client.RetoldTeachingPreviewClient;
-import cz.xefensor.retold.villager.RetoldVillagerTeaching;
-import net.minecraft.server.level.ServerPlayer;
 
 public final class RetoldNetworking {
     private RetoldNetworking() {

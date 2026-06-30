@@ -29,6 +29,10 @@ public class RetoldWorldData extends SavedData {
         this.stage = RetoldWorldStage.getStageFromId(stageId);
     }
 
+    public static RetoldWorldData get(ServerLevel level) {
+        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
+    }
+
     public RetoldWorldStage getStage() {
         return stage;
     }
@@ -38,9 +42,5 @@ public class RetoldWorldData extends SavedData {
             this.stage = stage;
             setDirty();
         }
-    }
-
-    public static RetoldWorldData get(ServerLevel level) {
-        return level.getServer().getDataStorage().computeIfAbsent(TYPE);
     }
 }

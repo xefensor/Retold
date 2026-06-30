@@ -19,13 +19,13 @@ import java.util.Optional;
 import java.util.Set;
 
 public final class RetoldRecipeBookEvents {
-    private RetoldRecipeBookEvents() {
-    }
-
     private static final Set<RecipeType<?>> OUTPUT_ONLY_RECIPE_TYPES = Set.of(
             RecipeType.STONECUTTING,
             RecipeType.SMITHING
     );
+
+    private RetoldRecipeBookEvents() {
+    }
 
     @SubscribeEvent
     public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {

@@ -5,16 +5,15 @@ import cz.xefensor.retold.stage.RetoldWorldStage;
 import java.util.List;
 
 public final class RetoldDelayedStructureIds {
-    private RetoldDelayedStructureIds() {
-    }
-
     public static final String WOODLAND_MANSION = "minecraft:mansion";
     public static final String PILLAGER_OUTPOST = "minecraft:pillager_outpost";
-
     public static final List<String> ALL = List.of(
             WOODLAND_MANSION,
             PILLAGER_OUTPOST
     );
+
+    private RetoldDelayedStructureIds() {
+    }
 
     public static RetoldWorldStage requiredStage(String structureId) {
         if (PILLAGER_OUTPOST.equals(structureId)) {

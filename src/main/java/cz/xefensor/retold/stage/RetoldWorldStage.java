@@ -11,15 +11,15 @@ public enum RetoldWorldStage {
         this.id = id;
     }
 
-    public int getId() {
-        return id;
-    }
-
     public static RetoldWorldStage getStageFromId(int id) {
         return switch (id) {
             case 2 -> STAGE_2;
             case 3 -> STAGE_3;
             default -> STAGE_1;
         };
+    }
+
+    public int getId() {
+        return id;
     }
 }
