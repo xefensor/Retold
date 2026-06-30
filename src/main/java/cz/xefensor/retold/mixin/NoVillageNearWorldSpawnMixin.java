@@ -25,18 +25,6 @@ public abstract class NoVillageNearWorldSpawnMixin {
     private static final long RETOLD_NO_VILLAGE_RADIUS_SQR =
             (long) RETOLD_NO_VILLAGE_RADIUS * RETOLD_NO_VILLAGE_RADIUS;
 
-    private static boolean retold$isChunkNearWorldSpawn(ChunkPos chunkPos) {
-        BlockPos spawn = RetoldWorldSpawnCache.getOverworldSpawn();
-
-        int chunkCenterX = (chunkPos.x() << 4) + 8;
-        int chunkCenterZ = (chunkPos.z() << 4) + 8;
-
-        long dx = chunkCenterX - spawn.getX();
-        long dz = chunkCenterZ - spawn.getZ();
-
-        return dx * dx + dz * dz <= RETOLD_NO_VILLAGE_RADIUS_SQR;
-    }
-
     @Inject(
             method = "tryGenerateStructure",
             at = @At("HEAD"),
@@ -52,7 +40,7 @@ public abstract class NoVillageNearWorldSpawnMixin {
             ChunkAccess chunk,
             ChunkPos chunkPos,
             SectionPos sectionPos,
-            ResourceKey<Level> dimension,
+            ResourceKey dimension,
             CallbackInfoReturnable<Boolean> cir
     ) {
         if (dimension != Level.OVERWORLD) {
@@ -63,8 +51,24 @@ public abstract class NoVillageNearWorldSpawnMixin {
             return;
         }
 
+        if (!RetoldWorldSpawnCache.isInitialized()) {
+            return;
+        }
+
         if (retold$isChunkNearWorldSpawn(chunkPos)) {
             cir.setReturnValue(false);
         }
+    }
+
+    private static boolean retold$isChunkNearWorldSpawn(ChunkPos chunkPos) {
+        BlockPos spawn = RetoldWorldSpawnCache.getOverworldSpawn();
+
+        int chunkCenterX = (chunkPos.x() << 4) + 8;
+        int chunkCenterZ = (chunkPos.z() << 4) + 8;
+
+        long dx = chunkCenterX - spawn.getX();
+        long dz = chunkCenterZ - spawn.getZ();
+
+        return dx * dx + dz * dz <= RETOLD_NO_VILLAGE_RADIUS_SQR;
     }
 }

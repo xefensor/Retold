@@ -11,12 +11,16 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public final class RetoldWorldSpawnCache {
     private static volatile BlockPos overworldSpawn = BlockPos.ZERO;
+    private static volatile boolean initialized = false;
 
     private RetoldWorldSpawnCache() {
     }
 
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
+        initialized = false;
+        overworldSpawn = BlockPos.ZERO;
+
         update(event.getServer());
     }
 
@@ -32,6 +36,14 @@ public final class RetoldWorldSpawnCache {
         }
     }
 
+    public static boolean isInitialized() {
+        return initialized;
+    }
+
+    public static BlockPos getOverworldSpawn() {
+        return overworldSpawn;
+    }
+
     private static void update(MinecraftServer server) {
         ServerLevel overworld = server.getLevel(Level.OVERWORLD);
 
@@ -41,12 +53,11 @@ public final class RetoldWorldSpawnCache {
 
         var spawnData = overworld.getLevelData().getRespawnData();
 
-        if (spawnData.dimension() == Level.OVERWORLD) {
-            overworldSpawn = spawnData.pos();
+        if (spawnData.dimension() != Level.OVERWORLD) {
+            return;
         }
-    }
 
-    public static BlockPos getOverworldSpawn() {
-        return overworldSpawn;
+        overworldSpawn = spawnData.pos();
+        initialized = true;
     }
 }
