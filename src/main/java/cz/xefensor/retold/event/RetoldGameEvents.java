@@ -72,7 +72,7 @@ public final class RetoldGameEvents {
             entity.clearFire();
 
             if (entity instanceof PathfinderMob pathfinderMob) {
-                RetoldUndeadSunFear.removeSunFearGoals(pathfinderMob);
+                RetoldUndeadSunFear.removeSunFearGoalsOnce(pathfinderMob);
             }
 
             return;
