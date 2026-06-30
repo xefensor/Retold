@@ -12,6 +12,7 @@ import cz.xefensor.retold.worldgen.delayed.*;
 import cz.xefensor.retold.aender.RetoldAenderAttachments;
 import cz.xefensor.retold.aender.RetoldAenderStabilizerEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.aender.RetoldAenderUnstableChunkEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -54,6 +55,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldRetrogenDropBlocker.class);
         NeoForge.EVENT_BUS.register(RetoldPatrolStageEvents.class);
         NeoForge.EVENT_BUS.register(RetoldAenderStabilizerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldAenderUnstableChunkEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }

@@ -51,7 +51,7 @@ public final class RetoldAenderChunkStability {
         chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
 
         Retold.LOGGER.debug(
-                "Aender chunk [{}, {}] stabilized count changed to {}",
+                "Aender chunk [{}, {}] stabilizer count changed to {}",
                 chunk.getPos().x(),
                 chunk.getPos().z(),
                 newData.stabilizerCount()
@@ -80,10 +80,63 @@ public final class RetoldAenderChunkStability {
         chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
 
         Retold.LOGGER.debug(
-                "Aender chunk [{}, {}] stabilized count changed to {}",
+                "Aender chunk [{}, {}] stabilizer count changed to {}",
                 chunk.getPos().x(),
                 chunk.getPos().z(),
                 newData.stabilizerCount()
         );
+    }
+
+    public static void scheduleRegenerationOnNextLoad(
+            ServerLevel level,
+            ChunkAccess chunk,
+            long salt
+    ) {
+        if (!isAender(level)) {
+            return;
+        }
+
+        RetoldAenderChunkData oldData =
+                chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
+
+        if (oldData.isStabilized()) {
+            return;
+        }
+
+        RetoldAenderChunkData newData =
+                oldData.withRegenerationScheduled(salt);
+
+        if (newData == oldData) {
+            return;
+        }
+
+        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
+
+        Retold.LOGGER.debug(
+                "Scheduled unstable Aender chunk [{}, {}] for regeneration",
+                chunk.getPos().x(),
+                chunk.getPos().z()
+        );
+    }
+
+    public static void markRegenerationFinished(
+            ServerLevel level,
+            ChunkAccess chunk
+    ) {
+        if (!isAender(level)) {
+            return;
+        }
+
+        RetoldAenderChunkData oldData =
+                chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
+
+        RetoldAenderChunkData newData =
+                oldData.withRegenerationFinished();
+
+        if (newData == oldData) {
+            return;
+        }
+
+        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
     }
 }
