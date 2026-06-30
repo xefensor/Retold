@@ -197,6 +197,12 @@ public final class RetoldRecipeBookEvents {
             return;
         }
 
-        player.getRecipeBook().addRecipes(List.of(recipe), player);
+        RetoldRecipeUnlockContext.beginInternalUnlock();
+
+        try {
+            player.getRecipeBook().addRecipes(List.of(recipe), player);
+        } finally {
+            RetoldRecipeUnlockContext.endInternalUnlock();
+        }
     }
 }

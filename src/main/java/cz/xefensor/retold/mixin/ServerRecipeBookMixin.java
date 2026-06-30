@@ -1,6 +1,7 @@
 package cz.xefensor.retold.mixin;
 
 import cz.xefensor.retold.recipe.RetoldKnownRecipeData;
+import cz.xefensor.retold.recipe.RetoldRecipeUnlockContext;
 import net.minecraft.network.protocol.game.ClientboundRecipeBookAddPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -34,8 +35,12 @@ public abstract class ServerRecipeBookMixin {
     @Shadow
     public abstract void removeHighlight(ResourceKey<Recipe<?>> id);
 
-    @Inject(method = "addRecipes", at = @At("HEAD"), cancellable = true)
-    private void retold$onlyUnlockActuallyCraftedRecipes(
+    @Inject(
+            method = "addRecipes",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void retold$onlyUnlockActuallyKnownRecipes(
             Collection<RecipeHolder<?>> recipes,
             ServerPlayer player,
             CallbackInfoReturnable<Integer> cir
@@ -46,6 +51,7 @@ public abstract class ServerRecipeBookMixin {
         }
 
         RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
+        boolean internalUnlock = RetoldRecipeUnlockContext.isInternalUnlock();
 
         List<ClientboundRecipeBookAddPacket.Entry> entries = new ArrayList<>();
         int added = 0;
@@ -53,7 +59,7 @@ public abstract class ServerRecipeBookMixin {
         for (RecipeHolder<?> recipe : recipes) {
             ResourceKey<Recipe<?>> recipeId = recipe.id();
 
-            if (!data.hasKnown(player, recipeId)) {
+            if (!internalUnlock && !data.hasKnown(player, recipeId)) {
                 continue;
             }
 
@@ -63,13 +69,14 @@ public abstract class ServerRecipeBookMixin {
 
             add(recipeId);
             removeHighlight(recipeId);
+
             added++;
 
             displayResolver.displaysForRecipe(recipeId, display -> {
                 entries.add(new ClientboundRecipeBookAddPacket.Entry(
                         display,
-                        false, // notification
-                        false  // highlight
+                        false,
+                        false
                 ));
             });
         }
