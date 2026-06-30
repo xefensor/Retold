@@ -1,5 +1,6 @@
 package cz.xefensor.retold.stage;
 
+import cz.xefensor.retold.aender.RetoldAenderAccess;
 import cz.xefensor.retold.network.RetoldStageSyncPayload;
 import cz.xefensor.retold.worldgen.delayed.RetoldDelayedStructureRetrogen;
 import net.minecraft.server.MinecraftServer;
@@ -13,7 +14,10 @@ public final class RetoldStageManager {
     private RetoldStageManager() {
     }
 
-    public static boolean setStage(ServerLevel level, RetoldWorldStage newStage) {
+    public static boolean setStage(
+            ServerLevel level,
+            RetoldWorldStage newStage
+    ) {
         RetoldWorldData data = RetoldWorldData.get(level);
         RetoldWorldStage oldStage = data.getStage();
 
@@ -44,6 +48,11 @@ public final class RetoldStageManager {
     ) {
         if (newStage == RetoldWorldStage.STAGE_2) {
             playStage2TransitionSound(server);
+        }
+
+        if (oldStage != RetoldWorldStage.STAGE_3
+                && newStage == RetoldWorldStage.STAGE_3) {
+            RetoldAenderAccess.ejectPlayersFromVanillaEnd(server);
         }
     }
 

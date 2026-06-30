@@ -12,7 +12,8 @@
     "MerchantMenuTeachingSlotMixin",
     "VillagerInvoker",
     "DelayedStructurePlacementMixin",
-    "AbstractFurnaceBlockEntityMixin"
+    "AbstractFurnaceBlockEntityMixin",
+    "EndPortalBlockMixin"
   ],
   "client": [
     "MerchantScreenMixin"
