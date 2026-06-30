@@ -2,6 +2,7 @@ package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 import cz.xefensor.retold.network.RetoldStageSyncPayload;
+import cz.xefensor.retold.sky.RetoldEndSkyData;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,16 +21,18 @@ public final class RetoldPlayerSyncEvents {
         }
 
         ServerLevel level = (ServerLevel) serverPlayer.level();
-        RetoldWorldData data = RetoldWorldData.get(level);
+
+        RetoldWorldData worldData = RetoldWorldData.get(level);
+        RetoldEndSkyData endSkyData = RetoldEndSkyData.get(level);
 
         PacketDistributor.sendToPlayer(
                 serverPlayer,
-                new RetoldStageSyncPayload(data.getStage().getId())
+                new RetoldStageSyncPayload(worldData.getStage().getId())
         );
 
         PacketDistributor.sendToPlayer(
                 serverPlayer,
-                new RetoldEndSkySeedSyncPayload(data.getEndSkySeed())
+                new RetoldEndSkySeedSyncPayload(endSkyData.getSeed())
         );
     }
 }

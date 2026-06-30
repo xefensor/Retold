@@ -2,14 +2,18 @@ package cz.xefensor.retold.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.stage.RetoldStageManager;
+import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
+import cz.xefensor.retold.sky.RetoldEndSkyData;
+
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
+
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldCommands {
@@ -73,7 +77,7 @@ public final class RetoldCommands {
 
     private static int getEndSkySeed(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
-        long seed = RetoldWorldData.get(level).getEndSkySeed();
+        long seed = RetoldEndSkyData.get(level).getSeed();
 
         source.sendSuccess(
                 () -> Component.literal("Current Retold End sky seed: " + seed),
@@ -85,16 +89,18 @@ public final class RetoldCommands {
 
     private static int randomizeEndSkySeed(CommandSourceStack source) {
         ServerLevel level = source.getLevel();
-        RetoldWorldData data = RetoldWorldData.get(level);
 
-        data.randomizeEndSkySeed();
+        RetoldEndSkyData data = RetoldEndSkyData.get(level);
+        data.randomizeSeed();
+
+        long seed = data.getSeed();
 
         PacketDistributor.sendToAllPlayers(
-                new RetoldEndSkySeedSyncPayload(data.getEndSkySeed())
+                new RetoldEndSkySeedSyncPayload(seed)
         );
 
         source.sendSuccess(
-                () -> Component.literal("Randomized Retold End sky seed: " + data.getEndSkySeed()),
+                () -> Component.literal("Randomized Retold End sky seed: " + seed),
                 true
         );
 
