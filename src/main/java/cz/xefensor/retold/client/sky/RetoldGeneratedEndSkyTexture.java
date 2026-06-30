@@ -12,6 +12,7 @@ public final class RetoldGeneratedEndSkyTexture {
     private static final int SIZE = 128;
 
     private static DynamicTexture currentTexture;
+    private static Identifier currentTextureId;
 
     private RetoldGeneratedEndSkyTexture() {
     }
@@ -30,19 +31,20 @@ public final class RetoldGeneratedEndSkyTexture {
             }
         }
 
-        currentTexture = new DynamicTexture(
+        DynamicTexture texture = new DynamicTexture(
                 () -> "Retold generated End sky",
                 image
         );
 
-        currentTexture.upload();
-
         Identifier id = Identifier.fromNamespaceAndPath(
                 Retold.MODID,
-                "generated/end_sky"
+                "generated/end_sky_" + Long.toUnsignedString(seed)
         );
 
-        Minecraft.getInstance().getTextureManager().register(id, currentTexture);
+        Minecraft.getInstance().getTextureManager().register(id, texture);
+
+        currentTexture = texture;
+        currentTextureId = id;
 
         return id;
     }
@@ -51,10 +53,11 @@ public final class RetoldGeneratedEndSkyTexture {
         return currentTexture;
     }
 
+    public static Identifier getCurrentTextureId() {
+        return currentTextureId;
+    }
+
     private static int rgba(int r, int g, int b, int a) {
-        return (a << 24)
-                | (b << 16)
-                | (g << 8)
-                | r;
+        return (a << 24) | (b << 16) | (g << 8) | r;
     }
 }
