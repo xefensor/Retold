@@ -4,7 +4,7 @@ import cz.xefensor.retold.mixin.MerchantMenuAccessor;
 import cz.xefensor.retold.network.RetoldTeachingPreviewPayload;
 import cz.xefensor.retold.recipe.RetoldKnownRecipeData;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
-import net.minecraft.core.NonNullList;
+import cz.xefensor.retold.recipe.RetoldRecipeResultHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -14,18 +14,14 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.AbstractCookingRecipe;
-import net.minecraft.world.item.crafting.CraftingInput;
-import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
-import net.minecraft.world.item.crafting.SingleItemRecipe;
-import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.minecraft.world.item.trading.Merchant;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.world.entity.npc.villager.VillagerData;
 import cz.xefensor.retold.mixin.VillagerInvoker;
 import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
-import net.minecraft.world.entity.npc.villager.VillagerData;
+import cz.xefensor.retold.recipe.RetoldRecipeResultHelper;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.Optional;
 
@@ -263,6 +259,13 @@ public final class RetoldVillagerTeaching {
 
         MinecraftServer server = serverLevel.getServer();
 
+        Optional<RecipeHolder<?>> exactItemIdRecipe =
+                findConfiguredRecipeByShownItemId(server, shownItem, teachingEntry);
+
+        if (exactItemIdRecipe.isPresent()) {
+            return exactItemIdRecipe;
+        }
+
         for (RecipeHolder<?> recipe : server.getRecipeManager().getRecipes()) {
             Identifier recipeId = recipe.id().identifier();
 
@@ -270,13 +273,10 @@ public final class RetoldVillagerTeaching {
                 continue;
             }
 
-            ItemStack result = getRecipeResult(recipe);
-
-            if (result.isEmpty()) {
-                continue;
-            }
-
-            if (!ItemStack.isSameItemSameComponents(result, shownItem)) {
+            if (!RetoldRecipeResultHelper.hasSameResultWithoutCraftingGuess(
+                    recipe,
+                    shownItem
+            )) {
                 continue;
             }
 
@@ -286,21 +286,30 @@ public final class RetoldVillagerTeaching {
         return Optional.empty();
     }
 
-    private static ItemStack getRecipeResult(RecipeHolder<?> recipe) {
-        if (recipe.value() instanceof CraftingRecipe craftingRecipe) {
-            NonNullList<ItemStack> emptyGrid = NonNullList.withSize(9, ItemStack.EMPTY);
-            return craftingRecipe.assemble(CraftingInput.of(3, 3, emptyGrid));
+    private static Optional<RecipeHolder<?>> findConfiguredRecipeByShownItemId(
+            MinecraftServer server,
+            ItemStack shownItem,
+            RetoldVillagerTeachingEntry teachingEntry
+    ) {
+        Identifier shownItemId =
+                BuiltInRegistries.ITEM.getKey(shownItem.getItem());
+
+        for (RetoldVillagerTeachingEntry.TeachableRecipe teachableRecipe
+                : teachingEntry.recipes()) {
+            if (!teachableRecipe.id().equals(shownItemId)) {
+                continue;
+            }
+
+            for (RecipeHolder<?> recipe : server.getRecipeManager().getRecipes()) {
+                if (!recipe.id().identifier().equals(teachableRecipe.id())) {
+                    continue;
+                }
+
+                return Optional.of(recipe);
+            }
         }
 
-        if (recipe.value() instanceof AbstractCookingRecipe cookingRecipe) {
-            return cookingRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
-        }
-
-        if (recipe.value() instanceof SingleItemRecipe singleItemRecipe) {
-            return singleItemRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
-        }
-
-        return ItemStack.EMPTY;
+        return Optional.empty();
     }
 
     private static boolean hasEmeralds(ServerPlayer player, int amount) {

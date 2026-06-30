@@ -6,13 +6,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SingleItemRecipe;
-import net.minecraft.world.item.crafting.SingleRecipeInput;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
@@ -55,9 +52,6 @@ public final class RetoldRecipeBookEvents {
             return;
         }
 
-        // Fallback pro bloky, které nedávají 2x2 / 3x3 crafting grid.
-        // Typicky stonecutter / smithing apod. Tam NeoForge event nedává přesný RecipeInput,
-        // takže to hledáme podle výsledného itemu.
         markAndUnlockRecipesByResult(
                 serverPlayer,
                 event.getCrafting(),
@@ -140,34 +134,15 @@ public final class RetoldRecipeBookEvents {
                 continue;
             }
 
-            ItemStack recipeResult = getRecipeResult(recipe);
-
-            if (recipeResult.isEmpty()) {
-                continue;
-            }
-
-            if (!ItemStack.isSameItemSameComponents(recipeResult, craftedResult)) {
+            if (!RetoldRecipeResultHelper.hasSameResultWithoutCraftingGuess(
+                    recipe,
+                    craftedResult
+            )) {
                 continue;
             }
 
             markAndUnlockRecipe(player, recipe);
         }
-    }
-
-    private static ItemStack getRecipeResult(RecipeHolder<?> recipe) {
-        try {
-            if (recipe.value() instanceof AbstractCookingRecipe cookingRecipe) {
-                return cookingRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
-            }
-
-            if (recipe.value() instanceof SingleItemRecipe singleItemRecipe) {
-                return singleItemRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
-            }
-        } catch (Exception ignored) {
-            return ItemStack.EMPTY;
-        }
-
-        return ItemStack.EMPTY;
     }
 
     private static void markAndUnlockRecipe(
