@@ -69,7 +69,10 @@ public abstract class AbstractFurnaceBlockEntityMixin {
         }
 
         for (RecipeHolder<?> recipe : recipes) {
-            RetoldRecipeBookEvents.markKnownRecipe(player, recipe);
+            RetoldRecipeBookEvents.markKnownRecipeAndUnlockCookingSiblings(
+                    player,
+                    recipe
+            );
         }
     }
 }

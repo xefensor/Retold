@@ -123,12 +123,63 @@ public final class RetoldRecipeBookEvents {
         }
     }
 
-    private static void markAndUnlockRecipe(
+    public static void markKnownRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
+        data.markKnown(player, recipe.id());
+    }
+
+    public static void markKnownRecipeAndUnlockCookingSiblings(
             ServerPlayer player,
             RecipeHolder<?> recipe
     ) {
         markKnownRecipe(player, recipe);
+        markAndUnlockCookingSiblings(player, recipe);
+    }
+
+    private static void markAndUnlockRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        markAndUnlockRecipe(player, recipe, true);
+    }
+
+    private static void markAndUnlockRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe,
+            boolean unlockCookingSiblings
+    ) {
+        markKnownRecipe(player, recipe);
         unlockRecipeSilently(player, recipe);
+
+        if (unlockCookingSiblings) {
+            markAndUnlockCookingSiblings(player, recipe);
+        }
+    }
+
+    private static void markAndUnlockCookingSiblings(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        List<RecipeHolder<?>> siblings =
+                RetoldCookingRecipeSiblingHelper.findCookingSiblings(
+                        serverLevel.getServer(),
+                        recipe
+                );
+
+        for (RecipeHolder<?> sibling : siblings) {
+            markAndUnlockRecipe(player, sibling, false);
+        }
     }
 
     public static void markKnownAndUnlockRecipe(
@@ -142,18 +193,10 @@ public final class RetoldRecipeBookEvents {
             ServerPlayer player,
             RecipeHolder<?> recipe
     ) {
-        player.getRecipeBook().addRecipes(List.of(recipe), player);
-    }
-
-    public static void markKnownRecipe(
-            ServerPlayer player,
-            RecipeHolder<?> recipe
-    ) {
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
+        if (player.getRecipeBook().contains(recipe.id())) {
             return;
         }
 
-        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-        data.markKnown(player, recipe.id());
+        player.getRecipeBook().addRecipes(List.of(recipe), player);
     }
 }
