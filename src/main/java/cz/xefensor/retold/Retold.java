@@ -2,7 +2,13 @@ package cz.xefensor.retold;
 
 import com.mojang.logging.LogUtils;
 import cz.xefensor.retold.client.RetoldClientEvents;
-import cz.xefensor.retold.event.RetoldGameEvents;
+import cz.xefensor.retold.event.RetoldCommandEvents;
+import cz.xefensor.retold.event.RetoldEndProgressionEvents;
+import cz.xefensor.retold.event.RetoldEndermanEvents;
+import cz.xefensor.retold.event.RetoldGolemEvents;
+import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
+import cz.xefensor.retold.event.RetoldStageRuntimeEvents;
+import cz.xefensor.retold.event.RetoldUndeadEvents;
 import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
@@ -38,7 +44,13 @@ public final class Retold {
             RetoldClientEvents.register(modEventBus);
         }
 
-        NeoForge.EVENT_BUS.register(RetoldGameEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldCommandEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldStageRuntimeEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldUndeadEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldEndProgressionEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldGolemEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldEndermanEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldPlayerSyncEvents.class);
         NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
         NeoForge.EVENT_BUS.register(RetoldWorldSpawnCache.class);
 
