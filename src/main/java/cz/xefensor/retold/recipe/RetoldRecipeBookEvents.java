@@ -22,13 +22,6 @@ public final class RetoldRecipeBookEvents {
     private RetoldRecipeBookEvents() {
     }
 
-    private static final Set<RecipeType<?>> COOKING_RECIPE_TYPES = Set.of(
-            RecipeType.SMELTING,
-            RecipeType.BLASTING,
-            RecipeType.SMOKING,
-            RecipeType.CAMPFIRE_COOKING
-    );
-
     private static final Set<RecipeType<?>> OUTPUT_ONLY_RECIPE_TYPES = Set.of(
             RecipeType.STONECUTTING,
             RecipeType.SMITHING
@@ -56,21 +49,6 @@ public final class RetoldRecipeBookEvents {
                 serverPlayer,
                 event.getCrafting(),
                 OUTPUT_ONLY_RECIPE_TYPES
-        );
-    }
-
-    @SubscribeEvent
-    public static void onItemSmelted(PlayerEvent.ItemSmeltedEvent event) {
-        Player player = event.getEntity();
-
-        if (!(player instanceof ServerPlayer serverPlayer)) {
-            return;
-        }
-
-        markAndUnlockRecipesByResult(
-                serverPlayer,
-                event.getSmelting(),
-                COOKING_RECIPE_TYPES
         );
     }
 
@@ -149,13 +127,7 @@ public final class RetoldRecipeBookEvents {
             ServerPlayer player,
             RecipeHolder<?> recipe
     ) {
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-
-        data.markKnown(player, recipe.id());
+        markKnownRecipe(player, recipe);
         unlockRecipeSilently(player, recipe);
     }
 
@@ -171,5 +143,17 @@ public final class RetoldRecipeBookEvents {
             RecipeHolder<?> recipe
     ) {
         player.getRecipeBook().addRecipes(List.of(recipe), player);
+    }
+
+    public static void markKnownRecipe(
+            ServerPlayer player,
+            RecipeHolder<?> recipe
+    ) {
+        if (!(player.level() instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
+        data.markKnown(player, recipe.id());
     }
 }
