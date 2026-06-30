@@ -6,16 +6,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.minecraft.world.item.crafting.AbstractCookingRecipe;
 import net.minecraft.world.item.crafting.SingleItemRecipe;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,15 +38,6 @@ public final class RetoldRecipeBookEvents {
     );
 
     @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
-            return;
-        }
-
-        lockUnknownRecipes(serverPlayer);
-    }
-
-    @SubscribeEvent
     public static void onItemCrafted(PlayerEvent.ItemCraftedEvent event) {
         Player player = event.getEntity();
 
@@ -55,14 +45,13 @@ public final class RetoldRecipeBookEvents {
             return;
         }
 
-        Optional<RecipeHolder<CraftingRecipe>> recipe = findCraftingRecipe(
+        Optional<RecipeHolder<?>> recipe = findCraftingRecipe(
                 serverPlayer,
                 event.getInventory()
         );
 
         if (recipe.isPresent()) {
             markAndUnlockRecipe(serverPlayer, recipe.get());
-            lockUnknownRecipes(serverPlayer);
             return;
         }
 
@@ -74,8 +63,6 @@ public final class RetoldRecipeBookEvents {
                 event.getCrafting(),
                 OUTPUT_ONLY_RECIPE_TYPES
         );
-
-        lockUnknownRecipes(serverPlayer);
     }
 
     @SubscribeEvent
@@ -91,25 +78,9 @@ public final class RetoldRecipeBookEvents {
                 event.getSmelting(),
                 COOKING_RECIPE_TYPES
         );
-
-        lockUnknownRecipes(serverPlayer);
     }
 
-    @SubscribeEvent
-    public static void onPlayerTickPost(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
-            return;
-        }
-
-        // Safety cleanup. Vanilla recipe advancements can unlock recipes after inventory changes.
-        if (serverPlayer.tickCount % 40 != 0) {
-            return;
-        }
-
-        lockUnknownRecipes(serverPlayer);
-    }
-
-    private static Optional<RecipeHolder<CraftingRecipe>> findCraftingRecipe(
+    private static Optional<RecipeHolder<?>> findCraftingRecipe(
             ServerPlayer player,
             Container craftingInventory
     ) {
@@ -140,10 +111,13 @@ public final class RetoldRecipeBookEvents {
             return Optional.empty();
         }
 
-        return serverLevel
-                .getServer()
-                .getRecipeManager()
-                .getRecipeFor(RecipeType.CRAFTING, input, serverLevel);
+        Optional<RecipeHolder<CraftingRecipe>> recipe =
+                serverLevel
+                        .getServer()
+                        .getRecipeManager()
+                        .getRecipeFor(RecipeType.CRAFTING, input, serverLevel);
+
+        return recipe.map(recipeHolder -> recipeHolder);
     }
 
     private static void markAndUnlockRecipesByResult(
@@ -181,12 +155,16 @@ public final class RetoldRecipeBookEvents {
     }
 
     private static ItemStack getRecipeResult(RecipeHolder<?> recipe) {
-        if (recipe.value() instanceof AbstractCookingRecipe cookingRecipe) {
-            return cookingRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
-        }
+        try {
+            if (recipe.value() instanceof AbstractCookingRecipe cookingRecipe) {
+                return cookingRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
+            }
 
-        if (recipe.value() instanceof SingleItemRecipe singleItemRecipe) {
-            return singleItemRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
+            if (recipe.value() instanceof SingleItemRecipe singleItemRecipe) {
+                return singleItemRecipe.assemble(new SingleRecipeInput(ItemStack.EMPTY));
+            }
+        } catch (Exception ignored) {
+            return ItemStack.EMPTY;
         }
 
         return ItemStack.EMPTY;
@@ -201,8 +179,8 @@ public final class RetoldRecipeBookEvents {
         }
 
         RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-        data.markKnown(player, recipe.id());
 
+        data.markKnown(player, recipe.id());
         unlockRecipeSilently(player, recipe);
     }
 
@@ -218,32 +196,5 @@ public final class RetoldRecipeBookEvents {
             RecipeHolder<?> recipe
     ) {
         player.getRecipeBook().addRecipes(List.of(recipe), player);
-    }
-
-    private static void lockUnknownRecipes(ServerPlayer player) {
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        MinecraftServer server = serverLevel.getServer();
-        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-
-        List<RecipeHolder<?>> recipesToLock = new ArrayList<>();
-
-        for (RecipeHolder<?> recipe : server.getRecipeManager().getRecipes()) {
-            if (!player.getRecipeBook().contains(recipe.id())) {
-                continue;
-            }
-
-            if (data.hasKnown(player, recipe.id())) {
-                continue;
-            }
-
-            recipesToLock.add(recipe);
-        }
-
-        if (!recipesToLock.isEmpty()) {
-            player.getRecipeBook().removeRecipes(recipesToLock, player);
-        }
     }
 }
