@@ -250,7 +250,7 @@ public final class RetoldAenderUnstableChunkEvents {
             return;
         }
 
-        RetoldAenderTerrainBuilder.generateFloatingIslands(
+        RetoldAenderTerrainBuilder.regenerateFloatingIslands(
                 chunk,
                 level.getSeed(),
                 data.regenerationSalt()

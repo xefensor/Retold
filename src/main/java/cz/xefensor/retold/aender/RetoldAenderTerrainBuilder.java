@@ -13,6 +13,9 @@ public final class RetoldAenderTerrainBuilder {
 
     private static final int CHUNK_WRITE_FLAGS = 0;
 
+    private static final long BASE_TERRAIN_SALT =
+            0x4E2A19D7C05B8F33L;
+
     private static final BlockState AIR =
             Blocks.AIR.defaultBlockState();
 
@@ -22,10 +25,56 @@ public final class RetoldAenderTerrainBuilder {
     private RetoldAenderTerrainBuilder() {
     }
 
-    public static void generateFloatingIslands(
+    public static void generateInitialFloatingIslands(
+            ChunkAccess chunk,
+            long worldSeed
+    ) {
+        generateFloatingIslands(
+                chunk,
+                worldSeed,
+                BASE_TERRAIN_SALT,
+                false
+        );
+    }
+
+    public static void regenerateFloatingIslands(
             ChunkAccess chunk,
             long worldSeed,
-            long salt
+            long regenerationSalt
+    ) {
+        generateFloatingIslands(
+                chunk,
+                worldSeed,
+                regenerationSalt,
+                true
+        );
+    }
+
+    public static BlockState getBaseBlockStateAt(
+            int worldX,
+            int y,
+            int worldZ,
+            long worldSeed
+    ) {
+        long seed = worldSeed
+                ^ BASE_TERRAIN_SALT
+                ^ 0xA35D3F1B4C9E27AFL;
+
+        ColumnShape shape =
+                getIslandColumnShape(
+                        worldX,
+                        worldZ,
+                        seed
+                );
+
+        return getIslandStateAtY(shape, y);
+    }
+
+    private static void generateFloatingIslands(
+            ChunkAccess chunk,
+            long worldSeed,
+            long salt,
+            boolean regenerated
     ) {
         ChunkPos pos = chunk.getPos();
 
@@ -37,6 +86,11 @@ public final class RetoldAenderTerrainBuilder {
                 int worldX = pos.getMinBlockX() + localX;
                 int worldZ = pos.getMinBlockZ() + localZ;
 
+                double regenerationBlend =
+                        regenerated
+                                ? getChunkInteriorBlend(localX, localZ)
+                                : 0.0D;
+
                 for (int y = MIN_Y; y < MAX_Y; y++) {
                     BlockState state =
                             getBlockStateAt(
@@ -44,7 +98,8 @@ public final class RetoldAenderTerrainBuilder {
                                     y,
                                     worldZ,
                                     worldSeed,
-                                    salt
+                                    salt,
+                                    regenerationBlend
                             );
 
                     mutablePos.set(worldX, y, worldZ);
@@ -58,25 +113,94 @@ public final class RetoldAenderTerrainBuilder {
         }
     }
 
-    public static BlockState getBlockStateAt(
+    private static BlockState getBlockStateAt(
             int worldX,
             int y,
             int worldZ,
             long worldSeed,
-            long salt
+            long salt,
+            double regenerationBlend
     ) {
-        long seed = worldSeed
-                ^ salt
+        long baseSeed = worldSeed
+                ^ BASE_TERRAIN_SALT
                 ^ 0xA35D3F1B4C9E27AFL;
 
-        ColumnShape shape =
+        ColumnShape baseShape =
                 getIslandColumnShape(
                         worldX,
                         worldZ,
-                        seed
+                        baseSeed
                 );
 
-        return getIslandStateAtY(shape, y);
+        if (regenerationBlend <= 0.0D) {
+            return getIslandStateAtY(baseShape, y);
+        }
+
+        long variantSeed = worldSeed
+                ^ salt
+                ^ 0xA35D3F1B4C9E27AFL;
+
+        ColumnShape variantShape =
+                getIslandColumnShape(
+                        worldX,
+                        worldZ,
+                        variantSeed
+                );
+
+        ColumnShape blendedShape =
+                blendShapes(
+                        baseShape,
+                        variantShape,
+                        regenerationBlend
+                );
+
+        return getIslandStateAtY(blendedShape, y);
+    }
+
+    private static double getChunkInteriorBlend(
+            int localX,
+            int localZ
+    ) {
+        int distanceToEdge = Math.min(
+                Math.min(localX, 15 - localX),
+                Math.min(localZ, 15 - localZ)
+        );
+
+        double blend = distanceToEdge / 6.0D;
+        blend = clamp(blend, 0.0D, 1.0D);
+
+        return smoothStep(blend);
+    }
+
+    private static ColumnShape blendShapes(
+            ColumnShape baseShape,
+            ColumnShape variantShape,
+            double blend
+    ) {
+        double softenedBlend = blend * 0.85D;
+
+        return new ColumnShape(
+                lerp(
+                        baseShape.islandStrength(),
+                        variantShape.islandStrength(),
+                        softenedBlend
+                ),
+                (int) Math.round(lerp(
+                        baseShape.centerY(),
+                        variantShape.centerY(),
+                        softenedBlend
+                )),
+                (int) Math.round(lerp(
+                        baseShape.thickness(),
+                        variantShape.thickness(),
+                        softenedBlend
+                )),
+                (int) Math.round(lerp(
+                        baseShape.undersideExtra(),
+                        variantShape.undersideExtra(),
+                        softenedBlend
+                ))
+        );
     }
 
     private static ColumnShape getIslandColumnShape(
@@ -280,6 +404,14 @@ public final class RetoldAenderTerrainBuilder {
             int value,
             int min,
             int max
+    ) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static double clamp(
+            double value,
+            double min,
+            double max
     ) {
         return Math.max(min, Math.min(max, value));
     }

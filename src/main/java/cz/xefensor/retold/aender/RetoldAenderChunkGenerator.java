@@ -27,9 +27,6 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
                             .forGetter(generator -> generator.biomeSource)
             ).apply(instance, RetoldAenderChunkGenerator::new));
 
-    private static final long INITIAL_TERRAIN_SALT =
-            0x4E2A19D7C05B8F33L;
-
     public RetoldAenderChunkGenerator(BiomeSource biomeSource) {
         super(biomeSource);
     }
@@ -46,10 +43,9 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
             StructureManager structureManager,
             ChunkAccess chunk
     ) {
-        RetoldAenderTerrainBuilder.generateFloatingIslands(
+        RetoldAenderTerrainBuilder.generateInitialFloatingIslands(
                 chunk,
-                0L,
-                INITIAL_TERRAIN_SALT
+                0L
         );
 
         return CompletableFuture.completedFuture(chunk);
@@ -67,12 +63,11 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
              y >= RetoldAenderTerrainBuilder.MIN_Y;
              y--) {
             BlockState state =
-                    RetoldAenderTerrainBuilder.getBlockStateAt(
+                    RetoldAenderTerrainBuilder.getBaseBlockStateAt(
                             x,
                             y,
                             z,
-                            0L,
-                            INITIAL_TERRAIN_SALT
+                            0L
                     );
 
             if (!state.isAir()) {
@@ -97,12 +92,11 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
             int y = RetoldAenderTerrainBuilder.MIN_Y + index;
 
             states[index] =
-                    RetoldAenderTerrainBuilder.getBlockStateAt(
+                    RetoldAenderTerrainBuilder.getBaseBlockStateAt(
                             x,
                             y,
                             z,
-                            0L,
-                            INITIAL_TERRAIN_SALT
+                            0L
                     );
         }
 
