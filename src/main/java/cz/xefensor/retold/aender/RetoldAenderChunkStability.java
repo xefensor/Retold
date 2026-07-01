@@ -21,7 +21,8 @@ public final class RetoldAenderChunkStability {
             return false;
         }
 
-        ChunkAccess chunk = level.getChunk(pos);
+        ChunkAccess chunk =
+                level.getChunk(pos);
 
         RetoldAenderChunkData data =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
@@ -37,18 +38,23 @@ public final class RetoldAenderChunkStability {
             return;
         }
 
-        ChunkAccess chunk = level.getChunk(pos);
+        ChunkAccess chunk =
+                level.getChunk(pos);
 
         RetoldAenderChunkData oldData =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
-        RetoldAenderChunkData newData = oldData.withAddedStabilizer();
+        RetoldAenderChunkData newData =
+                oldData.withAddedStabilizer();
 
         if (newData == oldData) {
             return;
         }
 
-        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
+        chunk.setData(
+                RetoldAenderAttachments.CHUNK_DATA.get(),
+                newData
+        );
 
         Retold.LOGGER.debug(
                 "Aender chunk [{}, {}] stabilizer count changed to {}",
@@ -66,18 +72,23 @@ public final class RetoldAenderChunkStability {
             return;
         }
 
-        ChunkAccess chunk = level.getChunk(pos);
+        ChunkAccess chunk =
+                level.getChunk(pos);
 
         RetoldAenderChunkData oldData =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
-        RetoldAenderChunkData newData = oldData.withRemovedStabilizer();
+        RetoldAenderChunkData newData =
+                oldData.withRemovedStabilizer();
 
         if (newData == oldData) {
             return;
         }
 
-        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
+        chunk.setData(
+                RetoldAenderAttachments.CHUNK_DATA.get(),
+                newData
+        );
 
         Retold.LOGGER.debug(
                 "Aender chunk [{}, {}] stabilizer count changed to {}",
@@ -87,44 +98,38 @@ public final class RetoldAenderChunkStability {
         );
     }
 
-    public static void scheduleRegenerationOnNextLoad(
+    public static boolean scheduleTerrainRegeneration(
             ServerLevel level,
             ChunkAccess chunk,
-            long salt,
-            int targetRegionVersion
+            long targetRevision
     ) {
         if (!isAender(level)) {
-            return;
+            return false;
         }
 
         RetoldAenderChunkData oldData =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
         if (oldData.isStabilized()) {
-            return;
+            return false;
         }
 
         RetoldAenderChunkData newData =
-                oldData.withRegenerationScheduled(
-                        salt,
-                        targetRegionVersion
-                );
+                oldData.withTerrainRegenerationScheduled(targetRevision);
 
         if (newData == oldData) {
-            return;
+            return false;
         }
 
-        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
-
-        Retold.LOGGER.debug(
-                "Scheduled Aender chunk [{}, {}] for region version {}",
-                chunk.getPos().x(),
-                chunk.getPos().z(),
-                targetRegionVersion
+        chunk.setData(
+                RetoldAenderAttachments.CHUNK_DATA.get(),
+                newData
         );
+
+        return true;
     }
 
-    public static void markRegenerationFinished(
+    public static void markTerrainRegenerationFinished(
             ServerLevel level,
             ChunkAccess chunk
     ) {
@@ -136,12 +141,15 @@ public final class RetoldAenderChunkStability {
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
         RetoldAenderChunkData newData =
-                oldData.withRegenerationFinished();
+                oldData.withTerrainRegenerationFinished();
 
         if (newData == oldData) {
             return;
         }
 
-        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
+        chunk.setData(
+                RetoldAenderAttachments.CHUNK_DATA.get(),
+                newData
+        );
     }
 }

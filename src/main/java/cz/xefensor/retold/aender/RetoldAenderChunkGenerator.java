@@ -43,11 +43,6 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
             StructureManager structureManager,
             ChunkAccess chunk
     ) {
-        RetoldAenderTerrainBuilder.generateInitialFloatingIslands(
-                chunk,
-                0L
-        );
-
         return CompletableFuture.completedFuture(chunk);
     }
 
@@ -113,6 +108,10 @@ public final class RetoldAenderChunkGenerator extends ChunkGenerator {
             RandomState random,
             ChunkAccess chunk
     ) {
+        RetoldAenderTerrainBuilder.generateInitialFloatingIslands(
+                chunk,
+                level.getSeed()
+        );
     }
 
     @Override

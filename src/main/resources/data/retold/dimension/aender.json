@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:the_end",
+  "type": "retold:aender",
   "generator": {
     "type": "retold:aender",
     "biome_source": {
