@@ -13,6 +13,16 @@ public final class RetoldAenderTerrainBuilder {
 
     private static final int CHUNK_WRITE_FLAGS = 0;
 
+    /*
+     * Important:
+     * The current Aender ChunkGenerator calls this builder with worldSeed = 0L,
+     * because this ChunkGenerator hook does not currently pass the real level seed.
+     *
+     * Regeneration must therefore use the same effective terrain seed,
+     * otherwise regenerated chunks will not match initially generated chunks.
+     */
+    private static final long EFFECTIVE_WORLD_TERRAIN_SEED = 0L;
+
     private static final long BASE_TERRAIN_SALT =
             0x4E2A19D7C05B8F33L;
 
@@ -29,52 +39,40 @@ public final class RetoldAenderTerrainBuilder {
             ChunkAccess chunk,
             long worldSeed
     ) {
-        generateFloatingIslands(
-                chunk,
-                worldSeed,
-                BASE_TERRAIN_SALT,
-                false
-        );
+        ChunkPos pos = chunk.getPos();
+
+        BlockPos.MutableBlockPos mutablePos =
+                new BlockPos.MutableBlockPos();
+
+        for (int localX = 0; localX < 16; localX++) {
+            for (int localZ = 0; localZ < 16; localZ++) {
+                int worldX = pos.getMinBlockX() + localX;
+                int worldZ = pos.getMinBlockZ() + localZ;
+
+                for (int y = MIN_Y; y < MAX_Y; y++) {
+                    BlockState state =
+                            getBaseBlockStateAt(
+                                    worldX,
+                                    y,
+                                    worldZ,
+                                    worldSeed
+                            );
+
+                    mutablePos.set(worldX, y, worldZ);
+                    chunk.setBlockState(
+                            mutablePos,
+                            state,
+                            CHUNK_WRITE_FLAGS
+                    );
+                }
+            }
+        }
     }
 
     public static void regenerateFloatingIslands(
             ChunkAccess chunk,
             long worldSeed,
             long regenerationSalt
-    ) {
-        generateFloatingIslands(
-                chunk,
-                worldSeed,
-                regenerationSalt,
-                true
-        );
-    }
-
-    public static BlockState getBaseBlockStateAt(
-            int worldX,
-            int y,
-            int worldZ,
-            long worldSeed
-    ) {
-        long seed = worldSeed
-                ^ BASE_TERRAIN_SALT
-                ^ 0xA35D3F1B4C9E27AFL;
-
-        ColumnShape shape =
-                getIslandColumnShape(
-                        worldX,
-                        worldZ,
-                        seed
-                );
-
-        return getIslandStateAtY(shape, y);
-    }
-
-    private static void generateFloatingIslands(
-            ChunkAccess chunk,
-            long worldSeed,
-            long salt,
-            boolean regenerated
     ) {
         ChunkPos pos = chunk.getPos();
 
@@ -87,18 +85,16 @@ public final class RetoldAenderTerrainBuilder {
                 int worldZ = pos.getMinBlockZ() + localZ;
 
                 double regenerationBlend =
-                        regenerated
-                                ? getChunkInteriorBlend(localX, localZ)
-                                : 0.0D;
+                        getChunkInteriorBlend(localX, localZ);
 
                 for (int y = MIN_Y; y < MAX_Y; y++) {
                     BlockState state =
-                            getBlockStateAt(
+                            getRegeneratedBlockStateAt(
                                     worldX,
                                     y,
                                     worldZ,
                                     worldSeed,
-                                    salt,
+                                    regenerationSalt,
                                     regenerationBlend
                             );
 
@@ -113,48 +109,145 @@ public final class RetoldAenderTerrainBuilder {
         }
     }
 
-    private static BlockState getBlockStateAt(
+    public static BlockState getBaseBlockStateAt(
+            int worldX,
+            int y,
+            int worldZ,
+            long worldSeed
+    ) {
+        double density =
+                getBaseDensityAt(
+                        worldX,
+                        y,
+                        worldZ,
+                        worldSeed
+                );
+
+        if (density > 0.0D) {
+            return END_STONE;
+        }
+
+        return AIR;
+    }
+
+    private static BlockState getRegeneratedBlockStateAt(
             int worldX,
             int y,
             int worldZ,
             long worldSeed,
-            long salt,
+            long regenerationSalt,
             double regenerationBlend
     ) {
-        long baseSeed = worldSeed
-                ^ BASE_TERRAIN_SALT
-                ^ 0xA35D3F1B4C9E27AFL;
-
-        ColumnShape baseShape =
-                getIslandColumnShape(
+        double baseDensity =
+                getBaseDensityAt(
                         worldX,
+                        y,
                         worldZ,
-                        baseSeed
+                        worldSeed
                 );
 
         if (regenerationBlend <= 0.0D) {
-            return getIslandStateAtY(baseShape, y);
+            return baseDensity > 0.0D ? END_STONE : AIR;
         }
 
-        long variantSeed = worldSeed
-                ^ salt
-                ^ 0xA35D3F1B4C9E27AFL;
+        /*
+         * Do not create detached new islands far away from the base terrain.
+         * Regeneration should alter the existing island shape, not replace it.
+         */
+        if (baseDensity < -0.18D) {
+            return AIR;
+        }
 
-        ColumnShape variantShape =
+        double mutation =
+                getMutationDensity(
+                        worldX,
+                        y,
+                        worldZ,
+                        worldSeed,
+                        regenerationSalt
+                );
+
+        double surfaceBias =
+                1.0D - clamp(Math.abs(baseDensity) * 4.0D, 0.0D, 1.0D);
+
+        /*
+         * Most mutation happens near the surface.
+         * Deep interiors stay mostly solid, far air stays air.
+         */
+        double mutationStrength =
+                0.16D
+                        * regenerationBlend
+                        * (0.25D + surfaceBias * 0.75D);
+
+        double density =
+                baseDensity + mutation * mutationStrength;
+
+        if (density > 0.0D) {
+            return END_STONE;
+        }
+
+        return AIR;
+    }
+
+    private static double getBaseDensityAt(
+            int worldX,
+            int y,
+            int worldZ,
+            long worldSeed
+    ) {
+        long seed =
+                getBaseTerrainSeed(worldSeed);
+
+        ColumnShape shape =
                 getIslandColumnShape(
                         worldX,
                         worldZ,
-                        variantSeed
+                        seed
                 );
 
-        ColumnShape blendedShape =
-                blendShapes(
-                        baseShape,
-                        variantShape,
-                        regenerationBlend
+        return getIslandDensityAtY(shape, y);
+    }
+
+    private static double getMutationDensity(
+            int worldX,
+            int y,
+            int worldZ,
+            long worldSeed,
+            long regenerationSalt
+    ) {
+        long seed =
+                getMutationTerrainSeed(
+                        worldSeed,
+                        regenerationSalt
                 );
 
-        return getIslandStateAtY(blendedShape, y);
+        double broadChange =
+                signedFractalNoise2D(
+                        worldX * 0.035D + y * 0.004D,
+                        worldZ * 0.035D - y * 0.003D,
+                        seed ^ 0x95A672F4D3C12B11L,
+                        3
+                );
+
+        double surfaceDetail =
+                signedFractalNoise2D(
+                        worldX * 0.145D + y * 0.019D,
+                        worldZ * 0.145D - y * 0.017D,
+                        seed ^ 0xC1D7A63EF2198B45L,
+                        2
+                );
+
+        double layerChange =
+                signedFractalNoise2D(
+                        worldX * 0.07D,
+                        y * 0.055D + worldZ * 0.011D,
+                        seed ^ 0x7D42C93B1E6A90F1L,
+                        2
+                );
+
+        return broadChange * 0.55D
+                + surfaceDetail * 0.35D
+                + layerChange * 0.10D;
     }
 
     private static double getChunkInteriorBlend(
@@ -166,41 +259,14 @@ public final class RetoldAenderTerrainBuilder {
                 Math.min(localZ, 15 - localZ)
         );
 
-        double blend = distanceToEdge / 6.0D;
+        /*
+         * Edge blocks stay exactly base terrain.
+         * The middle of the chunk can mutate.
+         */
+        double blend = distanceToEdge / 7.0D;
         blend = clamp(blend, 0.0D, 1.0D);
 
         return smoothStep(blend);
-    }
-
-    private static ColumnShape blendShapes(
-            ColumnShape baseShape,
-            ColumnShape variantShape,
-            double blend
-    ) {
-        double softenedBlend = blend * 0.85D;
-
-        return new ColumnShape(
-                lerp(
-                        baseShape.islandStrength(),
-                        variantShape.islandStrength(),
-                        softenedBlend
-                ),
-                (int) Math.round(lerp(
-                        baseShape.centerY(),
-                        variantShape.centerY(),
-                        softenedBlend
-                )),
-                (int) Math.round(lerp(
-                        baseShape.thickness(),
-                        variantShape.thickness(),
-                        softenedBlend
-                )),
-                (int) Math.round(lerp(
-                        baseShape.undersideExtra(),
-                        variantShape.undersideExtra(),
-                        softenedBlend
-                ))
-        );
     }
 
     private static ColumnShape getIslandColumnShape(
@@ -261,24 +327,16 @@ public final class RetoldAenderTerrainBuilder {
         );
     }
 
-    private static BlockState getIslandStateAtY(
+    private static double getIslandDensityAtY(
             ColumnShape shape,
             int y
     ) {
-        if (shape.islandStrength() < 0.48D) {
-            return AIR;
-        }
-
         int top = shape.centerY()
                 + Math.max(1, shape.thickness() / 3);
 
         int bottom = shape.centerY()
                 - shape.thickness()
                 - shape.undersideExtra();
-
-        if (y > top || y < bottom) {
-            return AIR;
-        }
 
         double verticalDistance;
 
@@ -292,15 +350,32 @@ public final class RetoldAenderTerrainBuilder {
                             / Math.max(1.0D, shape.centerY() - bottom);
         }
 
-        double islandDensity =
-                ((shape.islandStrength() - 0.48D) / 0.52D)
-                        - verticalDistance * 0.82D;
+        return ((shape.islandStrength() - 0.48D) / 0.52D)
+                - verticalDistance * 0.82D;
+    }
 
-        if (islandDensity <= 0.0D) {
-            return AIR;
-        }
+    private static long getBaseTerrainSeed(long worldSeed) {
+        return EFFECTIVE_WORLD_TERRAIN_SEED
+                ^ BASE_TERRAIN_SALT
+                ^ 0xA35D3F1B4C9E27AFL;
+    }
 
-        return END_STONE;
+    private static long getMutationTerrainSeed(
+            long worldSeed,
+            long regenerationSalt
+    ) {
+        return EFFECTIVE_WORLD_TERRAIN_SEED
+                ^ regenerationSalt
+                ^ 0xB89F1246D73AC55DL;
+    }
+
+    private static double signedFractalNoise2D(
+            double x,
+            double z,
+            long seed,
+            int octaves
+    ) {
+        return fractalNoise2D(x, z, seed, octaves) * 2.0D - 1.0D;
     }
 
     private static double fractalNoise2D(
