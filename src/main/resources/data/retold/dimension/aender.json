@@ -1,21 +1,10 @@
 {
   "type": "minecraft:the_end",
   "generator": {
-    "type": "minecraft:flat",
-    "settings": {
-      "biome": "minecraft:the_end",
-      "features": false,
-      "lakes": false,
-      "layers": [
-        {
-          "block": "minecraft:bedrock",
-          "height": 1
-        },
-        {
-          "block": "minecraft:end_stone",
-          "height": 4
-        }
-      ]
+    "type": "retold:aender",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "minecraft:the_end"
     }
   }
 }

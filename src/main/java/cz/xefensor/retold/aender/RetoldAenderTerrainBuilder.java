@@ -1,13 +1,17 @@
 package cz.xefensor.retold.aender;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
 
 public final class RetoldAenderTerrainBuilder {
-    private static final int BLOCK_UPDATE_FLAGS = 2;
+    public static final int MIN_Y = 0;
+    public static final int MAX_Y = 256;
+    public static final int HEIGHT = MAX_Y - MIN_Y;
+
+    private static final int CHUNK_WRITE_FLAGS = 0;
 
     private static final BlockState AIR =
             Blocks.AIR.defaultBlockState();
@@ -19,47 +23,65 @@ public final class RetoldAenderTerrainBuilder {
     }
 
     public static void generateFloatingIslands(
-            ServerLevel level,
-            ChunkPos pos,
+            ChunkAccess chunk,
+            long worldSeed,
             long salt
     ) {
-        long seed = level.getSeed()
-                ^ salt
-                ^ 0xA35D3F1B4C9E27AFL;
+        ChunkPos pos = chunk.getPos();
 
-        int minY = level.getMinY();
-        int maxY = level.getMaxY();
-
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos mutablePos =
+                new BlockPos.MutableBlockPos();
 
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 int worldX = pos.getMinBlockX() + localX;
                 int worldZ = pos.getMinBlockZ() + localZ;
 
-                ColumnShape shape = getIslandColumnShape(
-                        worldX,
-                        worldZ,
-                        minY,
-                        maxY,
-                        seed
-                );
-
-                for (int y = minY; y < maxY; y++) {
-                    BlockState state = getIslandStateAtY(shape, y);
+                for (int y = MIN_Y; y < MAX_Y; y++) {
+                    BlockState state =
+                            getBlockStateAt(
+                                    worldX,
+                                    y,
+                                    worldZ,
+                                    worldSeed,
+                                    salt
+                            );
 
                     mutablePos.set(worldX, y, worldZ);
-                    level.setBlock(mutablePos, state, BLOCK_UPDATE_FLAGS);
+                    chunk.setBlockState(
+                            mutablePos,
+                            state,
+                            CHUNK_WRITE_FLAGS
+                    );
                 }
             }
         }
     }
 
+    public static BlockState getBlockStateAt(
+            int worldX,
+            int y,
+            int worldZ,
+            long worldSeed,
+            long salt
+    ) {
+        long seed = worldSeed
+                ^ salt
+                ^ 0xA35D3F1B4C9E27AFL;
+
+        ColumnShape shape =
+                getIslandColumnShape(
+                        worldX,
+                        worldZ,
+                        seed
+                );
+
+        return getIslandStateAtY(shape, y);
+    }
+
     private static ColumnShape getIslandColumnShape(
             int worldX,
             int worldZ,
-            int minY,
-            int maxY,
             long seed
     ) {
         double continentNoise = fractalNoise2D(
@@ -80,8 +102,6 @@ public final class RetoldAenderTerrainBuilder {
                 continentNoise * 0.78D
                         + detailNoise * 0.22D;
 
-        int usableHeight = Math.max(1, maxY - minY);
-
         double heightNoise = fractalNoise2D(
                 worldX * 0.012D - 118.0D,
                 worldZ * 0.012D + 53.0D,
@@ -89,11 +109,11 @@ public final class RetoldAenderTerrainBuilder {
                 3
         );
 
-        int centerY = minY
-                + (int) (usableHeight * 0.28D)
-                + (int) (heightNoise * usableHeight * 0.42D);
+        int centerY = MIN_Y
+                + (int) (HEIGHT * 0.28D)
+                + (int) (heightNoise * HEIGHT * 0.42D);
 
-        centerY = clamp(centerY, minY + 16, maxY - 16);
+        centerY = clamp(centerY, MIN_Y + 16, MAX_Y - 16);
 
         double normalizedStrength =
                 Math.max(0.0D, islandStrength - 0.48D) / 0.52D;

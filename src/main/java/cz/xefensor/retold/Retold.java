@@ -13,6 +13,7 @@ import cz.xefensor.retold.aender.RetoldAenderAttachments;
 import cz.xefensor.retold.aender.RetoldAenderStabilizerEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.aender.RetoldAenderUnstableChunkEvents;
+import cz.xefensor.retold.aender.RetoldAenderChunkGenerators;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -31,6 +32,7 @@ public final class Retold {
         RetoldAenderAttachments.register(modEventBus);
         RetoldWorldgenRegistries.register(modEventBus);
         RetoldAttachments.register(modEventBus);
+        RetoldAenderChunkGenerators.register(modEventBus);
 
         modEventBus.addListener(RetoldNetworking::registerPayloads);
 

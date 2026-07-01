@@ -90,11 +90,6 @@ public final class RetoldAenderUnstableChunkEvents {
         RetoldAenderChunkData data =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
-        if (data.shouldGenerateInitialTerrain()) {
-            generateInitialTerrain(level, chunk);
-            return;
-        }
-
         if (!data.shouldRegenerateOnNextLoad()) {
             return;
         }
@@ -141,37 +136,6 @@ public final class RetoldAenderUnstableChunkEvents {
 
             regenerateIfStillUnstable(aenderLevel, pos);
         }
-    }
-
-    private static void generateInitialTerrain(
-            ServerLevel level,
-            ChunkAccess chunk
-    ) {
-        RetoldAenderChunkData data =
-                chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
-
-        if (!data.shouldGenerateInitialTerrain()) {
-            return;
-        }
-
-        long salt = initialSaltForChunk(level, chunk.getPos());
-
-        RetoldAenderTerrainBuilder.generateFloatingIslands(
-                level,
-                chunk.getPos(),
-                salt
-        );
-
-        RetoldAenderChunkData newData =
-                data.withInitialTerrainGenerated(salt);
-
-        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
-
-        Retold.LOGGER.debug(
-                "Generated initial Aender island terrain in chunk [{}, {}]",
-                chunk.getPos().x(),
-                chunk.getPos().z()
-        );
     }
 
     private static void scheduleUnwatchedChunkRegeneration(
@@ -287,8 +251,8 @@ public final class RetoldAenderUnstableChunkEvents {
         }
 
         RetoldAenderTerrainBuilder.generateFloatingIslands(
-                level,
-                pos,
+                chunk,
+                level.getSeed(),
                 data.regenerationSalt()
         );
 
@@ -300,15 +264,6 @@ public final class RetoldAenderUnstableChunkEvents {
                 pos.x(),
                 pos.z()
         );
-    }
-
-    private static long initialSaltForChunk(
-            ServerLevel level,
-            ChunkPos pos
-    ) {
-        return level.getSeed()
-                ^ packChunk(pos.x(), pos.z())
-                ^ 0x4E2A19D7C05B8F33L;
     }
 
     private static long packChunk(int chunkX, int chunkZ) {
