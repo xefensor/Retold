@@ -90,7 +90,8 @@ public final class RetoldAenderChunkStability {
     public static void scheduleRegenerationOnNextLoad(
             ServerLevel level,
             ChunkAccess chunk,
-            long salt
+            long salt,
+            int targetRegionVersion
     ) {
         if (!isAender(level)) {
             return;
@@ -104,7 +105,10 @@ public final class RetoldAenderChunkStability {
         }
 
         RetoldAenderChunkData newData =
-                oldData.withRegenerationScheduled(salt);
+                oldData.withRegenerationScheduled(
+                        salt,
+                        targetRegionVersion
+                );
 
         if (newData == oldData) {
             return;
@@ -113,9 +117,10 @@ public final class RetoldAenderChunkStability {
         chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
 
         Retold.LOGGER.debug(
-                "Scheduled unstable Aender chunk [{}, {}] for regeneration",
+                "Scheduled Aender chunk [{}, {}] for region version {}",
                 chunk.getPos().x(),
-                chunk.getPos().z()
+                chunk.getPos().z(),
+                targetRegionVersion
         );
     }
 

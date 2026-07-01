@@ -5,12 +5,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record RetoldAenderChunkData(
         int stabilizerCount,
-        boolean terrainGenerated,
+        int appliedRegionVersion,
         boolean regenerateOnNextLoad,
-        long regenerationSalt
+        long regenerationSalt,
+        int regenerationRegionVersion
 ) {
     public static final RetoldAenderChunkData EMPTY =
-            new RetoldAenderChunkData(0, false, false, 0L);
+            new RetoldAenderChunkData(0, 0, false, 0L, 0);
 
     public static final Codec<RetoldAenderChunkData> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
@@ -18,9 +19,9 @@ public record RetoldAenderChunkData(
                             .optionalFieldOf("stabilizer_count", 0)
                             .forGetter(RetoldAenderChunkData::stabilizerCount),
 
-                    Codec.BOOL
-                            .optionalFieldOf("terrain_generated", false)
-                            .forGetter(RetoldAenderChunkData::terrainGenerated),
+                    Codec.INT
+                            .optionalFieldOf("applied_region_version", 0)
+                            .forGetter(RetoldAenderChunkData::appliedRegionVersion),
 
                     Codec.BOOL
                             .optionalFieldOf("regenerate_on_next_load", false)
@@ -28,11 +29,17 @@ public record RetoldAenderChunkData(
 
                     Codec.LONG
                             .optionalFieldOf("regeneration_salt", 0L)
-                            .forGetter(RetoldAenderChunkData::regenerationSalt)
+                            .forGetter(RetoldAenderChunkData::regenerationSalt),
+
+                    Codec.INT
+                            .optionalFieldOf("regeneration_region_version", 0)
+                            .forGetter(RetoldAenderChunkData::regenerationRegionVersion)
             ).apply(instance, RetoldAenderChunkData::new));
 
     public RetoldAenderChunkData {
         stabilizerCount = Math.max(0, stabilizerCount);
+        appliedRegionVersion = Math.max(0, appliedRegionVersion);
+        regenerationRegionVersion = Math.max(0, regenerationRegionVersion);
 
         if (stabilizerCount > 0) {
             regenerateOnNextLoad = false;
@@ -43,10 +50,6 @@ public record RetoldAenderChunkData(
         return stabilizerCount > 0;
     }
 
-    public boolean shouldGenerateInitialTerrain() {
-        return !terrainGenerated && !isStabilized();
-    }
-
     public boolean shouldRegenerateOnNextLoad() {
         return regenerateOnNextLoad && !isStabilized();
     }
@@ -54,9 +57,10 @@ public record RetoldAenderChunkData(
     public RetoldAenderChunkData withAddedStabilizer() {
         return new RetoldAenderChunkData(
                 stabilizerCount + 1,
-                terrainGenerated,
+                appliedRegionVersion,
                 false,
-                regenerationSalt
+                regenerationSalt,
+                regenerationRegionVersion
         );
     }
 
@@ -67,40 +71,44 @@ public record RetoldAenderChunkData(
 
         return new RetoldAenderChunkData(
                 stabilizerCount - 1,
-                terrainGenerated,
+                appliedRegionVersion,
                 regenerateOnNextLoad,
-                regenerationSalt
+                regenerationSalt,
+                regenerationRegionVersion
         );
     }
 
-    public RetoldAenderChunkData withInitialTerrainGenerated(long salt) {
-        return new RetoldAenderChunkData(
-                stabilizerCount,
-                true,
-                false,
-                salt
-        );
-    }
-
-    public RetoldAenderChunkData withRegenerationScheduled(long salt) {
+    public RetoldAenderChunkData withRegenerationScheduled(
+            long salt,
+            int targetRegionVersion
+    ) {
         if (isStabilized()) {
+            return this;
+        }
+
+        if (targetRegionVersion <= appliedRegionVersion) {
             return this;
         }
 
         return new RetoldAenderChunkData(
                 stabilizerCount,
+                appliedRegionVersion,
                 true,
-                true,
-                salt
+                salt,
+                targetRegionVersion
         );
     }
 
     public RetoldAenderChunkData withRegenerationFinished() {
+        int finishedVersion =
+                Math.max(appliedRegionVersion, regenerationRegionVersion);
+
         return new RetoldAenderChunkData(
                 stabilizerCount,
-                true,
+                finishedVersion,
                 false,
-                regenerationSalt
+                regenerationSalt,
+                finishedVersion
         );
     }
 }

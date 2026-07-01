@@ -12,14 +12,12 @@ public final class RetoldAenderTerrainBuilder {
     public static final int HEIGHT = MAX_Y - MIN_Y;
 
     private static final int CHUNK_WRITE_FLAGS = 0;
+    private static final int CONSTRAINED_EDGE_BLEND_WIDTH = 6;
 
     /*
-     * Important:
-     * The current Aender ChunkGenerator calls this builder with worldSeed = 0L,
-     * because this ChunkGenerator hook does not currently pass the real level seed.
-     *
-     * Regeneration must therefore use the same effective terrain seed,
-     * otherwise regenerated chunks will not match initially generated chunks.
+     * Keep this fixed for now because the current ChunkGenerator path uses 0L.
+     * Regeneration must use the same effective base terrain seed, otherwise
+     * regenerated chunks will not visually match initially generated chunks.
      */
     private static final long EFFECTIVE_WORLD_TERRAIN_SEED = 0L;
 
@@ -40,9 +38,7 @@ public final class RetoldAenderTerrainBuilder {
             long worldSeed
     ) {
         ChunkPos pos = chunk.getPos();
-
-        BlockPos.MutableBlockPos mutablePos =
-                new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
@@ -72,20 +68,19 @@ public final class RetoldAenderTerrainBuilder {
     public static void regenerateFloatingIslands(
             ChunkAccess chunk,
             long worldSeed,
-            long regenerationSalt
+            long regenerationSalt,
+            RetoldAenderTerrainConstraints constraints
     ) {
         ChunkPos pos = chunk.getPos();
-
-        BlockPos.MutableBlockPos mutablePos =
-                new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
         for (int localX = 0; localX < 16; localX++) {
             for (int localZ = 0; localZ < 16; localZ++) {
                 int worldX = pos.getMinBlockX() + localX;
                 int worldZ = pos.getMinBlockZ() + localZ;
 
-                double regenerationBlend =
-                        getChunkInteriorBlend(localX, localZ);
+                double mutationBlend =
+                        getMutationBlend(localX, localZ, constraints);
 
                 for (int y = MIN_Y; y < MAX_Y; y++) {
                     BlockState state =
@@ -95,7 +90,7 @@ public final class RetoldAenderTerrainBuilder {
                                     worldZ,
                                     worldSeed,
                                     regenerationSalt,
-                                    regenerationBlend
+                                    mutationBlend
                             );
 
                     mutablePos.set(worldX, y, worldZ);
@@ -123,11 +118,7 @@ public final class RetoldAenderTerrainBuilder {
                         worldSeed
                 );
 
-        if (density > 0.0D) {
-            return END_STONE;
-        }
-
-        return AIR;
+        return density > 0.0D ? END_STONE : AIR;
     }
 
     private static BlockState getRegeneratedBlockStateAt(
@@ -136,57 +127,73 @@ public final class RetoldAenderTerrainBuilder {
             int worldZ,
             long worldSeed,
             long regenerationSalt,
-            double regenerationBlend
+            double mutationBlend
     ) {
-        double baseDensity =
-                getBaseDensityAt(
+        if (mutationBlend <= 0.0D) {
+            return getBaseBlockStateAt(worldX, y, worldZ, worldSeed);
+        }
+
+        long baseSeed = getBaseTerrainSeed(worldSeed);
+        long mutationSeed = getMutationTerrainSeed(
+                worldSeed,
+                regenerationSalt
+        );
+
+        IslandColumn baseColumn =
+                getIslandColumn(
                         worldX,
-                        y,
                         worldZ,
-                        worldSeed
+                        baseSeed
                 );
 
-        if (regenerationBlend <= 0.0D) {
-            return baseDensity > 0.0D ? END_STONE : AIR;
-        }
+        IslandColumn mutatedColumn =
+                mutateIslandColumn(
+                        baseColumn,
+                        worldX,
+                        worldZ,
+                        mutationSeed,
+                        mutationBlend
+                );
 
-        /*
-         * Do not create detached new islands far away from the base terrain.
-         * Regeneration should alter the existing island shape, not replace it.
-         */
-        if (baseDensity < -0.18D) {
-            return AIR;
-        }
+        double baseDensity =
+                getIslandDensityAtY(baseColumn, y);
 
-        double mutation =
-                getMutationDensity(
+        double mutatedDensity =
+                getIslandDensityAtY(mutatedColumn, y);
+
+        double detailMutation =
+                getMutationDetailDensity(
                         worldX,
                         y,
                         worldZ,
-                        worldSeed,
-                        regenerationSalt
+                        mutationSeed
                 );
 
         double surfaceBias =
-                1.0D - clamp(Math.abs(baseDensity) * 4.0D, 0.0D, 1.0D);
+                1.0D - clamp(Math.abs(baseDensity) * 1.25D, 0.0D, 1.0D);
 
         /*
-         * Most mutation happens near the surface.
-         * Deep interiors stay mostly solid, far air stays air.
+         * Stronger detail mutation.
+         * Since constrained edges now handle safety, the free interior can
+         * visibly retract, extend, erode, and fill.
          */
-        double mutationStrength =
-                0.16D
-                        * regenerationBlend
-                        * (0.25D + surfaceBias * 0.75D);
+        double detailStrength =
+                0.36D
+                        * mutationBlend
+                        * (0.35D + surfaceBias * 0.65D);
 
-        double density =
-                baseDensity + mutation * mutationStrength;
+        double finalDensity =
+                mutatedDensity + detailMutation * detailStrength;
 
-        if (density > 0.0D) {
-            return END_STONE;
+        /*
+         * Do not fill totally unrelated empty sky too easily,
+         * but allow real extension near low-mass island borders.
+         */
+        if (baseColumn.mass() < 0.03D && finalDensity < 0.12D) {
+            return AIR;
         }
 
-        return AIR;
+        return finalDensity > 0.0D ? END_STONE : AIR;
     }
 
     private static double getBaseDensityAt(
@@ -195,163 +202,326 @@ public final class RetoldAenderTerrainBuilder {
             int worldZ,
             long worldSeed
     ) {
-        long seed =
-                getBaseTerrainSeed(worldSeed);
+        long seed = getBaseTerrainSeed(worldSeed);
 
-        ColumnShape shape =
-                getIslandColumnShape(
+        IslandColumn column =
+                getIslandColumn(
                         worldX,
                         worldZ,
                         seed
                 );
 
-        return getIslandDensityAtY(shape, y);
+        return getIslandDensityAtY(column, y);
     }
 
-    private static double getMutationDensity(
+    private static IslandColumn mutateIslandColumn(
+            IslandColumn baseColumn,
             int worldX,
-            int y,
             int worldZ,
-            long worldSeed,
-            long regenerationSalt
+            long mutationSeed,
+            double blend
     ) {
-        long seed =
-                getMutationTerrainSeed(
-                        worldSeed,
-                        regenerationSalt
-                );
-
-        double broadChange =
+        double massNoise =
                 signedFractalNoise2D(
-                        worldX * 0.035D + y * 0.004D,
-                        worldZ * 0.035D - y * 0.003D,
-                        seed ^ 0x95A672F4D3C12B11L,
+                        worldX * 0.024D,
+                        worldZ * 0.024D,
+                        mutationSeed ^ 0x11F2AB37C94E58D1L,
                         3
                 );
 
-        double surfaceDetail =
+        double heightNoise =
                 signedFractalNoise2D(
-                        worldX * 0.145D + y * 0.019D,
-                        worldZ * 0.145D - y * 0.017D,
-                        seed ^ 0xC1D7A63EF2198B45L,
+                        worldX * 0.018D + 80.0D,
+                        worldZ * 0.018D - 160.0D,
+                        mutationSeed ^ 0xA87D46F012CE59B3L,
+                        3
+                );
+
+        double topNoise =
+                signedFractalNoise2D(
+                        worldX * 0.038D - 42.0D,
+                        worldZ * 0.038D + 77.0D,
+                        mutationSeed ^ 0x3CB92EA7764A19DDL,
                         2
                 );
 
-        double layerChange =
+        double bottomNoise =
                 signedFractalNoise2D(
-                        worldX * 0.07D,
-                        y * 0.055D + worldZ * 0.011D,
-                        seed ^ 0x7D42C93B1E6A90F1L,
+                        worldX * 0.032D + 190.0D,
+                        worldZ * 0.032D - 91.0D,
+                        mutationSeed ^ 0xD719AC43E660B221L,
                         2
                 );
-
-        return broadChange * 0.55D
-                + surfaceDetail * 0.35D
-                + layerChange * 0.10D;
-    }
-
-    private static double getChunkInteriorBlend(
-            int localX,
-            int localZ
-    ) {
-        int distanceToEdge = Math.min(
-                Math.min(localX, 15 - localX),
-                Math.min(localZ, 15 - localZ)
-        );
 
         /*
-         * Edge blocks stay exactly base terrain.
-         * The middle of the chunk can mutate.
+         * Much stronger than previous versions.
+         * This is safe because mutationBlend is constrained only on sides
+         * touching watched/stabilized chunks.
          */
-        double blend = distanceToEdge / 7.0D;
-        blend = clamp(blend, 0.0D, 1.0D);
+        double mass =
+                clamp(
+                        baseColumn.mass()
+                                + massNoise * 0.85D * blend,
+                        0.0D,
+                        1.45D
+                );
+
+        int centerY =
+                clamp(
+                        baseColumn.centerY()
+                                + (int) Math.round(heightNoise * 34.0D * blend),
+                        MIN_Y + 16,
+                        MAX_Y - 16
+                );
+
+        int topRadius =
+                clamp(
+                        baseColumn.topRadius()
+                                + (int) Math.round(topNoise * 16.0D * blend),
+                        2,
+                        42
+                );
+
+        int bottomRadius =
+                clamp(
+                        baseColumn.bottomRadius()
+                                + (int) Math.round(bottomNoise * 42.0D * blend),
+                        6,
+                        92
+                );
+
+        if (mass < baseColumn.mass()) {
+            double shrink = (baseColumn.mass() - mass) * blend;
+
+            topRadius =
+                    Math.max(
+                            2,
+                            topRadius - (int) Math.round(shrink * 12.0D)
+                    );
+
+            bottomRadius =
+                    Math.max(
+                            6,
+                            bottomRadius - (int) Math.round(shrink * 26.0D)
+                    );
+        } else {
+            double growth = (mass - baseColumn.mass()) * blend;
+
+            topRadius += (int) Math.round(growth * 8.0D);
+            bottomRadius += (int) Math.round(growth * 22.0D);
+        }
+
+        return new IslandColumn(
+                mass,
+                centerY,
+                topRadius,
+                bottomRadius
+        );
+    }
+
+    private static double getMutationDetailDensity(
+            int worldX,
+            int y,
+            int worldZ,
+            long mutationSeed
+    ) {
+        double erosion =
+                signedFractalNoise2D(
+                        worldX * 0.105D + y * 0.018D,
+                        worldZ * 0.105D - y * 0.015D,
+                        mutationSeed ^ 0x95A672F4D3C12B11L,
+                        3
+                );
+
+        double scars =
+                signedFractalNoise2D(
+                        worldX * 0.052D,
+                        y * 0.070D + worldZ * 0.014D,
+                        mutationSeed ^ 0xC1D7A63EF2198B45L,
+                        2
+                );
+
+        double pockets =
+                signedFractalNoise2D(
+                        worldX * 0.165D + y * 0.025D,
+                        worldZ * 0.165D - y * 0.021D,
+                        mutationSeed ^ 0x7D42C93B1E6A90F1L,
+                        2
+                );
+
+        return erosion * 0.48D
+                + scars * 0.30D
+                + pockets * 0.22D;
+    }
+
+    private static double getMutationBlend(
+            int localX,
+            int localZ,
+            RetoldAenderTerrainConstraints constraints
+    ) {
+        if (constraints == null || !constraints.hasAnyConstraint()) {
+            return 1.0D;
+        }
+
+        double blend = 1.0D;
+
+        if (constraints.constrainWest()) {
+            blend = Math.min(
+                    blend,
+                    edgeRamp(localX)
+            );
+        }
+
+        if (constraints.constrainEast()) {
+            blend = Math.min(
+                    blend,
+                    edgeRamp(15 - localX)
+            );
+        }
+
+        if (constraints.constrainNorth()) {
+            blend = Math.min(
+                    blend,
+                    edgeRamp(localZ)
+            );
+        }
+
+        if (constraints.constrainSouth()) {
+            blend = Math.min(
+                    blend,
+                    edgeRamp(15 - localZ)
+            );
+        }
 
         return smoothStep(blend);
     }
 
-    private static ColumnShape getIslandColumnShape(
+    private static double edgeRamp(int distanceFromEdge) {
+        return clamp(
+                distanceFromEdge / (double) CONSTRAINED_EDGE_BLEND_WIDTH,
+                0.0D,
+                1.0D
+        );
+    }
+
+    private static IslandColumn getIslandColumn(
             int worldX,
             int worldZ,
             long seed
     ) {
-        double continentNoise = fractalNoise2D(
-                worldX * 0.018D,
-                worldZ * 0.018D,
-                seed,
-                4
-        );
+        double largeMask =
+                fractalNoise2D(
+                        worldX * 0.009D,
+                        worldZ * 0.009D,
+                        seed,
+                        4
+                );
 
-        double detailNoise = fractalNoise2D(
-                worldX * 0.065D + 91.7D,
-                worldZ * 0.065D - 37.4D,
-                seed ^ 0x6C8E9CF570932BD5L,
-                3
-        );
+        double mediumMask =
+                fractalNoise2D(
+                        worldX * 0.030D + 91.7D,
+                        worldZ * 0.030D - 37.4D,
+                        seed ^ 0x6C8E9CF570932BD5L,
+                        3
+                );
 
-        double islandStrength =
-                continentNoise * 0.78D
-                        + detailNoise * 0.22D;
+        double edgeMask =
+                fractalNoise2D(
+                        worldX * 0.072D - 34.0D,
+                        worldZ * 0.072D + 129.0D,
+                        seed ^ 0x8E76172B4F139C5DL,
+                        2
+                );
 
-        double heightNoise = fractalNoise2D(
-                worldX * 0.012D - 118.0D,
-                worldZ * 0.012D + 53.0D,
-                seed ^ 0x2B5A4D07E31F9013L,
-                3
-        );
+        double islandMask =
+                largeMask * 0.58D
+                        + mediumMask * 0.32D
+                        + edgeMask * 0.10D;
 
-        int centerY = MIN_Y
-                + (int) (HEIGHT * 0.28D)
-                + (int) (heightNoise * HEIGHT * 0.42D);
+        double mass =
+                smoothThreshold(
+                        islandMask,
+                        0.49D,
+                        0.76D
+                );
 
-        centerY = clamp(centerY, MIN_Y + 16, MAX_Y - 16);
+        double heightNoise =
+                fractalNoise2D(
+                        worldX * 0.011D - 118.0D,
+                        worldZ * 0.011D + 53.0D,
+                        seed ^ 0x2B5A4D07E31F9013L,
+                        3
+                );
 
-        double normalizedStrength =
-                Math.max(0.0D, islandStrength - 0.48D) / 0.52D;
+        int centerY =
+                MIN_Y
+                        + (int) (HEIGHT * 0.36D)
+                        + (int) (heightNoise * HEIGHT * 0.32D);
 
-        int thickness = 3 + (int) (normalizedStrength * 18.0D);
+        centerY = clamp(centerY, MIN_Y + 24, MAX_Y - 32);
 
-        double undersideNoise = fractalNoise2D(
-                worldX * 0.11D + 420.0D,
-                worldZ * 0.11D - 240.0D,
-                seed ^ 0x5149D2AF0B44E281L,
-                2
-        );
+        double domeNoise =
+                fractalNoise2D(
+                        worldX * 0.080D + 240.0D,
+                        worldZ * 0.080D - 120.0D,
+                        seed ^ 0x1F37BCE92A60D4C3L,
+                        2
+                );
 
-        int undersideExtra = (int) (undersideNoise * 5.0D);
+        double undersideNoise =
+                fractalNoise2D(
+                        worldX * 0.067D + 420.0D,
+                        worldZ * 0.067D - 240.0D,
+                        seed ^ 0x5149D2AF0B44E281L,
+                        2
+                );
 
-        return new ColumnShape(
-                islandStrength,
+        int topRadius =
+                5
+                        + (int) (mass * 14.0D)
+                        + (int) (domeNoise * 4.0D);
+
+        int bottomRadius =
+                14
+                        + (int) (mass * 42.0D)
+                        + (int) (undersideNoise * 14.0D);
+
+        return new IslandColumn(
+                mass,
                 centerY,
-                thickness,
-                undersideExtra
+                Math.max(3, topRadius),
+                Math.max(8, bottomRadius)
         );
     }
 
     private static double getIslandDensityAtY(
-            ColumnShape shape,
+            IslandColumn column,
             int y
     ) {
-        int top = shape.centerY()
-                + Math.max(1, shape.thickness() / 3);
+        int top = column.centerY() + column.topRadius();
+        int bottom = column.centerY() - column.bottomRadius();
 
-        int bottom = shape.centerY()
-                - shape.thickness()
-                - shape.undersideExtra();
+        if (y > top || y < bottom) {
+            return -1.0D;
+        }
 
         double verticalDistance;
 
-        if (y >= shape.centerY()) {
+        if (y >= column.centerY()) {
             verticalDistance =
-                    (double) (y - shape.centerY())
-                            / Math.max(1.0D, top - shape.centerY());
+                    (double) (y - column.centerY())
+                            / Math.max(1.0D, column.topRadius());
+
+            verticalDistance = Math.pow(verticalDistance, 1.55D);
         } else {
             verticalDistance =
-                    (double) (shape.centerY() - y)
-                            / Math.max(1.0D, shape.centerY() - bottom);
+                    (double) (column.centerY() - y)
+                            / Math.max(1.0D, column.bottomRadius());
+
+            verticalDistance = Math.pow(verticalDistance, 0.76D);
         }
 
-        return ((shape.islandStrength() - 0.48D) / 0.52D)
-                - verticalDistance * 0.82D;
+        return column.mass() - verticalDistance * 0.82D;
     }
 
     private static long getBaseTerrainSeed(long worldSeed) {
@@ -367,6 +537,17 @@ public final class RetoldAenderTerrainBuilder {
         return EFFECTIVE_WORLD_TERRAIN_SEED
                 ^ regenerationSalt
                 ^ 0xB89F1246D73AC55DL;
+    }
+
+    private static double smoothThreshold(
+            double value,
+            double min,
+            double max
+    ) {
+        double normalized =
+                clamp((value - min) / (max - min), 0.0D, 1.0D);
+
+        return smoothStep(normalized);
     }
 
     private static double signedFractalNoise2D(
@@ -491,11 +672,11 @@ public final class RetoldAenderTerrainBuilder {
         return Math.max(min, Math.min(max, value));
     }
 
-    private record ColumnShape(
-            double islandStrength,
+    private record IslandColumn(
+            double mass,
             int centerY,
-            int thickness,
-            int undersideExtra
+            int topRadius,
+            int bottomRadius
     ) {
     }
 }
