@@ -9,11 +9,11 @@ import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.worldgen.delayed.*;
-import cz.xefensor.retold.aender.RetoldAenderAttachments;
-import cz.xefensor.retold.aender.RetoldAenderStabilizerEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
-import cz.xefensor.retold.aender.RetoldAenderUnstableChunkEvents;
-import cz.xefensor.retold.aender.RetoldAenderChunkGenerators;
+import cz.xefensor.retold.aender.RetoldAenderRegistries;
+import cz.xefensor.retold.aender.stability.AenderChunkEvents;
+import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
+import cz.xefensor.retold.registry.RetoldBlocks;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -22,6 +22,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import org.slf4j.Logger;
 
+
 @Mod(Retold.MODID)
 public final class Retold {
     public static final String MODID = "retold";
@@ -29,10 +30,9 @@ public final class Retold {
 
     public Retold(IEventBus modEventBus) {
         RetoldBlocks.register(modEventBus);
-        RetoldAenderAttachments.register(modEventBus);
         RetoldWorldgenRegistries.register(modEventBus);
         RetoldAttachments.register(modEventBus);
-        RetoldAenderChunkGenerators.register(modEventBus);
+        RetoldAenderRegistries.register(modEventBus);
 
         modEventBus.addListener(RetoldNetworking::registerPayloads);
 
@@ -56,8 +56,8 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldClientChunkTracker.class);
         NeoForge.EVENT_BUS.register(RetoldRetrogenDropBlocker.class);
         NeoForge.EVENT_BUS.register(RetoldPatrolStageEvents.class);
-        NeoForge.EVENT_BUS.register(RetoldAenderStabilizerEvents.class);
-        NeoForge.EVENT_BUS.register(RetoldAenderUnstableChunkEvents.class);
+        NeoForge.EVENT_BUS.register(AenderChunkEvents.class);
+        NeoForge.EVENT_BUS.register(AenderStabilizerEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }

@@ -13,7 +13,8 @@
     "VillagerInvoker",
     "DelayedStructurePlacementMixin",
     "AbstractFurnaceBlockEntityMixin",
-    "EndPortalBlockMixin"
+    "EndPortalBlockMixin",
+    "AenderChunkMapSaveMixin"
   ],
   "client": [
     "MerchantScreenMixin"
