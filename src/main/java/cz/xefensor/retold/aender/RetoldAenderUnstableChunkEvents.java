@@ -27,7 +27,15 @@ public final class RetoldAenderUnstableChunkEvents {
     private static final Map<Long, Integer> WATCHERS =
             new HashMap<>();
 
+    private static final Map<Long, Integer> REGENERATION_COOLDOWN_UNTIL_TICK =
+            new HashMap<>();
+
     private static final int CHUNKS_PER_TICK = 1;
+    private static final int MAX_REGENERATION_QUEUE_SIZE = 2048;
+    private static final int REGENERATION_COOLDOWN_TICKS = 100;
+    private static final int COOLDOWN_CLEANUP_INTERVAL_TICKS = 200;
+
+    private static int currentTick = 0;
 
     private RetoldAenderUnstableChunkEvents() {
     }
@@ -87,13 +95,21 @@ public final class RetoldAenderUnstableChunkEvents {
             return;
         }
 
-        if (data.shouldRegenerateOnNextLoad()) {
-            enqueue(chunk.getPos());
+        if (!data.shouldRegenerateOnNextLoad()) {
+            return;
         }
+
+        enqueue(chunk.getPos());
     }
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
+        currentTick++;
+
+        if (currentTick % COOLDOWN_CLEANUP_INTERVAL_TICKS == 0) {
+            cleanupExpiredCooldowns();
+        }
+
         ServerLevel aenderLevel =
                 event.getServer().getLevel(RetoldAenderDimensions.AENDER);
 
@@ -103,9 +119,15 @@ public final class RetoldAenderUnstableChunkEvents {
 
         for (int i = 0; i < CHUNKS_PER_TICK && !REGENERATION_QUEUE.isEmpty(); i++) {
             ChunkPos pos = REGENERATION_QUEUE.poll();
-            QUEUED_CHUNKS.remove(packChunk(pos.x(), pos.z()));
+            long key = packChunk(pos.x(), pos.z());
+
+            QUEUED_CHUNKS.remove(key);
 
             if (!aenderLevel.hasChunk(pos.x(), pos.z())) {
+                continue;
+            }
+
+            if (isInRegenerationCooldown(pos)) {
                 continue;
             }
 
@@ -160,6 +182,10 @@ public final class RetoldAenderUnstableChunkEvents {
             return;
         }
 
+        if (isInRegenerationCooldown(pos)) {
+            return;
+        }
+
         ChunkAccess chunk = level.getChunk(pos.x(), pos.z());
 
         RetoldAenderChunkData data =
@@ -179,6 +205,15 @@ public final class RetoldAenderUnstableChunkEvents {
     }
 
     private static void enqueue(ChunkPos pos) {
+        if (REGENERATION_QUEUE.size() >= MAX_REGENERATION_QUEUE_SIZE) {
+            Retold.LOGGER.warn(
+                    "Skipped queueing Aender chunk [{}, {}] because regeneration queue is full",
+                    pos.x(),
+                    pos.z()
+            );
+            return;
+        }
+
         long key = packChunk(pos.x(), pos.z());
 
         if (QUEUED_CHUNKS.add(key)) {
@@ -206,6 +241,34 @@ public final class RetoldAenderUnstableChunkEvents {
         return false;
     }
 
+    private static boolean isInRegenerationCooldown(ChunkPos pos) {
+        long key = packChunk(pos.x(), pos.z());
+        int cooldownUntilTick =
+                REGENERATION_COOLDOWN_UNTIL_TICK.getOrDefault(key, -1);
+
+        return cooldownUntilTick > currentTick;
+    }
+
+    private static void startRegenerationCooldown(ChunkPos pos) {
+        long key = packChunk(pos.x(), pos.z());
+
+        REGENERATION_COOLDOWN_UNTIL_TICK.put(
+                key,
+                currentTick + REGENERATION_COOLDOWN_TICKS
+        );
+    }
+
+    private static void cleanupExpiredCooldowns() {
+        for (long key : Set.copyOf(REGENERATION_COOLDOWN_UNTIL_TICK.keySet())) {
+            int cooldownUntilTick =
+                    REGENERATION_COOLDOWN_UNTIL_TICK.getOrDefault(key, -1);
+
+            if (cooldownUntilTick <= currentTick) {
+                REGENERATION_COOLDOWN_UNTIL_TICK.remove(key);
+            }
+        }
+    }
+
     private static void regenerateIfStillUnstable(
             ServerLevel level,
             ChunkPos pos
@@ -230,6 +293,7 @@ public final class RetoldAenderUnstableChunkEvents {
         );
 
         RetoldAenderChunkStability.markRegenerationFinished(level, chunk);
+        startRegenerationCooldown(pos);
 
         Retold.LOGGER.info(
                 "Regenerated unwatched unstable Aender island chunk [{}, {}]",
