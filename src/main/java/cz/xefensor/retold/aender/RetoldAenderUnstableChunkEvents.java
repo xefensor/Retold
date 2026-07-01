@@ -1,11 +1,8 @@
 package cz.xefensor.retold.aender;
 
 import cz.xefensor.retold.Retold;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
@@ -17,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Queue;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -32,7 +28,6 @@ public final class RetoldAenderUnstableChunkEvents {
             new HashMap<>();
 
     private static final int CHUNKS_PER_TICK = 1;
-    private static final int BLOCK_UPDATE_FLAGS = 2;
 
     private RetoldAenderUnstableChunkEvents() {
     }
@@ -87,11 +82,14 @@ public final class RetoldAenderUnstableChunkEvents {
         RetoldAenderChunkData data =
                 chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
 
-        if (!data.shouldRegenerateOnNextLoad()) {
+        if (data.shouldGenerateInitialTerrain()) {
+            generateInitialTerrain(level, chunk);
             return;
         }
 
-        enqueue(chunk.getPos());
+        if (data.shouldRegenerateOnNextLoad()) {
+            enqueue(chunk.getPos());
+        }
     }
 
     @SubscribeEvent
@@ -121,6 +119,37 @@ public final class RetoldAenderUnstableChunkEvents {
 
             regenerateIfStillUnstable(aenderLevel, pos);
         }
+    }
+
+    private static void generateInitialTerrain(
+            ServerLevel level,
+            ChunkAccess chunk
+    ) {
+        RetoldAenderChunkData data =
+                chunk.getData(RetoldAenderAttachments.CHUNK_DATA.get());
+
+        if (!data.shouldGenerateInitialTerrain()) {
+            return;
+        }
+
+        long salt = initialSaltForChunk(level, chunk.getPos());
+
+        RetoldAenderTerrainBuilder.generateFloatingIslands(
+                level,
+                chunk.getPos(),
+                salt
+        );
+
+        RetoldAenderChunkData newData =
+                data.withInitialTerrainGenerated(salt);
+
+        chunk.setData(RetoldAenderAttachments.CHUNK_DATA.get(), newData);
+
+        Retold.LOGGER.debug(
+                "Generated initial Aender island terrain in chunk [{}, {}]",
+                chunk.getPos().x(),
+                chunk.getPos().z()
+        );
     }
 
     private static void scheduleUnwatchedChunkRegeneration(
@@ -194,81 +223,28 @@ public final class RetoldAenderUnstableChunkEvents {
             return;
         }
 
-        regenerateFlatVariant(level, pos, data.regenerationSalt());
+        RetoldAenderTerrainBuilder.generateFloatingIslands(
+                level,
+                pos,
+                data.regenerationSalt()
+        );
 
         RetoldAenderChunkStability.markRegenerationFinished(level, chunk);
 
         Retold.LOGGER.info(
-                "Regenerated unwatched unstable Aender chunk [{}, {}]",
+                "Regenerated unwatched unstable Aender island chunk [{}, {}]",
                 pos.x(),
                 pos.z()
         );
     }
 
-    private static void regenerateFlatVariant(
+    private static long initialSaltForChunk(
             ServerLevel level,
-            ChunkPos pos,
-            long salt
+            ChunkPos pos
     ) {
-        Random random = new Random(
-                level.getSeed()
-                        ^ salt
-                        ^ packChunk(pos.x(), pos.z())
-        );
-
-        int minY = level.getMinY();
-        int maxY = level.getMaxY();
-
-        for (int localX = 0; localX < 16; localX++) {
-            for (int localZ = 0; localZ < 16; localZ++) {
-                int worldX = pos.getMinBlockX() + localX;
-                int worldZ = pos.getMinBlockZ() + localZ;
-
-                int surfaceHeight = minY + 3 + random.nextInt(4);
-
-                for (int y = minY; y < maxY; y++) {
-                    BlockState state = getStateForY(
-                            random,
-                            minY,
-                            y,
-                            surfaceHeight
-                    );
-
-                    level.setBlock(
-                            new BlockPos(worldX, y, worldZ),
-                            state,
-                            BLOCK_UPDATE_FLAGS
-                    );
-                }
-            }
-        }
-    }
-
-    private static BlockState getStateForY(
-            Random random,
-            int minY,
-            int y,
-            int surfaceHeight
-    ) {
-        if (y == minY) {
-            return Blocks.BEDROCK.defaultBlockState();
-        }
-
-        if (y > surfaceHeight) {
-            return Blocks.AIR.defaultBlockState();
-        }
-
-        int roll = random.nextInt(100);
-
-        if (roll < 2) {
-            return Blocks.AMETHYST_BLOCK.defaultBlockState();
-        }
-
-        if (roll < 8) {
-            return Blocks.OBSIDIAN.defaultBlockState();
-        }
-
-        return Blocks.END_STONE.defaultBlockState();
+        return level.getSeed()
+                ^ packChunk(pos.x(), pos.z())
+                ^ 0x4E2A19D7C05B8F33L;
     }
 
     private static long packChunk(int chunkX, int chunkZ) {

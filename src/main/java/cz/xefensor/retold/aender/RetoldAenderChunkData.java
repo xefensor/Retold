@@ -5,17 +5,22 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 public record RetoldAenderChunkData(
         int stabilizerCount,
+        boolean terrainGenerated,
         boolean regenerateOnNextLoad,
         long regenerationSalt
 ) {
     public static final RetoldAenderChunkData EMPTY =
-            new RetoldAenderChunkData(0, false, 0L);
+            new RetoldAenderChunkData(0, false, false, 0L);
 
     public static final Codec<RetoldAenderChunkData> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
                     Codec.INT
                             .optionalFieldOf("stabilizer_count", 0)
                             .forGetter(RetoldAenderChunkData::stabilizerCount),
+
+                    Codec.BOOL
+                            .optionalFieldOf("terrain_generated", false)
+                            .forGetter(RetoldAenderChunkData::terrainGenerated),
 
                     Codec.BOOL
                             .optionalFieldOf("regenerate_on_next_load", false)
@@ -38,6 +43,10 @@ public record RetoldAenderChunkData(
         return stabilizerCount > 0;
     }
 
+    public boolean shouldGenerateInitialTerrain() {
+        return !terrainGenerated && !isStabilized();
+    }
+
     public boolean shouldRegenerateOnNextLoad() {
         return regenerateOnNextLoad && !isStabilized();
     }
@@ -45,6 +54,7 @@ public record RetoldAenderChunkData(
     public RetoldAenderChunkData withAddedStabilizer() {
         return new RetoldAenderChunkData(
                 stabilizerCount + 1,
+                terrainGenerated,
                 false,
                 regenerationSalt
         );
@@ -57,8 +67,18 @@ public record RetoldAenderChunkData(
 
         return new RetoldAenderChunkData(
                 stabilizerCount - 1,
+                terrainGenerated,
                 regenerateOnNextLoad,
                 regenerationSalt
+        );
+    }
+
+    public RetoldAenderChunkData withInitialTerrainGenerated(long salt) {
+        return new RetoldAenderChunkData(
+                stabilizerCount,
+                true,
+                false,
+                salt
         );
     }
 
@@ -70,6 +90,7 @@ public record RetoldAenderChunkData(
         return new RetoldAenderChunkData(
                 stabilizerCount,
                 true,
+                true,
                 salt
         );
     }
@@ -77,6 +98,7 @@ public record RetoldAenderChunkData(
     public RetoldAenderChunkData withRegenerationFinished() {
         return new RetoldAenderChunkData(
                 stabilizerCount,
+                true,
                 false,
                 regenerationSalt
         );
