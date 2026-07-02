@@ -5,6 +5,7 @@ import cz.xefensor.retold.aender.generation.AenderVolatility;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 public final class AenderWorldTickEvents {
     private static boolean hadPlayers = false;
@@ -30,5 +31,11 @@ public final class AenderWorldTickEvents {
         }
 
         hadPlayers = hasPlayers;
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        AenderVolatility.clearForgottenWorld();
+        hadPlayers = false;
     }
 }

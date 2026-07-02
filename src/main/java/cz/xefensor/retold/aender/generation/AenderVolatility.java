@@ -11,7 +11,8 @@ import java.util.Map;
 import java.util.Set;
 
 public final class AenderVolatility {
-    private static final long ROOT_SALT = mix64(System.nanoTime() ^ 0xA3D1E41F29B7C53DL);
+    private static long realitySalt = mix64(System.nanoTime() ^ 0xA3D1E41F29B7C53DL);
+    private static long realityEpoch = 0L;
 
     private static final Map<RegionKey, Long> ACTIVE_REGION_SALTS = new HashMap<>();
     private static final Map<RegionKey, Integer> REGION_REFS = new HashMap<>();
@@ -28,8 +29,6 @@ public final class AenderVolatility {
      * Region-column epoch. Incrementing this makes the region generate differently.
      */
     private static final Map<RegionColumn, Long> REGION_EPOCHS = new HashMap<>();
-
-    private static long serial = 0L;
 
     private AenderVolatility() {
     }
@@ -101,7 +100,14 @@ public final class AenderVolatility {
         RETAINED_CHUNKS.clear();
         CHUNK_GENERATION_SIGNATURES.clear();
         REGION_EPOCHS.clear();
-        serial++;
+
+        realityEpoch++;
+        realitySalt = mix64(
+                realitySalt
+                        ^ System.nanoTime()
+                        ^ realityEpoch * 0x9E3779B97F4A7C15L
+                        ^ 0xA3D1E41F29B7C53DL
+        );
     }
 
     public static synchronized void forgetFarRegionColumns(List<ServerPlayer> players, int forgetDistanceBlocks) {
@@ -144,8 +150,6 @@ public final class AenderVolatility {
         ACTIVE_REGION_SALTS.keySet().removeIf(key ->
                 key.regionX() == column.regionX() && key.regionZ() == column.regionZ()
         );
-
-        serial++;
     }
 
     private static boolean isColumnNearAnyPlayer(
@@ -231,7 +235,8 @@ public final class AenderVolatility {
         long epoch = regionEpoch(key.regionX(), key.regionZ());
 
         return mix64(
-                ROOT_SALT
+                realitySalt
+                        ^ realityEpoch * 0xD1B54A32D192ED03L
                         ^ (long) key.regionX() * 0x632BE59BD9B4E019L
                         ^ (long) key.regionZ() * 0x85157AF5C91D1B35L
                         ^ (long) key.layerY() * 0x9E3779B97F4A7C15L
@@ -255,7 +260,11 @@ public final class AenderVolatility {
         int minRegionZ = Math.floorDiv(minZ, AenderIslandSampler.REGION_SIZE) - 1;
         int maxRegionZ = Math.floorDiv(maxZ, AenderIslandSampler.REGION_SIZE) + 1;
 
-        long signature = 0x9E3779B97F4A7C15L;
+        long signature = mix64(
+                realitySalt
+                        ^ realityEpoch * 0xD1B54A32D192ED03L
+                        ^ 0x9E3779B97F4A7C15L
+        );
 
         for (int regionX = minRegionX; regionX <= maxRegionX; regionX++) {
             for (int regionZ = minRegionZ; regionZ <= maxRegionZ; regionZ++) {
