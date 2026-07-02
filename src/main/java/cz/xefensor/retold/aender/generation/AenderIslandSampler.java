@@ -1,5 +1,6 @@
 package cz.xefensor.retold.aender.generation;
 
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import java.util.ArrayList;
@@ -12,6 +13,13 @@ public final class AenderIslandSampler {
 
     public static final int REGION_SIZE = 384;
     public static final int LAYER_HEIGHT = 80;
+
+    private static final double MIN_ISLAND_RADIUS = 50.0D;
+    private static final double MAX_ISLAND_RADIUS = 120.0D;
+    private static final double MIN_ISLAND_HEIGHT = 22.0D;
+    private static final double MAX_ISLAND_HEIGHT = 42.0D;
+
+    private static final int BOUND_MARGIN = 64;
 
     private AenderIslandSampler() {
     }
@@ -105,9 +113,9 @@ public final class AenderIslandSampler {
             return null;
         }
 
-        double radiusX = 80.0D + unit(s ^ 0xB1L) * 130.0D;
-        double radiusZ = 80.0D + unit(s ^ 0xB2L) * 130.0D;
-        double height = 22.0D + unit(s ^ 0xB3L) * 42.0D;
+        double radiusX = 75.0D + unit(s ^ 0xB1L) * 80.0D;
+        double radiusZ = 75.0D + unit(s ^ 0xB2L) * 80.0D;
+        double height = 34.0D + unit(s ^ 0xB3L) * 26.0D;
 
         return new Island(centerX, centerY, centerZ, radiusX, radiusZ, height, s);
     }
@@ -178,51 +186,152 @@ public final class AenderIslandSampler {
             long seed
     ) {
         public int minX() {
-            return (int) Math.floor(centerX - radiusX - 12.0D);
+            return (int) Math.floor(centerX - radiusX * 1.60D - 24.0D);
         }
 
         public int maxX() {
-            return (int) Math.ceil(centerX + radiusX + 12.0D);
+            return (int) Math.ceil(centerX + radiusX * 1.60D + 24.0D);
         }
 
         public int minY() {
-            return Math.max(MIN_Y, (int) Math.floor(centerY - height - 12.0D));
+            return Math.max(MIN_Y, (int) Math.floor(centerY - height * 1.35D - 24.0D));
         }
 
         public int maxY() {
-            return Math.min(MAX_Y - 1, (int) Math.ceil(centerY + height + 12.0D));
+            return Math.min(MAX_Y - 1, (int) Math.ceil(centerY + height * 0.45D + 24.0D));
         }
 
         public int minZ() {
-            return (int) Math.floor(centerZ - radiusZ - 12.0D);
+            return (int) Math.floor(centerZ - radiusZ * 1.60D - 24.0D);
         }
 
         public int maxZ() {
-            return (int) Math.ceil(centerZ + radiusZ + 12.0D);
+            return (int) Math.ceil(centerZ + radiusZ * 1.60D + 24.0D);
         }
 
         public double densityAt(int x, int y, int z) {
-            double dx = (x - centerX) / radiusX;
-            double dz = (z - centerZ) / radiusZ;
-            double dy = (y - centerY) / height;
+            double lx = x - centerX;
+            double lz = z - centerZ;
 
-            double horizontal = dx * dx + dz * dz;
-            double vertical = dy * dy * 1.75D;
+            // Domain warp: rozbije kulatý obrys ještě před výpočtem vzdálenosti.
+            double warpX =
+                    signedNoise2D(x * 0.012D, z * 0.012D, seed ^ 0x1010L) * radiusX * 0.16D +
+                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x1011L) * radiusX * 0.06D;
 
-            double edgeNoise = signedNoise2D(x * 0.018D, z * 0.018D, seed) * 0.22D;
-            double roughness = signedNoise3D(x * 0.055D, y * 0.035D, z * 0.055D, seed ^ 0x91E10DA5L) * 0.12D;
+            double warpZ =
+                    signedNoise2D(x * 0.012D, z * 0.012D, seed ^ 0x2020L) * radiusZ * 0.16D +
+                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x2021L) * radiusZ * 0.06D;
 
-            double shape = 1.0D - horizontal - vertical + edgeNoise + roughness;
+            double wx = lx + warpX;
+            double wz = lz + warpZ;
 
-            if (y <= centerY + 5 && y >= centerY - height * 0.45D) {
-                shape += 0.18D;
+            double angle = Math.atan2(wz / radiusZ, wx / radiusX);
+            double coast = coastScale(angle);
+
+            double nx = wx / (radiusX * coast);
+            double nz = wz / (radiusZ * coast);
+            double r = Math.sqrt(nx * nx + nz * nz);
+
+            // Tohle je hlavní rozdíl:
+            // žádný kulatý kopec, ale skoro plochý top a pokles až u kraje.
+            double rim = smoothStep(0.52D, 1.0D, r);
+
+            double topY = centerY + 5.0D;
+
+            // Okraje jsou trochu níž, střed zůstane použitelně plochý.
+            topY -= rim * height * 0.24D;
+
+            // Jemné zvlnění povrchu, hlavně u pobřeží.
+            topY += signedNoise2D(x * 0.026D, z * 0.026D, seed ^ 0x3030L) * 2.0D;
+            topY += signedNoise2D(x * 0.009D, z * 0.009D, seed ^ 0x3031L) * 5.0D * smoothStep(0.42D, 1.0D, r);
+
+            // Ostrov je uprostřed silnější, u okrajů tenčí.
+            double clampedR = Math.min(r, 1.15D);
+            double thickness = height * (1.02D - 0.58D * Math.pow(clampedR, 1.65D));
+
+            thickness += signedNoise2D(x * 0.018D, z * 0.018D, seed ^ 0x4040L) * height * 0.08D;
+            thickness = Math.max(10.0D, thickness);
+
+            double bottomY = topY - thickness;
+
+            // Čím níž jdeš, tím víc se ostrov zužuje.
+            double vertical01 = (topY - y) / Math.max(1.0D, topY - bottomY);
+            double bottomTaper = 0.30D * smoothStep(0.25D, 1.0D, vertical01);
+
+            double sideDistance = (1.0D - r - bottomTaper) * 30.0D;
+            double topDistance = topY - y;
+            double bottomDistance = y - bottomY;
+
+            double density = Math.min(sideDistance, Math.min(topDistance, bottomDistance));
+
+            // Jemné vykousnutí zespoda / z boků, ale ne tak moc, aby to celý rozbilo.
+            if (r > 0.55D && y < centerY - height * 0.12D) {
+                double undercutNoise = signedNoise3D(
+                        x * 0.030D,
+                        y * 0.040D,
+                        z * 0.030D,
+                        seed ^ 0x5050L
+                );
+
+                if (undercutNoise > 0.45D) {
+                    density -= (undercutNoise - 0.45D) * 4.0D * smoothStep(0.55D, 0.95D, r);
+                }
             }
 
-            if (y < centerY - height * 0.55D) {
-                shape -= ((centerY - height * 0.55D) - y) / height * 0.45D;
+            return density;
+        }
+
+        private double coastScale(double angle) {
+            double cx = Math.cos(angle);
+            double cz = Math.sin(angle);
+
+            double scale = 1.0D;
+
+            // Velké nepravidelnosti obrysu.
+            scale += signedNoise2D(cx * 1.6D, cz * 1.6D, seed ^ 0x7000L) * 0.26D;
+
+            // Menší nepravidelnosti obrysu.
+            scale += signedNoise2D(cx * 4.3D, cz * 4.3D, seed ^ 0x7001L) * 0.16D;
+
+            // Výběžky.
+            for (int i = 0; i < 4; i++) {
+                long s = seed ^ (0x8000L + i * 97L);
+
+                double lobeAngle = unit(s ^ 0x01L) * Math.PI * 2.0D;
+                double width = 0.20D + unit(s ^ 0x02L) * 0.22D;
+                double power = 0.14D + unit(s ^ 0x03L) * 0.20D;
+
+                double d = angleDistance(angle, lobeAngle);
+                scale += Math.exp(-(d * d) / (width * width)) * power;
             }
 
-            return shape;
+            // Zálivy / zářezy.
+            for (int i = 0; i < 5; i++) {
+                long s = seed ^ (0x9000L + i * 113L);
+
+                double biteAngle = unit(s ^ 0x11L) * Math.PI * 2.0D;
+                double width = 0.12D + unit(s ^ 0x12L) * 0.20D;
+                double power = 0.12D + unit(s ^ 0x13L) * 0.18D;
+
+                double d = angleDistance(angle, biteAngle);
+                scale -= Math.exp(-(d * d) / (width * width)) * power;
+            }
+
+            return clamp(scale, 0.58D, 1.48D);
+        }
+
+        private static double angleDistance(double a, double b) {
+            double d = Math.abs(a - b) % (Math.PI * 2.0D);
+            return d > Math.PI ? Math.PI * 2.0D - d : d;
+        }
+
+        private static double smoothStep(double edge0, double edge1, double value) {
+            double t = clamp((value - edge0) / (edge1 - edge0), 0.0D, 1.0D);
+            return t * t * (3.0D - 2.0D * t);
+        }
+
+        private static double clamp(double value, double min, double max) {
+            return Math.max(min, Math.min(max, value));
         }
     }
 }
