@@ -98,11 +98,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
             for (int x = minX; x <= maxX; x++) {
                 for (int z = minZ; z <= maxZ; z++) {
-                    for (int y = minY; y <= maxY; y++) {
-                        if (island.densityAt(x, y, z) > 0.0D) {
-                            pos.set(x, y, z);
-                            chunk.setBlockState(pos, END_STONE, 0);
-                        }
+                    AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+                    if (column.empty()) {
+                        continue;
+                    }
+
+                    int columnMinY = Math.max(minY, column.minY());
+                    int columnMaxY = Math.min(maxY, column.maxY());
+
+                    for (int y = columnMinY; y <= columnMaxY; y++) {
+                        pos.set(x, y, z);
+                        chunk.setBlockState(pos, END_STONE, 0);
                     }
                 }
             }

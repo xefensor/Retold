@@ -185,144 +185,101 @@ public final class AenderIslandSampler {
             double height,
             long seed
     ) {
+        private static final double BOUND_SCALE = 1.35D;
+        private static final double BOUND_MARGIN = 24.0D;
+
         public int minX() {
-            return (int) Math.floor(centerX - radiusX * 1.60D - 24.0D);
+            return (int) Math.floor(centerX - radiusX * BOUND_SCALE - BOUND_MARGIN);
         }
 
         public int maxX() {
-            return (int) Math.ceil(centerX + radiusX * 1.60D + 24.0D);
+            return (int) Math.ceil(centerX + radiusX * BOUND_SCALE + BOUND_MARGIN);
         }
 
         public int minY() {
-            return Math.max(MIN_Y, (int) Math.floor(centerY - height * 1.35D - 24.0D));
+            return Math.max(MIN_Y, (int) Math.floor(centerY - height * 1.20D - BOUND_MARGIN));
         }
 
         public int maxY() {
-            return Math.min(MAX_Y - 1, (int) Math.ceil(centerY + height * 0.45D + 24.0D));
+            return Math.min(MAX_Y - 1, (int) Math.ceil(centerY + height * 0.35D + BOUND_MARGIN));
         }
 
         public int minZ() {
-            return (int) Math.floor(centerZ - radiusZ * 1.60D - 24.0D);
+            return (int) Math.floor(centerZ - radiusZ * BOUND_SCALE - BOUND_MARGIN);
         }
 
         public int maxZ() {
-            return (int) Math.ceil(centerZ + radiusZ * 1.60D + 24.0D);
+            return (int) Math.ceil(centerZ + radiusZ * BOUND_SCALE + BOUND_MARGIN);
         }
 
-        public double densityAt(int x, int y, int z) {
+        public Column columnAt(int x, int z) {
             double lx = x - centerX;
             double lz = z - centerZ;
 
-            // Domain warp: rozbije kulatý obrys ještě před výpočtem vzdálenosti.
+            // Cheap 2D warp. Jen per x/z column, ne per y blok.
             double warpX =
-                    signedNoise2D(x * 0.012D, z * 0.012D, seed ^ 0x1010L) * radiusX * 0.16D +
-                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x1011L) * radiusX * 0.06D;
+                    signedNoise2D(x * 0.014D, z * 0.014D, seed ^ 0x1010L) * radiusX * 0.22D +
+                            signedNoise2D(x * 0.037D, z * 0.037D, seed ^ 0x1011L) * radiusX * 0.07D;
 
             double warpZ =
-                    signedNoise2D(x * 0.012D, z * 0.012D, seed ^ 0x2020L) * radiusZ * 0.16D +
-                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x2021L) * radiusZ * 0.06D;
+                    signedNoise2D(x * 0.014D, z * 0.014D, seed ^ 0x2020L) * radiusZ * 0.22D +
+                            signedNoise2D(x * 0.037D, z * 0.037D, seed ^ 0x2021L) * radiusZ * 0.07D;
 
-            double wx = lx + warpX;
-            double wz = lz + warpZ;
+            double coast =
+                    1.0D +
+                            signedNoise2D(x * 0.010D, z * 0.010D, seed ^ 0x3030L) * 0.24D +
+                            signedNoise2D(x * 0.026D, z * 0.026D, seed ^ 0x3031L) * 0.10D;
 
-            double angle = Math.atan2(wz / radiusZ, wx / radiusX);
-            double coast = coastScale(angle);
+            coast = clamp(coast, 0.68D, 1.34D);
 
-            double nx = wx / (radiusX * coast);
-            double nz = wz / (radiusZ * coast);
-            double r = Math.sqrt(nx * nx + nz * nz);
+            double dx = (lx + warpX) / (radiusX * coast);
+            double dz = (lz + warpZ) / (radiusZ * coast);
 
-            // Tohle je hlavní rozdíl:
-            // žádný kulatý kopec, ale skoro plochý top a pokles až u kraje.
+            double r = Math.sqrt(dx * dx + dz * dz);
+
+            if (r > 1.0D) {
+                return Column.EMPTY;
+            }
+
+            // Rim = kraj ostrova. Střed zůstane plochý, okraj jde níž.
             double rim = smoothStep(0.52D, 1.0D, r);
 
             double topY = centerY + 5.0D;
 
-            // Okraje jsou trochu níž, střed zůstane použitelně plochý.
-            topY -= rim * height * 0.24D;
+            // Okraje jsou níž, ale střed není "dortový kopec".
+            topY -= rim * height * 0.22D;
 
-            // Jemné zvlnění povrchu, hlavně u pobřeží.
-            topY += signedNoise2D(x * 0.026D, z * 0.026D, seed ^ 0x3030L) * 2.0D;
-            topY += signedNoise2D(x * 0.009D, z * 0.009D, seed ^ 0x3031L) * 5.0D * smoothStep(0.42D, 1.0D, r);
+            // Jemné zvlnění povrchu.
+            topY += signedNoise2D(x * 0.018D, z * 0.018D, seed ^ 0x4040L) * 2.5D;
+            topY += signedNoise2D(x * 0.045D, z * 0.045D, seed ^ 0x4041L) * 1.2D * rim;
 
-            // Ostrov je uprostřed silnější, u okrajů tenčí.
-            double clampedR = Math.min(r, 1.15D);
-            double thickness = height * (1.02D - 0.58D * Math.pow(clampedR, 1.65D));
+            // Tloušťka: silnější uprostřed, tenčí u krajů.
+            double thickness = height * (1.02D - 0.62D * r * r);
+            thickness += signedNoise2D(x * 0.016D, z * 0.016D, seed ^ 0x5050L) * height * 0.06D;
 
-            thickness += signedNoise2D(x * 0.018D, z * 0.018D, seed ^ 0x4040L) * height * 0.08D;
-            thickness = Math.max(10.0D, thickness);
+            thickness = Math.max(8.0D, thickness);
 
             double bottomY = topY - thickness;
 
-            // Čím níž jdeš, tím víc se ostrov zužuje.
-            double vertical01 = (topY - y) / Math.max(1.0D, topY - bottomY);
-            double bottomTaper = 0.30D * smoothStep(0.25D, 1.0D, vertical01);
+            int minY = Math.max(MIN_Y, (int) Math.floor(bottomY));
+            int maxY = Math.min(MAX_Y - 1, (int) Math.floor(topY));
 
-            double sideDistance = (1.0D - r - bottomTaper) * 30.0D;
-            double topDistance = topY - y;
-            double bottomDistance = y - bottomY;
-
-            double density = Math.min(sideDistance, Math.min(topDistance, bottomDistance));
-
-            // Jemné vykousnutí zespoda / z boků, ale ne tak moc, aby to celý rozbilo.
-            if (r > 0.55D && y < centerY - height * 0.12D) {
-                double undercutNoise = signedNoise3D(
-                        x * 0.030D,
-                        y * 0.040D,
-                        z * 0.030D,
-                        seed ^ 0x5050L
-                );
-
-                if (undercutNoise > 0.45D) {
-                    density -= (undercutNoise - 0.45D) * 4.0D * smoothStep(0.55D, 0.95D, r);
-                }
+            if (maxY < minY) {
+                return Column.EMPTY;
             }
 
-            return density;
+            return new Column(minY, maxY);
         }
 
-        private double coastScale(double angle) {
-            double cx = Math.cos(angle);
-            double cz = Math.sin(angle);
+        // Fallback pro staré metody typu getBaseHeight/getBaseColumn.
+        public double densityAt(int x, int y, int z) {
+            Column column = columnAt(x, z);
 
-            double scale = 1.0D;
-
-            // Velké nepravidelnosti obrysu.
-            scale += signedNoise2D(cx * 1.6D, cz * 1.6D, seed ^ 0x7000L) * 0.26D;
-
-            // Menší nepravidelnosti obrysu.
-            scale += signedNoise2D(cx * 4.3D, cz * 4.3D, seed ^ 0x7001L) * 0.16D;
-
-            // Výběžky.
-            for (int i = 0; i < 4; i++) {
-                long s = seed ^ (0x8000L + i * 97L);
-
-                double lobeAngle = unit(s ^ 0x01L) * Math.PI * 2.0D;
-                double width = 0.20D + unit(s ^ 0x02L) * 0.22D;
-                double power = 0.14D + unit(s ^ 0x03L) * 0.20D;
-
-                double d = angleDistance(angle, lobeAngle);
-                scale += Math.exp(-(d * d) / (width * width)) * power;
+            if (column.empty()) {
+                return -1.0D;
             }
 
-            // Zálivy / zářezy.
-            for (int i = 0; i < 5; i++) {
-                long s = seed ^ (0x9000L + i * 113L);
-
-                double biteAngle = unit(s ^ 0x11L) * Math.PI * 2.0D;
-                double width = 0.12D + unit(s ^ 0x12L) * 0.20D;
-                double power = 0.12D + unit(s ^ 0x13L) * 0.18D;
-
-                double d = angleDistance(angle, biteAngle);
-                scale -= Math.exp(-(d * d) / (width * width)) * power;
-            }
-
-            return clamp(scale, 0.58D, 1.48D);
-        }
-
-        private static double angleDistance(double a, double b) {
-            double d = Math.abs(a - b) % (Math.PI * 2.0D);
-            return d > Math.PI ? Math.PI * 2.0D - d : d;
+            return y >= column.minY && y <= column.maxY ? 1.0D : -1.0D;
         }
 
         private static double smoothStep(double edge0, double edge1, double value) {
@@ -332,6 +289,14 @@ public final class AenderIslandSampler {
 
         private static double clamp(double value, double min, double max) {
             return Math.max(min, Math.min(max, value));
+        }
+
+        public record Column(int minY, int maxY) {
+            public static final Column EMPTY = new Column(1, 0);
+
+            public boolean empty() {
+                return minY > maxY;
+            }
         }
     }
 }
