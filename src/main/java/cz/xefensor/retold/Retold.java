@@ -1,6 +1,7 @@
 package cz.xefensor.retold;
 
 import com.mojang.logging.LogUtils;
+import cz.xefensor.retold.aender.stability.AenderWorldTickEvents;
 import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.event.*;
 import cz.xefensor.retold.network.RetoldNetworking;
@@ -14,6 +15,7 @@ import cz.xefensor.retold.aender.RetoldAenderRegistries;
 import cz.xefensor.retold.aender.stability.AenderChunkEvents;
 import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -58,6 +60,8 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldPatrolStageEvents.class);
         NeoForge.EVENT_BUS.register(AenderChunkEvents.class);
         NeoForge.EVENT_BUS.register(AenderStabilizerEvents.class);
+        NeoForge.EVENT_BUS.register(AenderWorldTickEvents.class);
+        NeoForge.EVENT_BUS.register(AenderRealityTickEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }

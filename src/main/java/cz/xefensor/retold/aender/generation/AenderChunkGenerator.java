@@ -2,7 +2,6 @@ package cz.xefensor.retold.aender.generation;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import cz.xefensor.retold.aender.RetoldAenderRegistries;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -55,12 +54,37 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     }
 
     public static void generateChunk(ChunkAccess chunk) {
+        generateChunk(chunk, false);
+    }
+
+    public static void regenerateLoadedChunk(ChunkAccess chunk) {
+        generateChunk(chunk, true);
+    }
+
+    private static void generateChunk(ChunkAccess chunk, boolean clearFirst) {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
         int chunkMinX = chunk.getPos().getMinBlockX();
         int chunkMaxX = chunkMinX + 15;
         int chunkMinZ = chunk.getPos().getMinBlockZ();
         int chunkMaxZ = chunkMinZ + 15;
+
+        if (clearFirst) {
+            for (int localX = 0; localX < 16; localX++) {
+                for (int localZ = 0; localZ < 16; localZ++) {
+                    int x = chunkMinX + localX;
+                    int z = chunkMinZ + localZ;
+
+                    for (int y = AenderIslandSampler.MIN_Y; y < AenderIslandSampler.MAX_Y; y++) {
+                        pos.set(x, y, z);
+
+                        if (!chunk.getBlockState(pos).isAir()) {
+                            chunk.setBlockState(pos, AIR, 0);
+                        }
+                    }
+                }
+            }
+        }
 
         List<AenderIslandSampler.Island> islands = AenderIslandSampler.islandsForChunk(chunk);
 
@@ -92,6 +116,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                         Heightmap.Types.MOTION_BLOCKING
                 )
         );
+
+        AenderVolatility.markGenerated(chunk);
     }
 
     @Override
@@ -102,9 +128,9 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             LevelHeightAccessor level,
             RandomState random
     ) {
-        for (int y = AenderIslandSampler.MAX_Y - 1; y >= AenderIslandSampler.MIN_Y; y--) {
+        for (int y = AenderIslandSampler.MAX_Y - 1; y >= AenderIslandSampler.MIN_Y; y -= 4) {
             if (AenderIslandSampler.density(x, y, z) > 0.0D) {
-                return y + 1;
+                return Math.min(y + 5, AenderIslandSampler.MAX_Y);
             }
         }
 
@@ -135,7 +161,6 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             RandomState random,
             ChunkAccess chunk
     ) {
-        // Terrain is already generated in fillFromNoise.
     }
 
     @Override
@@ -178,5 +203,6 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         info.add("Retold Aender volatile terrain");
         info.add("Aender retained chunks: " + AenderVolatility.retainedChunkCount());
         info.add("Aender active regions: " + AenderVolatility.activeRegionCount());
+        info.add("Aender generated chunks: " + AenderVolatility.generatedThisSessionCount());
     }
 }

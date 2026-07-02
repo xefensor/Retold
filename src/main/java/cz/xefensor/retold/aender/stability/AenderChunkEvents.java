@@ -31,6 +31,11 @@ public final class AenderChunkEvents {
         }
 
         AenderVolatility.retainForChunk(chunk);
+
+        if (AenderVolatility.needsRegeneration(chunk)) {
+            System.out.println("[Aender] regenerating loaded unstable chunk " + chunk.getPos());
+            AenderChunkGenerator.regenerateLoadedChunk(chunk);
+        }
     }
 
     @SubscribeEvent
@@ -44,12 +49,13 @@ public final class AenderChunkEvents {
         }
 
         ChunkAccess chunk = event.getChunk();
-        ChunkPos pos = chunk.getPos();
-
-        if (AenderStabilityData.get(level).isStable(pos)) {
-            return;
-        }
 
         AenderVolatility.releaseForChunk(chunk);
+
+        int blockX = chunk.getPos().getMinBlockX();
+        int blockZ = chunk.getPos().getMinBlockZ();
+
+        int regionX = AenderVolatility.regionXForBlock(blockX);
+        int regionZ = AenderVolatility.regionZForBlock(blockZ);
     }
 }
