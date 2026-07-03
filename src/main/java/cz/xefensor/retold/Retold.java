@@ -45,6 +45,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldCommandEvents.class);
         NeoForge.EVENT_BUS.register(RetoldStageRuntimeEvents.class);
         NeoForge.EVENT_BUS.register(RetoldUndeadEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldPiglinEvents.class);
         NeoForge.EVENT_BUS.register(RetoldEndProgressionEvents.class);
         NeoForge.EVENT_BUS.register(RetoldGolemEvents.class);
         NeoForge.EVENT_BUS.register(RetoldEndermanEvents.class);
