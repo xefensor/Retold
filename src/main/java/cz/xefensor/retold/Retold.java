@@ -17,6 +17,7 @@ import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.event.RetoldFactionTerritoryEvents;
 import cz.xefensor.retold.event.RetoldNetherRemnantCombatEvents;
+import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -67,6 +68,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(AenderRealityTickEvents.class);
         NeoForge.EVENT_BUS.register(RetoldNetherRemnantCombatEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionTerritoryEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldFactionAssistEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }

@@ -154,6 +154,14 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
+        // If this mob is already attacking someone because of retaliation,
+        // faction assist, or another combat system, do not warn them.
+        // Adopt the existing target and enter attack mode immediately.
+        if (tryAdoptExistingAttackTarget(level, mob, state, gameTime)) {
+            updateAttackState(level, mob, state, gameTime);
+            return;
+        }
+
         LivingEntity currentWarningTarget = state.warningTarget;
 
         if (currentWarningTarget == null || !isValidWarningTarget(mob, currentWarningTarget)) {
@@ -202,6 +210,39 @@ public final class RetoldFactionTerritoryEvents {
         }
     }
 
+    private static boolean tryAdoptExistingAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            long gameTime
+    ) {
+        LivingEntity existingTarget = mob.getTarget();
+
+        if (existingTarget == null) {
+            return false;
+        }
+
+        if (!isPossibleIntruder(level, mob, existingTarget, gameTime)) {
+            return false;
+        }
+
+        if (!isValidAttackTarget(mob, existingTarget)) {
+            return false;
+        }
+
+        state.hasStartedAttack = true;
+        state.attackTarget = existingTarget;
+        state.warningTarget = existingTarget;
+        state.warningPulses = WARNING_PULSES_BEFORE_ATTACK;
+
+        // Do not mark random nearby new entities as warned.
+        // This target was already engaged through combat, not territory warning.
+        state.warnedIntruders.clear();
+
+        applyAttackTarget(mob, existingTarget, gameTime);
+        return true;
+    }
+
     private static void updateAttackState(
             ServerLevel level,
             PathfinderMob mob,
@@ -210,7 +251,7 @@ public final class RetoldFactionTerritoryEvents {
     ) {
         LivingEntity attackTarget = state.attackTarget;
 
-        if (attackTarget == null || !isValidWarnedAttackTarget(level, mob, state, attackTarget, gameTime)) {
+        if (attackTarget == null || !isValidCurrentAttackTarget(level, mob, attackTarget, gameTime)) {
             attackTarget = findNearestWarnedIntruderForAttack(level, mob, state, gameTime);
 
             if (attackTarget == null) {
@@ -230,6 +271,16 @@ public final class RetoldFactionTerritoryEvents {
         if (gameTime - state.lastAttackRefreshAt >= ATTACK_REFRESH_INTERVAL_TICKS) {
             applyAttackTarget(mob, attackTarget, gameTime);
         }
+    }
+
+    private static boolean isValidCurrentAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            LivingEntity target,
+            long gameTime
+    ) {
+        return isValidAttackTarget(mob, target)
+                && isNearNetherRemnantTerritory(level, target, gameTime);
     }
 
     private static LivingEntity findNearestIntruder(
