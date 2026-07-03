@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:bastion_remnant",
+    "minecraft:fortress"
+  ]
+}
