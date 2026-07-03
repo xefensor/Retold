@@ -2,6 +2,7 @@ package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.faction.RetoldFactionRelations;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -14,20 +15,20 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldFactionAssistEvents {
     private static final int ASSIST_RADIUS_BLOCKS = 32;
+    private static final int ENEMY_FACTION_DETECT_RADIUS_BLOCKS = 40;
 
-    // Per caller cooldown. Prevents every target refresh from spamming assists.
     private static final int HELP_CALL_COOLDOWN_TICKS = 40;
 
     private static final Map<Entity, Long> LAST_HELP_CALL_AT = new WeakHashMap<>();
-
-    // Tracks what target a faction mob has already announced.
-    // If the target changes, it can call help again.
     private static final Map<Entity, LivingEntity> LAST_ANNOUNCED_TARGETS = new WeakHashMap<>();
+    private static final Map<Entity, RetoldFaction> LAST_ANNOUNCED_TARGET_FACTIONS = new WeakHashMap<>();
 
     private RetoldFactionAssistEvents() {
     }
@@ -59,17 +60,23 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        RetoldFaction victimFaction = getFaction(victim);
-        RetoldFaction attackerFaction = getFaction(attacker);
+        RetoldFaction victimFaction = RetoldFactionMembers.getFaction(victim);
+        RetoldFaction attackerFaction = RetoldFactionMembers.getFaction(attacker);
 
-        // A faction member was attacked.
-        if (victimFaction != null && !RetoldFactionMembers.isMemberOf(attacker, victimFaction)) {
-            callForFactionHelp(level, victim, attacker, victimFaction);
+        if (victimFaction != null && victimFaction != attackerFaction) {
+            if (attackerFaction != null) {
+                callForFactionHelpAgainstFaction(level, victim, attackerFaction, victimFaction);
+            } else {
+                callForFactionHelp(level, victim, attacker, victimFaction);
+            }
         }
 
-        // A faction member hit someone.
-        if (attackerFaction != null && !RetoldFactionMembers.isMemberOf(victim, attackerFaction)) {
-            callForFactionHelp(level, attacker, victim, attackerFaction);
+        if (attackerFaction != null && attackerFaction != victimFaction) {
+            if (victimFaction != null) {
+                callForFactionHelpAgainstFaction(level, attacker, victimFaction, attackerFaction);
+            } else {
+                callForFactionHelp(level, attacker, victim, attackerFaction);
+            }
         }
     }
 
@@ -88,32 +95,51 @@ public final class RetoldFactionAssistEvents {
         }
 
         if (!(mob.level() instanceof ServerLevel)) {
-            LAST_ANNOUNCED_TARGETS.remove(mob);
+            clearAnnouncements(mob);
             return;
         }
 
         ServerLevel level = (ServerLevel) mob.level();
-        RetoldFaction faction = getFaction(mob);
+        RetoldFaction mobFaction = RetoldFactionMembers.getFaction(mob);
 
-        if (faction == null) {
-            LAST_ANNOUNCED_TARGETS.remove(mob);
+        if (mobFaction == null) {
+            clearAnnouncements(mob);
             return;
         }
 
         LivingEntity target = mob.getTarget();
 
         if (target == null || !target.isAlive()) {
-            LAST_ANNOUNCED_TARGETS.remove(mob);
+            clearAnnouncements(mob);
             return;
         }
 
         if (target.level() != mob.level()) {
-            LAST_ANNOUNCED_TARGETS.remove(mob);
+            clearAnnouncements(mob);
             return;
         }
 
-        if (RetoldFactionMembers.isMemberOf(target, faction)) {
-            LAST_ANNOUNCED_TARGETS.remove(mob);
+        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+
+        if (targetFaction == mobFaction) {
+            clearAnnouncements(mob);
+            return;
+        }
+
+        if (targetFaction != null) {
+            RetoldFaction lastAnnouncedFaction = LAST_ANNOUNCED_TARGET_FACTIONS.get(mob);
+
+            if (lastAnnouncedFaction == targetFaction) {
+                return;
+            }
+
+            LAST_ANNOUNCED_TARGET_FACTIONS.put(mob, targetFaction);
+            LAST_ANNOUNCED_TARGETS.put(mob, target);
+
+            callForFactionHelpAgainstFaction(level, mob, targetFaction, mobFaction);
+
+            // The target faction also reacts immediately.
+            callForFactionHelpAgainstFaction(level, target, mobFaction, targetFaction);
             return;
         }
 
@@ -124,14 +150,16 @@ public final class RetoldFactionAssistEvents {
         }
 
         LAST_ANNOUNCED_TARGETS.put(mob, target);
-        callForFactionHelp(level, mob, target, faction);
+        LAST_ANNOUNCED_TARGET_FACTIONS.remove(mob);
+
+        callForFactionHelp(level, mob, target, mobFaction);
     }
 
     public static void callForFactionHelp(
             ServerLevel level,
             LivingEntity caller,
             LivingEntity target,
-            RetoldFaction faction
+            RetoldFaction callerFaction
     ) {
         if (!caller.isAlive()) {
             return;
@@ -145,11 +173,18 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(caller, faction)) {
+        if (!RetoldFactionMembers.isMemberOf(caller, callerFaction)) {
             return;
         }
 
-        if (RetoldFactionMembers.isMemberOf(target, faction)) {
+        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+
+        if (targetFaction != null && targetFaction != callerFaction) {
+            callForFactionHelpAgainstFaction(level, caller, targetFaction, callerFaction);
+            return;
+        }
+
+        if (RetoldFactionMembers.isMemberOf(target, callerFaction)) {
             return;
         }
 
@@ -160,15 +195,39 @@ public final class RetoldFactionAssistEvents {
         }
 
         LAST_HELP_CALL_AT.put(caller, gameTime);
-        alertFactionAllies(level, caller, target, faction);
+        alertFactionAlliesAgainstSpecificTarget(level, caller, target, callerFaction);
     }
 
-    private static RetoldFaction getFaction(LivingEntity entity) {
-        if (RetoldFactionMembers.isMemberOf(entity, RetoldFaction.NETHER_REMNANTS)) {
-            return RetoldFaction.NETHER_REMNANTS;
+    public static void callForFactionHelpAgainstFaction(
+            ServerLevel level,
+            LivingEntity caller,
+            RetoldFaction enemyFaction,
+            RetoldFaction callerFaction
+    ) {
+        if (!caller.isAlive()) {
+            return;
         }
 
-        return null;
+        if (!RetoldFactionMembers.isMemberOf(caller, callerFaction)) {
+            return;
+        }
+
+        if (enemyFaction == callerFaction) {
+            return;
+        }
+
+        if (!RetoldFactionRelations.areEnemyFactions(callerFaction, enemyFaction)) {
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+
+        if (!canCallForHelp(caller, gameTime)) {
+            return;
+        }
+
+        LAST_HELP_CALL_AT.put(caller, gameTime);
+        alertFactionAlliesAgainstEnemyFaction(level, caller, callerFaction, enemyFaction);
     }
 
     private static LivingEntity getLivingAttacker(DamageSource source) {
@@ -188,38 +247,117 @@ public final class RetoldFactionAssistEvents {
                 || gameTime - lastHelpCallAt >= HELP_CALL_COOLDOWN_TICKS;
     }
 
-    private static void alertFactionAllies(
+    private static void alertFactionAlliesAgainstSpecificTarget(
             ServerLevel level,
             LivingEntity caller,
             LivingEntity target,
-            RetoldFaction faction
+            RetoldFaction callerFaction
     ) {
         AABB area = caller.getBoundingBox().inflate(ASSIST_RADIUS_BLOCKS);
 
         for (PathfinderMob ally : level.getEntitiesOfClass(
                 PathfinderMob.class,
                 area,
-                mob -> isValidAlly(mob, caller, target, faction)
+                mob -> isValidFactionAlly(mob, caller, callerFaction)
         )) {
-            makeAllyAttack(ally, target);
+            if (ally.getTarget() == null || ally.getTarget() == target) {
+                makeAllyAttack(ally, target);
+            }
         }
     }
 
-    private static boolean isValidAlly(
+    private static void alertFactionAlliesAgainstEnemyFaction(
+            ServerLevel level,
+            LivingEntity caller,
+            RetoldFaction callerFaction,
+            RetoldFaction enemyFaction
+    ) {
+        AABB allyArea = caller.getBoundingBox().inflate(ASSIST_RADIUS_BLOCKS);
+
+        List<PathfinderMob> allies = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                allyArea,
+                mob -> isValidFactionAlly(mob, caller, callerFaction)
+        );
+
+        AABB enemyArea = caller.getBoundingBox().inflate(
+                ASSIST_RADIUS_BLOCKS + ENEMY_FACTION_DETECT_RADIUS_BLOCKS
+        );
+
+        List<LivingEntity> enemies = level.getEntitiesOfClass(
+                LivingEntity.class,
+                enemyArea,
+                enemy -> isValidEnemyFactionMember(enemy, caller, enemyFaction)
+        );
+
+        if (enemies.isEmpty()) {
+            return;
+        }
+
+        Map<LivingEntity, Integer> assignments = new HashMap<>();
+
+        for (PathfinderMob ally : allies) {
+            LivingEntity currentTarget = ally.getTarget();
+
+            if (currentTarget != null && isValidEnemyFactionMember(currentTarget, ally, enemyFaction)) {
+                assignments.put(currentTarget, assignments.getOrDefault(currentTarget, 0) + 1);
+            }
+        }
+
+        for (PathfinderMob ally : allies) {
+            LivingEntity currentTarget = ally.getTarget();
+
+            if (currentTarget != null
+                    && isValidEnemyFactionMember(currentTarget, ally, enemyFaction)
+                    && isWithinDetectRange(ally, currentTarget)) {
+                continue;
+            }
+
+            LivingEntity chosenTarget = chooseEnemyFactionTargetForAlly(ally, enemies, assignments);
+
+            if (chosenTarget == null) {
+                continue;
+            }
+
+            makeAllyAttack(ally, chosenTarget);
+            assignments.put(chosenTarget, assignments.getOrDefault(chosenTarget, 0) + 1);
+        }
+    }
+
+    private static LivingEntity chooseEnemyFactionTargetForAlly(
+            PathfinderMob ally,
+            List<LivingEntity> enemies,
+            Map<LivingEntity, Integer> assignments
+    ) {
+        LivingEntity bestTarget = null;
+        int bestAssignmentCount = Integer.MAX_VALUE;
+        double bestDistance = Double.MAX_VALUE;
+
+        for (LivingEntity enemy : enemies) {
+            if (!isWithinDetectRange(ally, enemy)) {
+                continue;
+            }
+
+            int assignmentCount = assignments.getOrDefault(enemy, 0);
+            double distance = ally.distanceToSqr(enemy);
+
+            if (assignmentCount < bestAssignmentCount
+                    || assignmentCount == bestAssignmentCount && distance < bestDistance) {
+                bestTarget = enemy;
+                bestAssignmentCount = assignmentCount;
+                bestDistance = distance;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    private static boolean isValidFactionAlly(
             PathfinderMob ally,
             LivingEntity caller,
-            LivingEntity target,
-            RetoldFaction faction
+            RetoldFaction callerFaction
     ) {
         if (!ally.isAlive()) {
-            return false;
-        }
-
-        if (ally == caller) {
-            return false;
-        }
-
-        if (ally == target) {
             return false;
         }
 
@@ -227,11 +365,32 @@ public final class RetoldFactionAssistEvents {
             return false;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(ally, faction)) {
+        return RetoldFactionMembers.isMemberOf(ally, callerFaction);
+    }
+
+    private static boolean isValidEnemyFactionMember(
+            LivingEntity enemy,
+            LivingEntity observer,
+            RetoldFaction enemyFaction
+    ) {
+        if (!enemy.isAlive()) {
             return false;
         }
 
-        return ally.getTarget() == null || ally.getTarget() == target;
+        if (enemy == observer) {
+            return false;
+        }
+
+        if (enemy.level() != observer.level()) {
+            return false;
+        }
+
+        return RetoldFactionMembers.isMemberOf(enemy, enemyFaction);
+    }
+
+    private static boolean isWithinDetectRange(PathfinderMob ally, LivingEntity enemy) {
+        return ally.distanceToSqr(enemy)
+                <= ENEMY_FACTION_DETECT_RADIUS_BLOCKS * ENEMY_FACTION_DETECT_RADIUS_BLOCKS;
     }
 
     private static void makeAllyAttack(PathfinderMob ally, LivingEntity target) {
@@ -245,5 +404,10 @@ public final class RetoldFactionAssistEvents {
             piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
             piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
         }
+    }
+
+    private static void clearAnnouncements(Entity entity) {
+        LAST_ANNOUNCED_TARGETS.remove(entity);
+        LAST_ANNOUNCED_TARGET_FACTIONS.remove(entity);
     }
 }
