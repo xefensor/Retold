@@ -26,11 +26,25 @@ public final class AenderChunkEvents {
         ChunkAccess chunk = event.getChunk();
         ChunkPos pos = chunk.getPos();
 
+        /*
+         * Important:
+         * Even stable chunks must be retained and marked as current.
+         *
+         * Otherwise this happens:
+         * 1. Place stabilizer.
+         * 2. Save and quit.
+         * 3. Load world again.
+         * 4. Stable chunk loads, but gets no AenderVolatility signature.
+         * 5. Break stabilizer.
+         * 6. Chunk becomes unstable.
+         * 7. needsRegeneration() sees no signature and instantly regenerates it.
+         */
+        AenderVolatility.retainForChunk(chunk);
+
         if (AenderStabilityData.get(level).isStable(pos)) {
+            AenderVolatility.markGenerated(chunk);
             return;
         }
-
-        AenderVolatility.retainForChunk(chunk);
 
         if (AenderVolatility.needsRegeneration(chunk)) {
             System.out.println("[Aender] regenerating loaded unstable chunk " + chunk.getPos());
@@ -48,14 +62,6 @@ public final class AenderChunkEvents {
             return;
         }
 
-        ChunkAccess chunk = event.getChunk();
-
-        AenderVolatility.releaseForChunk(chunk);
-
-        int blockX = chunk.getPos().getMinBlockX();
-        int blockZ = chunk.getPos().getMinBlockZ();
-
-        int regionX = AenderVolatility.regionXForBlock(blockX);
-        int regionZ = AenderVolatility.regionZForBlock(blockZ);
+        AenderVolatility.releaseForChunk(event.getChunk());
     }
 }

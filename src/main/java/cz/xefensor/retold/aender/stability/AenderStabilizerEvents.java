@@ -1,6 +1,7 @@
 package cz.xefensor.retold.aender.stability;
 
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
+import cz.xefensor.retold.aender.generation.AenderVolatility;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -8,6 +9,7 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -82,11 +84,33 @@ public final class AenderStabilizerEvents {
             return;
         }
 
-        if (!level.getBlockState(event.getPos()).is(RetoldBlocks.AENDER_STABILIZER.get())) {
+        if (!level.getBlockState(event.getPos()).is(RetoldBlocks.AENDER_STABILIZER)) {
             return;
         }
 
-        AenderStabilityData.get(level).removeStabilizer(chunkOf(event.getPos()));
+        ChunkPos center = chunkOf(event.getPos());
+
+        markLoadedHaloAsCurrent(level, center);
+
+        AenderStabilityData.get(level).removeStabilizer(center);
+    }
+
+    private static void markLoadedHaloAsCurrent(ServerLevel level, ChunkPos center) {
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                int chunkX = center.x() + dx;
+                int chunkZ = center.z() + dz;
+
+                ChunkAccess chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+
+                if (chunk == null) {
+                    continue;
+                }
+
+                AenderVolatility.retainForChunk(chunk);
+                AenderVolatility.markGenerated(chunk);
+            }
+        }
     }
 
     @SubscribeEvent
