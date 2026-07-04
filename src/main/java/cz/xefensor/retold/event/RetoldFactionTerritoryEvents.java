@@ -221,10 +221,14 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
-        // Being attacked has priority over warning.
-        // If someone hits this faction mob inside its territory,
-        // it immediately switches to attack mode.
         if (tryAdoptRetaliationTarget(level, mob, state, config, gameTime)) {
+            updateAttackState(level, mob, state, config, gameTime);
+            return;
+        }
+
+        // If faction assist/combat already made this mob fight,
+        // territory should adopt that fight instead of forcing warning again.
+        if (tryAdoptOwnedCombatTarget(level, mob, state, config, gameTime)) {
             updateAttackState(level, mob, state, config, gameTime);
             return;
         }
@@ -292,6 +296,48 @@ public final class RetoldFactionTerritoryEvents {
                 applyAttackTarget(level, mob, attackTarget, config, gameTime);
             }
         }
+    }
+
+    private static boolean tryAdoptOwnedCombatTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        LivingEntity existingTarget = mob.getTarget();
+
+        if (existingTarget == null) {
+            return false;
+        }
+
+        if (!RetoldFactionTargetMemory.isOwnedByAny(
+                mob,
+                existingTarget,
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldTargetSource.TERRITORY_ATTACK,
+                RetoldTargetSource.RETALIATION
+        )) {
+            return false;
+        }
+
+        if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
+            return false;
+        }
+
+        if (!isValidAttackTarget(mob, existingTarget)) {
+            return false;
+        }
+
+        state.hasStartedAttack = true;
+        state.attackTarget = existingTarget;
+        state.warningTarget = existingTarget;
+        state.warningPulses = WARNING_PULSES_BEFORE_ATTACK;
+        state.warnedIntruders.clear();
+
+        applyAttackTarget(level, mob, existingTarget, config, gameTime);
+        return true;
     }
 
     private static boolean tryAdoptRetaliationTarget(
@@ -382,8 +428,20 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
+        // Never suppress targets created by our combat systems.
+        // Those should be adopted into attack state instead.
+        if (RetoldFactionTargetMemory.isOwnedByAny(
+                mob,
+                existingTarget,
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldTargetSource.TERRITORY_ATTACK,
+                RetoldTargetSource.RETALIATION
+        )) {
+            return;
+        }
+
         // Do not suppress retaliation.
-        // If this entity attacked the mob, warning is skipped and combat is allowed.
         if (existingTarget == mob.getLastHurtByMob()) {
             return;
         }

@@ -106,6 +106,32 @@ public final class RetoldFactionTargetMemory {
                 && ownership.source == source;
     }
 
+    public static boolean isOwnedByAny(
+            Mob mob,
+            LivingEntity target,
+            RetoldTargetSource... sources
+    ) {
+        cleanupTargetState(mob);
+
+        TargetOwnership ownership = OWNED_TARGETS.get(mob);
+
+        if (ownership == null) {
+            return false;
+        }
+
+        if (ownership.target != target) {
+            return false;
+        }
+
+        for (RetoldTargetSource source : sources) {
+            if (ownership.source == source) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static void cleanupTargetState(Mob mob) {
         TargetOwnership ownership = OWNED_TARGETS.get(mob);
         LivingEntity currentTarget = mob.getTarget();
