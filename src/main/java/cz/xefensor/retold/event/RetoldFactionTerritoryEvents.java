@@ -1291,6 +1291,28 @@ public final class RetoldFactionTerritoryEvents {
         return RetoldFactionRelations.areEnemyFactions(config.faction, intruderFaction);
     }
 
+    private static boolean canTriggerTerritoryWarning(
+            RetoldFaction territoryFaction,
+            RetoldFaction intruderFaction
+    ) {
+        if (territoryFaction == null || intruderFaction == null) {
+            return false;
+        }
+
+        if (territoryFaction == intruderFaction) {
+            return false;
+        }
+
+        // Players should be warned in faction territory even if normal open-world
+        // faction combat does not custom-target players.
+        if (intruderFaction == RetoldFaction.PLAYER) {
+            return territoryFaction == RetoldFaction.NETHER_REMNANTS
+                    || territoryFaction == RetoldFaction.ILLAGERS;
+        }
+
+        return RetoldFactionRelations.areEnemyFactions(territoryFaction, intruderFaction);
+    }
+
     private static boolean canSeeTarget(PathfinderMob mob, LivingEntity target) {
         return mob.getSensing().hasLineOfSight(target);
     }
