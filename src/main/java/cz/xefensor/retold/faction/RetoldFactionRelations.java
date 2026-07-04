@@ -28,7 +28,6 @@ public final class RetoldFactionRelations {
                         RetoldFaction.UNDEAD,
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
-                        RetoldFaction.CREEPERS,
                         RetoldFaction.ARTHROPODS,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
@@ -46,7 +45,6 @@ public final class RetoldFactionRelations {
                         RetoldFaction.UNDEAD,
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
-                        RetoldFaction.CREEPERS,
                         RetoldFaction.ARTHROPODS,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
@@ -57,12 +55,41 @@ public final class RetoldFactionRelations {
                 )
         );
 
+        /*
+         * Undead attack everyone except other undead.
+         *
+         * This includes:
+         * - players
+         * - piglins/brutes/blazes
+         * - illagers
+         * - slimes/magma cubes
+         * - guardians
+         * - creepers
+         * - arthropods
+         * - nether beasts
+         * - breezes
+         * - wardens
+         * - bosses
+         * - creakings
+         * - village defenders
+         * - enders
+         */
         TARGET_FACTIONS.put(
                 RetoldFaction.UNDEAD,
                 Set.of(
+                        RetoldFaction.PLAYER,
                         RetoldFaction.NETHER_REMNANTS,
                         RetoldFaction.ILLAGERS,
-                        RetoldFaction.VILLAGE_DEFENDERS
+                        RetoldFaction.SLIMES,
+                        RetoldFaction.AQUATIC_HOSTILES,
+                        RetoldFaction.ARTHROPODS,
+                        RetoldFaction.NETHER_BEASTS,
+                        RetoldFaction.BREEZES,
+                        RetoldFaction.WARDENS,
+                        RetoldFaction.BOSSES,
+                        RetoldFaction.CREAKINGS,
+                        RetoldFaction.VILLAGE_DEFENDERS,
+                        RetoldFaction.ENDERS
                 )
         );
 
@@ -84,12 +111,17 @@ public final class RetoldFactionRelations {
                 )
         );
 
+        /*
+         * Creepers keep mostly vanilla behavior.
+         * They only target players.
+         *
+         * Note: generic faction combat currently blocks custom player targeting,
+         * so actual player targeting still mostly comes from vanilla creeper AI.
+         */
         TARGET_FACTIONS.put(
                 RetoldFaction.CREEPERS,
                 Set.of(
-                        RetoldFaction.NETHER_REMNANTS,
-                        RetoldFaction.ILLAGERS,
-                        RetoldFaction.VILLAGE_DEFENDERS
+                        RetoldFaction.PLAYER
                 )
         );
 
@@ -148,7 +180,7 @@ public final class RetoldFactionRelations {
         );
 
         /*
-         * Village Defenders target everyone hostile/monstrous except:
+         * Village Defenders target hostile/monstrous factions except:
          * - Players
          * - Nether Remnants
          * - Enders
@@ -160,7 +192,6 @@ public final class RetoldFactionRelations {
                         RetoldFaction.UNDEAD,
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
-                        RetoldFaction.CREEPERS,
                         RetoldFaction.ARTHROPODS,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
@@ -171,9 +202,8 @@ public final class RetoldFactionRelations {
         );
 
         /*
-         * Enders keep vanilla.
-         * They do not custom-target anyone,
-         * and nobody custom-targets them in this relation file.
+         * Enders keep vanilla behavior.
+         * They do not custom-target anyone.
          */
         TARGET_FACTIONS.put(
                 RetoldFaction.ENDERS,
