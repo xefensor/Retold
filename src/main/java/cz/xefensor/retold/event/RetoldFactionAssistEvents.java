@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldFactionAssistEvents {
-    private static final int ASSIST_RADIUS_BLOCKS = 24;
-    private static final int ENEMY_FACTION_DETECT_RADIUS_BLOCKS = 32;
+    private static final int ASSIST_RADIUS_BLOCKS = 32;
+    private static final int ENEMY_FACTION_DETECT_RADIUS_BLOCKS = 40;
 
     private static final int HELP_CALL_COOLDOWN_TICKS = 40;
 
@@ -137,8 +137,6 @@ public final class RetoldFactionAssistEvents {
             LAST_ANNOUNCED_TARGETS.put(mob, target);
 
             callForFactionHelpAgainstFaction(level, mob, targetFaction, mobFaction);
-
-            // The target faction also reacts immediately.
             callForFactionHelpAgainstFaction(level, target, mobFaction, targetFaction);
             return;
         }
@@ -309,7 +307,7 @@ public final class RetoldFactionAssistEvents {
 
             if (currentTarget != null
                     && isValidEnemyFactionMember(currentTarget, ally, enemyFaction)
-                    && isWithinDetectRange(ally, currentTarget)) {
+                    && canDetectEnemy(ally, currentTarget)) {
                 continue;
             }
 
@@ -334,7 +332,7 @@ public final class RetoldFactionAssistEvents {
         double bestDistance = Double.MAX_VALUE;
 
         for (LivingEntity enemy : enemies) {
-            if (!isWithinDetectRange(ally, enemy)) {
+            if (!canDetectEnemy(ally, enemy)) {
                 continue;
             }
 
@@ -388,9 +386,13 @@ public final class RetoldFactionAssistEvents {
         return RetoldFactionMembers.isMemberOf(enemy, enemyFaction);
     }
 
-    private static boolean isWithinDetectRange(PathfinderMob ally, LivingEntity enemy) {
-        return ally.distanceToSqr(enemy)
-                <= ENEMY_FACTION_DETECT_RADIUS_BLOCKS * ENEMY_FACTION_DETECT_RADIUS_BLOCKS;
+    private static boolean canDetectEnemy(PathfinderMob ally, LivingEntity enemy) {
+        if (ally.distanceToSqr(enemy)
+                > ENEMY_FACTION_DETECT_RADIUS_BLOCKS * ENEMY_FACTION_DETECT_RADIUS_BLOCKS) {
+            return false;
+        }
+
+        return ally.getSensing().hasLineOfSight(enemy);
     }
 
     private static void makeAllyAttack(PathfinderMob ally, LivingEntity target) {

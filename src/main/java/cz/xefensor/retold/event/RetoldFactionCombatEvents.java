@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -26,8 +27,8 @@ public final class RetoldFactionCombatEvents {
     private static final int FORCED_TARGET_CHECK_INTERVAL_TICKS = 10;
     private static final int FORCED_TARGET_REFRESH_INTERVAL_TICKS = 20;
 
-    private static final int FORCED_TARGET_RADIUS_BLOCKS = 32;
-    private static final double FORCED_TARGET_RELEASE_DISTANCE_SQUARED = 40.00 * 40.00;
+    private static final int FORCED_TARGET_RADIUS_BLOCKS = 40;
+    private static final double FORCED_TARGET_RELEASE_DISTANCE_SQUARED = 48.0D * 48.0D;
 
     private static final Map<Entity, LivingEntity> FORCED_TARGETS = new WeakHashMap<>();
     private static final Map<Entity, Long> NEXT_FORCED_TARGET_CHECK_AT = new WeakHashMap<>();
@@ -109,7 +110,7 @@ public final class RetoldFactionCombatEvents {
 
     private static void addFactionTargetGoal(Mob mob) {
         mob.targetSelector.addGoal(
-                0,
+                2,
                 new NearestAttackableTargetGoal<>(
                         mob,
                         LivingEntity.class,
@@ -134,7 +135,35 @@ public final class RetoldFactionCombatEvents {
             return false;
         }
 
-        return RetoldFactionRelations.shouldAttack(mob, target);
+        if (mob.distanceToSqr(target) > FORCED_TARGET_RADIUS_BLOCKS * FORCED_TARGET_RADIUS_BLOCKS) {
+            return false;
+        }
+
+        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+
+        if (targetFaction == RetoldFaction.PLAYER) {
+            return false;
+        }
+
+        RetoldFaction attackerFaction = RetoldFactionMembers.getFaction(mob);
+
+        if (attackerFaction == RetoldFaction.ILLAGERS) {
+            if (!(mob.level() instanceof ServerLevel)) {
+                return false;
+            }
+
+            ServerLevel level = (ServerLevel) mob.level();
+
+            if (!isInRaid(level, mob)) {
+                return false;
+            }
+        }
+
+        if (!RetoldFactionRelations.shouldAttack(mob, target)) {
+            return false;
+        }
+
+        return mob.getSensing().hasLineOfSight(target);
     }
 
     private static void addRetaliationGoal(PathfinderMob mob) {
@@ -210,6 +239,12 @@ public final class RetoldFactionCombatEvents {
             return false;
         }
 
+        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+
+        if (targetFaction == RetoldFaction.PLAYER) {
+            return false;
+        }
+
         if (!RetoldFactionRelations.shouldAttack(mob, target)) {
             return false;
         }
@@ -234,5 +269,11 @@ public final class RetoldFactionCombatEvents {
             mob.setTarget(null);
             mob.setAggressive(false);
         }
+    }
+
+    private static boolean isInRaid(ServerLevel level, Entity entity) {
+        Raid raid = level.getRaidAt(entity.blockPosition());
+
+        return raid != null && raid.isActive();
     }
 }

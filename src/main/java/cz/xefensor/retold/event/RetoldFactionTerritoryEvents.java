@@ -18,6 +18,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
@@ -63,9 +64,9 @@ public final class RetoldFactionTerritoryEvents {
     private static final int STRUCTURE_SEARCH_RADIUS_CHUNKS = 6;
     private static final int TERRITORY_RADIUS_BLOCKS = 48;
 
-    private static final int NOTICE_MOB_RADIUS_BLOCKS = 40;
+    private static final int NOTICE_MOB_RADIUS_BLOCKS = 48;
     private static final int WARNING_START_RADIUS_BLOCKS = 12;
-    private static final int ATTACK_CHAIN_RADIUS_BLOCKS = 40;
+    private static final int ATTACK_CHAIN_RADIUS_BLOCKS = 48;
 
     private static final double ATTACK_TARGET_RELEASE_DISTANCE_SQUARED = 40.0D * 40.0D;
 
@@ -205,6 +206,11 @@ public final class RetoldFactionTerritoryEvents {
             TerritoryConfig config,
             long gameTime
     ) {
+        if (config.faction == RetoldFaction.ILLAGERS && isInRaid(level, mob)) {
+            clearMobState(mob);
+            return;
+        }
+
         if (!isNearFactionTerritory(level, mob, config, gameTime)) {
             clearMobState(mob);
             return;
@@ -215,16 +221,19 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
-        // If this mob is already fighting because of retaliation,
-        // faction assist, or another combat system, do not warn.
-        if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
+        if (config.faction == RetoldFaction.ILLAGERS) {
+            suppressExistingTargetDuringWarning(level, mob, config, gameTime);
+        } else if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
             updateAttackState(level, mob, state, config, gameTime);
             return;
         }
 
         LivingEntity currentWarningTarget = state.warningTarget;
 
-        if (currentWarningTarget == null || !isValidWarningTarget(mob, currentWarningTarget)) {
+        if (currentWarningTarget == null
+                || !isValidWarningTarget(mob, currentWarningTarget)
+                || !isPossibleIntruder(level, mob, currentWarningTarget, config, gameTime)
+                || !canSeeTarget(mob, currentWarningTarget)) {
             currentWarningTarget = findNearestIntruder(level, mob, config, gameTime);
 
             if (currentWarningTarget == null) {
@@ -238,7 +247,8 @@ public final class RetoldFactionTerritoryEvents {
             state.warnedIntruders.clear();
         }
 
-        if (!isCloseEnoughToCountWarning(mob, currentWarningTarget)) {
+        if (!isCloseEnoughToCountWarning(mob, currentWarningTarget)
+                || !canSeeTarget(mob, currentWarningTarget)) {
             state.warningPulses = 0;
             state.nextWarningPulseAt = gameTime;
             state.warnedIntruders.clear();
@@ -274,6 +284,26 @@ public final class RetoldFactionTerritoryEvents {
                 applyAttackTarget(level, mob, attackTarget, config, gameTime);
             }
         }
+    }
+
+    private static void suppressExistingTargetDuringWarning(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        LivingEntity existingTarget = mob.getTarget();
+
+        if (existingTarget == null) {
+            return;
+        }
+
+        if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
+            return;
+        }
+
+        mob.setTarget(null);
+        mob.setAggressive(false);
     }
 
     private static boolean tryAdoptExistingAttackTarget(
@@ -348,6 +378,7 @@ public final class RetoldFactionTerritoryEvents {
                 LivingEntity.class,
                 area,
                 target -> isPossibleIntruder(level, mob, target, config, gameTime)
+                        && canSeeTarget(mob, target)
         );
 
         LivingEntity nearest = null;
@@ -378,6 +409,7 @@ public final class RetoldFactionTerritoryEvents {
                 LivingEntity.class,
                 area,
                 target -> isPossibleIntruder(level, mob, target, config, gameTime)
+                        && canSeeTarget(mob, target)
         );
 
         state.warnedIntruders.clear();
@@ -388,7 +420,8 @@ public final class RetoldFactionTerritoryEvents {
 
         if (state.warningTarget != null
                 && isPossibleIntruder(level, mob, state.warningTarget, config, gameTime)
-                && isCloseEnoughToCountWarning(mob, state.warningTarget)) {
+                && isCloseEnoughToCountWarning(mob, state.warningTarget)
+                && canSeeTarget(mob, state.warningTarget)) {
             state.warnedIntruders.add(state.warningTarget);
         }
     }
@@ -493,11 +526,11 @@ public final class RetoldFactionTerritoryEvents {
 
         RetoldFaction intruderFaction = RetoldFactionMembers.getFaction(intruder);
 
-        if (intruderFaction != null) {
-            return RetoldFactionRelations.areEnemyFactions(config.faction, intruderFaction);
+        if (intruderFaction == null) {
+            return false;
         }
 
-        return RetoldFactionRelations.shouldAttackFaction(intruder, config.faction);
+        return RetoldFactionRelations.areEnemyFactions(config.faction, intruderFaction);
     }
 
     private static boolean isValidWarningTarget(PathfinderMob mob, LivingEntity target) {
@@ -526,6 +559,10 @@ public final class RetoldFactionTerritoryEvents {
 
     private static boolean isCloseEnoughToCountWarning(PathfinderMob mob, LivingEntity target) {
         return mob.distanceToSqr(target) <= WARNING_START_RADIUS_BLOCKS * WARNING_START_RADIUS_BLOCKS;
+    }
+
+    private static boolean canSeeTarget(PathfinderMob mob, LivingEntity target) {
+        return mob.getSensing().hasLineOfSight(target);
     }
 
     private static boolean isNearFactionTerritory(
@@ -737,6 +774,12 @@ public final class RetoldFactionTerritoryEvents {
 
     private static void clearMobState(PathfinderMob mob) {
         MOB_STATES.remove(mob);
+    }
+
+    private static boolean isInRaid(ServerLevel level, Entity entity) {
+        Raid raid = level.getRaidAt(entity.blockPosition());
+
+        return raid != null && raid.isActive();
     }
 
     private static boolean isWithinHorizontalDistance(
