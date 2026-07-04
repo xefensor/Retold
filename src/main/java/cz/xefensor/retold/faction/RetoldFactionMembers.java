@@ -36,7 +36,8 @@ public final class RetoldFactionMembers {
             id("wither_skeleton"),
             id("zombified_piglin"),
             id("phantom"),
-            id("ghast")
+            id("ghast"),
+            id("zoglin")
     );
 
     private static final Set<Identifier> SLIMES = Set.of(
@@ -61,8 +62,7 @@ public final class RetoldFactionMembers {
     );
 
     private static final Set<Identifier> NETHER_BEASTS = Set.of(
-            id("hoglin"),
-            id("zoglin")
+            id("hoglin")
     );
 
     private static final Set<Identifier> BREEZES = Set.of(

@@ -5,6 +5,8 @@ import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.undead.RetoldUndead;
 import cz.xefensor.retold.undead.RetoldUndeadCleansing;
 import cz.xefensor.retold.undead.RetoldUndeadSunFear;
+import cz.xefensor.retold.faction.RetoldFaction;
+import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -25,7 +27,7 @@ public final class RetoldUndeadEvents {
             return;
         }
 
-        if (!RetoldUndead.isUndead(entity)) {
+        if (!isRetoldUndead(entity)) {
             return;
         }
 
@@ -52,7 +54,7 @@ public final class RetoldUndeadEvents {
 
     @SubscribeEvent
     public static void onFinalizeSpawn(FinalizeSpawnEvent event) {
-        if (!RetoldUndead.isUndead(event.getEntity())) {
+        if (!isRetoldUndead(event.getEntity())) {
             return;
         }
 
@@ -67,5 +69,9 @@ public final class RetoldUndeadEvents {
         if (stage == RetoldWorldStage.STAGE_3) {
             event.setSpawnCancelled(true);
         }
+    }
+
+    private static boolean isRetoldUndead(Entity entity) {
+        return RetoldFactionMembers.getFaction(entity) == RetoldFaction.UNDEAD;
     }
 }
