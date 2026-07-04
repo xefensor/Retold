@@ -26,8 +26,8 @@ public final class RetoldFactionCombatEvents {
     private static final int FORCED_TARGET_CHECK_INTERVAL_TICKS = 10;
     private static final int FORCED_TARGET_REFRESH_INTERVAL_TICKS = 20;
 
-    private static final int FORCED_TARGET_RADIUS_BLOCKS = 40;
-    private static final double FORCED_TARGET_RELEASE_DISTANCE_SQUARED = 48.0D * 48.0D;
+    private static final int FORCED_TARGET_RADIUS_BLOCKS = 32;
+    private static final double FORCED_TARGET_RELEASE_DISTANCE_SQUARED = 40.00 * 40.00;
 
     private static final Map<Entity, LivingEntity> FORCED_TARGETS = new WeakHashMap<>();
     private static final Map<Entity, Long> NEXT_FORCED_TARGET_CHECK_AT = new WeakHashMap<>();

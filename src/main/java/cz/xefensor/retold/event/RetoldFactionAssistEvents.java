@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldFactionAssistEvents {
-    private static final int ASSIST_RADIUS_BLOCKS = 32;
-    private static final int ENEMY_FACTION_DETECT_RADIUS_BLOCKS = 40;
+    private static final int ASSIST_RADIUS_BLOCKS = 24;
+    private static final int ENEMY_FACTION_DETECT_RADIUS_BLOCKS = 32;
 
     private static final int HELP_CALL_COOLDOWN_TICKS = 40;
 

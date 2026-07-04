@@ -21,7 +21,8 @@ public final class RetoldFactionMembers {
             id("evoker"),
             id("illusioner"),
             id("ravager"),
-            id("vex")
+            id("vex"),
+            id("witch")
     );
 
     private static final Set<Identifier> UNDEAD = Set.of(
@@ -38,22 +39,18 @@ public final class RetoldFactionMembers {
             id("ghast")
     );
 
-    private static final Set<Identifier> MONSTERS = Set.of(
-            id("creeper"),
+    private static final Set<Identifier> SLIMES = Set.of(
             id("slime"),
-            id("magma_cube"),
+            id("magma_cube")
+    );
+
+    private static final Set<Identifier> AQUATIC_HOSTILES = Set.of(
             id("guardian"),
-            id("elder_guardian"),
-            id("witch"),
-            id("breeze"),
-            id("ravager"),
-            id("hoglin"),
-            id("zoglin"),
-            id("shulker"),
-            id("warden"),
-            id("wither"),
-            id("ender_dragon"),
-            id("creaking")
+            id("elder_guardian")
+    );
+
+    private static final Set<Identifier> CREEPERS = Set.of(
+            id("creeper")
     );
 
     private static final Set<Identifier> ARTHROPODS = Set.of(
@@ -61,6 +58,28 @@ public final class RetoldFactionMembers {
             id("cave_spider"),
             id("silverfish"),
             id("endermite")
+    );
+
+    private static final Set<Identifier> NETHER_BEASTS = Set.of(
+            id("hoglin"),
+            id("zoglin")
+    );
+
+    private static final Set<Identifier> BREEZES = Set.of(
+            id("breeze")
+    );
+
+    private static final Set<Identifier> WARDENS = Set.of(
+            id("warden")
+    );
+
+    private static final Set<Identifier> BOSSES = Set.of(
+            id("wither"),
+            id("ender_dragon")
+    );
+
+    private static final Set<Identifier> CREAKINGS = Set.of(
+            id("creaking")
     );
 
     private static final Set<Identifier> VILLAGE_DEFENDERS = Set.of(
@@ -95,12 +114,40 @@ public final class RetoldFactionMembers {
             return RetoldFaction.UNDEAD;
         }
 
-        if (MONSTERS.contains(id)) {
-            return RetoldFaction.MONSTERS;
+        if (SLIMES.contains(id)) {
+            return RetoldFaction.SLIMES;
+        }
+
+        if (AQUATIC_HOSTILES.contains(id)) {
+            return RetoldFaction.AQUATIC_HOSTILES;
+        }
+
+        if (CREEPERS.contains(id)) {
+            return RetoldFaction.CREEPERS;
         }
 
         if (ARTHROPODS.contains(id)) {
             return RetoldFaction.ARTHROPODS;
+        }
+
+        if (NETHER_BEASTS.contains(id)) {
+            return RetoldFaction.NETHER_BEASTS;
+        }
+
+        if (BREEZES.contains(id)) {
+            return RetoldFaction.BREEZES;
+        }
+
+        if (WARDENS.contains(id)) {
+            return RetoldFaction.WARDENS;
+        }
+
+        if (BOSSES.contains(id)) {
+            return RetoldFaction.BOSSES;
+        }
+
+        if (CREAKINGS.contains(id)) {
+            return RetoldFaction.CREAKINGS;
         }
 
         if (VILLAGE_DEFENDERS.contains(id)) {

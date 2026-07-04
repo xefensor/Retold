@@ -63,9 +63,9 @@ public final class RetoldFactionTerritoryEvents {
     private static final int STRUCTURE_SEARCH_RADIUS_CHUNKS = 6;
     private static final int TERRITORY_RADIUS_BLOCKS = 48;
 
-    private static final int NOTICE_MOB_RADIUS_BLOCKS = 48;
+    private static final int NOTICE_MOB_RADIUS_BLOCKS = 40;
     private static final int WARNING_START_RADIUS_BLOCKS = 12;
-    private static final int ATTACK_CHAIN_RADIUS_BLOCKS = 48;
+    private static final int ATTACK_CHAIN_RADIUS_BLOCKS = 40;
 
     private static final double ATTACK_TARGET_RELEASE_DISTANCE_SQUARED = 40.0D * 40.0D;
 
