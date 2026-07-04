@@ -25,6 +25,7 @@ import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
+import net.minecraft.world.entity.monster.CrossbowAttackMob;
 
 import java.util.Collections;
 import java.util.EnumMap;
@@ -78,7 +79,8 @@ public final class RetoldFactionTerritoryEvents {
     private static final float WARNING_SOUND_PITCH = 0.85F;
 
     private static final double WARNING_APPROACH_SPEED = 0.85D;
-    private static final double WARNING_APPROACH_STOP_DISTANCE_SQUARED = 5.0D * 5.0D;
+    private static final double WARNING_APPROACH_STOP_DISTANCE_SQUARED =
+            WARNING_START_RADIUS_BLOCKS * WARNING_START_RADIUS_BLOCKS;
 
     private static final int ATTACK_REFRESH_INTERVAL_TICKS = 100;
 
@@ -150,7 +152,7 @@ public final class RetoldFactionTerritoryEvents {
                 ignored -> new TerritoryMobState(gameTime, mob.getId())
         );
 
-        maintainContinuousBehavior(mob, state, gameTime);
+        maintainContinuousBehavior(mob, state, config, gameTime);
 
         if (gameTime < state.nextDecisionAt) {
             return;
@@ -180,7 +182,12 @@ public final class RetoldFactionTerritoryEvents {
                 || level.dimension().equals(config.requiredDimension);
     }
 
-    private static void maintainContinuousBehavior(PathfinderMob mob, TerritoryMobState state, long gameTime) {
+    private static void maintainContinuousBehavior(
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            long gameTime
+    ) {
         if (state.hasStartedAttack) {
             return;
         }
@@ -192,6 +199,11 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         stareAt(mob, warningTarget);
+
+        if (isCloseEnoughToCountWarning(mob, warningTarget)) {
+            mob.getNavigation().stop();
+            return;
+        }
 
         if (gameTime >= state.nextNavigationRefreshAt) {
             approachWithoutAttacking(mob, warningTarget);
@@ -268,6 +280,7 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (gameTime >= state.nextWarningPulseAt) {
+            stareAt(mob, currentWarningTarget);
             playWarningEffects(level, mob, config, state.warningPulses);
 
             state.warningPulses++;
@@ -815,7 +828,67 @@ public final class RetoldFactionTerritoryEvents {
     }
 
     private static void stareAt(PathfinderMob mob, LivingEntity target) {
-        mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        faceTargetHorizontally(mob, target);
+    }
+
+    private static void faceTargetHorizontally(PathfinderMob mob, LivingEntity target) {
+        double dx = target.getX() - mob.getX();
+        double dz = target.getZ() - mob.getZ();
+
+        if (dx * dx + dz * dz < 0.0001D) {
+            return;
+        }
+
+        double dy = target.getEyeY() - mob.getEyeY();
+        double horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+
+        float yaw = (float) (Math.atan2(dz, dx) * 57.2957763671875D) - 90.0F;
+        float pitch = (float) (-(Math.atan2(dy, horizontalDistance) * 57.2957763671875D));
+
+        mob.setYRot(rotateToward(mob.getYRot(), yaw, 12.0F));
+        mob.setYHeadRot(rotateToward(mob.getYHeadRot(), yaw, 18.0F));
+        mob.yBodyRot = rotateToward(mob.yBodyRot, yaw, 10.0F);
+
+        mob.setXRot(rotateToward(mob.getXRot(), pitch, 6.0F));
+    }
+
+    private static float rotateToward(float current, float target, float maxChange) {
+        float difference = wrapDegrees(target - current);
+
+        if (difference > maxChange) {
+            difference = maxChange;
+        }
+
+        if (difference < -maxChange) {
+            difference = -maxChange;
+        }
+
+        return current + difference;
+    }
+
+    private static float wrapDegrees(float degrees) {
+        while (degrees >= 180.0F) {
+            degrees -= 360.0F;
+        }
+
+        while (degrees < -180.0F) {
+            degrees += 360.0F;
+        }
+
+        return degrees;
+    }
+
+    private static void keepWarningPose(PathfinderMob mob) {
+        mob.setAggressive(false);
+
+        if (mob.isUsingItem()) {
+            mob.stopUsingItem();
+        }
+
+        if (mob instanceof CrossbowAttackMob) {
+            CrossbowAttackMob crossbowMob = (CrossbowAttackMob) mob;
+            crossbowMob.setChargingCrossbow(false);
+        }
     }
 
     private static void approachWithoutAttacking(PathfinderMob mob, LivingEntity target) {

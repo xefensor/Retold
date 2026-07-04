@@ -16,7 +16,8 @@
     "EndPortalBlockMixin",
     "AenderChunkMapSaveMixin",
     "MobTargetMixin",
-    "TargetGoalCanAttackMixin"
+    "TargetGoalAccessor",
+    "NearestAttackableTargetGoalMixin"
   ],
   "client": [
     "MerchantScreenMixin"
