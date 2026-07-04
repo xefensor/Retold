@@ -396,14 +396,26 @@ public final class RetoldFactionAssistEvents {
     }
 
     private static void makeAllyAttack(PathfinderMob ally, LivingEntity target) {
-        ally.setTarget(target);
+        boolean applied = RetoldFactionTargetMemory.trySetTarget(
+                ally,
+                target,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+
+        if (!applied && ally.getTarget() != target) {
+            return;
+        }
+
         ally.setAggressive(true);
         ally.getLookControl().setLookAt(target, 30.0F, 30.0F);
 
         if (ally instanceof AbstractPiglin) {
             AbstractPiglin piglin = (AbstractPiglin) ally;
 
-            piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            if (piglin.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) != target) {
+                piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            }
+
             piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
         }
     }

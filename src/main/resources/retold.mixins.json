@@ -14,7 +14,9 @@
     "DelayedStructurePlacementMixin",
     "AbstractFurnaceBlockEntityMixin",
     "EndPortalBlockMixin",
-    "AenderChunkMapSaveMixin"
+    "AenderChunkMapSaveMixin",
+    "MobTargetMixin",
+    "TargetGoalCanAttackMixin"
   ],
   "client": [
     "MerchantScreenMixin"

@@ -221,6 +221,14 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
+        // Being attacked has priority over warning.
+        // If someone hits this faction mob inside its territory,
+        // it immediately switches to attack mode.
+        if (tryAdoptRetaliationTarget(level, mob, state, config, gameTime)) {
+            updateAttackState(level, mob, state, config, gameTime);
+            return;
+        }
+
         if (config.faction == RetoldFaction.ILLAGERS) {
             suppressExistingTargetDuringWarning(level, mob, config, gameTime);
         } else if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
@@ -286,6 +294,82 @@ public final class RetoldFactionTerritoryEvents {
         }
     }
 
+    private static boolean tryAdoptRetaliationTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        LivingEntity attacker = mob.getLastHurtByMob();
+
+        if (attacker == null) {
+            return false;
+        }
+
+        if (!attacker.isAlive()) {
+            return false;
+        }
+
+        if (attacker.level() != mob.level()) {
+            return false;
+        }
+
+        if (!isPossibleIntruder(level, mob, attacker, config, gameTime)) {
+            return false;
+        }
+
+        if (!isValidAttackTarget(mob, attacker)) {
+            return false;
+        }
+
+        state.hasStartedAttack = true;
+        state.attackTarget = attacker;
+        state.warningTarget = attacker;
+        state.warningPulses = WARNING_PULSES_BEFORE_ATTACK;
+        state.warnedIntruders.clear();
+
+        applyAttackTarget(level, mob, attacker, config, gameTime);
+        return true;
+    }
+
+    private static void suppressVanillaTargetDuringWarningIfNeeded(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        if (config.faction != RetoldFaction.ILLAGERS) {
+            return;
+        }
+
+        if (state.hasStartedAttack) {
+            return;
+        }
+
+        if (isInRaid(level, mob)) {
+            return;
+        }
+
+        LivingEntity existingTarget = mob.getTarget();
+
+        if (existingTarget == null) {
+            return;
+        }
+
+        if (!isNearFactionTerritory(level, mob, config, gameTime)) {
+            return;
+        }
+
+        if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
+            return;
+        }
+
+        mob.setTarget(null);
+        mob.setAggressive(false);
+    }
+
     private static void suppressExistingTargetDuringWarning(
             ServerLevel level,
             PathfinderMob mob,
@@ -295,6 +379,12 @@ public final class RetoldFactionTerritoryEvents {
         LivingEntity existingTarget = mob.getTarget();
 
         if (existingTarget == null) {
+            return;
+        }
+
+        // Do not suppress retaliation.
+        // If this entity attacked the mob, warning is skipped and combat is allowed.
+        if (existingTarget == mob.getLastHurtByMob()) {
             return;
         }
 
@@ -688,14 +778,30 @@ public final class RetoldFactionTerritoryEvents {
             TerritoryConfig config,
             long gameTime
     ) {
-        mob.setTarget(target);
+        RetoldTargetSource source = mob.getLastHurtByMob() == target
+                ? RetoldTargetSource.RETALIATION
+                : RetoldTargetSource.TERRITORY_ATTACK;
+
+        boolean applied = RetoldFactionTargetMemory.trySetTarget(
+                mob,
+                target,
+                source
+        );
+
+        if (!applied && mob.getTarget() != target) {
+            return;
+        }
+
         mob.setAggressive(true);
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
 
         if (mob instanceof AbstractPiglin) {
             AbstractPiglin piglin = (AbstractPiglin) mob;
 
-            piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            if (piglin.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) != target) {
+                piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            }
+
             piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
         }
 
@@ -757,16 +863,13 @@ public final class RetoldFactionTerritoryEvents {
     private static void returnToWarningMode(PathfinderMob mob, TerritoryMobState state, long gameTime) {
         LivingEntity oldAttackTarget = state.attackTarget;
 
-        if (oldAttackTarget != null && mob.getTarget() == oldAttackTarget) {
-            mob.setTarget(null);
-            mob.setAggressive(false);
-
-            if (mob instanceof AbstractPiglin) {
-                AbstractPiglin piglin = (AbstractPiglin) mob;
-
-                piglin.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-                piglin.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
-            }
+        if (oldAttackTarget != null) {
+            RetoldFactionTargetMemory.clearTargetIfOwnedByAny(
+                    mob,
+                    oldAttackTarget,
+                    RetoldTargetSource.TERRITORY_ATTACK,
+                    RetoldTargetSource.RETALIATION
+            );
         }
 
         resetWarningState(state, gameTime);
@@ -883,5 +986,48 @@ public final class RetoldFactionTerritoryEvents {
         public int hashCode() {
             return Objects.hash(faction, dimension, chunkKey);
         }
+    }
+
+    public static boolean shouldBlockTargetDuringWarning(PathfinderMob mob, LivingEntity target) {
+        if (mob.level().isClientSide()) {
+            return false;
+        }
+
+        if (!(mob.level() instanceof ServerLevel)) {
+            return false;
+        }
+
+        ServerLevel level = (ServerLevel) mob.level();
+        TerritoryConfig config = getTerritoryConfigForMob(mob);
+
+        if (config == null) {
+            return false;
+        }
+
+        if (!isInAllowedDimension(level, config)) {
+            return false;
+        }
+
+        if (config.faction == RetoldFaction.ILLAGERS && isInRaid(level, mob)) {
+            return false;
+        }
+
+        long gameTime = level.getGameTime();
+
+        if (!isNearFactionTerritory(level, mob, config, gameTime)) {
+            return false;
+        }
+
+        if (!isPossibleIntruder(level, mob, target, config, gameTime)) {
+            return false;
+        }
+
+        TerritoryMobState state = MOB_STATES.get(mob);
+
+        if (state != null && state.hasStartedAttack) {
+            return false;
+        }
+
+        return true;
     }
 }

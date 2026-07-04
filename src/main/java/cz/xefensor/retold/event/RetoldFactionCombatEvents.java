@@ -87,6 +87,8 @@ public final class RetoldFactionCombatEvents {
 
         ServerLevel level = (ServerLevel) mob.level();
 
+        RetoldFactionTargetMemory.cleanupTargetState(mob);
+
         if (!RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
             clearForcedTarget(mob);
             return;
@@ -253,7 +255,16 @@ public final class RetoldFactionCombatEvents {
     }
 
     private static void forceTarget(Mob mob, LivingEntity target, long gameTime) {
-        mob.setTarget(target);
+        boolean applied = RetoldFactionTargetMemory.trySetTarget(
+                mob,
+                target,
+                RetoldTargetSource.FACTION_COMBAT
+        );
+
+        if (!applied && mob.getTarget() != target) {
+            return;
+        }
+
         mob.setAggressive(true);
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         LAST_FORCED_TARGET_REFRESH_AT.put(mob, gameTime);
@@ -265,9 +276,12 @@ public final class RetoldFactionCombatEvents {
         NEXT_FORCED_TARGET_CHECK_AT.remove(mob);
         LAST_FORCED_TARGET_REFRESH_AT.remove(mob);
 
-        if (forcedTarget != null && mob.getTarget() == forcedTarget) {
-            mob.setTarget(null);
-            mob.setAggressive(false);
+        if (forcedTarget != null) {
+            RetoldFactionTargetMemory.clearTargetIfOwnedBy(
+                    mob,
+                    forcedTarget,
+                    RetoldTargetSource.FACTION_COMBAT
+            );
         }
     }
 
