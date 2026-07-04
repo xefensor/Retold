@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 
-public final class RetoldNetherRemnantCombatEvents {
+public final class RetoldFactionCombatEvents {
     private static final Set<Entity> PATCHED_ENTITIES = Collections.newSetFromMap(new WeakHashMap<>());
 
     private static final int FORCED_TARGET_CHECK_INTERVAL_TICKS = 10;
@@ -33,7 +33,7 @@ public final class RetoldNetherRemnantCombatEvents {
     private static final Map<Entity, Long> NEXT_FORCED_TARGET_CHECK_AT = new WeakHashMap<>();
     private static final Map<Entity, Long> LAST_FORCED_TARGET_REFRESH_AT = new WeakHashMap<>();
 
-    private RetoldNetherRemnantCombatEvents() {
+    private RetoldFactionCombatEvents() {
     }
 
     @SubscribeEvent
@@ -51,15 +51,15 @@ public final class RetoldNetherRemnantCombatEvents {
         if (entity instanceof Mob) {
             Mob mob = (Mob) entity;
 
-            if (RetoldFactionRelations.shouldAttackFaction(mob, RetoldFaction.NETHER_REMNANTS)) {
-                addNetherRemnantTargetGoal(mob);
+            if (RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
+                addFactionTargetGoal(mob);
             }
         }
 
         if (entity instanceof PathfinderMob) {
             PathfinderMob pathfinderMob = (PathfinderMob) entity;
 
-            if (RetoldFactionMembers.isMemberOf(pathfinderMob, RetoldFaction.NETHER_REMNANTS)) {
+            if (RetoldFactionMembers.getFaction(pathfinderMob) != null) {
                 addRetaliationGoal(pathfinderMob);
             }
         }
@@ -86,7 +86,7 @@ public final class RetoldNetherRemnantCombatEvents {
 
         ServerLevel level = (ServerLevel) mob.level();
 
-        if (!RetoldFactionRelations.shouldAttackFaction(mob, RetoldFaction.NETHER_REMNANTS)) {
+        if (!RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
             clearForcedTarget(mob);
             return;
         }
@@ -94,6 +94,7 @@ public final class RetoldNetherRemnantCombatEvents {
         long gameTime = level.getGameTime();
 
         Long nextCheckAt = NEXT_FORCED_TARGET_CHECK_AT.get(mob);
+
         if (nextCheckAt != null && gameTime < nextCheckAt) {
             return;
         }
@@ -106,7 +107,7 @@ public final class RetoldNetherRemnantCombatEvents {
         updateForcedTarget(level, mob, gameTime);
     }
 
-    private static void addNetherRemnantTargetGoal(Mob mob) {
+    private static void addFactionTargetGoal(Mob mob) {
         mob.targetSelector.addGoal(
                 0,
                 new NearestAttackableTargetGoal<>(
@@ -115,24 +116,29 @@ public final class RetoldNetherRemnantCombatEvents {
                         10,
                         true,
                         false,
-                        RetoldNetherRemnantCombatEvents::isNetherRemnantTarget
+                        (target, level) -> isValidFactionTarget(mob, target)
                 )
         );
     }
 
-    private static boolean isNetherRemnantTarget(LivingEntity target, ServerLevel level) {
-        return isNetherRemnantEntity(target);
-    }
+    private static boolean isValidFactionTarget(Mob mob, LivingEntity target) {
+        if (target == mob) {
+            return false;
+        }
 
-    private static boolean isNetherRemnantEntity(LivingEntity target) {
-        return RetoldFactionMembers.isTargetableMemberOf(target, RetoldFaction.NETHER_REMNANTS);
+        if (!target.isAlive()) {
+            return false;
+        }
+
+        if (mob.level() != target.level()) {
+            return false;
+        }
+
+        return RetoldFactionRelations.shouldAttack(mob, target);
     }
 
     private static void addRetaliationGoal(PathfinderMob mob) {
-        mob.targetSelector.addGoal(
-                1,
-                new HurtByTargetGoal(mob)
-        );
+        mob.targetSelector.addGoal(1, new HurtByTargetGoal(mob));
     }
 
     private static void updateForcedTarget(ServerLevel level, Mob mob, long gameTime) {
@@ -149,7 +155,7 @@ public final class RetoldNetherRemnantCombatEvents {
             if (currentMobTarget != null && isValidForcedTarget(mob, currentMobTarget)) {
                 currentForcedTarget = currentMobTarget;
             } else {
-                currentForcedTarget = findNearestNetherRemnantTarget(level, mob);
+                currentForcedTarget = findNearestFactionTarget(level, mob);
             }
 
             if (currentForcedTarget == null) {
@@ -173,7 +179,7 @@ public final class RetoldNetherRemnantCombatEvents {
         forceTarget(mob, currentForcedTarget, gameTime);
     }
 
-    private static LivingEntity findNearestNetherRemnantTarget(ServerLevel level, Mob mob) {
+    private static LivingEntity findNearestFactionTarget(ServerLevel level, Mob mob) {
         AABB area = mob.getBoundingBox().inflate(FORCED_TARGET_RADIUS_BLOCKS);
 
         LivingEntity nearest = null;
@@ -182,7 +188,7 @@ public final class RetoldNetherRemnantCombatEvents {
         for (LivingEntity candidate : level.getEntitiesOfClass(
                 LivingEntity.class,
                 area,
-                target -> isNetherRemnantEntity(target)
+                target -> isValidFactionTarget(mob, target)
         )) {
             double distance = mob.distanceToSqr(candidate);
 
@@ -204,7 +210,7 @@ public final class RetoldNetherRemnantCombatEvents {
             return false;
         }
 
-        if (!isNetherRemnantEntity(target)) {
+        if (!RetoldFactionRelations.shouldAttack(mob, target)) {
             return false;
         }
 
@@ -215,7 +221,6 @@ public final class RetoldNetherRemnantCombatEvents {
         mob.setTarget(target);
         mob.setAggressive(true);
         mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
-
         LAST_FORCED_TARGET_REFRESH_AT.put(mob, gameTime);
     }
 

@@ -2,11 +2,14 @@ package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.faction.RetoldFactionRelations;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.TagKey;
@@ -23,17 +26,33 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.WeakHashMap;
 
 public final class RetoldFactionTerritoryEvents {
-    private static final TagKey<Structure> NETHER_REMNANT_TERRITORY = TagKey.create(
-            Registries.STRUCTURE,
-            Identifier.fromNamespaceAndPath("retold", "nether_remnant_territory")
-    );
+    private static final Map<RetoldFaction, TerritoryConfig> TERRITORIES =
+            new EnumMap<>(RetoldFaction.class);
+
+    static {
+        registerTerritory(
+                RetoldFaction.NETHER_REMNANTS,
+                "nether_remnant_territory",
+                SoundEvents.PIGLIN_ANGRY,
+                Level.NETHER
+        );
+
+        registerTerritory(
+                RetoldFaction.ILLAGERS,
+                "illager_territory",
+                SoundEvents.PILLAGER_AMBIENT,
+                null
+        );
+    }
 
     private static final int MOB_DECISION_INTERVAL_TICKS = 20;
     private static final int WARNING_NAVIGATION_REFRESH_TICKS = 10;
@@ -66,9 +85,29 @@ public final class RetoldFactionTerritoryEvents {
     private static final int MAX_TERRITORY_CACHE_SIZE = 4096;
 
     private static final Map<Entity, TerritoryMobState> MOB_STATES = new WeakHashMap<>();
-    private static final Map<Long, TerritoryCacheEntry> TERRITORY_CACHE = new HashMap<>();
+    private static final Map<CacheKey, TerritoryCacheEntry> TERRITORY_CACHE = new HashMap<>();
 
     private RetoldFactionTerritoryEvents() {
+    }
+
+    private static void registerTerritory(
+            RetoldFaction faction,
+            String structureTagPath,
+            SoundEvent warningSound,
+            ResourceKey<Level> requiredDimension
+    ) {
+        TERRITORIES.put(
+                faction,
+                new TerritoryConfig(
+                        faction,
+                        TagKey.create(
+                                Registries.STRUCTURE,
+                                Identifier.fromNamespaceAndPath("retold", structureTagPath)
+                        ),
+                        warningSound,
+                        requiredDimension
+                )
+        );
     }
 
     @SubscribeEvent
@@ -91,18 +130,20 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         ServerLevel level = (ServerLevel) mob.level();
+        TerritoryConfig config = getTerritoryConfigForMob(mob);
 
-        if (level.dimension() != Level.NETHER) {
+        if (config == null) {
             clearMobState(mob);
             return;
         }
 
-        if (!isAngerableNetherRemnant(mob)) {
+        if (!isInAllowedDimension(level, config)) {
             clearMobState(mob);
             return;
         }
 
         long gameTime = level.getGameTime();
+
         TerritoryMobState state = MOB_STATES.computeIfAbsent(
                 mob,
                 ignored -> new TerritoryMobState(gameTime, mob.getId())
@@ -116,7 +157,26 @@ public final class RetoldFactionTerritoryEvents {
 
         state.nextDecisionAt = gameTime + MOB_DECISION_INTERVAL_TICKS + Math.abs(mob.getId() % 5);
 
-        updateMobTerritoryLogic(level, mob, state, gameTime);
+        updateMobTerritoryLogic(level, mob, state, config, gameTime);
+    }
+
+    private static TerritoryConfig getTerritoryConfigForMob(PathfinderMob mob) {
+        RetoldFaction faction = RetoldFactionMembers.getFaction(mob);
+
+        if (faction == null) {
+            return null;
+        }
+
+        if (!mob.isAlive()) {
+            return null;
+        }
+
+        return TERRITORIES.get(faction);
+    }
+
+    private static boolean isInAllowedDimension(ServerLevel level, TerritoryConfig config) {
+        return config.requiredDimension == null
+                || level.dimension().equals(config.requiredDimension);
     }
 
     private static void maintainContinuousBehavior(PathfinderMob mob, TerritoryMobState state, long gameTime) {
@@ -142,30 +202,30 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
-        if (!isNearNetherRemnantTerritory(level, mob, gameTime)) {
+        if (!isNearFactionTerritory(level, mob, config, gameTime)) {
             clearMobState(mob);
             return;
         }
 
         if (state.hasStartedAttack) {
-            updateAttackState(level, mob, state, gameTime);
+            updateAttackState(level, mob, state, config, gameTime);
             return;
         }
 
-        // If this mob is already attacking someone because of retaliation,
-        // faction assist, or another combat system, do not warn them.
-        // Adopt the existing target and enter attack mode immediately.
-        if (tryAdoptExistingAttackTarget(level, mob, state, gameTime)) {
-            updateAttackState(level, mob, state, gameTime);
+        // If this mob is already fighting because of retaliation,
+        // faction assist, or another combat system, do not warn.
+        if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
+            updateAttackState(level, mob, state, config, gameTime);
             return;
         }
 
         LivingEntity currentWarningTarget = state.warningTarget;
 
         if (currentWarningTarget == null || !isValidWarningTarget(mob, currentWarningTarget)) {
-            currentWarningTarget = findNearestIntruder(level, mob, gameTime);
+            currentWarningTarget = findNearestIntruder(level, mob, config, gameTime);
 
             if (currentWarningTarget == null) {
                 resetWarningState(state, gameTime);
@@ -186,15 +246,21 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (gameTime >= state.nextWarningPulseAt) {
-            playWarningEffects(level, mob, state.warningPulses);
+            playWarningEffects(level, mob, config, state.warningPulses);
 
             state.warningPulses++;
             state.nextWarningPulseAt = gameTime + WARNING_PULSE_INTERVAL_TICKS;
 
             if (state.warningPulses >= WARNING_PULSES_BEFORE_ATTACK) {
-                markNearbyIntrudersAsWarned(level, mob, state, gameTime);
+                markNearbyIntrudersAsWarned(level, mob, state, config, gameTime);
 
-                LivingEntity attackTarget = findNearestWarnedIntruderForAttack(level, mob, state, gameTime);
+                LivingEntity attackTarget = findNearestWarnedIntruderForAttack(
+                        level,
+                        mob,
+                        state,
+                        config,
+                        gameTime
+                );
 
                 if (attackTarget == null) {
                     resetWarningState(state, gameTime);
@@ -205,7 +271,7 @@ public final class RetoldFactionTerritoryEvents {
                 state.attackTarget = attackTarget;
                 state.warningTarget = attackTarget;
 
-                applyAttackTarget(mob, attackTarget, gameTime);
+                applyAttackTarget(level, mob, attackTarget, config, gameTime);
             }
         }
     }
@@ -214,6 +280,7 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
         LivingEntity existingTarget = mob.getTarget();
@@ -222,7 +289,7 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
-        if (!isPossibleIntruder(level, mob, existingTarget, gameTime)) {
+        if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
             return false;
         }
 
@@ -234,12 +301,9 @@ public final class RetoldFactionTerritoryEvents {
         state.attackTarget = existingTarget;
         state.warningTarget = existingTarget;
         state.warningPulses = WARNING_PULSES_BEFORE_ATTACK;
-
-        // Do not mark random nearby new entities as warned.
-        // This target was already engaged through combat, not territory warning.
         state.warnedIntruders.clear();
 
-        applyAttackTarget(mob, existingTarget, gameTime);
+        applyAttackTarget(level, mob, existingTarget, config, gameTime);
         return true;
     }
 
@@ -247,16 +311,15 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
         LivingEntity attackTarget = state.attackTarget;
 
-        if (attackTarget == null || !isValidCurrentAttackTarget(level, mob, attackTarget, gameTime)) {
-            attackTarget = findNearestWarnedIntruderForAttack(level, mob, state, gameTime);
+        if (attackTarget == null || !isValidCurrentAttackTarget(level, mob, attackTarget, config, gameTime)) {
+            attackTarget = findNearestWarnedIntruderForAttack(level, mob, state, config, gameTime);
 
             if (attackTarget == null) {
-                // No already-warned enemies remain.
-                // New arrivals must be warned first.
                 returnToWarningMode(mob, state, gameTime);
                 return;
             }
@@ -264,28 +327,19 @@ public final class RetoldFactionTerritoryEvents {
             state.attackTarget = attackTarget;
             state.warningTarget = attackTarget;
 
-            applyAttackTarget(mob, attackTarget, gameTime);
+            applyAttackTarget(level, mob, attackTarget, config, gameTime);
             return;
         }
 
         if (gameTime - state.lastAttackRefreshAt >= ATTACK_REFRESH_INTERVAL_TICKS) {
-            applyAttackTarget(mob, attackTarget, gameTime);
+            applyAttackTarget(level, mob, attackTarget, config, gameTime);
         }
-    }
-
-    private static boolean isValidCurrentAttackTarget(
-            ServerLevel level,
-            PathfinderMob mob,
-            LivingEntity target,
-            long gameTime
-    ) {
-        return isValidAttackTarget(mob, target)
-                && isNearNetherRemnantTerritory(level, target, gameTime);
     }
 
     private static LivingEntity findNearestIntruder(
             ServerLevel level,
             PathfinderMob mob,
+            TerritoryConfig config,
             long gameTime
     ) {
         AABB area = mob.getBoundingBox().inflate(NOTICE_MOB_RADIUS_BLOCKS);
@@ -293,7 +347,7 @@ public final class RetoldFactionTerritoryEvents {
         List<LivingEntity> candidates = level.getEntitiesOfClass(
                 LivingEntity.class,
                 area,
-                target -> isPossibleIntruder(level, mob, target, gameTime)
+                target -> isPossibleIntruder(level, mob, target, config, gameTime)
         );
 
         LivingEntity nearest = null;
@@ -315,6 +369,7 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
         AABB area = mob.getBoundingBox().inflate(WARNING_START_RADIUS_BLOCKS);
@@ -322,7 +377,7 @@ public final class RetoldFactionTerritoryEvents {
         List<LivingEntity> candidates = level.getEntitiesOfClass(
                 LivingEntity.class,
                 area,
-                target -> isPossibleIntruder(level, mob, target, gameTime)
+                target -> isPossibleIntruder(level, mob, target, config, gameTime)
         );
 
         state.warnedIntruders.clear();
@@ -332,7 +387,7 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (state.warningTarget != null
-                && isPossibleIntruder(level, mob, state.warningTarget, gameTime)
+                && isPossibleIntruder(level, mob, state.warningTarget, config, gameTime)
                 && isCloseEnoughToCountWarning(mob, state.warningTarget)) {
             state.warnedIntruders.add(state.warningTarget);
         }
@@ -342,15 +397,16 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
-        purgeInvalidWarnedIntruders(level, mob, state, gameTime);
+        purgeInvalidWarnedIntruders(level, mob, state, config, gameTime);
 
         LivingEntity nearest = null;
         double nearestDistance = Double.MAX_VALUE;
 
         for (LivingEntity candidate : state.warnedIntruders) {
-            if (!isValidWarnedAttackTarget(level, mob, state, candidate, gameTime)) {
+            if (!isValidWarnedAttackTarget(level, mob, state, candidate, config, gameTime)) {
                 continue;
             }
 
@@ -373,10 +429,11 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
+            TerritoryConfig config,
             long gameTime
     ) {
         state.warnedIntruders.removeIf(
-                target -> !isValidWarnedAttackTarget(level, mob, state, target, gameTime)
+                target -> !isValidWarnedAttackTarget(level, mob, state, target, config, gameTime)
         );
     }
 
@@ -385,31 +442,43 @@ public final class RetoldFactionTerritoryEvents {
             PathfinderMob mob,
             TerritoryMobState state,
             LivingEntity target,
+            TerritoryConfig config,
             long gameTime
     ) {
         return state.warnedIntruders.contains(target)
-                && isValidAttackTarget(mob, target)
-                && isNearNetherRemnantTerritory(level, target, gameTime);
+                && isValidCurrentAttackTarget(level, mob, target, config, gameTime);
+    }
+
+    private static boolean isValidCurrentAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            LivingEntity target,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        return isValidAttackTarget(mob, target)
+                && isNearFactionTerritory(level, target, config, gameTime);
     }
 
     private static boolean isPossibleIntruder(
             ServerLevel level,
             PathfinderMob mob,
             LivingEntity target,
+            TerritoryConfig config,
             long gameTime
     ) {
         if (target == mob) {
             return false;
         }
 
-        if (!canTriggerTerritoryAnger(target)) {
+        if (!canTriggerTerritoryAnger(target, config)) {
             return false;
         }
 
-        return isNearNetherRemnantTerritory(level, target, gameTime);
+        return isNearFactionTerritory(level, target, config, gameTime);
     }
 
-    private static boolean canTriggerTerritoryAnger(LivingEntity intruder) {
+    private static boolean canTriggerTerritoryAnger(LivingEntity intruder, TerritoryConfig config) {
         if (!intruder.isAlive()) {
             return false;
         }
@@ -422,7 +491,13 @@ public final class RetoldFactionTerritoryEvents {
             }
         }
 
-        return !RetoldFactionMembers.isMemberOf(intruder, RetoldFaction.NETHER_REMNANTS);
+        RetoldFaction intruderFaction = RetoldFactionMembers.getFaction(intruder);
+
+        if (intruderFaction != null) {
+            return RetoldFactionRelations.areEnemyFactions(config.faction, intruderFaction);
+        }
+
+        return RetoldFactionRelations.shouldAttackFaction(intruder, config.faction);
     }
 
     private static boolean isValidWarningTarget(PathfinderMob mob, LivingEntity target) {
@@ -431,10 +506,6 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (mob.level() != target.level()) {
-            return false;
-        }
-
-        if (!canTriggerTerritoryAnger(target)) {
             return false;
         }
 
@@ -450,10 +521,6 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
-        if (!canTriggerTerritoryAnger(target)) {
-            return false;
-        }
-
         return mob.distanceToSqr(target) <= ATTACK_TARGET_RELEASE_DISTANCE_SQUARED;
     }
 
@@ -461,18 +528,27 @@ public final class RetoldFactionTerritoryEvents {
         return mob.distanceToSqr(target) <= WARNING_START_RADIUS_BLOCKS * WARNING_START_RADIUS_BLOCKS;
     }
 
-    private static boolean isNearNetherRemnantTerritory(ServerLevel level, Entity entity, long gameTime) {
-        long chunkKey = chunkKey(entity);
-        TerritoryCacheEntry cached = TERRITORY_CACHE.get(chunkKey);
+    private static boolean isNearFactionTerritory(
+            ServerLevel level,
+            Entity entity,
+            TerritoryConfig config,
+            long gameTime
+    ) {
+        if (!isInAllowedDimension(level, config)) {
+            return false;
+        }
+
+        CacheKey cacheKey = new CacheKey(config.faction, level.dimension(), chunkKey(entity));
+        TerritoryCacheEntry cached = TERRITORY_CACHE.get(cacheKey);
 
         if (cached != null && gameTime < cached.expiresAt) {
             return cached.isNearTerritory;
         }
 
-        boolean isNearTerritory = computeIsNearNetherRemnantTerritory(level, entity);
+        boolean isNearTerritory = computeIsNearFactionTerritory(level, entity, config);
 
         TERRITORY_CACHE.put(
-                chunkKey,
+                cacheKey,
                 new TerritoryCacheEntry(isNearTerritory, gameTime + TERRITORY_CACHE_TICKS)
         );
 
@@ -483,13 +559,17 @@ public final class RetoldFactionTerritoryEvents {
         return isNearTerritory;
     }
 
-    private static boolean computeIsNearNetherRemnantTerritory(ServerLevel level, Entity entity) {
-        if (isInsideNetherRemnantStructure(level, entity)) {
+    private static boolean computeIsNearFactionTerritory(
+            ServerLevel level,
+            Entity entity,
+            TerritoryConfig config
+    ) {
+        if (isInsideFactionStructure(level, entity, config)) {
             return true;
         }
 
         var structurePos = level.findNearestMapStructure(
-                NETHER_REMNANT_TERRITORY,
+                config.structureTag,
                 entity.blockPosition(),
                 STRUCTURE_SEARCH_RADIUS_CHUNKS,
                 false
@@ -508,10 +588,14 @@ public final class RetoldFactionTerritoryEvents {
         );
     }
 
-    private static boolean isInsideNetherRemnantStructure(ServerLevel level, Entity entity) {
+    private static boolean isInsideFactionStructure(
+            ServerLevel level,
+            Entity entity,
+            TerritoryConfig config
+    ) {
         StructureStart structureStart = level.structureManager().getStructureWithPieceAt(
                 entity.blockPosition(),
-                NETHER_REMNANT_TERRITORY
+                config.structureTag
         );
 
         return structureStart != null && structureStart.isValid();
@@ -529,7 +613,12 @@ public final class RetoldFactionTerritoryEvents {
                 | (((long) chunkZ & 4294967295L) << 32);
     }
 
-    private static void playWarningEffects(ServerLevel level, PathfinderMob mob, int warningPulses) {
+    private static void playWarningEffects(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryConfig config,
+            int warningPulses
+    ) {
         int particleCount = BASE_WARNING_PARTICLE_COUNT
                 + warningPulses * WARNING_PARTICLE_COUNT_PER_PULSE;
 
@@ -537,7 +626,7 @@ public final class RetoldFactionTerritoryEvents {
                 + warningPulses * WARNING_SOUND_VOLUME_PER_PULSE;
 
         spawnAngryParticles(level, mob, particleCount);
-        playWarningSound(level, mob, volume);
+        playWarningSound(level, mob, config.warningSound, volume);
     }
 
     private static void stareAt(PathfinderMob mob, LivingEntity target) {
@@ -555,9 +644,16 @@ public final class RetoldFactionTerritoryEvents {
         mob.getNavigation().moveTo(target, WARNING_APPROACH_SPEED);
     }
 
-    private static void applyAttackTarget(PathfinderMob mob, LivingEntity target, long gameTime) {
+    private static void applyAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            LivingEntity target,
+            TerritoryConfig config,
+            long gameTime
+    ) {
         mob.setTarget(target);
         mob.setAggressive(true);
+        mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
 
         if (mob instanceof AbstractPiglin) {
             AbstractPiglin piglin = (AbstractPiglin) mob;
@@ -571,11 +667,13 @@ public final class RetoldFactionTerritoryEvents {
         if (state != null) {
             state.lastAttackRefreshAt = gameTime;
         }
-    }
 
-    private static boolean isAngerableNetherRemnant(PathfinderMob mob) {
-        return mob.isAlive()
-                && RetoldFactionMembers.isMemberOf(mob, RetoldFaction.NETHER_REMNANTS);
+        RetoldFactionAssistEvents.callForFactionHelp(
+                level,
+                mob,
+                target,
+                config.faction
+        );
     }
 
     private static void spawnAngryParticles(ServerLevel level, LivingEntity entity, int count) {
@@ -592,13 +690,18 @@ public final class RetoldFactionTerritoryEvents {
         );
     }
 
-    private static void playWarningSound(ServerLevel level, PathfinderMob mob, float volume) {
+    private static void playWarningSound(
+            ServerLevel level,
+            PathfinderMob mob,
+            SoundEvent sound,
+            float volume
+    ) {
         level.playSound(
                 null,
                 mob.getX(),
                 mob.getY(),
                 mob.getZ(),
-                SoundEvents.PIGLIN_ANGRY,
+                sound,
                 SoundSource.HOSTILE,
                 volume,
                 WARNING_SOUND_PITCH
@@ -650,6 +753,25 @@ public final class RetoldFactionTerritoryEvents {
         return dx * dx + dz * dz <= maxDistanceSquared;
     }
 
+    private static final class TerritoryConfig {
+        private final RetoldFaction faction;
+        private final TagKey<Structure> structureTag;
+        private final SoundEvent warningSound;
+        private final ResourceKey<Level> requiredDimension;
+
+        private TerritoryConfig(
+                RetoldFaction faction,
+                TagKey<Structure> structureTag,
+                SoundEvent warningSound,
+                ResourceKey<Level> requiredDimension
+        ) {
+            this.faction = faction;
+            this.structureTag = structureTag;
+            this.warningSound = warningSound;
+            this.requiredDimension = requiredDimension;
+        }
+    }
+
     private static final class TerritoryMobState {
         private LivingEntity warningTarget;
         private LivingEntity attackTarget;
@@ -683,6 +805,40 @@ public final class RetoldFactionTerritoryEvents {
         private TerritoryCacheEntry(boolean isNearTerritory, long expiresAt) {
             this.isNearTerritory = isNearTerritory;
             this.expiresAt = expiresAt;
+        }
+    }
+
+    private static final class CacheKey {
+        private final RetoldFaction faction;
+        private final ResourceKey<Level> dimension;
+        private final long chunkKey;
+
+        private CacheKey(RetoldFaction faction, ResourceKey<Level> dimension, long chunkKey) {
+            this.faction = faction;
+            this.dimension = dimension;
+            this.chunkKey = chunkKey;
+        }
+
+        @Override
+        public boolean equals(Object object) {
+            if (this == object) {
+                return true;
+            }
+
+            if (!(object instanceof CacheKey)) {
+                return false;
+            }
+
+            CacheKey other = (CacheKey) object;
+
+            return chunkKey == other.chunkKey
+                    && faction == other.faction
+                    && Objects.equals(dimension, other.dimension);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(faction, dimension, chunkKey);
         }
     }
 }

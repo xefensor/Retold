@@ -4,6 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.Set;
 
@@ -23,10 +24,63 @@ public final class RetoldFactionMembers {
             id("vex")
     );
 
+    private static final Set<Identifier> UNDEAD = Set.of(
+            id("zombie"),
+            id("zombie_villager"),
+            id("husk"),
+            id("drowned"),
+            id("skeleton"),
+            id("stray"),
+            id("bogged"),
+            id("wither_skeleton"),
+            id("zombified_piglin"),
+            id("phantom"),
+            id("ghast")
+    );
+
+    private static final Set<Identifier> MONSTERS = Set.of(
+            id("creeper"),
+            id("slime"),
+            id("magma_cube"),
+            id("guardian"),
+            id("elder_guardian"),
+            id("witch"),
+            id("breeze"),
+            id("ravager"),
+            id("hoglin"),
+            id("zoglin"),
+            id("shulker"),
+            id("warden"),
+            id("wither"),
+            id("ender_dragon"),
+            id("creaking")
+    );
+
+    private static final Set<Identifier> ARTHROPODS = Set.of(
+            id("spider"),
+            id("cave_spider"),
+            id("silverfish"),
+            id("endermite")
+    );
+
+    private static final Set<Identifier> VILLAGE_DEFENDERS = Set.of(
+            id("iron_golem"),
+            id("snow_golem")
+    );
+
+    private static final Set<Identifier> ENDERS = Set.of(
+            id("enderman"),
+            id("shulker")
+    );
+
     private RetoldFactionMembers() {
     }
 
     public static RetoldFaction getFaction(Entity entity) {
+        if (entity instanceof Player) {
+            return RetoldFaction.PLAYER;
+        }
+
         Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
 
         if (NETHER_REMNANTS.contains(id)) {
@@ -35,6 +89,26 @@ public final class RetoldFactionMembers {
 
         if (ILLAGERS.contains(id)) {
             return RetoldFaction.ILLAGERS;
+        }
+
+        if (UNDEAD.contains(id)) {
+            return RetoldFaction.UNDEAD;
+        }
+
+        if (MONSTERS.contains(id)) {
+            return RetoldFaction.MONSTERS;
+        }
+
+        if (ARTHROPODS.contains(id)) {
+            return RetoldFaction.ARTHROPODS;
+        }
+
+        if (VILLAGE_DEFENDERS.contains(id)) {
+            return RetoldFaction.VILLAGE_DEFENDERS;
+        }
+
+        if (ENDERS.contains(id)) {
+            return RetoldFaction.ENDERS;
         }
 
         return null;
