@@ -150,10 +150,14 @@ public final class RetoldFactionTargetMemory {
             }
         }
 
-        // Safety cleanup for illagers: if our systems left them aggressive
-        // but they currently have no target, lower the weapon.
-        if (currentTarget == null && RetoldFactionMembers.getFaction(mob) == RetoldFaction.ILLAGERS) {
-            mob.setAggressive(false);
+        RetoldFaction faction = RetoldFactionMembers.getFaction(mob);
+
+        // Safety cleanup for idle faction mobs.
+        // If they have no actual target, they should not keep combat pose.
+        if (currentTarget == null) {
+            if (faction == RetoldFaction.ILLAGERS || faction == RetoldFaction.NETHER_REMNANTS) {
+                mob.setAggressive(false);
+            }
         }
     }
 

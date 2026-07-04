@@ -25,8 +25,6 @@ import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
-import net.minecraft.world.entity.monster.CrossbowAttackMob;
-
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -390,43 +388,6 @@ public final class RetoldFactionTerritoryEvents {
 
         applyAttackTarget(level, mob, attacker, config, gameTime);
         return true;
-    }
-
-    private static void suppressVanillaTargetDuringWarningIfNeeded(
-            ServerLevel level,
-            PathfinderMob mob,
-            TerritoryMobState state,
-            TerritoryConfig config,
-            long gameTime
-    ) {
-        if (config.faction != RetoldFaction.ILLAGERS) {
-            return;
-        }
-
-        if (state.hasStartedAttack) {
-            return;
-        }
-
-        if (isInRaid(level, mob)) {
-            return;
-        }
-
-        LivingEntity existingTarget = mob.getTarget();
-
-        if (existingTarget == null) {
-            return;
-        }
-
-        if (!isNearFactionTerritory(level, mob, config, gameTime)) {
-            return;
-        }
-
-        if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
-            return;
-        }
-
-        mob.setTarget(null);
-        mob.setAggressive(false);
     }
 
     private static void suppressExistingTargetDuringWarning(
@@ -876,19 +837,6 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         return degrees;
-    }
-
-    private static void keepWarningPose(PathfinderMob mob) {
-        mob.setAggressive(false);
-
-        if (mob.isUsingItem()) {
-            mob.stopUsingItem();
-        }
-
-        if (mob instanceof CrossbowAttackMob) {
-            CrossbowAttackMob crossbowMob = (CrossbowAttackMob) mob;
-            crossbowMob.setChargingCrossbow(false);
-        }
     }
 
     private static void approachWithoutAttacking(PathfinderMob mob, LivingEntity target) {
