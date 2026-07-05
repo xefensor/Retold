@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -61,7 +62,7 @@ public final class RetoldTerritoryCombat {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        LivingEntity existingTarget = mob.getTarget();
+        LivingEntity existingTarget = getCurrentCombatTarget(mob);
 
         if (existingTarget == null) {
             return false;
@@ -111,7 +112,7 @@ public final class RetoldTerritoryCombat {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        LivingEntity existingTarget = mob.getTarget();
+        LivingEntity existingTarget = getCurrentCombatTarget(mob);
 
         if (existingTarget == null) {
             return false;
@@ -146,17 +147,17 @@ public final class RetoldTerritoryCombat {
         return true;
     }
 
-    public static void suppressExistingTargetDuringWarning(
+    public static boolean suppressExistingTargetDuringWarning(
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryConfig config,
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        LivingEntity existingTarget = mob.getTarget();
+        LivingEntity existingTarget = getCurrentCombatTarget(mob);
 
         if (existingTarget == null) {
-            return;
+            return false;
         }
 
         if (RetoldFactionTargetMemory.isOwnedByAny(
@@ -167,25 +168,25 @@ public final class RetoldTerritoryCombat {
                 RetoldTargetSource.TERRITORY_ATTACK,
                 RetoldTargetSource.RETALIATION
         )) {
-            return;
+            return false;
         }
 
         if (existingTarget == mob.getLastHurtByMob()) {
-            return;
+            return false;
         }
 
         if (!RetoldTerritoryTargetSelector.isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
-            return;
+            return false;
         }
 
         RetoldTerritoryMobState state = mobStates.get(mob);
 
         if (state != null && RetoldTerritoryTargetSelector.canAttackByTerritoryReputation(state, existingTarget)) {
-            return;
+            return false;
         }
 
-        mob.setTarget(null);
-        mob.setAggressive(false);
+        clearUnauthorizedCombatTarget(mob, existingTarget);
+        return true;
     }
 
     public static void startAttackOnTarget(
@@ -383,6 +384,49 @@ public final class RetoldTerritoryCombat {
 
             piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
         }
+    }
+
+    private static LivingEntity getCurrentCombatTarget(PathfinderMob mob) {
+        LivingEntity target = mob.getTarget();
+
+        if (target != null) {
+            return target;
+        }
+
+        if (!(mob instanceof AbstractPiglin piglin)) {
+            return null;
+        }
+
+        return piglin.getBrain()
+                .getMemory(MemoryModuleType.ATTACK_TARGET)
+                .orElse(null);
+    }
+
+    private static void clearUnauthorizedCombatTarget(
+            PathfinderMob mob,
+            LivingEntity target
+    ) {
+        if (target == null) {
+            return;
+        }
+
+        if (mob.getTarget() == target) {
+            RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
+        }
+
+        if (mob instanceof AbstractPiglin piglin) {
+            LivingEntity brainTarget = piglin.getBrain()
+                    .getMemory(MemoryModuleType.ATTACK_TARGET)
+                    .orElse(null);
+
+            if (brainTarget == target) {
+                piglin.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                piglin.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
+            }
+        }
+
+        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
+        mob.getNavigation().stop();
     }
 
     private static void returnToWarningMode(

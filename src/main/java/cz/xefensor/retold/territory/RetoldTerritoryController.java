@@ -86,13 +86,18 @@ public final class RetoldTerritoryController {
             return;
         }
 
-        RetoldTerritoryCombat.suppressExistingTargetDuringWarning(
-                level,
-                mob,
-                config,
-                mobStates,
-                gameTime
-        );
+        if (
+                RetoldTerritoryCombat.suppressExistingTargetDuringWarning(
+                        level,
+                        mob,
+                        config,
+                        mobStates,
+                        gameTime
+                )
+        ) {
+            RetoldWarningPose.stopWarningPose(mob);
+            return;
+        }
 
         updateWarningTarget(level, mob, state, config, mobStates, gameTime);
 

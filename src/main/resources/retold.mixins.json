@@ -16,7 +16,9 @@
     "EndPortalBlockMixin",
     "AenderChunkMapSaveMixin",
     "MobTargetMixin",
-    "MobAggressiveMixin"
+    "MobAggressiveMixin",
+    "MobBrainMemoryOwnerMixin",
+    "BrainMemoryMixin"
   ],
   "client": [
     "MerchantScreenMixin"
