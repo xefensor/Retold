@@ -1,13 +1,44 @@
 package cz.xefensor.retold.territory;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public final class RetoldTerritoryReputationDebugEvents {
     private RetoldTerritoryReputationDebugEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onServerTickPost(ServerTickEvent.Post event) {
+        MinecraftServer server = event.getServer();
+
+        if (server == null) {
+            return;
+        }
+
+        long gameTime = server.overworld().getGameTime();
+
+        RetoldTerritoryReputation.loadFromServer(server);
+        RetoldTerritoryReputation.tickDecay(gameTime);
+        RetoldTerritoryReputation.saveIfDirty(server, gameTime);
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        MinecraftServer server = event.getServer();
+
+        if (server == null) {
+            return;
+        }
+
+        long gameTime = server.overworld().getGameTime();
+
+        RetoldTerritoryReputation.saveToServer(server, gameTime);
     }
 
     @SubscribeEvent
@@ -22,7 +53,7 @@ public final class RetoldTerritoryReputationDebugEvents {
 
         long gameTime = level.getGameTime();
 
-        RetoldTerritoryReputation.tickDecay(gameTime);
+        RetoldTerritoryReputation.loadFromServer(level.getServer());
 
         if (!RetoldTerritoryConstants.DEBUG_REPUTATION) {
             return;

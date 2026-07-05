@@ -1,18 +1,141 @@
 package cz.xefensor.retold.territory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.level.storage.LevelResource;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
 public final class RetoldTerritoryReputation {
+    private static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
+
     private static final Map<ReputationKey, ReputationEntry> REPUTATION = new HashMap<>();
 
     private static long lastDecayAt = -RetoldTerritoryConstants.REPUTATION_DECAY_INTERVAL_TICKS;
+    private static long lastSaveAt = -RetoldTerritoryConstants.REPUTATION_SAVE_INTERVAL_TICKS;
+
+    private static boolean dirty;
+    private static boolean loaded;
+    private static Path loadedSavePath;
 
     private RetoldTerritoryReputation() {
+    }
+
+    public static void loadFromServer(MinecraftServer server) {
+        if (server == null) {
+            return;
+        }
+
+        Path savePath = getSavePath(server);
+
+        if (loaded && savePath.equals(loadedSavePath)) {
+            return;
+        }
+
+        REPUTATION.clear();
+        loaded = true;
+        dirty = false;
+        loadedSavePath = savePath;
+
+        if (!Files.exists(savePath)) {
+            return;
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(savePath, StandardCharsets.UTF_8)) {
+            JsonElement rootElement = JsonParser.parseReader(reader);
+
+            if (!rootElement.isJsonObject()) {
+                return;
+            }
+
+            JsonObject root = rootElement.getAsJsonObject();
+            JsonArray entries = getArray(root, "entries");
+
+            if (entries == null) {
+                return;
+            }
+
+            for (JsonElement entryElement : entries) {
+                if (!entryElement.isJsonObject()) {
+                    continue;
+                }
+
+                readEntry(entryElement.getAsJsonObject());
+            }
+        } catch (IOException | RuntimeException exception) {
+            System.err.println("[Retold] Failed to load territory reputation: " + exception.getMessage());
+        }
+    }
+
+    public static void saveIfDirty(MinecraftServer server, long gameTime) {
+        if (!dirty) {
+            return;
+        }
+
+        if (gameTime - lastSaveAt < RetoldTerritoryConstants.REPUTATION_SAVE_INTERVAL_TICKS) {
+            return;
+        }
+
+        saveToServer(server, gameTime);
+    }
+
+    public static void saveToServer(MinecraftServer server, long gameTime) {
+        if (server == null) {
+            return;
+        }
+
+        loadFromServer(server);
+
+        Path savePath = getSavePath(server);
+
+        try {
+            Files.createDirectories(savePath.getParent());
+
+            JsonObject root = new JsonObject();
+            root.addProperty("version", RetoldTerritoryConstants.REPUTATION_SAVE_VERSION);
+
+            JsonArray entries = new JsonArray();
+
+            for (Map.Entry<ReputationKey, ReputationEntry> mapEntry : REPUTATION.entrySet()) {
+                ReputationEntry entry = mapEntry.getValue();
+
+                if (entry.suspicion <= 0) {
+                    continue;
+                }
+
+                entries.add(writeEntry(mapEntry.getKey(), entry));
+            }
+
+            root.add("entries", entries);
+
+            try (BufferedWriter writer = Files.newBufferedWriter(savePath, StandardCharsets.UTF_8)) {
+                GSON.toJson(root, writer);
+            }
+
+            dirty = false;
+            loaded = true;
+            loadedSavePath = savePath;
+            lastSaveAt = gameTime;
+        } catch (IOException | RuntimeException exception) {
+            System.err.println("[Retold] Failed to save territory reputation: " + exception.getMessage());
+        }
     }
 
     public static void tickDecay(long gameTime) {
@@ -25,6 +148,7 @@ public final class RetoldTerritoryReputation {
 
         lastDecayAt = gameTime;
 
+        boolean changed = false;
         Iterator<Map.Entry<ReputationKey, ReputationEntry>> iterator = REPUTATION.entrySet().iterator();
 
         while (iterator.hasNext()) {
@@ -33,6 +157,7 @@ public final class RetoldTerritoryReputation {
 
             if (entry.suspicion <= 0) {
                 iterator.remove();
+                changed = true;
                 continue;
             }
 
@@ -44,10 +169,16 @@ public final class RetoldTerritoryReputation {
             }
 
             entry.suspicion -= RetoldTerritoryConstants.REPUTATION_DECAY_AMOUNT;
+            entry.lastUpdatedAt = gameTime;
+            changed = true;
 
             if (entry.suspicion <= 0) {
                 iterator.remove();
             }
+        }
+
+        if (changed) {
+            dirty = true;
         }
     }
 
@@ -95,6 +226,10 @@ public final class RetoldTerritoryReputation {
         }
 
         entry.lastSeenAt = gameTime;
+
+        if (entry.suspicion > 0) {
+            dirty = true;
+        }
     }
 
     public static void addTrespassSuspicion(
@@ -257,12 +392,18 @@ public final class RetoldTerritoryReputation {
             return;
         }
 
+        int oldSuspicion = entry.suspicion;
+
         entry.suspicion = Math.min(
                 RetoldTerritoryConstants.REPUTATION_MAX_SUSPICION,
                 entry.suspicion + amount
         );
 
         entry.lastUpdatedAt = gameTime;
+
+        if (entry.suspicion != oldSuspicion) {
+            dirty = true;
+        }
     }
 
     public static String getDebugText(
@@ -407,6 +548,134 @@ public final class RetoldTerritoryReputation {
         }
 
         return RetoldWarningLevel.NONE;
+    }
+
+    private static Path getSavePath(MinecraftServer server) {
+        return server.getWorldPath(LevelResource.ROOT)
+                .resolve(RetoldTerritoryConstants.REPUTATION_SAVE_DIRECTORY)
+                .resolve(RetoldTerritoryConstants.REPUTATION_SAVE_FILE_NAME);
+    }
+
+    private static void readEntry(JsonObject json) {
+        String territoryKey = getString(json, "territory", "");
+        String intruderUuidText = getString(json, "intruder", "");
+
+        if (territoryKey.isBlank() || intruderUuidText.isBlank()) {
+            return;
+        }
+
+        UUID intruderUuid;
+
+        try {
+            intruderUuid = UUID.fromString(intruderUuidText);
+        } catch (IllegalArgumentException exception) {
+            return;
+        }
+
+        ReputationEntry entry = new ReputationEntry();
+        entry.suspicion = getInt(json, "suspicion", 0);
+
+        if (entry.suspicion <= 0) {
+            return;
+        }
+
+        entry.firstCreatedAt = getLong(json, "firstCreatedAt", 0L);
+        entry.lastUpdatedAt = getLong(json, "lastUpdatedAt", 0L);
+        entry.lastSeenAt = getLong(json, "lastSeenAt", 0L);
+
+        entry.lastTrespassSuspicionAt = getLong(
+                json,
+                "lastTrespassSuspicionAt",
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME
+        );
+
+        entry.lastVisibleWarningSuspicionAt = getLong(
+                json,
+                "lastVisibleWarningSuspicionAt",
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME
+        );
+
+        entry.lastTooCloseSuspicionAt = getLong(
+                json,
+                "lastTooCloseSuspicionAt",
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME
+        );
+
+        REPUTATION.put(
+                new ReputationKey(territoryKey, intruderUuid),
+                entry
+        );
+    }
+
+    private static JsonObject writeEntry(
+            ReputationKey key,
+            ReputationEntry entry
+    ) {
+        JsonObject json = new JsonObject();
+
+        json.addProperty("territory", key.territoryKey);
+        json.addProperty("intruder", key.intruderUuid.toString());
+        json.addProperty("suspicion", entry.suspicion);
+        json.addProperty("firstCreatedAt", entry.firstCreatedAt);
+        json.addProperty("lastUpdatedAt", entry.lastUpdatedAt);
+        json.addProperty("lastSeenAt", entry.lastSeenAt);
+        json.addProperty("lastTrespassSuspicionAt", entry.lastTrespassSuspicionAt);
+        json.addProperty("lastVisibleWarningSuspicionAt", entry.lastVisibleWarningSuspicionAt);
+        json.addProperty("lastTooCloseSuspicionAt", entry.lastTooCloseSuspicionAt);
+
+        return json;
+    }
+
+    private static JsonArray getArray(JsonObject json, String key) {
+        JsonElement element = json.get(key);
+
+        if (element == null || !element.isJsonArray()) {
+            return null;
+        }
+
+        return element.getAsJsonArray();
+    }
+
+    private static String getString(JsonObject json, String key, String fallback) {
+        JsonElement element = json.get(key);
+
+        if (element == null || !element.isJsonPrimitive()) {
+            return fallback;
+        }
+
+        try {
+            return element.getAsString();
+        } catch (RuntimeException exception) {
+            return fallback;
+        }
+    }
+
+    private static int getInt(JsonObject json, String key, int fallback) {
+        JsonElement element = json.get(key);
+
+        if (element == null || !element.isJsonPrimitive()) {
+            return fallback;
+        }
+
+        try {
+            return element.getAsInt();
+        } catch (RuntimeException exception) {
+            return fallback;
+        }
+    }
+
+    private static long getLong(JsonObject json, String key, long fallback) {
+        JsonElement element = json.get(key);
+
+        if (element == null || !element.isJsonPrimitive()) {
+            return fallback;
+        }
+
+        try {
+            return element.getAsLong();
+        } catch (RuntimeException exception) {
+            return fallback;
+        }
     }
 
     private record ReputationKey(
