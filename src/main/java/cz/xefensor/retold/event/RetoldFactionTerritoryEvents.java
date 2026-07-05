@@ -57,7 +57,6 @@ public final class RetoldFactionTerritoryEvents {
     private static final double ATTACK_CHAIN_RADIUS_BLOCKS = 48.0D;
     private static final double ATTACK_TARGET_RELEASE_DISTANCE_SQUARED = 40.0D * 40.0D;
 
-    private static final int WARNING_PULSES_BEFORE_ATTACK = 5;
     private static final int BASE_WARNING_PARTICLE_COUNT = 2;
     private static final int WARNING_PARTICLE_COUNT_PER_PULSE = 2;
 
@@ -65,16 +64,18 @@ public final class RetoldFactionTerritoryEvents {
     private static final float WARNING_SOUND_VOLUME_PER_PULSE = 0.12F;
     private static final float WARNING_SOUND_PITCH = 0.85F;
 
-    private static final int BASE_WARNING_PULSE_INTERVAL_TICKS = 80;
     private static final int TARGET_RECHECK_INTERVAL_TICKS = 35;
     private static final int ATTACK_REFRESH_INTERVAL_TICKS = 100;
 
-    private static final int WARNING_LOST_SIGHT_MEMORY_TICKS = 100;
-    private static final double LOST_SIGHT_POSITION_REACH_DISTANCE_SQUARED = 2.0D * 2.0D;
-
-    private static final int WARNING_FORMATION_RECHECK_INTERVAL_TICKS = 45;
-
     private static final int WARNING_CROSSBOW_CHARGE_TICKS = 28;
+    private static final int WARNING_LOST_SIGHT_MEMORY_TICKS = 100;
+    private static final int WARNING_FORMATION_RECHECK_INTERVAL_TICKS = 45;
+    private static final int MIN_FINAL_WARNING_TICKS_BEFORE_ATTACK = 40;
+
+    private static final double WARNING_POSITION_REPATH_DISTANCE_SQUARED = 2.5D * 2.5D;
+    private static final double WARNING_TARGET_DRIFT_REPATH_DISTANCE_SQUARED = 4.0D * 4.0D;
+    private static final double WARNING_POSITION_STOP_DISTANCE_SQUARED = 1.75D * 1.75D;
+    private static final int WARNING_MIN_REPATH_INTERVAL_TICKS = 30;
 
     private static final int TERRITORY_CACHE_TICKS = 100;
     private static final int MAX_TERRITORY_CACHE_SIZE = 4096;
@@ -206,11 +207,148 @@ public final class RetoldFactionTerritoryEvents {
 
         TerritoryMobState state = MOB_STATES.get(mob);
 
-        if (state != null && state.hasStartedAttack) {
+        return state == null || !state.hasStartedAttack;
+    }
+
+    public static RetoldTerritoryContext getTerritoryContextAt(ServerLevel level, BlockPos pos) {
+        for (TerritoryConfig config : TERRITORY_CONFIGS.values()) {
+            if (!isInAllowedDimension(level, config)) {
+                continue;
+            }
+
+            BlockPos structurePos = findFactionTerritoryAnchor(level, pos, config);
+
+            if (structurePos == null) {
+                continue;
+            }
+
+            double dx = structurePos.getX() + 0.5D - pos.getX();
+            double dz = structurePos.getZ() + 0.5D - pos.getZ();
+
+            if (dx * dx + dz * dz > TERRITORY_RADIUS_BLOCKS * TERRITORY_RADIUS_BLOCKS) {
+                continue;
+            }
+
+            return new RetoldTerritoryContext(
+                    config.faction,
+                    getDimensionId(level),
+                    structurePos.getX(),
+                    structurePos.getZ()
+            );
+        }
+
+        return null;
+    }
+
+    private static String getDimensionId(ServerLevel level) {
+        return level.dimension().toString();
+    }
+
+    public static RetoldFaction getTerritoryFactionAt(ServerLevel level, BlockPos pos) {
+        RetoldTerritoryContext context = getTerritoryContextAt(level, pos);
+        return context == null ? null : context.faction();
+    }
+
+    public static boolean hasWitnessForIllegalAction(
+            ServerLevel level,
+            RetoldFaction faction,
+            ServerPlayer player,
+            BlockPos actionPos
+    ) {
+        if (faction == null || player == null) {
             return false;
         }
 
-        return true;
+        List<PathfinderMob> possibleWitnesses = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                player.getBoundingBox().inflate(NOTICE_MOB_RADIUS_BLOCKS),
+                mob -> mob.isAlive()
+                        && RetoldFactionMembers.getFaction(mob) == faction
+                        && mob.distanceToSqr(
+                        actionPos.getX() + 0.5D,
+                        actionPos.getY() + 0.5D,
+                        actionPos.getZ() + 0.5D
+                ) <= NOTICE_MOB_RADIUS_BLOCKS * NOTICE_MOB_RADIUS_BLOCKS
+        );
+
+        for (PathfinderMob witness : possibleWitnesses) {
+            if (witness.getSensing().hasLineOfSight(player)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static void alertWitnessesAfterIllegalAction(
+            ServerLevel level,
+            RetoldFaction faction,
+            ServerPlayer player,
+            BlockPos actionPos
+    ) {
+        if (faction == null || player == null) {
+            return;
+        }
+
+        List<PathfinderMob> witnesses = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                player.getBoundingBox().inflate(NOTICE_MOB_RADIUS_BLOCKS),
+                mob -> mob.isAlive()
+                        && RetoldFactionMembers.getFaction(mob) == faction
+                        && mob.distanceToSqr(
+                        actionPos.getX() + 0.5D,
+                        actionPos.getY() + 0.5D,
+                        actionPos.getZ() + 0.5D
+                ) <= NOTICE_MOB_RADIUS_BLOCKS * NOTICE_MOB_RADIUS_BLOCKS
+                        && mob.getSensing().hasLineOfSight(player)
+        );
+
+        long gameTime = level.getGameTime();
+
+        for (PathfinderMob witness : witnesses) {
+            TerritoryConfig config = getTerritoryConfigForMob(witness);
+
+            if (config == null || config.faction != faction) {
+                continue;
+            }
+
+            if (!isInAllowedDimension(level, config)) {
+                continue;
+            }
+
+            if (!isNearFactionTerritory(level, witness, config, gameTime)) {
+                continue;
+            }
+
+            TerritoryMobState state = MOB_STATES.computeIfAbsent(
+                    witness,
+                    ignored -> new TerritoryMobState(witness.getId())
+            );
+
+            state.territoryContext = getTerritoryContextAt(level, witness.blockPosition());
+
+            if (state.territoryContext == null || state.territoryContext.faction() != faction) {
+                continue;
+            }
+
+            if (state.hasStartedAttack) {
+                continue;
+            }
+
+            setWarningTarget(state, witness, player, gameTime);
+
+            if (RetoldIntruderReputation.shouldAttack(state.territoryContext, player)) {
+                startAttackOnTarget(
+                        level,
+                        witness,
+                        state,
+                        config,
+                        player,
+                        gameTime,
+                        RetoldTargetSource.TERRITORY_ATTACK
+                );
+            }
+        }
     }
 
     private static void updateMobTerritoryLogic(
@@ -220,6 +358,15 @@ public final class RetoldFactionTerritoryEvents {
             TerritoryConfig config,
             long gameTime
     ) {
+        RetoldTerritoryContext territoryContext = getTerritoryContextAt(level, mob.blockPosition());
+
+        if (territoryContext == null || territoryContext.faction() != config.faction) {
+            clearMobState(mob);
+            return;
+        }
+
+        state.territoryContext = territoryContext;
+
         if (state.hasStartedAttack) {
             updateAttackState(level, mob, state, config, gameTime);
             return;
@@ -252,9 +399,24 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
+        if (RetoldIntruderReputation.getWarningLevel(state.territoryContext, warningTarget) == RetoldWarningLevel.ATTACK) {
+            startAttackOnTarget(
+                    level,
+                    mob,
+                    state,
+                    config,
+                    warningTarget,
+                    gameTime,
+                    RetoldTargetSource.TERRITORY_ATTACK
+            );
+
+            signalNearbyWarnedGuardsToAttack(level, mob, config, gameTime);
+            return;
+        }
+
         maintainContinuousBehavior(level, mob, state, config, gameTime);
 
-        if (!canCountWarningPulse(level, mob, warningTarget, config, gameTime)) {
+        if (!canCountWarningPulse(level, mob, warningTarget, config, state.territoryContext, gameTime)) {
             state.nextWarningPulseAt = Math.max(state.nextWarningPulseAt, gameTime + 10L);
             return;
         }
@@ -264,12 +426,45 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         markVisibleWarnedIntruders(level, mob, state, config, gameTime);
-        playWarningEffects(level, mob, config, state.warningPulses);
+
+        RetoldWarningLevel warningLevelBeforeGain = RetoldIntruderReputation.getWarningLevel(
+                state.territoryContext,
+                warningTarget
+        );
+
+        updateFinalWarningTimer(state, warningLevelBeforeGain, gameTime);
+        playWarningEffects(level, mob, config, warningLevelBeforeGain);
+
+        int suspicionGain = getWarningSuspicionGain(warningLevelBeforeGain);
+
+        if (suspicionGain > 0) {
+            RetoldIntruderReputation.addVisibleWarningSuspicion(
+                    state.territoryContext,
+                    warningTarget,
+                    suspicionGain,
+                    gameTime
+            );
+        }
+
+        if (isTooCloseDuringWarning(mob, warningTarget)) {
+            RetoldIntruderReputation.addTooCloseSuspicion(
+                    state.territoryContext,
+                    warningTarget,
+                    gameTime
+            );
+        }
+
+        RetoldWarningLevel warningLevelAfterGain = RetoldIntruderReputation.getWarningLevel(
+                state.territoryContext,
+                warningTarget
+        );
+
+        updateFinalWarningTimer(state, warningLevelAfterGain, gameTime);
 
         state.warningPulses++;
-        state.nextWarningPulseAt = gameTime + getWarningPulseInterval(mob);
+        state.nextWarningPulseAt = gameTime + getWarningPulseInterval(mob, warningLevelAfterGain);
 
-        if (state.warningPulses >= WARNING_PULSES_BEFORE_ATTACK) {
+        if (canStartTerritoryAttack(state, warningLevelAfterGain, gameTime)) {
             startAttackOnTarget(
                     level,
                     mob,
@@ -295,6 +490,15 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
+        if (state.territoryContext == null || state.territoryContext.faction() != config.faction) {
+            state.territoryContext = getTerritoryContextAt(level, mob.blockPosition());
+        }
+
+        if (state.territoryContext == null || state.territoryContext.faction() != config.faction) {
+            stopWarningPose(mob);
+            return;
+        }
+
         LivingEntity warningTarget = state.warningTarget;
 
         if (
@@ -305,16 +509,54 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
-        updateWarningPose(mob, warningTarget);
+        RetoldWarningLevel warningLevel = RetoldIntruderReputation.getWarningLevel(
+                state.territoryContext,
+                warningTarget
+        );
+
+        updateWarningPose(mob, warningTarget, warningLevel);
 
         if (canSeeTarget(mob, warningTarget)) {
+            RetoldIntruderReputation.markSeen(
+                    state.territoryContext,
+                    warningTarget,
+                    gameTime
+            );
+
             faceTargetSmoothly(mob, warningTarget);
         } else {
             faceLastKnownWarningPosition(mob, state);
         }
 
-        int focusCount = countNearbyFactionMobsFocusedOn(level, mob, config, warningTarget);
-        WarningMovementProfile profile = getWarningMovementProfile(mob, warningTarget, focusCount);
+        if (warningLevel == RetoldWarningLevel.NONE) {
+            mob.getNavigation().stop();
+            return;
+        }
+
+        WarningFormationSlot formationSlot = getWarningFormationSlot(
+                level,
+                mob,
+                config,
+                warningTarget
+        );
+
+        if (gameTime >= state.nextFormationRecheckAt) {
+            if (state.warningFormationSlot != formationSlot.slotOffset) {
+                state.warningFormationSlot = formationSlot.slotOffset;
+                state.hasWarningMoveTarget = false;
+            }
+
+            state.nextFormationRecheckAt = gameTime + WARNING_FORMATION_RECHECK_INTERVAL_TICKS;
+        }
+
+        int focusCount = Math.max(0, formationSlot.totalGuards - 1);
+
+        WarningMovementProfile profile = getWarningMovementProfile(
+                mob,
+                warningTarget,
+                focusCount,
+                warningLevel
+        );
 
         updateWarningMovement(mob, warningTarget, state, profile, gameTime);
     }
@@ -343,8 +585,6 @@ public final class RetoldFactionTerritoryEvents {
 
         state.nextTargetRecheckAt = gameTime + TARGET_RECHECK_INTERVAL_TICKS + Math.floorMod(mob.getId(), 12);
 
-        // Do not switch targets while the current target is hidden but remembered.
-        // Otherwise guards can jitter between hidden/visible enemies.
         if (!canSeeTarget(mob, currentTarget)) {
             return;
         }
@@ -369,25 +609,38 @@ public final class RetoldFactionTerritoryEvents {
             LivingEntity target,
             long gameTime
     ) {
-        if (target != null) {
-            state.warningMoveSide = getStableSide(mob, target);
-            rememberWarningTargetPosition(state, target, gameTime);
+        if (state.warningTarget == target) {
+            return;
         }
 
         state.warningTarget = target;
         state.attackTarget = null;
         state.hasStartedAttack = false;
         state.firedPreparedWarningShot = false;
+        state.finalWarningStartedAt = -1L;
         state.warningPulses = 0;
         state.nextWarningPulseAt = gameTime;
         state.nextTargetRecheckAt = gameTime + TARGET_RECHECK_INTERVAL_TICKS + Math.floorMod(mob.getId(), 12);
         state.nextWarningRepositionAt = gameTime;
+        state.hasWarningMoveTarget = false;
+        state.warningMoveTargetSlot = Integer.MIN_VALUE;
+        state.nextWarningPathRefreshAt = gameTime;
 
         if (target != null) {
             state.warningMoveSide = getStableSide(mob, target);
             state.warningAnchorAngle = getAngleFromTargetToMob(mob, target);
             state.warningFormationSlot = 0;
             state.nextFormationRecheckAt = gameTime;
+
+            rememberWarningTargetPosition(state, target, gameTime);
+
+            if (state.territoryContext != null) {
+                RetoldIntruderReputation.addTrespassSuspicion(
+                        state.territoryContext,
+                        target,
+                        gameTime
+                );
+            }
         }
     }
 
@@ -440,69 +693,12 @@ public final class RetoldFactionTerritoryEvents {
         int count = 0;
 
         for (PathfinderMob other : nearbyMobs) {
-            TerritoryMobState otherState = MOB_STATES.get(other);
-
-            if (otherState != null) {
-                if (otherState.warningTarget == intruder || otherState.attackTarget == intruder) {
-                    count++;
-                    continue;
-                }
-            }
-
-            if (other.getTarget() == intruder) {
+            if (isFocusedOnIntruder(other, intruder)) {
                 count++;
             }
         }
 
         return count;
-    }
-
-    private static void updateWarningMovement(
-            PathfinderMob mob,
-            LivingEntity target,
-            TerritoryMobState state,
-            WarningMovementProfile profile,
-            long gameTime
-    ) {
-        double distanceSqr = mob.distanceToSqr(target);
-        double minDistanceSqr = profile.minDistance * profile.minDistance;
-        double maxDistanceSqr = profile.maxDistance * profile.maxDistance;
-
-        boolean tooClose = distanceSqr < minDistanceSqr;
-        boolean tooFar = distanceSqr > maxDistanceSqr;
-        boolean shouldReposition = gameTime >= state.nextWarningRepositionAt;
-
-        if (!tooClose && !tooFar && !shouldReposition) {
-            return;
-        }
-
-        moveToWarningRingPosition(mob, target, state, profile, gameTime, tooClose || tooFar);
-    }
-
-    private static void moveToWarningRingPosition(
-            PathfinderMob mob,
-            LivingEntity target,
-            TerritoryMobState state,
-            WarningMovementProfile profile,
-            long gameTime,
-            boolean urgent
-    ) {
-        double slotOffset = state.warningFormationSlot * profile.sideAngle;
-        slotOffset = clamp(slotOffset, -1.35D, 1.35D);
-
-        double targetAngle = state.warningAnchorAngle + slotOffset;
-
-        double moveX = target.getX() + Math.cos(targetAngle) * profile.desiredDistance;
-        double moveZ = target.getZ() + Math.sin(targetAngle) * profile.desiredDistance;
-
-        mob.getNavigation().moveTo(
-                moveX,
-                target.getY(),
-                moveZ,
-                urgent ? profile.urgentSpeed : profile.speed
-        );
-
-        state.nextWarningRepositionAt = gameTime + profile.repositionInterval;
     }
 
     private static WarningFormationSlot getWarningFormationSlot(
@@ -573,67 +769,200 @@ public final class RetoldFactionTerritoryEvents {
         return Math.atan2(dz, dx);
     }
 
+    private static void updateWarningMovement(
+            PathfinderMob mob,
+            LivingEntity target,
+            TerritoryMobState state,
+            WarningMovementProfile profile,
+            long gameTime
+    ) {
+        double distanceToTargetSqr = mob.distanceToSqr(target);
+        double minDistanceSqr = profile.minDistance * profile.minDistance;
+        double maxDistanceSqr = profile.maxDistance * profile.maxDistance;
+
+        boolean tooCloseToIntruder = distanceToTargetSqr < minDistanceSqr;
+        boolean tooFarFromIntruder = distanceToTargetSqr > maxDistanceSqr;
+
+        boolean needsNewMoveTarget = !state.hasWarningMoveTarget
+                || state.warningMoveTargetSlot != state.warningFormationSlot
+                || hasWarningTargetDrifted(target, state)
+                || tooCloseToIntruder
+                || tooFarFromIntruder;
+
+        if (needsNewMoveTarget && gameTime >= state.nextWarningPathRefreshAt) {
+            setWarningMoveTarget(mob, target, state, profile, gameTime);
+        }
+
+        if (!state.hasWarningMoveTarget) {
+            return;
+        }
+
+        double distanceToMoveTargetSqr = mob.distanceToSqr(
+                state.warningMoveTargetX,
+                state.warningMoveTargetY,
+                state.warningMoveTargetZ
+        );
+
+        if (
+                !tooCloseToIntruder
+                        && !tooFarFromIntruder
+                        && distanceToMoveTargetSqr <= WARNING_POSITION_STOP_DISTANCE_SQUARED
+        ) {
+            mob.getNavigation().stop();
+            return;
+        }
+
+        if (distanceToMoveTargetSqr > WARNING_POSITION_REPATH_DISTANCE_SQUARED) {
+            mob.getNavigation().moveTo(
+                    state.warningMoveTargetX,
+                    state.warningMoveTargetY,
+                    state.warningMoveTargetZ,
+                    tooCloseToIntruder || tooFarFromIntruder ? profile.urgentSpeed : profile.speed
+            );
+        }
+    }
+
+    private static void setWarningMoveTarget(
+            PathfinderMob mob,
+            LivingEntity target,
+            TerritoryMobState state,
+            WarningMovementProfile profile,
+            long gameTime
+    ) {
+        double slotOffset = state.warningFormationSlot * profile.sideAngle;
+        slotOffset = clamp(slotOffset, -1.2D, 1.2D);
+
+        double targetAngle = state.warningAnchorAngle + slotOffset;
+
+        state.warningMoveTargetX = target.getX() + Math.cos(targetAngle) * profile.desiredDistance;
+        state.warningMoveTargetY = target.getY();
+        state.warningMoveTargetZ = target.getZ() + Math.sin(targetAngle) * profile.desiredDistance;
+
+        state.warningMoveTargetSourceX = target.getX();
+        state.warningMoveTargetSourceZ = target.getZ();
+        state.warningMoveTargetSlot = state.warningFormationSlot;
+        state.hasWarningMoveTarget = true;
+
+        state.nextWarningPathRefreshAt = gameTime + WARNING_MIN_REPATH_INTERVAL_TICKS;
+    }
+
+    private static boolean hasWarningTargetDrifted(
+            LivingEntity target,
+            TerritoryMobState state
+    ) {
+        if (!state.hasWarningMoveTarget) {
+            return true;
+        }
+
+        double dx = target.getX() - state.warningMoveTargetSourceX;
+        double dz = target.getZ() - state.warningMoveTargetSourceZ;
+
+        return dx * dx + dz * dz >= WARNING_TARGET_DRIFT_REPATH_DISTANCE_SQUARED;
+    }
+
     private static WarningMovementProfile getWarningMovementProfile(
             PathfinderMob mob,
             LivingEntity target,
-            int focusCount
+            int focusCount,
+            RetoldWarningLevel warningLevel
     ) {
         boolean ranged = isRangedWarningMob(mob);
+        boolean noticed = warningLevel == RetoldWarningLevel.NOTICED;
+        boolean finalWarning = warningLevel == RetoldWarningLevel.FINAL_WARNING
+                || warningLevel == RetoldWarningLevel.ATTACK;
 
         double mobWidth = Math.max(0.6D, mob.getBbWidth());
         double targetWidth = Math.max(0.6D, target.getBbWidth());
 
-        if (ranged) {
-            double desiredDistance = clamp(
-                    9.5D + mobWidth + targetWidth + focusCount * 0.6D,
-                    9.0D,
-                    16.0D
-            );
+        if (noticed) {
+            if (ranged) {
+                double desiredDistance = clamp(
+                        14.0D + mobWidth + targetWidth + focusCount * 0.4D,
+                        12.0D,
+                        19.0D
+                );
 
-            double band = clamp(2.25D + focusCount * 0.15D, 2.25D, 4.0D);
-            double sideAngle = clamp(0.35D + focusCount * 0.04D, 0.35D, 0.7D);
-            int repositionInterval = 34 + Math.floorMod(mob.getId(), 16);
+                return new WarningMovementProfile(
+                        desiredDistance,
+                        desiredDistance - 3.0D,
+                        desiredDistance + 4.0D,
+                        0.45D,
+                        0.65D,
+                        0.25D,
+                        70 + Math.floorMod(mob.getId(), 20)
+                );
+            }
+
+            double desiredDistance = clamp(
+                    8.0D + mobWidth + targetWidth + focusCount * 0.25D,
+                    7.0D,
+                    11.0D
+            );
 
             return new WarningMovementProfile(
                     desiredDistance,
-                    Math.max(6.5D, desiredDistance - band),
+                    desiredDistance - 2.0D,
+                    desiredDistance + 3.0D,
+                    0.55D,
+                    0.75D,
+                    0.35D,
+                    60 + Math.floorMod(mob.getId(), 20)
+            );
+        }
+
+        if (ranged) {
+            double desiredDistance = finalWarning
+                    ? clamp(10.0D + mobWidth + targetWidth + focusCount * 0.45D, 9.0D, 14.0D)
+                    : clamp(12.0D + mobWidth + targetWidth + focusCount * 0.6D, 10.0D, 17.0D);
+
+            double band = finalWarning
+                    ? clamp(1.4D + focusCount * 0.1D, 1.4D, 2.6D)
+                    : clamp(2.4D + focusCount * 0.15D, 2.4D, 4.0D);
+
+            double sideAngle = finalWarning
+                    ? clamp(0.25D + focusCount * 0.03D, 0.25D, 0.5D)
+                    : clamp(0.4D + focusCount * 0.04D, 0.4D, 0.75D);
+
+            int repositionInterval = finalWarning
+                    ? 50 + Math.floorMod(mob.getId(), 18)
+                    : 36 + Math.floorMod(mob.getId(), 16);
+
+            return new WarningMovementProfile(
+                    desiredDistance,
+                    Math.max(7.0D, desiredDistance - band),
                     desiredDistance + band,
-                    0.72D,
-                    0.92D,
+                    finalWarning ? 0.55D : 0.72D,
+                    finalWarning ? 0.75D : 0.92D,
                     sideAngle,
                     repositionInterval
             );
         }
 
-        double desiredDistance = clamp(
-                3.5D + mobWidth + targetWidth + focusCount * 0.25D,
-                4.25D,
-                7.5D
-        );
+        double desiredDistance = finalWarning
+                ? clamp(2.7D + mobWidth + targetWidth + focusCount * 0.15D, 3.25D, 5.5D)
+                : clamp(4.3D + mobWidth + targetWidth + focusCount * 0.25D, 4.75D, 7.75D);
 
-        double band = clamp(1.1D + focusCount * 0.08D, 1.1D, 1.9D);
-        double sideAngle = clamp(0.55D + focusCount * 0.05D, 0.55D, 0.9D);
-        int repositionInterval = 24 + Math.floorMod(mob.getId(), 14);
+        double band = finalWarning
+                ? clamp(0.75D + focusCount * 0.05D, 0.75D, 1.4D)
+                : clamp(1.2D + focusCount * 0.08D, 1.2D, 2.0D);
+
+        double sideAngle = finalWarning
+                ? clamp(0.45D + focusCount * 0.04D, 0.45D, 0.75D)
+                : clamp(0.6D + focusCount * 0.05D, 0.6D, 0.95D);
+
+        int repositionInterval = finalWarning
+                ? 38 + Math.floorMod(mob.getId(), 14)
+                : 28 + Math.floorMod(mob.getId(), 14);
 
         return new WarningMovementProfile(
                 desiredDistance,
-                Math.max(2.75D, desiredDistance - band),
+                Math.max(2.5D, desiredDistance - band),
                 desiredDistance + band,
-                0.86D,
-                1.02D,
+                finalWarning ? 0.82D : 0.86D,
+                finalWarning ? 1.05D : 1.02D,
                 sideAngle,
                 repositionInterval
         );
-    }
-
-    private static final class WarningFormationSlot {
-        private final int slotOffset;
-        private final int totalGuards;
-
-        private WarningFormationSlot(int slotOffset, int totalGuards) {
-            this.slotOffset = slotOffset;
-            this.totalGuards = totalGuards;
-        }
     }
 
     private static boolean isRangedWarningMob(PathfinderMob mob) {
@@ -652,8 +981,13 @@ public final class RetoldFactionTerritoryEvents {
             PathfinderMob mob,
             LivingEntity target,
             TerritoryConfig config,
+            RetoldTerritoryContext territoryContext,
             long gameTime
     ) {
+        if (territoryContext == null) {
+            return false;
+        }
+
         if (!isValidWarningTarget(level, mob, target, config, gameTime)) {
             return false;
         }
@@ -663,14 +997,82 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         int focusCount = countNearbyFactionMobsFocusedOn(level, mob, config, target);
-        WarningMovementProfile profile = getWarningMovementProfile(mob, target, focusCount);
+
+        RetoldWarningLevel warningLevel = RetoldIntruderReputation.getWarningLevel(
+                territoryContext,
+                target
+        );
+
+        WarningMovementProfile profile = getWarningMovementProfile(
+                mob,
+                target,
+                focusCount,
+                warningLevel
+        );
 
         double countDistance = profile.maxDistance + 1.5D;
         return mob.distanceToSqr(target) <= countDistance * countDistance;
     }
 
-    private static int getWarningPulseInterval(PathfinderMob mob) {
-        return BASE_WARNING_PULSE_INTERVAL_TICKS + Math.floorMod(mob.getId(), 16);
+    private static int getWarningPulseInterval(
+            PathfinderMob mob,
+            RetoldWarningLevel warningLevel
+    ) {
+        int baseInterval = switch (warningLevel) {
+            case NONE -> 140;
+            case NOTICED -> 130;
+            case WARNING -> 95;
+            case FINAL_WARNING -> 60;
+            case ATTACK -> 40;
+        };
+
+        return baseInterval + Math.floorMod(mob.getId(), 16);
+    }
+
+    private static int getWarningSuspicionGain(RetoldWarningLevel warningLevel) {
+        return switch (warningLevel) {
+            case NONE -> 0;
+            case NOTICED -> 3;
+            case WARNING -> 8;
+            case FINAL_WARNING -> 13;
+            case ATTACK -> 0;
+        };
+    }
+
+    private static boolean isTooCloseDuringWarning(PathfinderMob mob, LivingEntity target) {
+        return mob.distanceToSqr(target) <= 4.0D * 4.0D;
+    }
+
+    private static void updateFinalWarningTimer(
+            TerritoryMobState state,
+            RetoldWarningLevel warningLevel,
+            long gameTime
+    ) {
+        if (warningLevel == RetoldWarningLevel.FINAL_WARNING || warningLevel == RetoldWarningLevel.ATTACK) {
+            if (state.finalWarningStartedAt < 0L) {
+                state.finalWarningStartedAt = gameTime;
+            }
+
+            return;
+        }
+
+        state.finalWarningStartedAt = -1L;
+    }
+
+    private static boolean canStartTerritoryAttack(
+            TerritoryMobState state,
+            RetoldWarningLevel warningLevel,
+            long gameTime
+    ) {
+        if (warningLevel != RetoldWarningLevel.ATTACK) {
+            return false;
+        }
+
+        if (state.finalWarningStartedAt < 0L) {
+            return false;
+        }
+
+        return gameTime - state.finalWarningStartedAt >= MIN_FINAL_WARNING_TICKS_BEFORE_ATTACK;
     }
 
     private static void markVisibleWarnedIntruders(
@@ -691,7 +1093,7 @@ public final class RetoldFactionTerritoryEvents {
                 mob.getBoundingBox().inflate(NOTICE_MOB_RADIUS_BLOCKS),
                 target -> isPossibleIntruder(level, mob, target, config, gameTime)
                         && canSeeTarget(mob, target)
-                        && canCountWarningPulse(level, mob, target, config, gameTime)
+                        && canCountWarningPulse(level, mob, target, config, state.territoryContext, gameTime)
         );
 
         for (LivingEntity intruder : nearbyIntruders) {
@@ -703,10 +1105,12 @@ public final class RetoldFactionTerritoryEvents {
             ServerLevel level,
             PathfinderMob mob,
             TerritoryConfig config,
-            int warningPulses
+            RetoldWarningLevel warningLevel
     ) {
-        int particleCount = BASE_WARNING_PARTICLE_COUNT + warningPulses * WARNING_PARTICLE_COUNT_PER_PULSE;
-        float volume = BASE_WARNING_SOUND_VOLUME + warningPulses * WARNING_SOUND_VOLUME_PER_PULSE;
+        int intensity = getWarningIntensity(warningLevel);
+
+        int particleCount = BASE_WARNING_PARTICLE_COUNT + intensity * WARNING_PARTICLE_COUNT_PER_PULSE;
+        float volume = BASE_WARNING_SOUND_VOLUME + intensity * WARNING_SOUND_VOLUME_PER_PULSE;
 
         level.sendParticles(
                 ParticleTypes.ANGRY_VILLAGER,
@@ -730,8 +1134,31 @@ public final class RetoldFactionTerritoryEvents {
         );
     }
 
-    private static void updateWarningPose(PathfinderMob mob, LivingEntity warningTarget) {
+    private static int getWarningIntensity(RetoldWarningLevel warningLevel) {
+        return switch (warningLevel) {
+            case NONE -> 0;
+            case NOTICED -> 1;
+            case WARNING -> 2;
+            case FINAL_WARNING -> 4;
+            case ATTACK -> 5;
+        };
+    }
+
+    private static void updateWarningPose(
+            PathfinderMob mob,
+            LivingEntity warningTarget,
+            RetoldWarningLevel warningLevel
+    ) {
+        if (warningLevel == RetoldWarningLevel.NONE || warningLevel == RetoldWarningLevel.NOTICED) {
+            stopWarningPose(mob);
+            return;
+        }
+
         RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, true);
+
+        if (warningLevel != RetoldWarningLevel.FINAL_WARNING && warningLevel != RetoldWarningLevel.ATTACK) {
+            return;
+        }
 
         InteractionHand weaponHand = getProjectileWeaponHand(mob);
 
@@ -935,6 +1362,37 @@ public final class RetoldFactionTerritoryEvents {
 
     private static boolean isProjectileWeapon(ItemStack stack) {
         return !stack.isEmpty() && stack.getItem() instanceof ProjectileWeaponItem;
+    }
+
+    private static boolean canMaintainWarningAwareness(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!isValidWarningTarget(level, mob, target, config, gameTime)) {
+            return false;
+        }
+
+        if (canSeeTarget(mob, target)) {
+            rememberWarningTargetPosition(state, target, gameTime);
+            return true;
+        }
+
+        return gameTime - state.lastSawWarningTargetAt <= WARNING_LOST_SIGHT_MEMORY_TICKS;
+    }
+
+    private static void rememberWarningTargetPosition(
+            TerritoryMobState state,
+            LivingEntity target,
+            long gameTime
+    ) {
+        state.lastSawWarningTargetAt = gameTime;
+        state.lastKnownWarningTargetX = target.getX();
+        state.lastKnownWarningTargetY = target.getY();
+        state.lastKnownWarningTargetZ = target.getZ();
     }
 
     private static void faceTargetSmoothly(PathfinderMob mob, LivingEntity target) {
@@ -1171,7 +1629,7 @@ public final class RetoldFactionTerritoryEvents {
         state.hasStartedAttack = true;
         state.attackTarget = target;
         state.warningTarget = target;
-        state.warningPulses = WARNING_PULSES_BEFORE_ATTACK;
+        state.warningPulses = 0;
         state.nextAttackRefreshAt = gameTime + 20L;
         state.warnedIntruders.add(target.getUUID());
 
@@ -1305,6 +1763,12 @@ public final class RetoldFactionTerritoryEvents {
                 continue;
             }
 
+            guardState.territoryContext = getTerritoryContextAt(level, guard.blockPosition());
+
+            if (guardState.territoryContext == null || guardState.territoryContext.faction() != config.faction) {
+                continue;
+            }
+
             LivingEntity attackTarget = findBestWarnedAttackTarget(level, guard, guardState, config, gameTime);
 
             if (attackTarget == null) {
@@ -1341,12 +1805,17 @@ public final class RetoldFactionTerritoryEvents {
     private static void resetWarningState(TerritoryMobState state, long gameTime) {
         state.hasStartedAttack = false;
         state.firedPreparedWarningShot = false;
+        state.finalWarningStartedAt = -1L;
         state.attackTarget = null;
         state.warningTarget = null;
         state.warningPulses = 0;
         state.nextWarningPulseAt = gameTime;
         state.nextWarningRepositionAt = gameTime;
         state.nextTargetRecheckAt = gameTime;
+        state.nextFormationRecheckAt = gameTime;
+        state.hasWarningMoveTarget = false;
+        state.warningMoveTargetSlot = Integer.MIN_VALUE;
+        state.nextWarningPathRefreshAt = gameTime;
         state.warnedIntruders.clear();
     }
 
@@ -1405,7 +1874,7 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
-        return RetoldFactionRelations.areEnemyFactions(config.faction, intruderFaction);
+        return canTriggerTerritoryWarning(config.faction, intruderFaction);
     }
 
     private static boolean canTriggerTerritoryWarning(
@@ -1420,8 +1889,6 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
-        // Players should be warned in faction territory even if normal open-world
-        // faction combat does not custom-target players.
         if (intruderFaction == RetoldFaction.PLAYER) {
             return territoryFaction == RetoldFaction.NETHER_REMNANTS
                     || territoryFaction == RetoldFaction.ILLAGERS;
@@ -1454,7 +1921,15 @@ public final class RetoldFactionTerritoryEvents {
             TerritoryConfig config,
             long gameTime
     ) {
-        BlockPos pos = entity.blockPosition();
+        return isNearFactionTerritory(level, entity.blockPosition(), config, gameTime);
+    }
+
+    private static boolean isNearFactionTerritory(
+            ServerLevel level,
+            BlockPos pos,
+            TerritoryConfig config,
+            long gameTime
+    ) {
         long chunkKey = chunkKey(pos);
 
         TerritoryCacheKey cacheKey = new TerritoryCacheKey(
@@ -1510,6 +1985,36 @@ public final class RetoldFactionTerritoryEvents {
         double dz = structurePos.getZ() + 0.5D - pos.getZ();
 
         return dx * dx + dz * dz <= TERRITORY_RADIUS_BLOCKS * TERRITORY_RADIUS_BLOCKS;
+    }
+
+    private static BlockPos findFactionTerritoryAnchor(
+            ServerLevel level,
+            BlockPos pos,
+            TerritoryConfig config
+    ) {
+        BlockPos structurePos = level.findNearestMapStructure(
+                config.territoryTag,
+                pos,
+                STRUCTURE_SEARCH_RADIUS_CHUNKS,
+                false
+        );
+
+        if (structurePos != null) {
+            return structurePos;
+        }
+
+        StructureStart currentStructure = level.structureManager()
+                .getStructureWithPieceAt(pos, config.territoryTag);
+
+        if (currentStructure != null && currentStructure.isValid()) {
+            return new BlockPos(
+                    pos.getX() >> 4 << 4,
+                    pos.getY(),
+                    pos.getZ() >> 4 << 4
+            );
+        }
+
+        return null;
     }
 
     private static boolean isInRaid(ServerLevel level, Entity entity) {
@@ -1624,6 +2129,8 @@ public final class RetoldFactionTerritoryEvents {
     }
 
     private static final class TerritoryMobState {
+        private RetoldTerritoryContext territoryContext;
+
         private LivingEntity warningTarget;
         private LivingEntity attackTarget;
 
@@ -1634,64 +2141,34 @@ public final class RetoldFactionTerritoryEvents {
         private long nextWarningPulseAt;
         private long nextWarningRepositionAt;
         private long nextTargetRecheckAt;
+        private long nextFormationRecheckAt;
         private long nextAttackRefreshAt;
+
+        private long finalWarningStartedAt = -1L;
 
         private long lastSawWarningTargetAt;
         private double lastKnownWarningTargetX;
         private double lastKnownWarningTargetY;
         private double lastKnownWarningTargetZ;
 
-        private double warningAnchorAngle;
-        private int warningFormationSlot;
-        private long nextFormationRecheckAt;
-
         private int warningMoveSide;
+        private int warningFormationSlot;
+        private double warningAnchorAngle;
+
+        private boolean hasWarningMoveTarget;
+        private double warningMoveTargetX;
+        private double warningMoveTargetY;
+        private double warningMoveTargetZ;
+        private double warningMoveTargetSourceX;
+        private double warningMoveTargetSourceZ;
+        private int warningMoveTargetSlot = Integer.MIN_VALUE;
+        private long nextWarningPathRefreshAt;
 
         private final Set<UUID> warnedIntruders = new HashSet<>();
 
         private TerritoryMobState(int mobId) {
             this.warningMoveSide = Math.floorMod(mobId, 2) == 0 ? 1 : -1;
         }
-    }
-
-    private static boolean canMaintainWarningAwareness(
-            ServerLevel level,
-            PathfinderMob mob,
-            TerritoryMobState state,
-            TerritoryConfig config,
-            LivingEntity target,
-            long gameTime
-    ) {
-        if (!isValidWarningTarget(level, mob, target, config, gameTime)) {
-            return false;
-        }
-
-        if (canSeeTarget(mob, target)) {
-            rememberWarningTargetPosition(state, target, gameTime);
-            return true;
-        }
-
-        return gameTime - state.lastSawWarningTargetAt <= WARNING_LOST_SIGHT_MEMORY_TICKS;
-    }
-
-    private static void rememberWarningTargetPosition(
-            TerritoryMobState state,
-            LivingEntity target,
-            long gameTime
-    ) {
-        state.lastSawWarningTargetAt = gameTime;
-        state.lastKnownWarningTargetX = target.getX();
-        state.lastKnownWarningTargetY = target.getY();
-        state.lastKnownWarningTargetZ = target.getZ();
-    }
-
-    private static boolean canCurrentlySeeWarningTarget(PathfinderMob mob, TerritoryMobState state) {
-        LivingEntity target = state.warningTarget;
-
-        return target != null
-                && target.isAlive()
-                && mob.level() == target.level()
-                && canSeeTarget(mob, target);
     }
 
     private static final class WarningMovementProfile {
@@ -1719,6 +2196,16 @@ public final class RetoldFactionTerritoryEvents {
             this.urgentSpeed = urgentSpeed;
             this.sideAngle = sideAngle;
             this.repositionInterval = repositionInterval;
+        }
+    }
+
+    private static final class WarningFormationSlot {
+        private final int slotOffset;
+        private final int totalGuards;
+
+        private WarningFormationSlot(int slotOffset, int totalGuards) {
+            this.slotOffset = slotOffset;
+            this.totalGuards = totalGuards;
         }
     }
 

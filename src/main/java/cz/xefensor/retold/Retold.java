@@ -19,6 +19,8 @@ import cz.xefensor.retold.event.RetoldFactionTerritoryEvents;
 import cz.xefensor.retold.event.RetoldFactionCombatEvents;
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
+import cz.xefensor.retold.event.RetoldIllegalActionEvents;
+import cz.xefensor.retold.event.RetoldReputationDebugEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -69,6 +71,8 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldFactionCombatEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionTerritoryEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionAssistEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldIllegalActionEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldReputationDebugEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
