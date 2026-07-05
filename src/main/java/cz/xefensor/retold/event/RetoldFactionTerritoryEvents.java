@@ -50,8 +50,13 @@ import java.util.WeakHashMap;
 public final class RetoldFactionTerritoryEvents {
     private static final int MOB_DECISION_INTERVAL_TICKS = 20;
 
-    private static final int STRUCTURE_SEARCH_RADIUS_CHUNKS = 6;
-    private static final double TERRITORY_RADIUS_BLOCKS = 48.0D;
+    private static final int STRUCTURE_SEARCH_RADIUS_CHUNKS = 12;
+    private static final double TERRITORY_RADIUS_BLOCKS = 64.0D;
+
+    private static final int TERRITORY_PIECE_PADDING_CHUNKS = 2;
+    private static final int TERRITORY_PIECE_SCAN_STEP_BLOCKS = 8;
+    private static final int TERRITORY_PIECE_VERTICAL_SCAN_STEP_BLOCKS = 8;
+    private static final int TERRITORY_PIECE_VERTICAL_SCAN_RANGE_BLOCKS = 24;
 
     private static final double NOTICE_MOB_RADIUS_BLOCKS = 48.0D;
     private static final double ATTACK_CHAIN_RADIUS_BLOCKS = 48.0D;
@@ -211,21 +216,20 @@ public final class RetoldFactionTerritoryEvents {
     }
 
     public static RetoldTerritoryContext getTerritoryContextAt(ServerLevel level, BlockPos pos) {
+        long gameTime = level.getGameTime();
+
         for (TerritoryConfig config : TERRITORY_CONFIGS.values()) {
             if (!isInAllowedDimension(level, config)) {
+                continue;
+            }
+
+            if (!isNearFactionTerritory(level, pos, config, gameTime)) {
                 continue;
             }
 
             BlockPos structurePos = findFactionTerritoryAnchor(level, pos, config);
 
             if (structurePos == null) {
-                continue;
-            }
-
-            double dx = structurePos.getX() + 0.5D - pos.getX();
-            double dz = structurePos.getZ() + 0.5D - pos.getZ();
-
-            if (dx * dx + dz * dz > TERRITORY_RADIUS_BLOCKS * TERRITORY_RADIUS_BLOCKS) {
                 continue;
             }
 
@@ -1963,13 +1967,14 @@ public final class RetoldFactionTerritoryEvents {
             BlockPos pos,
             TerritoryConfig config
     ) {
-        StructureStart currentStructure = level.structureManager()
-                .getStructureWithPieceAt(pos, config.territoryTag);
-
-        if (currentStructure != null && currentStructure.isValid()) {
+        // Best detection:
+        // inside the structure OR within 2 chunks of any real structure piece.
+        if (findNearbyFactionTerritoryPiece(level, pos, config) != null) {
             return true;
         }
 
+        // Fallback detection:
+        // near the map structure start/anchor.
         BlockPos structurePos = level.findNearestMapStructure(
                 config.territoryTag,
                 pos,
@@ -1992,6 +1997,8 @@ public final class RetoldFactionTerritoryEvents {
             BlockPos pos,
             TerritoryConfig config
     ) {
+        // Prefer the real structure start as the reputation key anchor.
+        // This keeps one fortress/bastion/outpost using one stable suspicion key.
         BlockPos structurePos = level.findNearestMapStructure(
                 config.territoryTag,
                 pos,
@@ -2003,15 +2010,45 @@ public final class RetoldFactionTerritoryEvents {
             return structurePos;
         }
 
-        StructureStart currentStructure = level.structureManager()
-                .getStructureWithPieceAt(pos, config.territoryTag);
+        // Fallback: if map-structure lookup fails but a structure piece is nearby,
+        // use that piece chunk as the local reputation anchor.
+        BlockPos nearbyPiecePos = findNearbyFactionTerritoryPiece(level, pos, config);
 
-        if (currentStructure != null && currentStructure.isValid()) {
+        if (nearbyPiecePos != null) {
             return new BlockPos(
-                    pos.getX() >> 4 << 4,
-                    pos.getY(),
-                    pos.getZ() >> 4 << 4
+                    nearbyPiecePos.getX() >> 4 << 4,
+                    nearbyPiecePos.getY(),
+                    nearbyPiecePos.getZ() >> 4 << 4
             );
+        }
+
+        return null;
+    }
+
+    private static BlockPos findNearbyFactionTerritoryPiece(
+            ServerLevel level,
+            BlockPos pos,
+            TerritoryConfig config
+    ) {
+        int paddingBlocks = TERRITORY_PIECE_PADDING_CHUNKS * 16;
+
+        for (int dx = -paddingBlocks; dx <= paddingBlocks; dx += TERRITORY_PIECE_SCAN_STEP_BLOCKS) {
+            for (int dz = -paddingBlocks; dz <= paddingBlocks; dz += TERRITORY_PIECE_SCAN_STEP_BLOCKS) {
+                for (
+                        int dy = -TERRITORY_PIECE_VERTICAL_SCAN_RANGE_BLOCKS;
+                        dy <= TERRITORY_PIECE_VERTICAL_SCAN_RANGE_BLOCKS;
+                        dy += TERRITORY_PIECE_VERTICAL_SCAN_STEP_BLOCKS
+                ) {
+                    BlockPos samplePos = pos.offset(dx, dy, dz);
+
+                    StructureStart structureStart = level.structureManager()
+                            .getStructureWithPieceAt(samplePos, config.territoryTag);
+
+                    if (structureStart != null && structureStart.isValid()) {
+                        return samplePos;
+                    }
+                }
+            }
         }
 
         return null;
