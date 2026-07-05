@@ -7,7 +7,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 public final class RetoldReputationDebugEvents {
-    private static final boolean DEBUG_REPUTATION = true;
+    private static final boolean DEBUG_REPUTATION = false;
     private static final int DEBUG_INTERVAL_TICKS = 10;
 
     private RetoldReputationDebugEvents() {
