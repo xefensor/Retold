@@ -1,4 +1,4 @@
-package cz.xefensor.retold.event;
+package cz.xefensor.retold.territory;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -18,7 +18,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.Set;
 
-public final class RetoldIllegalActionEvents {
+public final class RetoldTerritoryIllegalActionEvents {
     private static final Set<Identifier> ILLEGAL_CONTAINER_BLOCKS = Set.of(
             id("chest"),
             id("trapped_chest"),
@@ -42,7 +42,7 @@ public final class RetoldIllegalActionEvents {
             id("black_shulker_box")
     );
 
-    private RetoldIllegalActionEvents() {
+    private RetoldTerritoryIllegalActionEvents() {
     }
 
     @SubscribeEvent
@@ -108,7 +108,7 @@ public final class RetoldIllegalActionEvents {
             return;
         }
 
-        RetoldTerritoryContext territoryContext = RetoldFactionTerritoryEvents.getTerritoryContextAt(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
                 level,
                 victim.blockPosition()
         );
@@ -117,17 +117,19 @@ public final class RetoldIllegalActionEvents {
             return;
         }
 
-        RetoldIntruderReputation.addAttackSuspicion(
+        RetoldTerritoryReputation.addAttackSuspicion(
                 territoryContext,
                 player,
                 level.getGameTime()
         );
 
-        RetoldFactionTerritoryEvents.alertWitnessesAfterIllegalAction(
+        RetoldTerritoryWitnesses.alertWitnessesAfterIllegalAction(
                 level,
                 territoryContext.faction(),
                 player,
-                victim.blockPosition()
+                victim.blockPosition(),
+                RetoldTerritoryMobStates.states(),
+                RetoldTerritoryConstants.ILLEGAL_ACTION_WITNESS_RADIUS_BLOCKS
         );
     }
 
@@ -151,7 +153,7 @@ public final class RetoldIllegalActionEvents {
             return;
         }
 
-        RetoldTerritoryContext territoryContext = RetoldFactionTerritoryEvents.getTerritoryContextAt(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
                 level,
                 victim.blockPosition()
         );
@@ -160,17 +162,19 @@ public final class RetoldIllegalActionEvents {
             return;
         }
 
-        RetoldIntruderReputation.addKillSuspicion(
+        RetoldTerritoryReputation.addKillSuspicion(
                 territoryContext,
                 player,
                 level.getGameTime()
         );
 
-        RetoldFactionTerritoryEvents.alertWitnessesAfterIllegalAction(
+        RetoldTerritoryWitnesses.alertWitnessesAfterIllegalAction(
                 level,
                 territoryContext.faction(),
                 player,
-                victim.blockPosition()
+                victim.blockPosition(),
+                RetoldTerritoryMobStates.states(),
+                RetoldTerritoryConstants.ILLEGAL_ACTION_WITNESS_RADIUS_BLOCKS
         );
     }
 
@@ -180,7 +184,7 @@ public final class RetoldIllegalActionEvents {
             BlockPos pos,
             IllegalActionType actionType
     ) {
-        RetoldTerritoryContext territoryContext = RetoldFactionTerritoryEvents.getTerritoryContextAt(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
                 level,
                 pos
         );
@@ -191,11 +195,12 @@ public final class RetoldIllegalActionEvents {
 
         RetoldFaction territoryFaction = territoryContext.faction();
 
-        if (!RetoldFactionTerritoryEvents.hasWitnessForIllegalAction(
+        if (!RetoldTerritoryWitnesses.hasWitnessForIllegalAction(
                 level,
                 territoryFaction,
                 player,
-                pos
+                pos,
+                RetoldTerritoryConstants.ILLEGAL_ACTION_WITNESS_RADIUS_BLOCKS
         )) {
             return;
         }
@@ -203,24 +208,26 @@ public final class RetoldIllegalActionEvents {
         long gameTime = level.getGameTime();
 
         if (actionType == IllegalActionType.STEALING) {
-            RetoldIntruderReputation.addStealingSuspicion(
+            RetoldTerritoryReputation.addStealingSuspicion(
                     territoryContext,
                     player,
                     gameTime
             );
         } else if (actionType == IllegalActionType.BLOCK_BREAK) {
-            RetoldIntruderReputation.addBlockBreakSuspicion(
+            RetoldTerritoryReputation.addBlockBreakSuspicion(
                     territoryContext,
                     player,
                     gameTime
             );
         }
 
-        RetoldFactionTerritoryEvents.alertWitnessesAfterIllegalAction(
+        RetoldTerritoryWitnesses.alertWitnessesAfterIllegalAction(
                 level,
                 territoryFaction,
                 player,
-                pos
+                pos,
+                RetoldTerritoryMobStates.states(),
+                RetoldTerritoryConstants.ILLEGAL_ACTION_WITNESS_RADIUS_BLOCKS
         );
     }
 

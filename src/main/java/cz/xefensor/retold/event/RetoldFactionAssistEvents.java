@@ -3,6 +3,8 @@ package cz.xefensor.retold.event;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;

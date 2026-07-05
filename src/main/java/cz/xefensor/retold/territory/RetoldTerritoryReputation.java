@@ -1,4 +1,4 @@
-package cz.xefensor.retold.event;
+package cz.xefensor.retold.territory;
 
 import net.minecraft.world.entity.LivingEntity;
 
@@ -7,31 +7,19 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
 
-public final class RetoldIntruderReputation {
+public final class RetoldTerritoryReputation {
     private static final Map<ReputationKey, ReputationEntry> REPUTATION = new HashMap<>();
 
-    private static final int MAX_SUSPICION = 160;
+    private static long lastDecayAt = -RetoldTerritoryConstants.REPUTATION_DECAY_INTERVAL_TICKS;
 
-    private static final int NOTICED_THRESHOLD = 5;
-    private static final int WARNING_THRESHOLD = 25;
-    private static final int FINAL_WARNING_THRESHOLD = 65;
-    private static final int ATTACK_THRESHOLD = 110;
-
-    private static final int TRESPASS_SUSPICION_COOLDOWN_TICKS = 20 * 18;
-    private static final int VISIBLE_WARNING_SUSPICION_COOLDOWN_TICKS = 20 * 4;
-    private static final int TOO_CLOSE_SUSPICION_COOLDOWN_TICKS = 20 * 4;
-
-    private static final int SEEN_DECAY_BLOCK_TICKS = 20 * 8;
-    private static final int DECAY_INTERVAL_TICKS = 40;
-    private static final int DECAY_AMOUNT = 1;
-
-    private static long lastDecayAt = -DECAY_INTERVAL_TICKS;
-
-    private RetoldIntruderReputation() {
+    private RetoldTerritoryReputation() {
     }
 
     public static void tickDecay(long gameTime) {
-        if (gameTime - lastDecayAt < DECAY_INTERVAL_TICKS) {
+        if (
+                gameTime - lastDecayAt
+                        < RetoldTerritoryConstants.REPUTATION_DECAY_INTERVAL_TICKS
+        ) {
             return;
         }
 
@@ -48,11 +36,14 @@ public final class RetoldIntruderReputation {
                 continue;
             }
 
-            if (gameTime - entry.lastSeenAt <= SEEN_DECAY_BLOCK_TICKS) {
+            if (
+                    gameTime - entry.lastSeenAt
+                            <= RetoldTerritoryConstants.REPUTATION_SEEN_DECAY_BLOCK_TICKS
+            ) {
                 continue;
             }
 
-            entry.suspicion -= DECAY_AMOUNT;
+            entry.suspicion -= RetoldTerritoryConstants.REPUTATION_DECAY_AMOUNT;
 
             if (entry.suspicion <= 0) {
                 iterator.remove();
@@ -88,7 +79,8 @@ public final class RetoldIntruderReputation {
             RetoldTerritoryContext territory,
             LivingEntity intruder
     ) {
-        return getSuspicion(territory, intruder) >= ATTACK_THRESHOLD;
+        return getSuspicion(territory, intruder)
+                >= RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD;
     }
 
     public static void markSeen(
@@ -116,12 +108,21 @@ public final class RetoldIntruderReputation {
             return;
         }
 
-        if (gameTime - entry.lastTrespassSuspicionAt < TRESPASS_SUSPICION_COOLDOWN_TICKS) {
+        if (
+                gameTime - entry.lastTrespassSuspicionAt
+                        < RetoldTerritoryConstants.REPUTATION_TRESPASS_SUSPICION_COOLDOWN_TICKS
+        ) {
             return;
         }
 
         entry.lastTrespassSuspicionAt = gameTime;
-        addSuspicion(territory, intruder, 8, gameTime);
+
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_TRESPASS_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addVisibleWarningSuspicion(
@@ -129,7 +130,12 @@ public final class RetoldIntruderReputation {
             LivingEntity intruder,
             long gameTime
     ) {
-        addVisibleWarningSuspicion(territory, intruder, 8, gameTime);
+        addVisibleWarningSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_VISIBLE_WARNING_DEFAULT_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addVisibleWarningSuspicion(
@@ -144,7 +150,10 @@ public final class RetoldIntruderReputation {
             return;
         }
 
-        if (gameTime - entry.lastVisibleWarningSuspicionAt < VISIBLE_WARNING_SUSPICION_COOLDOWN_TICKS) {
+        if (
+                gameTime - entry.lastVisibleWarningSuspicionAt
+                        < RetoldTerritoryConstants.REPUTATION_VISIBLE_WARNING_SUSPICION_COOLDOWN_TICKS
+        ) {
             return;
         }
 
@@ -163,12 +172,21 @@ public final class RetoldIntruderReputation {
             return;
         }
 
-        if (gameTime - entry.lastTooCloseSuspicionAt < TOO_CLOSE_SUSPICION_COOLDOWN_TICKS) {
+        if (
+                gameTime - entry.lastTooCloseSuspicionAt
+                        < RetoldTerritoryConstants.REPUTATION_TOO_CLOSE_SUSPICION_COOLDOWN_TICKS
+        ) {
             return;
         }
 
         entry.lastTooCloseSuspicionAt = gameTime;
-        addSuspicion(territory, intruder, 6, gameTime);
+
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_TOO_CLOSE_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addStealingSuspicion(
@@ -176,7 +194,12 @@ public final class RetoldIntruderReputation {
             LivingEntity intruder,
             long gameTime
     ) {
-        addSuspicion(territory, intruder, 55, gameTime);
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_STEALING_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addBlockBreakSuspicion(
@@ -184,7 +207,12 @@ public final class RetoldIntruderReputation {
             LivingEntity intruder,
             long gameTime
     ) {
-        addSuspicion(territory, intruder, 35, gameTime);
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_BLOCK_BREAK_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addAttackSuspicion(
@@ -192,7 +220,12 @@ public final class RetoldIntruderReputation {
             LivingEntity intruder,
             long gameTime
     ) {
-        addSuspicion(territory, intruder, 110, gameTime);
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_ATTACK_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addKillSuspicion(
@@ -200,7 +233,12 @@ public final class RetoldIntruderReputation {
             LivingEntity intruder,
             long gameTime
     ) {
-        addSuspicion(territory, intruder, 140, gameTime);
+        addSuspicion(
+                territory,
+                intruder,
+                RetoldTerritoryConstants.REPUTATION_KILL_SUSPICION_GAIN,
+                gameTime
+        );
     }
 
     public static void addSuspicion(
@@ -219,7 +257,11 @@ public final class RetoldIntruderReputation {
             return;
         }
 
-        entry.suspicion = Math.min(MAX_SUSPICION, entry.suspicion + amount);
+        entry.suspicion = Math.min(
+                RetoldTerritoryConstants.REPUTATION_MAX_SUSPICION,
+                entry.suspicion + amount
+        );
+
         entry.lastUpdatedAt = gameTime;
     }
 
@@ -243,7 +285,10 @@ public final class RetoldIntruderReputation {
 
         if (entry == null || suspicion <= 0) {
             decayState = "empty";
-        } else if (ticksSinceSeen <= SEEN_DECAY_BLOCK_TICKS) {
+        } else if (
+                ticksSinceSeen
+                        <= RetoldTerritoryConstants.REPUTATION_SEEN_DECAY_BLOCK_TICKS
+        ) {
             decayState = "blocked, seen " + ticksSinceSeen + "t ago";
         } else {
             decayState = "decaying";
@@ -253,7 +298,7 @@ public final class RetoldIntruderReputation {
                 + " | Suspicion: "
                 + suspicion
                 + "/"
-                + ATTACK_THRESHOLD
+                + RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD
                 + " | Level: "
                 + warningLevel.name()
                 + " | Decay: "
@@ -296,7 +341,8 @@ public final class RetoldIntruderReputation {
         long ticksSinceSeen = gameTime - bestEntry.lastSeenAt;
         RetoldWarningLevel warningLevel = getWarningLevel(bestEntry.suspicion);
 
-        String decayState = ticksSinceSeen <= SEEN_DECAY_BLOCK_TICKS
+        String decayState = ticksSinceSeen
+                <= RetoldTerritoryConstants.REPUTATION_SEEN_DECAY_BLOCK_TICKS
                 ? "blocked, seen " + ticksSinceSeen + "t ago"
                 : "decaying";
 
@@ -304,7 +350,7 @@ public final class RetoldIntruderReputation {
                 + " | Suspicion: "
                 + bestEntry.suspicion
                 + "/"
-                + ATTACK_THRESHOLD
+                + RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD
                 + " | Level: "
                 + warningLevel.name()
                 + " | Decay: "
@@ -321,7 +367,10 @@ public final class RetoldIntruderReputation {
         }
 
         ReputationKey key = key(territory, intruder);
-        ReputationEntry entry = REPUTATION.computeIfAbsent(key, ignored -> new ReputationEntry());
+        ReputationEntry entry = REPUTATION.computeIfAbsent(
+                key,
+                ignored -> new ReputationEntry()
+        );
 
         if (entry.firstCreatedAt == 0L) {
             entry.firstCreatedAt = gameTime;
@@ -341,19 +390,19 @@ public final class RetoldIntruderReputation {
     }
 
     private static RetoldWarningLevel getWarningLevel(int suspicion) {
-        if (suspicion >= ATTACK_THRESHOLD) {
+        if (suspicion >= RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD) {
             return RetoldWarningLevel.ATTACK;
         }
 
-        if (suspicion >= FINAL_WARNING_THRESHOLD) {
+        if (suspicion >= RetoldTerritoryConstants.REPUTATION_FINAL_WARNING_THRESHOLD) {
             return RetoldWarningLevel.FINAL_WARNING;
         }
 
-        if (suspicion >= WARNING_THRESHOLD) {
+        if (suspicion >= RetoldTerritoryConstants.REPUTATION_WARNING_THRESHOLD) {
             return RetoldWarningLevel.WARNING;
         }
 
-        if (suspicion >= NOTICED_THRESHOLD) {
+        if (suspicion >= RetoldTerritoryConstants.REPUTATION_NOTICED_THRESHOLD) {
             return RetoldWarningLevel.NOTICED;
         }
 
@@ -372,8 +421,13 @@ public final class RetoldIntruderReputation {
         private long lastUpdatedAt;
         private long lastSeenAt;
 
-        private long lastTrespassSuspicionAt = -999999L;
-        private long lastVisibleWarningSuspicionAt = -999999L;
-        private long lastTooCloseSuspicionAt = -999999L;
+        private long lastTrespassSuspicionAt =
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME;
+
+        private long lastVisibleWarningSuspicionAt =
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME;
+
+        private long lastTooCloseSuspicionAt =
+                RetoldTerritoryConstants.REPUTATION_INITIAL_COOLDOWN_TIME;
     }
 }

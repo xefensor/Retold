@@ -1,4 +1,4 @@
-package cz.xefensor.retold.event;
+package cz.xefensor.retold.territory;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -6,11 +6,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-public final class RetoldReputationDebugEvents {
-    private static final boolean DEBUG_REPUTATION = false;
-    private static final int DEBUG_INTERVAL_TICKS = 10;
-
-    private RetoldReputationDebugEvents() {
+public final class RetoldTerritoryReputationDebugEvents {
+    private RetoldTerritoryReputationDebugEvents() {
     }
 
     @SubscribeEvent
@@ -25,31 +22,35 @@ public final class RetoldReputationDebugEvents {
 
         long gameTime = level.getGameTime();
 
-        RetoldIntruderReputation.tickDecay(gameTime);
+        RetoldTerritoryReputation.tickDecay(gameTime);
 
-        if (!DEBUG_REPUTATION) {
+        if (!RetoldTerritoryConstants.DEBUG_REPUTATION) {
             return;
         }
 
-        if (gameTime % DEBUG_INTERVAL_TICKS != 0L) {
+        if (gameTime % RetoldTerritoryConstants.DEBUG_REPUTATION_INTERVAL_TICKS != 0L) {
             return;
         }
 
-        RetoldTerritoryContext territoryContext = RetoldFactionTerritoryEvents.getTerritoryContextAt(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
                 level,
                 player.blockPosition()
         );
 
         if (territoryContext != null) {
             String text = "Territory: "
-                    + RetoldIntruderReputation.getDebugText(territoryContext, player, gameTime);
+                    + RetoldTerritoryReputation.getDebugText(
+                    territoryContext,
+                    player,
+                    gameTime
+            );
 
             player.sendSystemMessage(Component.literal(text), true);
             return;
         }
 
         String text = "Suspicion: "
-                + RetoldIntruderReputation.getMostSuspiciousDebugText(player, gameTime);
+                + RetoldTerritoryReputation.getMostSuspiciousDebugText(player, gameTime);
 
         if (!text.endsWith("No reputation")) {
             player.sendSystemMessage(Component.literal(text), true);

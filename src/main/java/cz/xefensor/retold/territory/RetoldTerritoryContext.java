@@ -1,4 +1,4 @@
-package cz.xefensor.retold.event;
+package cz.xefensor.retold.territory;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 

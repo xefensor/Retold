@@ -6,6 +6,9 @@ import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.event.*;
 import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
+import cz.xefensor.retold.territory.RetoldTerritoryEvents;
+import cz.xefensor.retold.territory.RetoldTerritoryIllegalActionEvents;
+import cz.xefensor.retold.territory.RetoldTerritoryReputationDebugEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
@@ -14,13 +17,9 @@ import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.aender.RetoldAenderRegistries;
 import cz.xefensor.retold.aender.stability.AenderChunkEvents;
 import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
-import cz.xefensor.retold.registry.RetoldBlocks;
-import cz.xefensor.retold.event.RetoldFactionTerritoryEvents;
 import cz.xefensor.retold.event.RetoldFactionCombatEvents;
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
-import cz.xefensor.retold.event.RetoldIllegalActionEvents;
-import cz.xefensor.retold.event.RetoldReputationDebugEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -69,10 +68,10 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(AenderWorldTickEvents.class);
         NeoForge.EVENT_BUS.register(AenderRealityTickEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionCombatEvents.class);
-        NeoForge.EVENT_BUS.register(RetoldFactionTerritoryEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldTerritoryEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionAssistEvents.class);
-        NeoForge.EVENT_BUS.register(RetoldIllegalActionEvents.class);
-        NeoForge.EVENT_BUS.register(RetoldReputationDebugEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldTerritoryIllegalActionEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldTerritoryReputationDebugEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
