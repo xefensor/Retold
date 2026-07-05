@@ -178,6 +178,10 @@ public final class RetoldFactionTerritoryEvents {
     }
 
     public static boolean shouldBlockTargetDuringWarning(PathfinderMob mob, LivingEntity target) {
+        if (target == null) {
+            return false;
+        }
+
         if (mob.level().isClientSide()) {
             return false;
         }
@@ -210,9 +214,31 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
-        TerritoryMobState state = MOB_STATES.get(mob);
+        // Direct retaliation should never be blocked.
+        if (target == mob.getLastHurtByMob()) {
+            return false;
+        }
 
-        return state == null || !state.hasStartedAttack;
+        // Non-player enemies should be fought normally.
+        // Example: spider interrupts pillagers warning the player.
+        if (!isReputationGatedIntruder(target)) {
+            return false;
+        }
+
+        TerritoryMobState state = MOB_STATES.get(mob);
+        RetoldTerritoryContext territoryContext = state == null
+                ? getTerritoryContextAt(level, mob.blockPosition())
+                : state.territoryContext;
+
+        if (territoryContext == null || territoryContext.faction() != config.faction) {
+            territoryContext = getTerritoryContextAt(level, mob.blockPosition());
+        }
+
+        if (territoryContext == null || territoryContext.faction() != config.faction) {
+            return true;
+        }
+
+        return !RetoldIntruderReputation.shouldAttack(territoryContext, target);
     }
 
     public static RetoldTerritoryContext getTerritoryContextAt(ServerLevel level, BlockPos pos) {
@@ -386,12 +412,12 @@ public final class RetoldFactionTerritoryEvents {
             return;
         }
 
-        if (config.faction == RetoldFaction.ILLAGERS) {
-            suppressExistingTargetDuringWarning(level, mob, config, gameTime);
-        } else if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
+        if (tryAdoptExistingAttackTarget(level, mob, state, config, gameTime)) {
             updateAttackState(level, mob, state, config, gameTime);
             return;
         }
+
+        suppressExistingTargetDuringWarning(level, mob, config, gameTime);
 
         updateWarningTarget(level, mob, state, config, gameTime);
 
@@ -1525,6 +1551,10 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
+        if (!canAttackByTerritoryReputation(state, existingTarget)) {
+            return false;
+        }
+
         startAttackOnTarget(
                 level,
                 mob,
@@ -1563,6 +1593,10 @@ public final class RetoldFactionTerritoryEvents {
             return false;
         }
 
+        if (!canAttackByTerritoryReputation(state, existingTarget)) {
+            return false;
+        }
+
         startAttackOnTarget(
                 level,
                 mob,
@@ -1574,6 +1608,34 @@ public final class RetoldFactionTerritoryEvents {
         );
 
         return true;
+    }
+
+    private static boolean canAttackByTerritoryReputation(
+            TerritoryMobState state,
+            LivingEntity target
+    ) {
+        // Only players use the warning / suspicion / attack-stage system.
+        // Enemy mobs like spiders, undead, slimes, etc. can be attacked normally.
+        if (!isReputationGatedIntruder(target)) {
+            return true;
+        }
+
+        if (state.territoryContext == null || target == null) {
+            return false;
+        }
+
+        return RetoldIntruderReputation.shouldAttack(
+                state.territoryContext,
+                target
+        );
+    }
+
+    private static boolean isReputationGatedIntruder(LivingEntity target) {
+        if (target instanceof ServerPlayer) {
+            return true;
+        }
+
+        return RetoldFactionMembers.getFaction(target) == RetoldFaction.PLAYER;
     }
 
     private static void suppressExistingTargetDuringWarning(
@@ -1604,6 +1666,14 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (!isPossibleIntruder(level, mob, existingTarget, config, gameTime)) {
+            return;
+        }
+
+        TerritoryMobState state = MOB_STATES.get(mob);
+
+        // Only suppress player targets that have not reached ATTACK reputation.
+        // Do not suppress enemy mobs like spiders/zombies/etc.
+        if (state != null && canAttackByTerritoryReputation(state, existingTarget)) {
             return;
         }
 
@@ -1675,8 +1745,8 @@ public final class RetoldFactionTerritoryEvents {
     ) {
         LivingEntity attackTarget = state.attackTarget;
 
-        if (attackTarget == null || !isValidAttackTarget(mob, attackTarget)) {
-            LivingEntity replacement = findBestWarnedAttackTarget(level, mob, state, config, gameTime);
+        if (attackTarget == null || !isSelectableTerritoryAttackTarget(level, mob, state, config, attackTarget, gameTime)) {
+            LivingEntity replacement = findBestAvailableAttackTarget(level, mob, state, config, gameTime);
 
             if (replacement == null) {
                 returnToWarningMode(mob, state, gameTime);
@@ -1697,6 +1767,25 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         if (gameTime >= state.nextAttackRefreshAt) {
+            LivingEntity betterTarget = findBestAvailableAttackTarget(
+                    level,
+                    mob,
+                    state,
+                    config,
+                    gameTime
+            );
+
+            if (
+                    betterTarget != null
+                            && betterTarget != attackTarget
+                            && shouldSwitchAttackTarget(level, mob, state, config, attackTarget, betterTarget)
+            ) {
+                attackTarget = betterTarget;
+                state.attackTarget = betterTarget;
+                state.warningTarget = betterTarget;
+                state.warnedIntruders.add(betterTarget.getUUID());
+            }
+
             RetoldTargetSource source = mob.getLastHurtByMob() == attackTarget
                     ? RetoldTargetSource.RETALIATION
                     : RetoldTargetSource.TERRITORY_ATTACK;
@@ -1706,28 +1795,46 @@ public final class RetoldFactionTerritoryEvents {
         }
     }
 
-    private static LivingEntity findBestWarnedAttackTarget(
+    private static boolean shouldSwitchAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            LivingEntity currentTarget,
+            LivingEntity betterTarget
+    ) {
+        if (betterTarget == mob.getLastHurtByMob()) {
+            return true;
+        }
+
+        if (currentTarget == null || !currentTarget.isAlive()) {
+            return true;
+        }
+
+        int currentFocus = countNearbyFactionMobsFocusedOn(level, mob, config, currentTarget);
+        int betterFocus = countNearbyFactionMobsFocusedOn(level, mob, config, betterTarget);
+
+        if (currentFocus > betterFocus + 1) {
+            return true;
+        }
+
+        double currentDistance = mob.distanceToSqr(currentTarget);
+        double betterDistance = mob.distanceToSqr(betterTarget);
+
+        return betterDistance + 8.0D * 8.0D < currentDistance;
+    }
+
+    private static LivingEntity findBestAvailableAttackTarget(
             ServerLevel level,
             PathfinderMob mob,
             TerritoryMobState state,
             TerritoryConfig config,
             long gameTime
     ) {
-        if (
-                state.warningTarget != null
-                        && state.warnedIntruders.contains(state.warningTarget.getUUID())
-                        && isPossibleIntruder(level, mob, state.warningTarget, config, gameTime)
-                        && isValidAttackTarget(mob, state.warningTarget)
-        ) {
-            return state.warningTarget;
-        }
-
         List<LivingEntity> candidates = level.getEntitiesOfClass(
                 LivingEntity.class,
                 mob.getBoundingBox().inflate(NOTICE_MOB_RADIUS_BLOCKS),
-                target -> state.warnedIntruders.contains(target.getUUID())
-                        && isPossibleIntruder(level, mob, target, config, gameTime)
-                        && isValidAttackTarget(mob, target)
+                target -> isSelectableTerritoryAttackTarget(level, mob, state, config, target, gameTime)
         );
 
         LivingEntity bestTarget = null;
@@ -1735,7 +1842,18 @@ public final class RetoldFactionTerritoryEvents {
 
         for (LivingEntity candidate : candidates) {
             int focusCount = countNearbyFactionMobsFocusedOn(level, mob, config, candidate);
-            double score = focusCount * 1000.0D + mob.distanceToSqr(candidate) * 0.01D;
+            double distanceScore = mob.distanceToSqr(candidate) * 0.01D;
+            double tieBreaker = getStableTieBreaker(mob, candidate);
+
+            double score = focusCount * 900.0D + distanceScore + tieBreaker;
+
+            if (candidate == mob.getLastHurtByMob()) {
+                score -= 500.0D;
+            }
+
+            if (candidate == state.attackTarget) {
+                score -= 120.0D;
+            }
 
             if (score < bestScore) {
                 bestScore = score;
@@ -1744,6 +1862,39 @@ public final class RetoldFactionTerritoryEvents {
         }
 
         return bestTarget;
+    }
+
+    private static boolean isSelectableTerritoryAttackTarget(
+            ServerLevel level,
+            PathfinderMob mob,
+            TerritoryMobState state,
+            TerritoryConfig config,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!isPossibleIntruder(level, mob, target, config, gameTime)) {
+            return false;
+        }
+
+        if (!isValidAttackTarget(mob, target)) {
+            return false;
+        }
+
+        return canAttackByTerritoryReputation(state, target);
+    }
+
+    private static boolean canPromoteWarnedIntruderToAttack(
+            TerritoryMobState state,
+            LivingEntity target
+    ) {
+        if (state.territoryContext == null || target == null) {
+            return false;
+        }
+
+        return RetoldIntruderReputation.shouldAttack(
+                state.territoryContext,
+                target
+        );
     }
 
     private static void signalNearbyWarnedGuardsToAttack(
@@ -1761,11 +1912,10 @@ public final class RetoldFactionTerritoryEvents {
         );
 
         for (PathfinderMob guard : nearbyGuards) {
-            TerritoryMobState guardState = MOB_STATES.get(guard);
-
-            if (guardState == null || guardState.hasStartedAttack) {
-                continue;
-            }
+            TerritoryMobState guardState = MOB_STATES.computeIfAbsent(
+                    guard,
+                    ignored -> new TerritoryMobState(guard.getId())
+            );
 
             guardState.territoryContext = getTerritoryContextAt(level, guard.blockPosition());
 
@@ -1773,7 +1923,13 @@ public final class RetoldFactionTerritoryEvents {
                 continue;
             }
 
-            LivingEntity attackTarget = findBestWarnedAttackTarget(level, guard, guardState, config, gameTime);
+            LivingEntity attackTarget = findBestAvailableAttackTarget(
+                    level,
+                    guard,
+                    guardState,
+                    config,
+                    gameTime
+            );
 
             if (attackTarget == null) {
                 continue;
