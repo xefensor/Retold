@@ -20,6 +20,7 @@ import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
 import cz.xefensor.retold.event.RetoldFactionCombatEvents;
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
+import cz.xefensor.retold.event.TorchWeatherEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -72,6 +73,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldFactionAssistEvents.class);
         NeoForge.EVENT_BUS.register(RetoldTerritoryIllegalActionEvents.class);
         NeoForge.EVENT_BUS.register(RetoldTerritoryReputationDebugEvents.class);
+        NeoForge.EVENT_BUS.register(TorchWeatherEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
