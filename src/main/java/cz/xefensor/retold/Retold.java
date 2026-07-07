@@ -2,8 +2,7 @@ package cz.xefensor.retold;
 
 import com.mojang.logging.LogUtils;
 import cz.xefensor.retold.aender.stability.AenderWorldTickEvents;
-import cz.xefensor.retold.behavior.RetoldBehaviorDebugEvents;
-import cz.xefensor.retold.behavior.RetoldControlledHuntingEvents;
+import cz.xefensor.retold.behavior.*;
 import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.event.*;
 import cz.xefensor.retold.network.RetoldNetworking;
@@ -23,8 +22,7 @@ import cz.xefensor.retold.event.RetoldFactionCombatEvents;
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
 import cz.xefensor.retold.event.TorchWeatherEvents;
-import cz.xefensor.retold.behavior.RetoldFoodBehaviorEvents;
-import cz.xefensor.retold.behavior.RetoldVanillaAiBlockerEvents;
+import cz.xefensor.retold.behavior.RetoldControlledFleeEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -82,6 +80,8 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldVanillaAiBlockerEvents.class);
         NeoForge.EVENT_BUS.register(RetoldControlledHuntingEvents.class);
         NeoForge.EVENT_BUS.register(RetoldBehaviorDebugEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldControlledCombatEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldControlledFleeEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }
