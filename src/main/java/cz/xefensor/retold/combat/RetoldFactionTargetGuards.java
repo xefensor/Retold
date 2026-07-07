@@ -1,5 +1,8 @@
 package cz.xefensor.retold.combat;
 
+import cz.xefensor.retold.behavior.RetoldAiControl;
+import cz.xefensor.retold.behavior.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.RetoldMobRules;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;
@@ -19,7 +22,10 @@ public final class RetoldFactionTargetGuards {
     private RetoldFactionTargetGuards() {
     }
 
-    public static boolean shouldBlockTarget(Mob mob, LivingEntity target) {
+    public static boolean shouldBlockTarget(
+            Mob mob,
+            LivingEntity target
+    ) {
         if (mob == null || target == null) {
             return false;
         }
@@ -28,11 +34,21 @@ public final class RetoldFactionTargetGuards {
             return false;
         }
 
-        if (!(mob instanceof PathfinderMob pathfinderMob)) {
-            return false;
+        if (
+                mob instanceof PathfinderMob pathfinderMob
+                        && RetoldMobRules.shouldBlockVanillaPredatorTarget(
+                        pathfinderMob,
+                        target
+                )
+        ) {
+            return true;
         }
 
-        if (target == mob.getLastHurtByMob()) {
+        if (RetoldAiControl.shouldBlockVanillaTarget(mob, target)) {
+            return true;
+        }
+
+        if (!(mob instanceof PathfinderMob pathfinderMob)) {
             return false;
         }
 
@@ -42,7 +58,10 @@ public final class RetoldFactionTargetGuards {
         );
     }
 
-    public static void setTargetIgnoringGuard(Mob mob, LivingEntity target) {
+    public static void setTargetIgnoringGuard(
+            Mob mob,
+            LivingEntity target
+    ) {
         if (mob == null) {
             return;
         }
@@ -57,11 +76,20 @@ public final class RetoldFactionTargetGuards {
         }
     }
 
-    public static void setTargetIgnoringWarning(Mob mob, LivingEntity target) {
-        setTargetIgnoringGuard(mob, target);
+    public static void setTargetIgnoringWarning(
+            Mob mob,
+            LivingEntity target
+    ) {
+        setTargetIgnoringGuard(
+                mob,
+                target
+        );
     }
 
-    public static void setAggressiveIgnoringGuard(Mob mob, boolean aggressive) {
+    public static void setAggressiveIgnoringGuard(
+            Mob mob,
+            boolean aggressive
+    ) {
         if (mob == null) {
             return;
         }
@@ -76,21 +104,39 @@ public final class RetoldFactionTargetGuards {
         }
     }
 
-    public static void setAggressiveIgnoringWarning(Mob mob, boolean aggressive) {
-        setAggressiveIgnoringGuard(mob, aggressive);
+    public static void setAggressiveIgnoringWarning(
+            Mob mob,
+            boolean aggressive
+    ) {
+        setAggressiveIgnoringGuard(
+                mob,
+                aggressive
+        );
     }
 
-    public static boolean shouldBlockAggressiveState(Mob mob, boolean aggressive) {
-        if (mob == null) {
-            return false;
-        }
-
-        if (!aggressive) {
+    public static boolean shouldBlockAggressiveState(
+            Mob mob,
+            boolean aggressive
+    ) {
+        if (mob == null || !aggressive) {
             return false;
         }
 
         if (IGNORE_AGGRESSIVE_GUARD.get()) {
             return false;
+        }
+
+        if (RetoldAiControl.shouldBlockVanillaAggression(mob, aggressive)) {
+            return true;
+        }
+
+        if (
+                mob instanceof PathfinderMob pathfinderMob
+                        && RetoldMobRules.isManagedPredator(pathfinderMob)
+                        && !RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.HUNT)
+                        && !RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)
+        ) {
+            return true;
         }
 
         if (!(mob instanceof AbstractPiglin piglin)) {
@@ -107,14 +153,25 @@ public final class RetoldFactionTargetGuards {
             return false;
         }
 
-        LivingEntity brainAttackTarget = piglin.getBrain()
-                .getMemory(MemoryModuleType.ATTACK_TARGET)
-                .orElse(null);
+        LivingEntity brainAttackTarget = getBrainAttackTargetSafely(piglin);
 
         return !isValidTargetForMob(piglin, brainAttackTarget);
     }
 
-    private static boolean isValidTargetForMob(Mob mob, LivingEntity target) {
+    private static LivingEntity getBrainAttackTargetSafely(Mob mob) {
+        try {
+            return mob.getBrain()
+                    .getMemory(MemoryModuleType.ATTACK_TARGET)
+                    .orElse(null);
+        } catch (IllegalStateException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isValidTargetForMob(
+            Mob mob,
+            LivingEntity target
+    ) {
         return target != null
                 && target.isAlive()
                 && target.level() == mob.level();

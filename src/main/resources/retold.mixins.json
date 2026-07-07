@@ -18,7 +18,8 @@
     "MobTargetMixin",
     "MobAggressiveMixin",
     "MobBrainMemoryOwnerMixin",
-    "BrainMemoryMixin"
+    "BrainMemoryMixin",
+    "PathNavigationMixin"
   ],
   "client": [
     "MerchantScreenMixin"
