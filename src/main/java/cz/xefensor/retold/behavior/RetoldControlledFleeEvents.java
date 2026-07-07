@@ -12,10 +12,20 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class RetoldControlledFleeEvents {
+    private static final Map<PathfinderMob, FleeMemory> FLEE_MEMORIES = new WeakHashMap<>();
+
     private static final int FLEE_THINK_INTERVAL_TICKS = 8;
     private static final int FLEE_CONTROL_TICKS = 20 * 3;
+
+    /*
+     * New:
+     * prey keeps fleeing even after it loses direct sight/hearing/smell of the hunter.
+     */
+    private static final int FLEE_MEMORY_TICKS = 20 * 10;
 
     private static final double ACTIVE_THREAT_RADIUS_BLOCKS = 22.0D;
     private static final double ACTIVE_THREAT_RADIUS_SQUARED =
@@ -25,17 +35,19 @@ public final class RetoldControlledFleeEvents {
     private static final double WARNING_THREAT_RADIUS_SQUARED =
             WARNING_THREAT_RADIUS_BLOCKS * WARNING_THREAT_RADIUS_BLOCKS;
 
-    private static final double SAFE_DISTANCE_BLOCKS = 18.0D;
-    private static final double SAFE_DISTANCE_SQUARED =
-            SAFE_DISTANCE_BLOCKS * SAFE_DISTANCE_BLOCKS;
-
     private static final double BASE_FLEE_DISTANCE_BLOCKS = 13.0D;
     private static final double CLOSE_FLEE_DISTANCE_BLOCKS = 15.0D;
     private static final double FAR_FLEE_DISTANCE_BLOCKS = 10.0D;
 
-    private static final double BASE_FLEE_SPEED = 1.10D;
-    private static final double MIN_FLEE_SPEED = 0.82D;
-    private static final double MAX_FLEE_SPEED = 1.38D;
+    /*
+     * Used when the hunter is no longer directly sensed but the prey is still scared.
+     */
+    private static final double MEMORY_FLEE_DISTANCE_BLOCKS = 12.0D;
+
+    private static final double BASE_FLEE_SPEED = 1.16D;
+    private static final double MEMORY_FLEE_SPEED = 1.10D;
+    private static final double MIN_FLEE_SPEED = 0.86D;
+    private static final double MAX_FLEE_SPEED = 1.46D;
 
     private static final double CLOSE_THREAT_DISTANCE_BLOCKS = 5.0D;
     private static final double CLOSE_THREAT_DISTANCE_SQUARED =
@@ -73,6 +85,7 @@ public final class RetoldControlledFleeEvents {
         }
 
         if (!isFleeingPrey(prey)) {
+            FLEE_MEMORIES.remove(prey);
             return;
         }
 
@@ -88,30 +101,45 @@ public final class RetoldControlledFleeEvents {
                 gameTime
         );
 
-        if (threat == null) {
-            if (RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)) {
-                RetoldAiControl.clear(prey);
-                prey.setSprinting(false);
-            }
+        if (threat != null) {
+            rememberThreat(
+                    prey,
+                    threat,
+                    gameTime
+            );
 
+            fleeFromThreat(
+                    prey,
+                    threat,
+                    gameTime
+            );
             return;
         }
 
-        if (
-                prey.distanceToSqr(threat) >= SAFE_DISTANCE_SQUARED
-                        && RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)
-        ) {
+        /*
+         * New:
+         * If the prey lost the hunter, it still keeps running from the remembered
+         * danger direction for a while.
+         */
+        FleeMemory memory = getActiveFleeMemory(
+                prey,
+                gameTime
+        );
+
+        if (memory != null) {
+            fleeFromMemory(
+                    prey,
+                    memory,
+                    gameTime
+            );
+            return;
+        }
+
+        if (RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)) {
             RetoldAiControl.clear(prey);
             prey.setSprinting(false);
             prey.getNavigation().stop();
-            return;
         }
-
-        fleeFromThreat(
-                prey,
-                threat,
-                gameTime
-        );
     }
 
     private static boolean shouldThink(
@@ -166,6 +194,10 @@ public final class RetoldControlledFleeEvents {
 
                 if (RetoldAiControl.isControlledAs(threatMob, RetoldAiControlMode.ATTACK)) {
                     score -= 40.0D;
+                }
+
+                if (RetoldAiControl.isControlledAs(threatMob, RetoldAiControlMode.SEARCH)) {
+                    score -= 14.0D;
                 }
             }
 
@@ -231,6 +263,10 @@ public final class RetoldControlledFleeEvents {
             return canSenseThreat(prey, threatMob);
         }
 
+        if (RetoldAiControl.isControlledAs(threatMob, RetoldAiControlMode.ATTACK)) {
+            return canSenseThreat(prey, threatMob);
+        }
+
         /*
          * Warning flee:
          * prey can flee a close hungry predator before the hunt starts.
@@ -287,6 +323,52 @@ public final class RetoldControlledFleeEvents {
                 && mob.getTarget() != null;
     }
 
+    private static void rememberThreat(
+            PathfinderMob prey,
+            LivingEntity threat,
+            long gameTime
+    ) {
+        Vec3 away = new Vec3(
+                prey.getX() - threat.getX(),
+                0.0D,
+                prey.getZ() - threat.getZ()
+        );
+
+        if (away.lengthSqr() <= 0.0001D) {
+            away = randomHorizontalDirection(prey);
+        } else {
+            away = away.normalize();
+        }
+
+        FLEE_MEMORIES.put(
+                prey,
+                new FleeMemory(
+                        threat.blockPosition().immutable(),
+                        away,
+                        gameTime,
+                        gameTime + FLEE_MEMORY_TICKS
+                )
+        );
+    }
+
+    private static FleeMemory getActiveFleeMemory(
+            PathfinderMob prey,
+            long gameTime
+    ) {
+        FleeMemory memory = FLEE_MEMORIES.get(prey);
+
+        if (memory == null) {
+            return null;
+        }
+
+        if (memory.isExpired(gameTime)) {
+            FLEE_MEMORIES.remove(prey);
+            return null;
+        }
+
+        return memory;
+    }
+
     private static void fleeFromThreat(
             PathfinderMob prey,
             LivingEntity threat,
@@ -299,30 +381,92 @@ public final class RetoldControlledFleeEvents {
         );
 
         if (away.lengthSqr() <= 0.0001D) {
-            double angle = prey.getRandom().nextDouble() * Math.PI * 2.0D;
-
-            away = new Vec3(
-                    Math.cos(angle),
-                    0.0D,
-                    Math.sin(angle)
-            );
+            away = randomHorizontalDirection(prey);
         } else {
             away = away.normalize();
         }
 
+        double distanceSquared = prey.distanceToSqr(threat);
+        double fleeDistance = getFleeDistance(distanceSquared);
+
+        moveInFleeDirection(
+                prey,
+                away,
+                fleeDistance,
+                getFleeSpeed(prey, threat),
+                gameTime
+        );
+    }
+
+    private static void fleeFromMemory(
+            PathfinderMob prey,
+            FleeMemory memory,
+            long gameTime
+    ) {
+        Vec3 away = memory.awayDirection();
+
+        if (away == null || away.lengthSqr() <= 0.0001D) {
+            away = randomHorizontalDirection(prey);
+        } else {
+            away = away.normalize();
+        }
+
+        /*
+         * Small direction drift while scared.
+         * This prevents all prey from running in a perfect straight line forever,
+         * but still keeps the main direction away from the remembered threat.
+         */
         Vec3 side = new Vec3(
                 -away.z,
                 0.0D,
                 away.x
         );
 
-        double sideOffset = (prey.getRandom().nextDouble() - 0.5D) * 5.0D;
+        double sideDrift = (prey.getRandom().nextDouble() - 0.5D) * 0.38D;
 
-        double distanceSquared = prey.distanceToSqr(threat);
-        double fleeDistance = getFleeDistance(distanceSquared);
+        Vec3 rememberedDirection = away
+                .add(side.scale(sideDrift));
+
+        if (rememberedDirection.lengthSqr() <= 0.0001D) {
+            rememberedDirection = away;
+        } else {
+            rememberedDirection = rememberedDirection.normalize();
+        }
+
+        moveInFleeDirection(
+                prey,
+                rememberedDirection,
+                MEMORY_FLEE_DISTANCE_BLOCKS,
+                getMemoryFleeSpeed(prey),
+                gameTime
+        );
+    }
+
+    private static void moveInFleeDirection(
+            PathfinderMob prey,
+            Vec3 direction,
+            double fleeDistance,
+            double speed,
+            long gameTime
+    ) {
+        Vec3 safeDirection = direction;
+
+        if (safeDirection == null || safeDirection.lengthSqr() <= 0.0001D) {
+            safeDirection = randomHorizontalDirection(prey);
+        } else {
+            safeDirection = safeDirection.normalize();
+        }
+
+        Vec3 side = new Vec3(
+                -safeDirection.z,
+                0.0D,
+                safeDirection.x
+        );
+
+        double sideOffset = (prey.getRandom().nextDouble() - 0.5D) * 4.5D;
 
         Vec3 target = prey.position()
-                .add(away.scale(fleeDistance))
+                .add(safeDirection.scale(fleeDistance))
                 .add(side.scale(sideOffset));
 
         BlockPos targetPos = new BlockPos(
@@ -345,7 +489,7 @@ public final class RetoldControlledFleeEvents {
                     targetPos.getX() + 0.5D,
                     targetPos.getY(),
                     targetPos.getZ() + 0.5D,
-                    getFleeSpeed(prey, threat)
+                    speed
             );
         });
     }
@@ -370,32 +514,20 @@ public final class RetoldControlledFleeEvents {
 
         double modifier = 1.0D;
 
-        /*
-         * Very close predator: panic burst.
-         */
         if (distanceSquared <= CLOSE_THREAT_DISTANCE_SQUARED) {
             modifier += 0.12D + prey.getRandom().nextDouble() * 0.13D;
         }
 
-        /*
-         * Far threat: prey does not sprint at full speed forever.
-         */
         if (distanceSquared > FAR_THREAT_DISTANCE_SQUARED) {
             modifier -= 0.12D + prey.getRandom().nextDouble() * 0.06D;
         }
 
         double roll = prey.getRandom().nextDouble();
 
-        /*
-         * Stumble / hesitation chance.
-         */
         if (roll < 0.20D) {
             modifier -= 0.10D + prey.getRandom().nextDouble() * 0.14D;
         }
 
-        /*
-         * Panic spike chance.
-         */
         if (roll >= 0.20D && roll < 0.36D) {
             modifier += 0.08D + prey.getRandom().nextDouble() * 0.10D;
         }
@@ -404,6 +536,40 @@ public final class RetoldControlledFleeEvents {
                 BASE_FLEE_SPEED * modifier,
                 MIN_FLEE_SPEED,
                 MAX_FLEE_SPEED
+        );
+    }
+
+    private static double getMemoryFleeSpeed(PathfinderMob prey) {
+        double modifier = 1.0D;
+
+        double roll = prey.getRandom().nextDouble();
+
+        /*
+         * Fear-running is slightly less intense than direct panic,
+         * but still fast enough that the animal does not stop right after breaking sight.
+         */
+        if (roll < 0.18D) {
+            modifier -= 0.08D + prey.getRandom().nextDouble() * 0.10D;
+        }
+
+        if (roll >= 0.18D && roll < 0.34D) {
+            modifier += 0.06D + prey.getRandom().nextDouble() * 0.08D;
+        }
+
+        return clamp(
+                MEMORY_FLEE_SPEED * modifier,
+                MIN_FLEE_SPEED,
+                MAX_FLEE_SPEED
+        );
+    }
+
+    private static Vec3 randomHorizontalDirection(PathfinderMob mob) {
+        double angle = mob.getRandom().nextDouble() * Math.PI * 2.0D;
+
+        return new Vec3(
+                Math.cos(angle),
+                0.0D,
+                Math.sin(angle)
         );
     }
 
@@ -447,5 +613,16 @@ public final class RetoldControlledFleeEvents {
                 value,
                 max
         );
+    }
+
+    private record FleeMemory(
+            BlockPos lastThreatPos,
+            Vec3 awayDirection,
+            long lastThreatSeenAt,
+            long expiresAt
+    ) {
+        public boolean isExpired(long gameTime) {
+            return gameTime > expiresAt;
+        }
     }
 }

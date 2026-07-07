@@ -4,15 +4,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 
-import java.util.Iterator;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldAiControl {
-    private static final Map<Mob, ControlState> CONTROLS = new WeakHashMap<>();
-
-    private static final ThreadLocal<Boolean> NAVIGATION_BYPASS =
-            ThreadLocal.withInitial(() -> false);
+    private static final Map<Mob, ControlState> CONTROLLED_MOBS = new WeakHashMap<>();
+    private static final ThreadLocal<Boolean> NAVIGATION_BYPASS = ThreadLocal.withInitial(() -> false);
 
     private RetoldAiControl() {
     }
@@ -21,23 +18,20 @@ public final class RetoldAiControl {
             Mob mob,
             RetoldAiControlMode mode,
             long gameTime,
-            int durationTicks
+            int ticks
     ) {
         if (mob == null || mode == null || mode == RetoldAiControlMode.NONE) {
-            clear(mob);
             return;
         }
 
-        if (!mob.isAlive() || mob.isRemoved()) {
-            clear(mob);
-            return;
-        }
-
-        CONTROLS.put(
+        CONTROLLED_MOBS.put(
                 mob,
                 new ControlState(
                         mode,
-                        gameTime + Math.max(1, durationTicks)
+                        gameTime + Math.max(
+                                1,
+                                ticks
+                        )
                 )
         );
     }
@@ -46,13 +40,13 @@ public final class RetoldAiControl {
             Mob mob,
             RetoldAiControlMode mode,
             long gameTime,
-            int durationTicks
+            int ticks
     ) {
         claim(
                 mob,
                 mode,
                 gameTime,
-                durationTicks
+                ticks
         );
     }
 
@@ -61,7 +55,7 @@ public final class RetoldAiControl {
             return;
         }
 
-        CONTROLS.remove(mob);
+        CONTROLLED_MOBS.remove(mob);
     }
 
     public static boolean isControlled(Mob mob) {
@@ -89,7 +83,7 @@ public final class RetoldAiControl {
     }
 
     public static int activeCount() {
-        return CONTROLS.size();
+        return CONTROLLED_MOBS.size();
     }
 
     public static boolean shouldBlockVanillaNavigation(Mob mob) {
@@ -97,20 +91,20 @@ public final class RetoldAiControl {
             return false;
         }
 
-        if (NAVIGATION_BYPASS.get()) {
+        if (Boolean.TRUE.equals(NAVIGATION_BYPASS.get())) {
             return false;
         }
 
-        ControlState state = getActiveState(mob);
+        RetoldAiControlMode mode = getMode(mob);
 
-        if (state == null) {
-            return false;
-        }
-
-        return switch (state.mode()) {
-            case FEED, HUNT, ATTACK, FLEE, REGROUP, SHELTER, TERRITORY -> true;
-            case NONE -> false;
-        };
+        return mode == RetoldAiControlMode.FEED
+                || mode == RetoldAiControlMode.SEARCH
+                || mode == RetoldAiControlMode.HUNT
+                || mode == RetoldAiControlMode.ATTACK
+                || mode == RetoldAiControlMode.FLEE
+                || mode == RetoldAiControlMode.REGROUP
+                || mode == RetoldAiControlMode.SHELTER
+                || mode == RetoldAiControlMode.TERRITORY;
     }
 
     public static boolean shouldBlockVanillaTarget(
@@ -121,16 +115,13 @@ public final class RetoldAiControl {
             return false;
         }
 
-        ControlState state = getActiveState(mob);
+        RetoldAiControlMode mode = getMode(mob);
 
-        if (state == null) {
-            return false;
-        }
-
-        return switch (state.mode()) {
-            case FEED, FLEE, REGROUP, SHELTER -> true;
-            case HUNT, ATTACK, TERRITORY, NONE -> false;
-        };
+        return mode == RetoldAiControlMode.FEED
+                || mode == RetoldAiControlMode.SEARCH
+                || mode == RetoldAiControlMode.FLEE
+                || mode == RetoldAiControlMode.REGROUP
+                || mode == RetoldAiControlMode.SHELTER;
     }
 
     public static boolean shouldBlockVanillaAggression(
@@ -141,16 +132,13 @@ public final class RetoldAiControl {
             return false;
         }
 
-        ControlState state = getActiveState(mob);
+        RetoldAiControlMode mode = getMode(mob);
 
-        if (state == null) {
-            return false;
-        }
-
-        return switch (state.mode()) {
-            case FEED, FLEE, REGROUP, SHELTER -> true;
-            case HUNT, ATTACK, TERRITORY, NONE -> false;
-        };
+        return mode == RetoldAiControlMode.FEED
+                || mode == RetoldAiControlMode.SEARCH
+                || mode == RetoldAiControlMode.FLEE
+                || mode == RetoldAiControlMode.REGROUP
+                || mode == RetoldAiControlMode.SHELTER;
     }
 
     public static void withNavigationBypass(Runnable runnable) {
@@ -158,7 +146,8 @@ public final class RetoldAiControl {
             return;
         }
 
-        boolean previous = NAVIGATION_BYPASS.get();
+        boolean previous = Boolean.TRUE.equals(NAVIGATION_BYPASS.get());
+
         NAVIGATION_BYPASS.set(true);
 
         try {
@@ -169,24 +158,20 @@ public final class RetoldAiControl {
     }
 
     public static void cleanup(long gameTime) {
-        Iterator<Map.Entry<Mob, ControlState>> iterator =
-                CONTROLS.entrySet().iterator();
-
-        while (iterator.hasNext()) {
-            Map.Entry<Mob, ControlState> entry = iterator.next();
+        CONTROLLED_MOBS.entrySet().removeIf(entry -> {
             Mob mob = entry.getKey();
             ControlState state = entry.getValue();
 
-            if (
-                    mob == null
-                            || !mob.isAlive()
-                            || mob.isRemoved()
-                            || state == null
-                            || state.isExpired(gameTime)
-            ) {
-                iterator.remove();
+            if (mob == null || state == null) {
+                return true;
             }
-        }
+
+            if (!mob.isAlive() || mob.isRemoved()) {
+                return true;
+            }
+
+            return state.isExpired(gameTime);
+        });
     }
 
     private static ControlState getActiveState(Mob mob) {
@@ -194,28 +179,18 @@ public final class RetoldAiControl {
             return null;
         }
 
-        if (!(mob.level() instanceof ServerLevel level)) {
-            return null;
-        }
-
-        return getActiveState(
-                mob,
-                level.getGameTime()
-        );
-    }
-
-    private static ControlState getActiveState(
-            Mob mob,
-            long gameTime
-    ) {
-        ControlState state = CONTROLS.get(mob);
+        ControlState state = CONTROLLED_MOBS.get(mob);
 
         if (state == null) {
             return null;
         }
 
-        if (state.isExpired(gameTime)) {
-            CONTROLS.remove(mob);
+        if (!(mob.level() instanceof ServerLevel level)) {
+            return state;
+        }
+
+        if (state.isExpired(level.getGameTime())) {
+            CONTROLLED_MOBS.remove(mob);
             return null;
         }
 

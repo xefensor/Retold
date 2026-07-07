@@ -575,6 +575,18 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
+        /*
+         * Food-first rule during active hunt:
+         * if edible dropped food is nearby, stop chasing and let FEED take over.
+         */
+        if (hasEasyFoodNearby(level, hunter)) {
+            stopHuntForFood(
+                    hunter,
+                    gameTime
+            );
+            return;
+        }
+
         HuntMemory memory = getActiveHuntMemory(
                 hunter,
                 gameTime
@@ -863,6 +875,34 @@ public final class RetoldControlledHuntingEvents {
         RetoldPredatorStrike.clear(hunter);
 
         RetoldAiControl.clear(hunter);
+
+        RetoldFactionTargetGuards.setTargetIgnoringGuard(
+                hunter,
+                null
+        );
+
+        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
+                hunter,
+                false
+        );
+
+        hunter.setSprinting(false);
+        hunter.getNavigation().stop();
+    }
+
+    private static void stopHuntForFood(
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        clearHuntMemory(hunter);
+        RetoldPredatorStrike.clear(hunter);
+
+        RetoldAiControl.claim(
+                hunter,
+                RetoldAiControlMode.FEED,
+                gameTime,
+                FEED_LOCK_AFTER_KILL_TICKS
+        );
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 hunter,
