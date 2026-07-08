@@ -28,6 +28,7 @@ import cz.xefensor.retold.behavior.RetoldPredatorSearchEvents;
 import cz.xefensor.retold.behavior.RetoldPackHuntingEvents;
 import cz.xefensor.retold.behavior.RetoldPredatorStaminaEvents;
 import cz.xefensor.retold.behavior.RetoldHeldFoodConsumptionEvents;
+import cz.xefensor.retold.registry.RetoldGameRules;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -47,6 +48,7 @@ public final class Retold {
         RetoldWorldgenRegistries.register(modEventBus);
         RetoldAttachments.register(modEventBus);
         RetoldAenderRegistries.register(modEventBus);
+        RetoldGameRules.register(modEventBus);
 
         modEventBus.addListener(RetoldNetworking::registerPayloads);
 
