@@ -50,8 +50,8 @@ public final class RetoldPackHuntingEvents {
     private static final double WOLF_SEARCH_SPEED = 0.98D;
     private static final double DOLPHIN_SEARCH_SPEED = 1.08D;
 
-    private static final double WOLF_HUNT_SPEED = 1.31D;
-    private static final double DOLPHIN_HUNT_SPEED = 1.38D;
+    private static final double WOLF_HUNT_SPEED = 1.30D;
+    private static final double DOLPHIN_HUNT_SPEED = 1.36D;
 
     private static final double RETURN_TO_PACK_SPEED = 0.86D;
 

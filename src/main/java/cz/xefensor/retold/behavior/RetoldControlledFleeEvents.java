@@ -22,10 +22,15 @@ public final class RetoldControlledFleeEvents {
     private static final int FLEE_CONTROL_TICKS = 20 * 3;
 
     /*
-     * New:
-     * prey keeps fleeing even after it loses direct sight/hearing/smell of the hunter.
+     * Direct predator fear memory.
      */
     private static final int FLEE_MEMORY_TICKS = 20 * 10;
+
+    /*
+     * Herd panic memory is shorter than direct predator memory.
+     * This is copied fear from another prey animal.
+     */
+    private static final int HERD_PANIC_MEMORY_TICKS = 20 * 7;
 
     private static final double ACTIVE_THREAT_RADIUS_BLOCKS = 22.0D;
     private static final double ACTIVE_THREAT_RADIUS_SQUARED =
@@ -35,19 +40,18 @@ public final class RetoldControlledFleeEvents {
     private static final double WARNING_THREAT_RADIUS_SQUARED =
             WARNING_THREAT_RADIUS_BLOCKS * WARNING_THREAT_RADIUS_BLOCKS;
 
-    private static final double BASE_FLEE_DISTANCE_BLOCKS = 13.0D;
-    private static final double CLOSE_FLEE_DISTANCE_BLOCKS = 15.0D;
-    private static final double FAR_FLEE_DISTANCE_BLOCKS = 10.0D;
+    private static final double BASE_FLEE_DISTANCE_BLOCKS = 16.0D;
+    private static final double CLOSE_FLEE_DISTANCE_BLOCKS = 19.0D;
+    private static final double FAR_FLEE_DISTANCE_BLOCKS = 13.0D;
 
-    /*
-     * Used when the hunter is no longer directly sensed but the prey is still scared.
-     */
-    private static final double MEMORY_FLEE_DISTANCE_BLOCKS = 12.0D;
+    private static final double MEMORY_FLEE_DISTANCE_BLOCKS = 15.0D;
+    private static final double HERD_PANIC_FLEE_DISTANCE_BLOCKS = 13.5D;
 
-    private static final double BASE_FLEE_SPEED = 1.16D;
-    private static final double MEMORY_FLEE_SPEED = 1.10D;
-    private static final double MIN_FLEE_SPEED = 0.86D;
-    private static final double MAX_FLEE_SPEED = 1.46D;
+    private static final double BASE_FLEE_SPEED = 1.26D;
+    private static final double MEMORY_FLEE_SPEED = 1.17D;
+    private static final double HERD_PANIC_FLEE_SPEED = 1.13D;
+    private static final double MIN_FLEE_SPEED = 0.94D;
+    private static final double MAX_FLEE_SPEED = 1.62D;
 
     private static final double CLOSE_THREAT_DISTANCE_BLOCKS = 5.0D;
     private static final double CLOSE_THREAT_DISTANCE_SQUARED =
@@ -68,6 +72,21 @@ public final class RetoldControlledFleeEvents {
     private static final double SMELL_RADIUS_BLOCKS = 5.0D;
     private static final double SMELL_RADIUS_SQUARED =
             SMELL_RADIUS_BLOCKS * SMELL_RADIUS_BLOCKS;
+
+    /*
+     * Explicit herd panic spread.
+     */
+    private static final double HERD_PANIC_RADIUS_BLOCKS = 13.0D;
+    private static final double HERD_PANIC_RADIUS_SQUARED =
+            HERD_PANIC_RADIUS_BLOCKS * HERD_PANIC_RADIUS_BLOCKS;
+
+    private static final double HERD_PANIC_SIGHT_RADIUS_BLOCKS = 13.0D;
+    private static final double HERD_PANIC_SIGHT_RADIUS_SQUARED =
+            HERD_PANIC_SIGHT_RADIUS_BLOCKS * HERD_PANIC_SIGHT_RADIUS_BLOCKS;
+
+    private static final double HERD_PANIC_HEARING_RADIUS_BLOCKS = 7.0D;
+    private static final double HERD_PANIC_HEARING_RADIUS_SQUARED =
+            HERD_PANIC_HEARING_RADIUS_BLOCKS * HERD_PANIC_HEARING_RADIUS_BLOCKS;
 
     private static final double AUDIBLE_MOVEMENT_THRESHOLD_SQUARED = 0.0016D;
 
@@ -117,9 +136,9 @@ public final class RetoldControlledFleeEvents {
         }
 
         /*
-         * New:
-         * If the prey lost the hunter, it still keeps running from the remembered
-         * danger direction for a while.
+         * Existing fear memory has priority.
+         * Important: do this BEFORE copying herd panic again, otherwise animals
+         * can refresh each other forever.
          */
         FleeMemory memory = getActiveFleeMemory(
                 prey,
@@ -133,6 +152,39 @@ public final class RetoldControlledFleeEvents {
                     gameTime
             );
             return;
+        }
+
+        /*
+         * Explicit herd panic:
+         * this only copies from animals that have direct predator fear.
+         * Copied herd panic cannot spread again.
+         */
+        PathfinderMob panicSource = findBestHerdPanicSource(
+                level,
+                prey,
+                gameTime
+        );
+
+        if (panicSource != null) {
+            rememberHerdPanic(
+                    prey,
+                    panicSource,
+                    gameTime
+            );
+
+            FleeMemory copiedMemory = getActiveFleeMemory(
+                    prey,
+                    gameTime
+            );
+
+            if (copiedMemory != null) {
+                fleeFromMemory(
+                        prey,
+                        copiedMemory,
+                        gameTime
+                );
+                return;
+            }
         }
 
         if (RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)) {
@@ -311,16 +363,151 @@ public final class RetoldControlledFleeEvents {
         return distanceSquared <= SMELL_RADIUS_SQUARED;
     }
 
-    private static boolean isAudible(LivingEntity entity) {
-        Vec3 movement = entity.getDeltaMovement();
-        double horizontalMovementSquared = movement.x * movement.x + movement.z * movement.z;
+    private static PathfinderMob findBestHerdPanicSource(
+            ServerLevel level,
+            PathfinderMob prey,
+            long gameTime
+    ) {
+        AABB area = prey.getBoundingBox().inflate(HERD_PANIC_RADIUS_BLOCKS);
 
-        if (horizontalMovementSquared >= AUDIBLE_MOVEMENT_THRESHOLD_SQUARED) {
+        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                candidate -> isValidHerdPanicSource(
+                        prey,
+                        candidate,
+                        gameTime
+                )
+        );
+
+        PathfinderMob bestSource = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (PathfinderMob candidate : candidates) {
+            double distanceSquared = prey.distanceToSqr(candidate);
+
+            if (distanceSquared > HERD_PANIC_RADIUS_SQUARED) {
+                continue;
+            }
+
+            double score = distanceSquared;
+
+            if (isSameAnimalType(prey, candidate)) {
+                score -= 18.0D;
+            }
+
+            if (prey.hasLineOfSight(candidate)) {
+                score -= 10.0D;
+            }
+
+            if (candidate.isSprinting()) {
+                score -= 8.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestSource = candidate;
+            }
+        }
+
+        return bestSource;
+    }
+
+    private static boolean isValidHerdPanicSource(
+            PathfinderMob prey,
+            PathfinderMob candidate,
+            long gameTime
+    ) {
+        if (prey == null || candidate == null) {
+            return false;
+        }
+
+        if (prey == candidate) {
+            return false;
+        }
+
+        if (!candidate.isAlive() || candidate.isRemoved()) {
+            return false;
+        }
+
+        if (prey.level() != candidate.level()) {
+            return false;
+        }
+
+        if (!isFleeingPrey(candidate)) {
+            return false;
+        }
+
+        if (!canSharePanic(prey, candidate)) {
+            return false;
+        }
+
+        if (prey.distanceToSqr(candidate) > HERD_PANIC_RADIUS_SQUARED) {
+            return false;
+        }
+
+        FleeMemory sourceMemory = getActiveFleeMemory(
+                candidate,
+                gameTime
+        );
+
+        /*
+         * Critical anti-loop rule:
+         * only direct predator fear can broadcast herd panic.
+         * Herd panic copied from another animal cannot spread again.
+         */
+        if (sourceMemory == null || sourceMemory.fromHerdPanic()) {
+            return false;
+        }
+
+        return canSensePanicSource(
+                prey,
+                candidate
+        );
+    }
+
+    private static boolean canSensePanicSource(
+            PathfinderMob prey,
+            PathfinderMob panicSource
+    ) {
+        double distanceSquared = prey.distanceToSqr(panicSource);
+
+        if (
+                distanceSquared <= HERD_PANIC_SIGHT_RADIUS_SQUARED
+                        && prey.hasLineOfSight(panicSource)
+        ) {
             return true;
         }
 
-        return entity instanceof Mob mob
-                && mob.getTarget() != null;
+        return distanceSquared <= HERD_PANIC_HEARING_RADIUS_SQUARED
+                && isAudible(panicSource);
+    }
+
+    private static boolean canSharePanic(
+            PathfinderMob prey,
+            PathfinderMob panicSource
+    ) {
+        String preyPath = getPath(prey);
+        String sourcePath = getPath(panicSource);
+
+        /*
+         * Fish panic with fish, land animals panic with land animals.
+         * This prevents weird cases like a cow reacting to a salmon.
+         */
+        if (isFishPath(preyPath) || isFishPath(sourcePath)) {
+            return isFishPath(preyPath) && isFishPath(sourcePath);
+        }
+
+        return isLandPreyPath(preyPath) && isLandPreyPath(sourcePath);
+    }
+
+    private static boolean isSameAnimalType(
+            PathfinderMob first,
+            PathfinderMob second
+    ) {
+        return getPath(first).equals(
+                getPath(second)
+        );
     }
 
     private static void rememberThreat(
@@ -346,7 +533,80 @@ public final class RetoldControlledFleeEvents {
                         threat.blockPosition().immutable(),
                         away,
                         gameTime,
-                        gameTime + FLEE_MEMORY_TICKS
+                        gameTime + FLEE_MEMORY_TICKS,
+                        false
+                )
+        );
+    }
+
+    private static void rememberHerdPanic(
+            PathfinderMob prey,
+            PathfinderMob panicSource,
+            long gameTime
+    ) {
+        FleeMemory sourceMemory = getActiveFleeMemory(
+                panicSource,
+                gameTime
+        );
+
+        Vec3 copiedDirection = null;
+
+        if (sourceMemory != null && sourceMemory.awayDirection() != null) {
+            copiedDirection = sourceMemory.awayDirection();
+        }
+
+        if (copiedDirection == null || copiedDirection.lengthSqr() <= 0.0001D) {
+            Vec3 movement = panicSource.getDeltaMovement();
+
+            copiedDirection = new Vec3(
+                    movement.x,
+                    0.0D,
+                    movement.z
+            );
+        }
+
+        if (copiedDirection == null || copiedDirection.lengthSqr() <= 0.0001D) {
+            copiedDirection = new Vec3(
+                    prey.getX() - panicSource.getX(),
+                    0.0D,
+                    prey.getZ() - panicSource.getZ()
+            );
+        }
+
+        if (copiedDirection.lengthSqr() <= 0.0001D) {
+            copiedDirection = randomHorizontalDirection(prey);
+        } else {
+            copiedDirection = copiedDirection.normalize();
+        }
+
+        /*
+         * Small herd spread, but still mostly same direction.
+         */
+        Vec3 side = new Vec3(
+                -copiedDirection.z,
+                0.0D,
+                copiedDirection.x
+        );
+
+        double sideDrift = (prey.getRandom().nextDouble() - 0.5D) * 0.28D;
+
+        Vec3 finalDirection = copiedDirection
+                .add(side.scale(sideDrift));
+
+        if (finalDirection.lengthSqr() <= 0.0001D) {
+            finalDirection = copiedDirection;
+        } else {
+            finalDirection = finalDirection.normalize();
+        }
+
+        FLEE_MEMORIES.put(
+                prey,
+                new FleeMemory(
+                        panicSource.blockPosition().immutable(),
+                        finalDirection,
+                        gameTime,
+                        gameTime + HERD_PANIC_MEMORY_TICKS,
+                        true
                 )
         );
     }
@@ -411,18 +671,15 @@ public final class RetoldControlledFleeEvents {
             away = away.normalize();
         }
 
-        /*
-         * Small direction drift while scared.
-         * This prevents all prey from running in a perfect straight line forever,
-         * but still keeps the main direction away from the remembered threat.
-         */
         Vec3 side = new Vec3(
                 -away.z,
                 0.0D,
                 away.x
         );
 
-        double sideDrift = (prey.getRandom().nextDouble() - 0.5D) * 0.38D;
+        double sideDrift = memory.fromHerdPanic()
+                ? (prey.getRandom().nextDouble() - 0.5D) * 0.26D
+                : (prey.getRandom().nextDouble() - 0.5D) * 0.38D;
 
         Vec3 rememberedDirection = away
                 .add(side.scale(sideDrift));
@@ -433,11 +690,19 @@ public final class RetoldControlledFleeEvents {
             rememberedDirection = rememberedDirection.normalize();
         }
 
+        double fleeDistance = memory.fromHerdPanic()
+                ? HERD_PANIC_FLEE_DISTANCE_BLOCKS
+                : MEMORY_FLEE_DISTANCE_BLOCKS;
+
+        double speed = memory.fromHerdPanic()
+                ? getHerdPanicFleeSpeed(prey)
+                : getMemoryFleeSpeed(prey);
+
         moveInFleeDirection(
                 prey,
                 rememberedDirection,
-                MEMORY_FLEE_DISTANCE_BLOCKS,
-                getMemoryFleeSpeed(prey),
+                fleeDistance,
+                speed,
                 gameTime
         );
     }
@@ -515,11 +780,11 @@ public final class RetoldControlledFleeEvents {
         double modifier = 1.0D;
 
         if (distanceSquared <= CLOSE_THREAT_DISTANCE_SQUARED) {
-            modifier += 0.12D + prey.getRandom().nextDouble() * 0.13D;
+            modifier += 0.20D + prey.getRandom().nextDouble() * 0.18D;
         }
 
         if (distanceSquared > FAR_THREAT_DISTANCE_SQUARED) {
-            modifier -= 0.12D + prey.getRandom().nextDouble() * 0.06D;
+            modifier -= 0.06D + prey.getRandom().nextDouble() * 0.04D;
         }
 
         double roll = prey.getRandom().nextDouble();
@@ -544,10 +809,6 @@ public final class RetoldControlledFleeEvents {
 
         double roll = prey.getRandom().nextDouble();
 
-        /*
-         * Fear-running is slightly less intense than direct panic,
-         * but still fast enough that the animal does not stop right after breaking sight.
-         */
         if (roll < 0.18D) {
             modifier -= 0.08D + prey.getRandom().nextDouble() * 0.10D;
         }
@@ -558,6 +819,26 @@ public final class RetoldControlledFleeEvents {
 
         return clamp(
                 MEMORY_FLEE_SPEED * modifier,
+                MIN_FLEE_SPEED,
+                MAX_FLEE_SPEED
+        );
+    }
+
+    private static double getHerdPanicFleeSpeed(PathfinderMob prey) {
+        double modifier = 1.0D;
+
+        double roll = prey.getRandom().nextDouble();
+
+        if (roll < 0.16D) {
+            modifier -= 0.06D + prey.getRandom().nextDouble() * 0.08D;
+        }
+
+        if (roll >= 0.16D && roll < 0.36D) {
+            modifier += 0.05D + prey.getRandom().nextDouble() * 0.08D;
+        }
+
+        return clamp(
+                HERD_PANIC_FLEE_SPEED * modifier,
                 MIN_FLEE_SPEED,
                 MAX_FLEE_SPEED
         );
@@ -574,9 +855,7 @@ public final class RetoldControlledFleeEvents {
     }
 
     private static boolean isFleeingPrey(PathfinderMob mob) {
-        String path = RetoldMobRules.getEntityTypePath(
-                mob.getType()
-        );
+        String path = getPath(mob);
 
         if (path.equals("villager")) {
             return false;
@@ -600,6 +879,46 @@ public final class RetoldControlledFleeEvents {
                 || path.equals("pufferfish");
     }
 
+    private static boolean isLandPreyPath(String path) {
+        return path.equals("cow")
+                || path.equals("sheep")
+                || path.equals("pig")
+                || path.equals("chicken")
+                || path.equals("rabbit")
+                || path.equals("goat")
+                || path.equals("horse")
+                || path.equals("donkey")
+                || path.equals("mule")
+                || path.equals("llama")
+                || path.equals("trader_llama")
+                || path.equals("camel");
+    }
+
+    private static boolean isFishPath(String path) {
+        return path.equals("cod")
+                || path.equals("salmon")
+                || path.equals("tropical_fish")
+                || path.equals("pufferfish");
+    }
+
+    private static boolean isAudible(LivingEntity entity) {
+        Vec3 movement = entity.getDeltaMovement();
+        double horizontalMovementSquared = movement.x * movement.x + movement.z * movement.z;
+
+        if (horizontalMovementSquared >= AUDIBLE_MOVEMENT_THRESHOLD_SQUARED) {
+            return true;
+        }
+
+        return entity instanceof Mob mob
+                && mob.getTarget() != null;
+    }
+
+    private static String getPath(PathfinderMob mob) {
+        return RetoldMobRules.getEntityTypePath(
+                mob.getType()
+        );
+    }
+
     private static double clamp(
             double value,
             double min,
@@ -619,7 +938,8 @@ public final class RetoldControlledFleeEvents {
             BlockPos lastThreatPos,
             Vec3 awayDirection,
             long lastThreatSeenAt,
-            long expiresAt
+            long expiresAt,
+            boolean fromHerdPanic
     ) {
         public boolean isExpired(long gameTime) {
             return gameTime > expiresAt;

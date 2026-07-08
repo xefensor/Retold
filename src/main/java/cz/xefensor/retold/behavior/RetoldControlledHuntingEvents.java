@@ -32,39 +32,29 @@ public final class RetoldControlledHuntingEvents {
     private static final double PREY_SEARCH_RADIUS_SQUARED =
             PREY_SEARCH_RADIUS_BLOCKS * PREY_SEARCH_RADIUS_BLOCKS;
 
-    private static final double PREY_SIGHT_RADIUS_BLOCKS = 18.0D;
-    private static final double PREY_SIGHT_RADIUS_SQUARED =
-            PREY_SIGHT_RADIUS_BLOCKS * PREY_SIGHT_RADIUS_BLOCKS;
+    private static final double SIGHT_RADIUS_BLOCKS = 18.0D;
+    private static final double SIGHT_RADIUS_SQUARED =
+            SIGHT_RADIUS_BLOCKS * SIGHT_RADIUS_BLOCKS;
 
-    private static final double PREY_HEARING_RADIUS_BLOCKS = 6.0D;
-    private static final double PREY_HEARING_RADIUS_SQUARED =
-            PREY_HEARING_RADIUS_BLOCKS * PREY_HEARING_RADIUS_BLOCKS;
+    private static final double HEARING_RADIUS_BLOCKS = 6.0D;
+    private static final double HEARING_RADIUS_SQUARED =
+            HEARING_RADIUS_BLOCKS * HEARING_RADIUS_BLOCKS;
 
-    private static final double PREY_SMELL_RADIUS_BLOCKS = 4.0D;
-    private static final double PREY_SMELL_RADIUS_SQUARED =
-            PREY_SMELL_RADIUS_BLOCKS * PREY_SMELL_RADIUS_BLOCKS;
+    private static final double SMELL_RADIUS_BLOCKS = 7.0D;
+    private static final double SMELL_RADIUS_SQUARED =
+            SMELL_RADIUS_BLOCKS * SMELL_RADIUS_BLOCKS;
 
     private static final double TRAIL_REACQUIRE_RADIUS_BLOCKS = 10.0D;
     private static final double TRAIL_REACQUIRE_RADIUS_SQUARED =
             TRAIL_REACQUIRE_RADIUS_BLOCKS * TRAIL_REACQUIRE_RADIUS_BLOCKS;
 
-    private static final double TRAIL_DIRECT_SMELL_RADIUS_BLOCKS = 7.0D;
-    private static final double TRAIL_DIRECT_SMELL_RADIUS_SQUARED =
-            TRAIL_DIRECT_SMELL_RADIUS_BLOCKS * TRAIL_DIRECT_SMELL_RADIUS_BLOCKS;
-
     private static final double EASY_FOOD_RADIUS_BLOCKS = 8.0D;
     private static final double EASY_FOOD_RADIUS_SQUARED =
             EASY_FOOD_RADIUS_BLOCKS * EASY_FOOD_RADIUS_BLOCKS;
 
-    private static final double PREY_MOVEMENT_HEARING_THRESHOLD_SQUARED = 0.0016D;
-
     private static final double CLOSE_CHASE_DISTANCE_BLOCKS = 5.0D;
     private static final double CLOSE_CHASE_DISTANCE_SQUARED =
             CLOSE_CHASE_DISTANCE_BLOCKS * CLOSE_CHASE_DISTANCE_BLOCKS;
-
-    private static final double FAR_CHASE_DISTANCE_BLOCKS = 14.0D;
-    private static final double FAR_CHASE_DISTANCE_SQUARED =
-            FAR_CHASE_DISTANCE_BLOCKS * FAR_CHASE_DISTANCE_BLOCKS;
 
     private static final double HUNT_ABANDON_DISTANCE_BLOCKS = 44.0D;
     private static final double HUNT_ABANDON_DISTANCE_SQUARED =
@@ -74,14 +64,23 @@ public final class RetoldControlledHuntingEvents {
     private static final double SEARCH_POINT_REACHED_DISTANCE_SQUARED =
             SEARCH_POINT_REACHED_DISTANCE_BLOCKS * SEARCH_POINT_REACHED_DISTANCE_BLOCKS;
 
-    private static final double DEFAULT_HUNT_BASE_SPEED = 1.30D;
-    private static final double CAT_HUNT_BASE_SPEED = 1.34D;
-    private static final double FOX_HUNT_BASE_SPEED = 1.34D;
-    private static final double SPIDER_HUNT_BASE_SPEED = 1.18D;
-    private static final double DOLPHIN_HUNT_BASE_SPEED = 1.40D;
+    private static final double DEFAULT_HUNT_SPEED = 1.30D;
+    private static final double WOLF_HUNT_SPEED = 1.30D;
+    private static final double FOX_HUNT_SPEED = 1.38D;
+
+    /*
+     * Cats and ocelots were feeling slow/glitchy in HUNT.
+     * They need a faster chase layer before the strike system takes over.
+     */
+    private static final double CAT_HUNT_SPEED = 1.62D;
+
+    private static final double SPIDER_HUNT_SPEED = 1.18D;
+    private static final double DOLPHIN_HUNT_SPEED = 1.40D;
 
     private static final double MIN_HUNT_SPEED = 0.95D;
-    private static final double MAX_HUNT_SPEED = 1.66D;
+    private static final double MAX_HUNT_SPEED = 1.85D;
+
+    private static final double AUDIBLE_MOVEMENT_THRESHOLD_SQUARED = 0.0016D;
 
     private RetoldControlledHuntingEvents() {
     }
@@ -97,6 +96,8 @@ public final class RetoldControlledHuntingEvents {
         }
 
         if (!RetoldMobRules.isManagedPredator(hunter)) {
+            clearHuntMemory(hunter);
+            RetoldPredatorStrike.clear(hunter);
             return;
         }
 
@@ -104,8 +105,8 @@ public final class RetoldControlledHuntingEvents {
 
         /*
          * Hard stale cleanup:
-         * If no Retold system owns the predator anymore, it must not keep sprinting
-         * or keeping old strike/trail state.
+         * if Retold is no longer controlling this predator and it has no target,
+         * remove old hunt/strike state.
          */
         if (!RetoldAiControl.isControlled(hunter)) {
             if (hunter.getTarget() == null) {
@@ -115,11 +116,11 @@ public final class RetoldControlledHuntingEvents {
             }
         }
 
-        /*
-         * HUNT state is high priority and should be cleaned even between normal
-         * think ticks. This prevents predators staying in HUNT with no prey.
-         */
         if (RetoldAiControl.isControlledAs(hunter, RetoldAiControlMode.HUNT)) {
+            stabilizeHuntMotion(
+                    hunter
+            );
+
             if (isStaleHunt(level, hunter, gameTime)) {
                 stopHunt(hunter);
                 return;
@@ -171,12 +172,9 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        PathfinderMob killer = findResponsibleKiller(
-                event,
-                killed
-        );
+        Entity sourceEntity = event.getSource().getEntity();
 
-        if (killer == null) {
+        if (!(sourceEntity instanceof PathfinderMob killer)) {
             return;
         }
 
@@ -184,23 +182,21 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        if (!RetoldMobRules.canHuntPrey(killer, killed, level.getGameTime())) {
+        long gameTime = level.getGameTime();
+
+        if (!RetoldMobRules.canHuntPrey(killer, killed, gameTime)) {
             return;
         }
 
-        /*
-         * Kill does not reduce hunger.
-         * Eating dropped food is the only thing that reduces hunger.
-         */
+        clearHuntMemory(killer);
+        RetoldPredatorStrike.clear(killer);
+
         RetoldAiControl.claim(
                 killer,
                 RetoldAiControlMode.FEED,
-                level.getGameTime(),
+                gameTime,
                 FEED_LOCK_AFTER_KILL_TICKS
         );
-
-        clearHuntMemory(killer);
-        RetoldPredatorStrike.clear(killer);
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 killer,
@@ -212,30 +208,8 @@ public final class RetoldControlledHuntingEvents {
                 false
         );
 
-        /*
-         * Important:
-         * kill exits sprint/hunt movement immediately.
-         * Food behavior can move the predator normally after this.
-         */
         killer.setSprinting(false);
         killer.getNavigation().stop();
-    }
-
-    private static PathfinderMob findResponsibleKiller(
-            LivingDeathEvent event,
-            LivingEntity killed
-    ) {
-        Entity sourceEntity = event.getSource().getEntity();
-
-        if (sourceEntity instanceof PathfinderMob mob) {
-            return mob;
-        }
-
-        if (killed.getLastHurtByMob() instanceof PathfinderMob mob) {
-            return mob;
-        }
-
-        return null;
     }
 
     private static boolean shouldThink(
@@ -255,11 +229,7 @@ public final class RetoldControlledHuntingEvents {
             PathfinderMob hunter,
             long gameTime
     ) {
-        if (hunter == null || level == null) {
-            return false;
-        }
-
-        if (!hunter.isAlive() || hunter.isRemoved()) {
+        if (hunter == null || !hunter.isAlive() || hunter.isRemoved()) {
             return false;
         }
 
@@ -286,227 +256,9 @@ public final class RetoldControlledHuntingEvents {
 
         return !hasEasyFoodNearby(
                 level,
-                hunter
-        );
-    }
-
-    private static boolean isStaleHunt(
-            ServerLevel level,
-            PathfinderMob hunter,
-            long gameTime
-    ) {
-        LivingEntity target = hunter.getTarget();
-
-        if (
-                target != null
-                        && target.isAlive()
-                        && RetoldMobRules.canHuntPrey(hunter, target, gameTime)
-                        && hunter.distanceToSqr(target) <= HUNT_ABANDON_DISTANCE_SQUARED
-        ) {
-            return false;
-        }
-
-        HuntMemory memory = getActiveHuntMemory(
                 hunter,
                 gameTime
         );
-
-        if (memory == null) {
-            return true;
-        }
-
-        Entity rememberedEntity = level.getEntity(memory.preyUuid());
-
-        if (!(rememberedEntity instanceof LivingEntity rememberedPrey)) {
-            return true;
-        }
-
-        if (
-                !rememberedPrey.isAlive()
-                        || rememberedPrey.isRemoved()
-                        || !RetoldMobRules.canHuntPrey(hunter, rememberedPrey, gameTime)
-                        || hunter.distanceToSqr(rememberedPrey) > HUNT_ABANDON_DISTANCE_SQUARED
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private static boolean hasEasyFoodNearby(
-            ServerLevel level,
-            PathfinderMob hunter
-    ) {
-        List<ItemEntity> items = level.getEntitiesOfClass(
-                ItemEntity.class,
-                hunter.getBoundingBox().inflate(EASY_FOOD_RADIUS_BLOCKS),
-                item -> isEasyFood(hunter, item)
-        );
-
-        return !items.isEmpty();
-    }
-
-    private static boolean isEasyFood(
-            PathfinderMob hunter,
-            ItemEntity item
-    ) {
-        if (hunter == null || item == null) {
-            return false;
-        }
-
-        if (!item.isAlive() || item.isRemoved()) {
-            return false;
-        }
-
-        if (item.getItem().isEmpty()) {
-            return false;
-        }
-
-        if (hunter.distanceToSqr(item) > EASY_FOOD_RADIUS_SQUARED) {
-            return false;
-        }
-
-        if (!hunter.hasLineOfSight(item) && hunter.distanceToSqr(item) > 16.0D) {
-            return false;
-        }
-
-        return RetoldMobRules.canEatDroppedItem(
-                hunter,
-                item.getItem()
-        );
-    }
-
-    private static LivingEntity findBestPrey(
-            ServerLevel level,
-            PathfinderMob hunter,
-            long gameTime
-    ) {
-        AABB area = hunter.getBoundingBox().inflate(PREY_SEARCH_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
-                LivingEntity.class,
-                area,
-                prey -> isValidPrey(
-                        hunter,
-                        prey,
-                        gameTime
-                )
-        );
-
-        LivingEntity bestPrey = null;
-        double bestScore = Double.MAX_VALUE;
-
-        for (LivingEntity prey : candidates) {
-            double distanceSquared = hunter.distanceToSqr(prey);
-
-            if (distanceSquared > PREY_SEARCH_RADIUS_SQUARED) {
-                continue;
-            }
-
-            double score = distanceSquared;
-
-            if (hunter.hasLineOfSight(prey)) {
-                score -= 24.0D;
-            }
-
-            if (RetoldMobRules.isSmallFoodPrey(prey)) {
-                score -= 12.0D;
-            }
-
-            if (score < bestScore) {
-                bestScore = score;
-                bestPrey = prey;
-            }
-        }
-
-        return bestPrey;
-    }
-
-    private static boolean isValidPrey(
-            PathfinderMob hunter,
-            LivingEntity prey,
-            long gameTime
-    ) {
-        if (hunter == null || prey == null) {
-            return false;
-        }
-
-        if (hunter == prey) {
-            return false;
-        }
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (prey instanceof Player player && (player.isCreative() || player.isSpectator())) {
-            return false;
-        }
-
-        if (hunter.distanceToSqr(prey) > PREY_SEARCH_RADIUS_SQUARED) {
-            return false;
-        }
-
-        if (!RetoldMobRules.canHuntPrey(hunter, prey, gameTime)) {
-            return false;
-        }
-
-        return canDirectlySensePrey(
-                hunter,
-                prey
-        );
-    }
-
-    private static boolean canDirectlySensePrey(
-            PathfinderMob hunter,
-            LivingEntity prey
-    ) {
-        double distanceSquared = hunter.distanceToSqr(prey);
-
-        if (
-                distanceSquared <= PREY_SIGHT_RADIUS_SQUARED
-                        && hunter.hasLineOfSight(prey)
-        ) {
-            return true;
-        }
-
-        if (
-                distanceSquared <= PREY_HEARING_RADIUS_SQUARED
-                        && isAudiblePrey(prey)
-        ) {
-            return true;
-        }
-
-        return distanceSquared <= PREY_SMELL_RADIUS_SQUARED;
-    }
-
-    private static boolean canFollowTrailToPrey(
-            PathfinderMob hunter,
-            LivingEntity prey,
-            HuntMemory memory,
-            long gameTime
-    ) {
-        if (hunter == null || prey == null || memory == null) {
-            return false;
-        }
-
-        if (memory.isExpired(gameTime)) {
-            return false;
-        }
-
-        if (hunter.distanceToSqr(prey) <= TRAIL_DIRECT_SMELL_RADIUS_SQUARED) {
-            return true;
-        }
-
-        return hunter.blockPosition().distSqr(memory.lastKnownPos()) <= TRAIL_REACQUIRE_RADIUS_SQUARED
-                && prey.blockPosition().distSqr(memory.lastKnownPos()) <= TRAIL_REACQUIRE_RADIUS_SQUARED;
-    }
-
-    private static boolean isAudiblePrey(LivingEntity prey) {
-        Vec3 movement = prey.getDeltaMovement();
-        double horizontalMovementSquared = movement.x * movement.x + movement.z * movement.z;
-
-        return horizontalMovementSquared >= PREY_MOVEMENT_HEARING_THRESHOLD_SQUARED;
     }
 
     private static void beginHunt(
@@ -517,8 +269,7 @@ public final class RetoldControlledHuntingEvents {
         rememberPrey(
                 hunter,
                 prey,
-                gameTime,
-                0
+                gameTime
         );
 
         RetoldAiControl.claim(
@@ -542,14 +293,17 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.getLookControl().setLookAt(
                 prey,
-                30.0F,
-                30.0F
+                35.0F,
+                35.0F
         );
 
         RetoldAiControl.withNavigationBypass(() -> {
             hunter.getNavigation().moveTo(
                     prey,
-                    getHuntSpeed(hunter, prey, gameTime)
+                    getHuntSpeed(
+                            hunter,
+                            gameTime
+                    )
             );
         });
     }
@@ -559,13 +313,29 @@ public final class RetoldControlledHuntingEvents {
             PathfinderMob hunter,
             long gameTime
     ) {
-        LivingEntity prey = getRememberedOrCurrentPrey(
+        LivingEntity prey = getCurrentOrRememberedPrey(
                 level,
                 hunter,
                 gameTime
         );
 
+        HuntMemory memory = HUNT_MEMORIES.get(hunter);
+
         if (prey == null) {
+            if (memory != null && !memory.isExpired(gameTime)) {
+                moveToRememberedSearchPoint(
+                        hunter,
+                        memory,
+                        gameTime
+                );
+                return;
+            }
+
+            stopHunt(hunter);
+            return;
+        }
+
+        if (!isValidHuntPrey(hunter, prey, gameTime)) {
             stopHunt(hunter);
             return;
         }
@@ -579,7 +349,7 @@ public final class RetoldControlledHuntingEvents {
          * Food-first rule during active hunt:
          * if edible dropped food is nearby, stop chasing and let FEED take over.
          */
-        if (hasEasyFoodNearby(level, hunter)) {
+        if (hasEasyFoodNearby(level, hunter, gameTime)) {
             stopHuntForFood(
                     hunter,
                     gameTime
@@ -587,42 +357,396 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        HuntMemory memory = getActiveHuntMemory(
-                hunter,
-                gameTime
-        );
-
-        boolean directSense = canDirectlySensePrey(
+        boolean canDirectlySense = canDirectlySensePrey(
                 hunter,
                 prey
         );
 
-        boolean trailSense = !directSense
-                && canFollowTrailToPrey(
+        boolean canUseTrail = canUseTrailSense(
                 hunter,
                 prey,
                 memory,
                 gameTime
         );
 
-        if (directSense || trailSense) {
+        if (canDirectlySense || canUseTrail) {
             rememberPrey(
                     hunter,
                     prey,
-                    gameTime,
-                    0
+                    gameTime
             );
+
+            RetoldAiControl.refresh(
+                    hunter,
+                    RetoldAiControlMode.HUNT,
+                    gameTime,
+                    HUNT_CONTROL_TICKS
+            );
+
+            hunter.setSprinting(true);
+
+            RetoldFactionTargetGuards.setTargetIgnoringGuard(
+                    hunter,
+                    prey
+            );
+
+            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
+                    hunter,
+                    true
+            );
+
+            boolean struck = RetoldPredatorStrike.tryStrike(
+                    level,
+                    hunter,
+                    prey,
+                    gameTime
+            );
+
+            if (struck) {
+                return;
+            }
+
+            RetoldAiControl.withNavigationBypass(() -> {
+                hunter.getNavigation().moveTo(
+                        prey,
+                        getHuntSpeed(
+                                hunter,
+                                gameTime
+                        )
+                );
+            });
+
+            return;
         }
 
-        memory = getActiveHuntMemory(
-                hunter,
-                gameTime
+        memory = HUNT_MEMORIES.get(hunter);
+
+        if (memory != null && !memory.isExpired(gameTime)) {
+            moveToRememberedSearchPoint(
+                    hunter,
+                    memory,
+                    gameTime
+            );
+            return;
+        }
+
+        stopHunt(hunter);
+    }
+
+    private static boolean isStaleHunt(
+            ServerLevel level,
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        LivingEntity target = hunter.getTarget();
+
+        if (
+                target != null
+                        && isValidHuntPrey(hunter, target, gameTime)
+                        && hunter.distanceToSqr(target) <= HUNT_ABANDON_DISTANCE_SQUARED
+        ) {
+            return false;
+        }
+
+        HuntMemory memory = HUNT_MEMORIES.get(hunter);
+
+        if (memory == null || memory.isExpired(gameTime)) {
+            return true;
+        }
+
+        LivingEntity rememberedPrey = getRememberedPrey(
+                level,
+                memory
         );
 
-        if (!directSense && !trailSense && memory == null) {
+        if (
+                rememberedPrey != null
+                        && isValidHuntPrey(hunter, rememberedPrey, gameTime)
+                        && hunter.distanceToSqr(rememberedPrey) <= HUNT_ABANDON_DISTANCE_SQUARED
+        ) {
+            return false;
+        }
+
+        return blockDistanceSquared(
+                hunter.blockPosition(),
+                memory.lastKnownPos()
+        ) > HUNT_ABANDON_DISTANCE_SQUARED;
+    }
+
+    private static LivingEntity findBestPrey(
+            ServerLevel level,
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        AABB area = hunter.getBoundingBox().inflate(PREY_SEARCH_RADIUS_BLOCKS);
+
+        List<LivingEntity> candidates = level.getEntitiesOfClass(
+                LivingEntity.class,
+                area,
+                candidate -> isValidSearchPrey(
+                        hunter,
+                        candidate,
+                        gameTime
+                )
+        );
+
+        LivingEntity bestPrey = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (LivingEntity candidate : candidates) {
+            double distanceSquared = hunter.distanceToSqr(candidate);
+
+            if (distanceSquared > PREY_SEARCH_RADIUS_SQUARED) {
+                continue;
+            }
+
+            if (!canDirectlySensePrey(hunter, candidate)) {
+                continue;
+            }
+
+            double score = distanceSquared;
+
+            if (hunter.hasLineOfSight(candidate)) {
+                score -= 24.0D;
+            }
+
+            if (RetoldMobRules.isSmallFoodPrey(candidate)) {
+                score -= 10.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestPrey = candidate;
+            }
+        }
+
+        return bestPrey;
+    }
+
+    private static boolean isValidSearchPrey(
+            PathfinderMob hunter,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        if (!isValidHuntPrey(hunter, prey, gameTime)) {
+            return false;
+        }
+
+        if (prey instanceof Player player && (player.isCreative() || player.isSpectator())) {
+            return false;
+        }
+
+        return hunter.distanceToSqr(prey) <= PREY_SEARCH_RADIUS_SQUARED;
+    }
+
+    private static boolean isValidHuntPrey(
+            PathfinderMob hunter,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        if (hunter == null || prey == null) {
+            return false;
+        }
+
+        if (hunter == prey) {
+            return false;
+        }
+
+        if (!prey.isAlive() || prey.isRemoved()) {
+            return false;
+        }
+
+        if (hunter.level() != prey.level()) {
+            return false;
+        }
+
+        return RetoldMobRules.canHuntPrey(
+                hunter,
+                prey,
+                gameTime
+        );
+    }
+
+    private static boolean canDirectlySensePrey(
+            PathfinderMob hunter,
+            LivingEntity prey
+    ) {
+        double distanceSquared = hunter.distanceToSqr(prey);
+
+        if (
+                distanceSquared <= SIGHT_RADIUS_SQUARED
+                        && hunter.hasLineOfSight(prey)
+        ) {
+            return true;
+        }
+
+        if (
+                distanceSquared <= HEARING_RADIUS_SQUARED
+                        && isAudible(prey)
+        ) {
+            return true;
+        }
+
+        return distanceSquared <= SMELL_RADIUS_SQUARED;
+    }
+
+    private static boolean canUseTrailSense(
+            PathfinderMob hunter,
+            LivingEntity prey,
+            HuntMemory memory,
+            long gameTime
+    ) {
+        if (memory == null || memory.isExpired(gameTime)) {
+            return false;
+        }
+
+        if (!memory.preyId().equals(prey.getUUID())) {
+            return false;
+        }
+
+        if (hunter.distanceToSqr(prey) <= SMELL_RADIUS_SQUARED) {
+            return true;
+        }
+
+        return blockDistanceSquared(
+                hunter.blockPosition(),
+                memory.lastKnownPos()
+        ) <= TRAIL_REACQUIRE_RADIUS_SQUARED;
+    }
+
+    private static boolean isAudible(LivingEntity entity) {
+        Vec3 movement = entity.getDeltaMovement();
+        double horizontalMovementSquared = movement.x * movement.x + movement.z * movement.z;
+
+        return horizontalMovementSquared >= AUDIBLE_MOVEMENT_THRESHOLD_SQUARED;
+    }
+
+    private static LivingEntity getCurrentOrRememberedPrey(
+            ServerLevel level,
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        LivingEntity target = hunter.getTarget();
+
+        if (isValidHuntPrey(hunter, target, gameTime)) {
+            return target;
+        }
+
+        HuntMemory memory = HUNT_MEMORIES.get(hunter);
+
+        if (memory == null || memory.isExpired(gameTime)) {
+            return null;
+        }
+
+        LivingEntity remembered = getRememberedPrey(
+                level,
+                memory
+        );
+
+        if (isValidHuntPrey(hunter, remembered, gameTime)) {
+            return remembered;
+        }
+
+        return null;
+    }
+
+    private static LivingEntity getRememberedPrey(
+            ServerLevel level,
+            HuntMemory memory
+    ) {
+        if (level == null || memory == null) {
+            return null;
+        }
+
+        Entity entity = level.getEntity(
+                memory.preyId()
+        );
+
+        if (entity instanceof LivingEntity livingEntity) {
+            return livingEntity;
+        }
+
+        return null;
+    }
+
+    private static void rememberPrey(
+            PathfinderMob hunter,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        Vec3 movement = prey.getDeltaMovement();
+
+        Vec3 horizontalMovement = new Vec3(
+                movement.x,
+                0.0D,
+                movement.z
+        );
+
+        HUNT_MEMORIES.put(
+                hunter,
+                new HuntMemory(
+                        prey.getUUID(),
+                        prey.blockPosition().immutable(),
+                        horizontalMovement,
+                        gameTime,
+                        gameTime + HUNT_TRAIL_MEMORY_TICKS,
+                        0
+                )
+        );
+    }
+
+    private static void moveToRememberedSearchPoint(
+            PathfinderMob hunter,
+            HuntMemory memory,
+            long gameTime
+    ) {
+        if (memory == null || memory.isExpired(gameTime)) {
             stopHunt(hunter);
             return;
         }
+
+        if (
+                blockDistanceSquared(
+                        hunter.blockPosition(),
+                        memory.lastKnownPos()
+                ) <= SEARCH_POINT_REACHED_DISTANCE_SQUARED
+        ) {
+            memory.searchStep++;
+        }
+
+        Vec3 movement = memory.lastKnownMovement();
+
+        Vec3 direction;
+
+        if (movement != null && movement.lengthSqr() > 0.0001D) {
+            direction = movement.normalize();
+        } else {
+            direction = randomHorizontalDirection(hunter);
+        }
+
+        Vec3 side = new Vec3(
+                -direction.z,
+                0.0D,
+                direction.x
+        );
+
+        double sideOffset = switch (memory.searchStep() % 5) {
+            case 0 -> 0.0D;
+            case 1 -> 2.0D;
+            case 2 -> -2.0D;
+            case 3 -> 4.0D;
+            default -> -4.0D;
+        };
+
+        double forwardOffset = 3.0D + memory.searchStep() * 1.5D;
+
+        Vec3 target = new Vec3(
+                memory.lastKnownPos().getX() + 0.5D,
+                memory.lastKnownPos().getY(),
+                memory.lastKnownPos().getZ() + 0.5D
+        )
+                .add(direction.scale(forwardOffset))
+                .add(side.scale(sideOffset));
 
         RetoldAiControl.refresh(
                 hunter,
@@ -633,261 +757,85 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(true);
 
-        if (hunter.getTarget() != prey) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                    hunter,
-                    prey
-            );
-        }
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                hunter,
-                true
-        );
-
-        if (directSense || trailSense) {
-            if (
-                    RetoldPredatorStrike.tryStrike(
-                            level,
-                            hunter,
-                            prey,
-                            gameTime
-                    )
-            ) {
-                return;
-            }
-
-            hunter.getLookControl().setLookAt(
-                    prey,
-                    30.0F,
-                    30.0F
-            );
-
-            RetoldAiControl.withNavigationBypass(() -> {
-                hunter.getNavigation().moveTo(
-                        prey,
-                        getHuntSpeed(hunter, prey, gameTime)
-                );
-            });
-
-            return;
-        }
-
-        BlockPos searchPos = getSearchPosition(
-                hunter,
-                memory
-        );
-
-        if (hunter.blockPosition().distSqr(searchPos) <= SEARCH_POINT_REACHED_DISTANCE_SQUARED) {
-            memory = memory.nextSearchStep(gameTime + HUNT_TRAIL_MEMORY_TICKS);
-
-            HUNT_MEMORIES.put(
-                    hunter,
-                    memory
-            );
-
-            searchPos = getSearchPosition(
-                    hunter,
-                    memory
-            );
-        }
-
-        hunter.getLookControl().setLookAt(
-                searchPos.getX() + 0.5D,
-                searchPos.getY() + 0.5D,
-                searchPos.getZ() + 0.5D
-        );
-
-        BlockPos finalSearchPos = searchPos;
-
         RetoldAiControl.withNavigationBypass(() -> {
             hunter.getNavigation().moveTo(
-                    finalSearchPos.getX() + 0.5D,
-                    finalSearchPos.getY(),
-                    finalSearchPos.getZ() + 0.5D,
-                    getTrackingSpeed(hunter, gameTime)
+                    target.x,
+                    target.y,
+                    target.z,
+                    getHuntSpeed(
+                            hunter,
+                            gameTime
+                    )
             );
         });
     }
 
-    private static LivingEntity getRememberedOrCurrentPrey(
+    private static boolean hasEasyFoodNearby(
             ServerLevel level,
             PathfinderMob hunter,
             long gameTime
     ) {
-        LivingEntity target = hunter.getTarget();
-
-        if (
-                target != null
-                        && target.isAlive()
-                        && RetoldMobRules.canHuntPrey(hunter, target, gameTime)
-        ) {
-            return target;
+        if (level == null || hunter == null || !hunter.isAlive() || hunter.isRemoved()) {
+            return false;
         }
 
-        HuntMemory memory = getActiveHuntMemory(
+        RetoldMobState state = RetoldMobStates.getOrCreate(
                 hunter,
                 gameTime
         );
 
-        if (memory == null) {
-            return null;
+        if (state.hunger() < RetoldMobRules.eatThreshold(hunter)) {
+            return false;
         }
 
-        Entity entity = level.getEntity(memory.preyUuid());
+        AABB area = hunter.getBoundingBox().inflate(EASY_FOOD_RADIUS_BLOCKS);
 
-        if (!(entity instanceof LivingEntity rememberedPrey)) {
-            return null;
-        }
-
-        if (
-                !rememberedPrey.isAlive()
-                        || rememberedPrey.isRemoved()
-                        || !RetoldMobRules.canHuntPrey(hunter, rememberedPrey, gameTime)
-        ) {
-            return null;
-        }
-
-        return rememberedPrey;
-    }
-
-    private static void rememberPrey(
-            PathfinderMob hunter,
-            LivingEntity prey,
-            long gameTime,
-            int searchStep
-    ) {
-        Vec3 movement = prey.getDeltaMovement();
-
-        HUNT_MEMORIES.put(
-                hunter,
-                new HuntMemory(
-                        prey.getUUID(),
-                        prey.blockPosition().immutable(),
-                        new Vec3(
-                                movement.x,
-                                0.0D,
-                                movement.z
-                        ),
-                        gameTime,
-                        gameTime + HUNT_TRAIL_MEMORY_TICKS,
-                        searchStep
+        List<ItemEntity> foods = level.getEntitiesOfClass(
+                ItemEntity.class,
+                area,
+                item -> isValidEasyFood(
+                        hunter,
+                        item
                 )
         );
-    }
 
-    private static HuntMemory getActiveHuntMemory(
-            PathfinderMob hunter,
-            long gameTime
-    ) {
-        HuntMemory memory = HUNT_MEMORIES.get(hunter);
-
-        if (memory == null) {
-            return null;
-        }
-
-        if (memory.isExpired(gameTime)) {
-            HUNT_MEMORIES.remove(hunter);
-            return null;
-        }
-
-        return memory;
-    }
-
-    private static BlockPos getSearchPosition(
-            PathfinderMob hunter,
-            HuntMemory memory
-    ) {
-        Vec3 movement = memory.lastKnownMovement();
-
-        Vec3 direction;
-
-        if (movement.lengthSqr() > 0.0001D) {
-            direction = movement.normalize();
-        } else {
-            Vec3 fromHunterToTrail = new Vec3(
-                    memory.lastKnownPos().getX() + 0.5D - hunter.getX(),
-                    0.0D,
-                    memory.lastKnownPos().getZ() + 0.5D - hunter.getZ()
-            );
-
-            if (fromHunterToTrail.lengthSqr() <= 0.0001D) {
-                double angle = hunter.getRandom().nextDouble() * Math.PI * 2.0D;
-
-                direction = new Vec3(
-                        Math.cos(angle),
-                        0.0D,
-                        Math.sin(angle)
-                );
-            } else {
-                direction = fromHunterToTrail.normalize();
+        for (ItemEntity food : foods) {
+            if (hunter.distanceToSqr(food) <= EASY_FOOD_RADIUS_SQUARED) {
+                return true;
             }
         }
 
-        Vec3 side = new Vec3(
-                -direction.z,
-                0.0D,
-                direction.x
-        );
-
-        int step = Math.max(
-                0,
-                memory.searchStep()
-        );
-
-        double forwardDistance = 4.0D + Math.min(
-                12.0D,
-                step * 3.0D
-        );
-
-        double sideDistance = switch (step % 4) {
-            case 1 -> 3.5D;
-            case 2 -> -3.5D;
-            case 3 -> 6.0D;
-            default -> 0.0D;
-        };
-
-        Vec3 predicted = new Vec3(
-                memory.lastKnownPos().getX() + 0.5D,
-                memory.lastKnownPos().getY(),
-                memory.lastKnownPos().getZ() + 0.5D
-        )
-                .add(direction.scale(forwardDistance))
-                .add(side.scale(sideDistance));
-
-        return new BlockPos(
-                (int) Math.floor(predicted.x),
-                memory.lastKnownPos().getY(),
-                (int) Math.floor(predicted.z)
-        ).immutable();
+        return false;
     }
 
-    private static void clearHuntMemory(PathfinderMob hunter) {
-        if (hunter == null) {
-            return;
+    private static boolean isValidEasyFood(
+            PathfinderMob hunter,
+            ItemEntity item
+    ) {
+        if (hunter == null || item == null) {
+            return false;
         }
 
-        HUNT_MEMORIES.remove(hunter);
-    }
+        if (!item.isAlive() || item.isRemoved()) {
+            return false;
+        }
 
-    private static void stopHunt(PathfinderMob hunter) {
-        clearHuntMemory(hunter);
-        RetoldPredatorStrike.clear(hunter);
+        if (item.getItem().isEmpty()) {
+            return false;
+        }
 
-        RetoldAiControl.clear(hunter);
+        if (hunter.distanceToSqr(item) > EASY_FOOD_RADIUS_SQUARED) {
+            return false;
+        }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
+        if (!hunter.hasLineOfSight(item) && hunter.distanceToSqr(item) > CLOSE_CHASE_DISTANCE_SQUARED) {
+            return false;
+        }
+
+        return RetoldMobRules.canEatDroppedItem(
                 hunter,
-                null
+                item.getItem()
         );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                hunter,
-                false
-        );
-
-        hunter.setSprinting(false);
-        hunter.getNavigation().stop();
     }
 
     private static void stopHuntForFood(
@@ -918,84 +866,87 @@ public final class RetoldControlledHuntingEvents {
         hunter.getNavigation().stop();
     }
 
-    private static double getTrackingSpeed(
-            PathfinderMob hunter,
-            long gameTime
-    ) {
-        return clamp(
-                getBaseHuntSpeed(hunter) * 0.96D * RetoldPredatorStrike.chaseSpeedMultiplier(hunter, gameTime),
-                MIN_HUNT_SPEED,
-                MAX_HUNT_SPEED
+    private static void stopHunt(PathfinderMob hunter) {
+        clearHuntMemory(hunter);
+        RetoldPredatorStrike.clear(hunter);
+
+        RetoldAiControl.clear(hunter);
+
+        RetoldFactionTargetGuards.setTargetIgnoringGuard(
+                hunter,
+                null
         );
+
+        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
+                hunter,
+                false
+        );
+
+        hunter.setSprinting(false);
+        hunter.getNavigation().stop();
+    }
+
+    private static void clearHuntMemory(PathfinderMob hunter) {
+        HUNT_MEMORIES.remove(hunter);
     }
 
     private static double getHuntSpeed(
             PathfinderMob hunter,
-            LivingEntity prey,
             long gameTime
     ) {
-        double baseSpeed = getBaseHuntSpeed(hunter);
+        String path = RetoldMobRules.getEntityTypePath(
+                hunter.getType()
+        );
 
-        double distanceSquared = prey == null
-                ? FAR_CHASE_DISTANCE_SQUARED
-                : hunter.distanceToSqr(prey);
+        double baseSpeed = DEFAULT_HUNT_SPEED;
 
-        double modifier = 1.0D;
-
-        if (distanceSquared > FAR_CHASE_DISTANCE_SQUARED) {
-            modifier -= 0.04D;
+        if (path.equals("wolf")) {
+            baseSpeed = WOLF_HUNT_SPEED;
+        } else if (path.equals("cat") || path.equals("ocelot")) {
+            baseSpeed = CAT_HUNT_SPEED;
+        } else if (path.equals("fox")) {
+            baseSpeed = FOX_HUNT_SPEED;
+        } else if (path.equals("spider") || path.equals("cave_spider")) {
+            baseSpeed = SPIDER_HUNT_SPEED;
+        } else if (path.equals("dolphin")) {
+            baseSpeed = DOLPHIN_HUNT_SPEED;
         }
 
-        double roll = hunter.getRandom().nextDouble();
-
-        if (distanceSquared <= CLOSE_CHASE_DISTANCE_SQUARED && roll < 0.42D) {
-            modifier += 0.18D + hunter.getRandom().nextDouble() * 0.12D;
-        }
-
-        if (roll >= 0.42D && roll < 0.56D) {
-            modifier -= 0.08D + hunter.getRandom().nextDouble() * 0.10D;
-        }
-
-        modifier *= RetoldPredatorStrike.chaseSpeedMultiplier(
+        /*
+         * Strike multiplier is currently 1.0 in the latest strike file,
+         * but keeping the hook here lets strike logic tune chase speed later.
+         */
+        double speed = baseSpeed * RetoldPredatorStrike.chaseSpeedMultiplier(
                 hunter,
                 gameTime
         );
 
         return clamp(
-                baseSpeed * modifier,
+                speed,
                 MIN_HUNT_SPEED,
                 MAX_HUNT_SPEED
         );
     }
 
-    private static double getBaseHuntSpeed(PathfinderMob hunter) {
-        String hunterPath = RetoldMobRules.getEntityTypePath(
-                hunter.getType()
+    private static Vec3 randomHorizontalDirection(PathfinderMob hunter) {
+        double angle = hunter.getRandom().nextDouble() * Math.PI * 2.0D;
+
+        return new Vec3(
+                Math.cos(angle),
+                0.0D,
+                Math.sin(angle)
         );
+    }
 
-        if (
-                hunterPath.equals("cat")
-                        || hunterPath.equals("ocelot")
-        ) {
-            return CAT_HUNT_BASE_SPEED;
-        }
+    private static double blockDistanceSquared(
+            BlockPos first,
+            BlockPos second
+    ) {
+        double x = first.getX() - second.getX();
+        double y = first.getY() - second.getY();
+        double z = first.getZ() - second.getZ();
 
-        if (hunterPath.equals("fox")) {
-            return FOX_HUNT_BASE_SPEED;
-        }
-
-        if (
-                hunterPath.equals("spider")
-                        || hunterPath.equals("cave_spider")
-        ) {
-            return SPIDER_HUNT_BASE_SPEED;
-        }
-
-        if (hunterPath.equals("dolphin")) {
-            return DOLPHIN_HUNT_BASE_SPEED;
-        }
-
-        return DEFAULT_HUNT_BASE_SPEED;
+        return x * x + y * y + z * z;
     }
 
     private static double clamp(
@@ -1013,27 +964,82 @@ public final class RetoldControlledHuntingEvents {
         );
     }
 
-    private record HuntMemory(
-            UUID preyUuid,
-            BlockPos lastKnownPos,
-            Vec3 lastKnownMovement,
-            long lastSeenAt,
-            long expiresAt,
-            int searchStep
-    ) {
-        public boolean isExpired(long gameTime) {
-            return gameTime > expiresAt;
+    private static void stabilizeHuntMotion(PathfinderMob hunter) {
+        String path = RetoldMobRules.getEntityTypePath(
+                hunter.getType()
+        );
+
+        hunter.setSprinting(true);
+
+        /*
+         * Foxes still have vanilla pounce/jump behavior fighting Retold.
+         * During Retold HUNT, suppress the big upward vanilla leap.
+         * RetoldPredatorStrike still handles the forward intercept lunge.
+         */
+        if (path.equals("fox")) {
+            Vec3 movement = hunter.getDeltaMovement();
+
+            if (movement.y > 0.075D) {
+                hunter.setDeltaMovement(
+                        movement.x,
+                        0.075D,
+                        movement.z
+                );
+            }
         }
 
-        public HuntMemory nextSearchStep(long newExpiresAt) {
-            return new HuntMemory(
-                    preyUuid,
-                    lastKnownPos,
-                    lastKnownMovement,
-                    lastSeenAt,
-                    newExpiresAt,
-                    searchStep + 1
-            );
+        /*
+         * Cats/ocelots should stay committed during HUNT.
+         * Their speed is controlled by getHuntSpeed(...), but keeping sprint on
+         * prevents some vanilla-looking slow/stutter behavior.
+         */
+        if (path.equals("cat") || path.equals("ocelot")) {
+            hunter.setSprinting(true);
+        }
+    }
+
+    private static final class HuntMemory {
+        private final UUID preyId;
+        private final BlockPos lastKnownPos;
+        private final Vec3 lastKnownMovement;
+        private final long lastSeenAt;
+        private final long expiresAt;
+        private int searchStep;
+
+        private HuntMemory(
+                UUID preyId,
+                BlockPos lastKnownPos,
+                Vec3 lastKnownMovement,
+                long lastSeenAt,
+                long expiresAt,
+                int searchStep
+        ) {
+            this.preyId = preyId;
+            this.lastKnownPos = lastKnownPos;
+            this.lastKnownMovement = lastKnownMovement;
+            this.lastSeenAt = lastSeenAt;
+            this.expiresAt = expiresAt;
+            this.searchStep = searchStep;
+        }
+
+        private UUID preyId() {
+            return preyId;
+        }
+
+        private BlockPos lastKnownPos() {
+            return lastKnownPos;
+        }
+
+        private Vec3 lastKnownMovement() {
+            return lastKnownMovement;
+        }
+
+        private int searchStep() {
+            return searchStep;
+        }
+
+        private boolean isExpired(long gameTime) {
+            return gameTime > expiresAt;
         }
     }
 }
