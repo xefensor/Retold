@@ -3,8 +3,10 @@ package cz.xefensor.retold.registry;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
+import cz.xefensor.retold.block.AenderChronolithBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -41,6 +43,26 @@ public final class RetoldBlocks {
                             Registries.ITEM,
                             AENDER_STABILIZER.getId()
                     ))
+    );
+
+    public static final DeferredBlock<AenderChronolithBlock> DEV_TIME_ACCELERATOR = BLOCKS.register(
+            "aender_chronolith",
+            registryName -> new AenderChronolithBlock(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.OBSIDIAN)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .strength(12.0F, 1200.0F)
+                            .sound(SoundType.AMETHYST)
+                            .lightLevel(state -> state.getValue(AenderChronolithBlock.LIT) ? 12 : 0)
+            )
+    );
+
+    public static final DeferredItem<BlockItem> DEV_TIME_ACCELERATOR_ITEM = ITEMS.registerSimpleBlockItem(
+            DEV_TIME_ACCELERATOR,
+            properties -> properties.setId(ResourceKey.create(
+                    Registries.ITEM,
+                    DEV_TIME_ACCELERATOR.getId()
+            ))
     );
 
     public static final DeferredBlock<ExtinguishedTorchBlock> EXTINGUISHED_TORCH = BLOCKS.register(

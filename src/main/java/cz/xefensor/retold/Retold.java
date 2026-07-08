@@ -29,6 +29,7 @@ import cz.xefensor.retold.behavior.RetoldPackHuntingEvents;
 import cz.xefensor.retold.behavior.RetoldPredatorStaminaEvents;
 import cz.xefensor.retold.behavior.RetoldHeldFoodConsumptionEvents;
 import cz.xefensor.retold.registry.RetoldGameRules;
+import cz.xefensor.retold.event.AenderChronolithEvents;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -94,6 +95,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldPackHuntingEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPredatorStaminaEvents.class);
         NeoForge.EVENT_BUS.register(RetoldHeldFoodConsumptionEvents.class);
+        NeoForge.EVENT_BUS.register(AenderChronolithEvents.class);
 
         NeoForge.EVENT_BUS.addListener(this::addServerReloadListeners);
     }

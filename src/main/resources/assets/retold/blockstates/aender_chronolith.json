@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "retold:block/aender_chronolith"
+    },
+    "lit=true": {
+      "model": "retold:block/aender_chronolith"
+    }
+  }
+}
