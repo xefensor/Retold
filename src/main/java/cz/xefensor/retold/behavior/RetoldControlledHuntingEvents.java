@@ -250,7 +250,7 @@ public final class RetoldControlledHuntingEvents {
                 gameTime
         );
 
-        if (state.hunger() < RetoldMobRules.huntThreshold(hunter)) {
+        if (!RetoldMobRules.hasHuntDrive(hunter, state)) {
             return false;
         }
 

@@ -39,10 +39,12 @@ public final class RetoldControlledFleeEvents {
     private static final double WARNING_THREAT_RADIUS_BLOCKS = 9.0D;
     private static final double WARNING_THREAT_RADIUS_SQUARED =
             WARNING_THREAT_RADIUS_BLOCKS * WARNING_THREAT_RADIUS_BLOCKS;
+    private static final double FEAR_WARNING_RADIUS_BONUS_BLOCKS = 4.0D;
 
     private static final double BASE_FLEE_DISTANCE_BLOCKS = 16.0D;
     private static final double CLOSE_FLEE_DISTANCE_BLOCKS = 19.0D;
     private static final double FAR_FLEE_DISTANCE_BLOCKS = 13.0D;
+    private static final double FEAR_FLEE_DISTANCE_BONUS_BLOCKS = 3.0D;
 
     private static final double MEMORY_FLEE_DISTANCE_BLOCKS = 15.0D;
     private static final double HERD_PANIC_FLEE_DISTANCE_BLOCKS = 13.5D;
@@ -52,6 +54,7 @@ public final class RetoldControlledFleeEvents {
     private static final double HERD_PANIC_FLEE_SPEED = 1.13D;
     private static final double MIN_FLEE_SPEED = 0.94D;
     private static final double MAX_FLEE_SPEED = 1.62D;
+    private static final double FEAR_FLEE_SPEED_BONUS = 0.14D;
 
     private static final double CLOSE_THREAT_DISTANCE_BLOCKS = 5.0D;
     private static final double CLOSE_THREAT_DISTANCE_SQUARED =
@@ -87,6 +90,19 @@ public final class RetoldControlledFleeEvents {
     private static final double HERD_PANIC_HEARING_RADIUS_BLOCKS = 7.0D;
     private static final double HERD_PANIC_HEARING_RADIUS_SQUARED =
             HERD_PANIC_HEARING_RADIUS_BLOCKS * HERD_PANIC_HEARING_RADIUS_BLOCKS;
+
+    private static final double WARREN_FLEE_MAX_DISTANCE_BLOCKS = 32.0D;
+    private static final double WARREN_FLEE_MAX_DISTANCE_SQUARED =
+            WARREN_FLEE_MAX_DISTANCE_BLOCKS * WARREN_FLEE_MAX_DISTANCE_BLOCKS;
+
+    private static final double WARREN_FLEE_MIN_ALIGNMENT = -0.35D;
+    private static final double WARREN_FLEE_MIN_SPEED = 1.34D;
+    private static final double WARREN_HIDE_DISTANCE_BLOCKS = 3.0D;
+    private static final double WARREN_HIDE_DISTANCE_SQUARED =
+            WARREN_HIDE_DISTANCE_BLOCKS * WARREN_HIDE_DISTANCE_BLOCKS;
+    private static final double WARREN_HIDE_CLOSE_THREAT_BLOCKS = 4.0D;
+    private static final double WARREN_HIDE_CLOSE_THREAT_SQUARED =
+            WARREN_HIDE_CLOSE_THREAT_BLOCKS * WARREN_HIDE_CLOSE_THREAT_BLOCKS;
 
     private static final double AUDIBLE_MOVEMENT_THRESHOLD_SQUARED = 0.0016D;
 
@@ -191,6 +207,10 @@ public final class RetoldControlledFleeEvents {
             RetoldAiControl.clear(prey);
             prey.setSprinting(false);
             prey.getNavigation().stop();
+            markFleeEnded(
+                    prey,
+                    gameTime
+            );
         }
     }
 
@@ -323,7 +343,7 @@ public final class RetoldControlledFleeEvents {
          * Warning flee:
          * prey can flee a close hungry predator before the hunt starts.
          */
-        if (prey.distanceToSqr(threatMob) > WARNING_THREAT_RADIUS_SQUARED) {
+        if (prey.distanceToSqr(threatMob) > getWarningThreatRadiusSquared(prey)) {
             return false;
         }
 
@@ -333,7 +353,7 @@ public final class RetoldControlledFleeEvents {
             return false;
         }
 
-        if (predatorState.hunger() < RetoldMobRules.huntThreshold(threatMob)) {
+        if (!RetoldMobRules.hasHuntDrive(threatMob, predatorState)) {
             return false;
         }
 
@@ -515,6 +535,12 @@ public final class RetoldControlledFleeEvents {
             LivingEntity threat,
             long gameTime
     ) {
+        markDanger(
+                prey,
+                gameTime,
+                false
+        );
+
         Vec3 away = new Vec3(
                 prey.getX() - threat.getX(),
                 0.0D,
@@ -544,6 +570,12 @@ public final class RetoldControlledFleeEvents {
             PathfinderMob panicSource,
             long gameTime
     ) {
+        markDanger(
+                prey,
+                gameTime,
+                true
+        );
+
         FleeMemory sourceMemory = getActiveFleeMemory(
                 panicSource,
                 gameTime
@@ -611,6 +643,33 @@ public final class RetoldControlledFleeEvents {
         );
     }
 
+    private static void markDanger(
+            PathfinderMob prey,
+            long gameTime,
+            boolean copiedPanic
+    ) {
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                prey,
+                gameTime
+        );
+
+        state.markDanger(gameTime);
+        state.addStress(copiedPanic ? 2 : 4);
+        state.addConfidence(copiedPanic ? -1 : -3);
+    }
+
+    private static void markFleeEnded(
+            PathfinderMob prey,
+            long gameTime
+    ) {
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                prey,
+                gameTime
+        );
+
+        state.markFleeEnded(gameTime);
+    }
+
     private static FleeMemory getActiveFleeMemory(
             PathfinderMob prey,
             long gameTime
@@ -634,6 +693,16 @@ public final class RetoldControlledFleeEvents {
             LivingEntity threat,
             long gameTime
     ) {
+        if (
+                prey.distanceToSqr(threat) > WARREN_HIDE_CLOSE_THREAT_SQUARED
+                        && hideAtWarrenIfReached(
+                        prey,
+                        gameTime
+                )
+        ) {
+            return;
+        }
+
         Vec3 away = new Vec3(
                 prey.getX() - threat.getX(),
                 0.0D,
@@ -647,7 +716,10 @@ public final class RetoldControlledFleeEvents {
         }
 
         double distanceSquared = prey.distanceToSqr(threat);
-        double fleeDistance = getFleeDistance(distanceSquared);
+        double fleeDistance = getFleeDistance(
+                prey,
+                distanceSquared
+        );
 
         moveInFleeDirection(
                 prey,
@@ -663,6 +735,10 @@ public final class RetoldControlledFleeEvents {
             FleeMemory memory,
             long gameTime
     ) {
+        if (hideAtWarrenIfReached(prey, gameTime)) {
+            return;
+        }
+
         Vec3 away = memory.awayDirection();
 
         if (away == null || away.lengthSqr() <= 0.0001D) {
@@ -693,6 +769,7 @@ public final class RetoldControlledFleeEvents {
         double fleeDistance = memory.fromHerdPanic()
                 ? HERD_PANIC_FLEE_DISTANCE_BLOCKS
                 : MEMORY_FLEE_DISTANCE_BLOCKS;
+        fleeDistance += getFearPressure(prey) * FEAR_FLEE_DISTANCE_BONUS_BLOCKS;
 
         double speed = memory.fromHerdPanic()
                 ? getHerdPanicFleeSpeed(prey)
@@ -739,6 +816,18 @@ public final class RetoldControlledFleeEvents {
                 prey.blockPosition().getY(),
                 (int) Math.floor(target.z)
         );
+        BlockPos homeFleeTarget = getHomeFleeTarget(
+                prey,
+                safeDirection
+        );
+
+        if (homeFleeTarget != null) {
+            targetPos = homeFleeTarget;
+            speed = Math.max(
+                    speed,
+                    WARREN_FLEE_MIN_SPEED
+            );
+        }
 
         RetoldAiControl.refresh(
                 prey,
@@ -749,26 +838,129 @@ public final class RetoldControlledFleeEvents {
 
         prey.setSprinting(true);
 
+        BlockPos finalTargetPos = targetPos;
+        double finalSpeed = speed;
+
         RetoldAiControl.withNavigationBypass(() -> {
             prey.getNavigation().moveTo(
-                    targetPos.getX() + 0.5D,
-                    targetPos.getY(),
-                    targetPos.getZ() + 0.5D,
-                    speed
+                    finalTargetPos.getX() + 0.5D,
+                    finalTargetPos.getY(),
+                    finalTargetPos.getZ() + 0.5D,
+                    finalSpeed
             );
         });
     }
 
-    private static double getFleeDistance(double distanceSquared) {
+    private static boolean hideAtWarrenIfReached(
+            PathfinderMob prey,
+            long gameTime
+    ) {
+        RetoldAnimalHomeMemory home = getValidWarrenHome(prey);
+
+        if (home == null) {
+            return false;
+        }
+
+        if (prey.blockPosition().distSqr(home.pos()) > WARREN_HIDE_DISTANCE_SQUARED) {
+            return false;
+        }
+
+        RetoldAiControl.refresh(
+                prey,
+                RetoldAiControlMode.FLEE,
+                gameTime,
+                FLEE_CONTROL_TICKS
+        );
+
+        prey.setSprinting(false);
+        prey.getNavigation().stop();
+
+        RetoldAnimalHomes.markUsed(
+                prey,
+                gameTime
+        );
+
+        return true;
+    }
+
+    private static BlockPos getHomeFleeTarget(
+            PathfinderMob prey,
+            Vec3 safeDirection
+    ) {
+        RetoldAnimalHomeMemory home = getValidWarrenHome(prey);
+
+        if (home == null) {
+            return null;
+        }
+
+        if (prey.blockPosition().distSqr(home.pos()) > WARREN_FLEE_MAX_DISTANCE_SQUARED) {
+            return null;
+        }
+
+        Vec3 toHome = new Vec3(
+                home.pos().getX() + 0.5D - prey.getX(),
+                0.0D,
+                home.pos().getZ() + 0.5D - prey.getZ()
+        );
+
+        if (toHome.lengthSqr() <= 0.0001D) {
+            return home.pos();
+        }
+
+        Vec3 normalizedHome = toHome.normalize();
+
+        if (normalizedHome.dot(safeDirection) < WARREN_FLEE_MIN_ALIGNMENT) {
+            return null;
+        }
+
+        RetoldAnimalHomes.markUsed(
+                prey,
+                ((ServerLevel) prey.level()).getGameTime()
+        );
+
+        return home.pos();
+    }
+
+    private static RetoldAnimalHomeMemory getValidWarrenHome(PathfinderMob prey) {
+        if (!(prey.level() instanceof ServerLevel level)) {
+            return null;
+        }
+
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(prey);
+
+        if (!RetoldAnimalHomes.isValidFor(level, prey, home)) {
+            return null;
+        }
+
+        if (home.type() != RetoldAnimalHomeType.WARREN) {
+            return null;
+        }
+
+        return home;
+    }
+
+    private static double getWarningThreatRadiusSquared(PathfinderMob prey) {
+        double radius = WARNING_THREAT_RADIUS_BLOCKS
+                + getFearPressure(prey) * FEAR_WARNING_RADIUS_BONUS_BLOCKS;
+
+        return radius * radius;
+    }
+
+    private static double getFleeDistance(
+            PathfinderMob prey,
+            double distanceSquared
+    ) {
+        double fearBonus = getFearPressure(prey) * FEAR_FLEE_DISTANCE_BONUS_BLOCKS;
+
         if (distanceSquared <= CLOSE_THREAT_DISTANCE_SQUARED) {
-            return CLOSE_FLEE_DISTANCE_BLOCKS;
+            return CLOSE_FLEE_DISTANCE_BLOCKS + fearBonus;
         }
 
         if (distanceSquared > FAR_THREAT_DISTANCE_SQUARED) {
-            return FAR_FLEE_DISTANCE_BLOCKS;
+            return FAR_FLEE_DISTANCE_BLOCKS + fearBonus;
         }
 
-        return BASE_FLEE_DISTANCE_BLOCKS;
+        return BASE_FLEE_DISTANCE_BLOCKS + fearBonus;
     }
 
     private static double getFleeSpeed(
@@ -778,6 +970,7 @@ public final class RetoldControlledFleeEvents {
         double distanceSquared = prey.distanceToSqr(threat);
 
         double modifier = 1.0D;
+        modifier += getFearPressure(prey) * FEAR_FLEE_SPEED_BONUS;
 
         if (distanceSquared <= CLOSE_THREAT_DISTANCE_SQUARED) {
             modifier += 0.20D + prey.getRandom().nextDouble() * 0.18D;
@@ -806,6 +999,7 @@ public final class RetoldControlledFleeEvents {
 
     private static double getMemoryFleeSpeed(PathfinderMob prey) {
         double modifier = 1.0D;
+        modifier += getFearPressure(prey) * (FEAR_FLEE_SPEED_BONUS * 0.75D);
 
         double roll = prey.getRandom().nextDouble();
 
@@ -826,6 +1020,7 @@ public final class RetoldControlledFleeEvents {
 
     private static double getHerdPanicFleeSpeed(PathfinderMob prey) {
         double modifier = 1.0D;
+        modifier += getFearPressure(prey) * (FEAR_FLEE_SPEED_BONUS * 0.55D);
 
         double roll = prey.getRandom().nextDouble();
 
@@ -851,6 +1046,29 @@ public final class RetoldControlledFleeEvents {
                 Math.cos(angle),
                 0.0D,
                 Math.sin(angle)
+        );
+    }
+
+    private static double getFearPressure(PathfinderMob prey) {
+        RetoldMobState state = RetoldMobStates.get(prey);
+
+        if (state == null) {
+            return 0.0D;
+        }
+
+        double stressPressure = Math.max(
+                0.0D,
+                (state.stress() - 15.0D) / 85.0D
+        );
+        double confidencePressure = Math.max(
+                0.0D,
+                (50.0D - state.confidence()) / 50.0D
+        );
+
+        return clamp(
+                stressPressure * 0.65D + confidencePressure * 0.45D,
+                0.0D,
+                1.0D
         );
     }
 

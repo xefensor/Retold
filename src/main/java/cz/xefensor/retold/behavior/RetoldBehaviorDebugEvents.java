@@ -19,6 +19,8 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.ObjIntConsumer;
+import java.util.function.ToIntFunction;
 import java.util.UUID;
 
 public final class RetoldBehaviorDebugEvents {
@@ -62,6 +64,46 @@ public final class RetoldBehaviorDebugEvents {
                                                                 IntegerArgumentType.integer(-100, 100)
                                                         )
                                                         .executes(RetoldBehaviorDebugEvents::addLookedMobHunger)
+                                        )
+                        )
+                        .then(
+                                Commands.literal("setstress")
+                                        .then(
+                                                Commands.argument(
+                                                                "value",
+                                                                IntegerArgumentType.integer(0, 100)
+                                                        )
+                                                        .executes(RetoldBehaviorDebugEvents::setLookedMobStress)
+                                        )
+                        )
+                        .then(
+                                Commands.literal("addstress")
+                                        .then(
+                                                Commands.argument(
+                                                                "amount",
+                                                                IntegerArgumentType.integer(-100, 100)
+                                                        )
+                                                        .executes(RetoldBehaviorDebugEvents::addLookedMobStress)
+                                        )
+                        )
+                        .then(
+                                Commands.literal("setconfidence")
+                                        .then(
+                                                Commands.argument(
+                                                                "value",
+                                                                IntegerArgumentType.integer(0, 100)
+                                                        )
+                                                        .executes(RetoldBehaviorDebugEvents::setLookedMobConfidence)
+                                        )
+                        )
+                        .then(
+                                Commands.literal("addconfidence")
+                                        .then(
+                                                Commands.argument(
+                                                                "amount",
+                                                                IntegerArgumentType.integer(-100, 100)
+                                                        )
+                                                        .executes(RetoldBehaviorDebugEvents::addLookedMobConfidence)
                                         )
                         )
                         .then(
@@ -179,8 +221,73 @@ public final class RetoldBehaviorDebugEvents {
     }
 
     private static int setLookedMobHunger(CommandContext<CommandSourceStack> context) {
-        CommandSourceStack source = context.getSource();
+        return setLookedMobStateValue(
+                context,
+                "value",
+                "hunger",
+                RetoldMobState::setHunger,
+                RetoldMobState::hunger
+        );
+    }
 
+    private static int addLookedMobHunger(CommandContext<CommandSourceStack> context) {
+        return addLookedMobStateValue(
+                context,
+                "amount",
+                "hunger",
+                RetoldMobState::addHunger,
+                RetoldMobState::hunger
+        );
+    }
+
+    private static int setLookedMobStress(CommandContext<CommandSourceStack> context) {
+        return setLookedMobStateValue(
+                context,
+                "value",
+                "stress",
+                RetoldMobState::setStress,
+                RetoldMobState::stress
+        );
+    }
+
+    private static int addLookedMobStress(CommandContext<CommandSourceStack> context) {
+        return addLookedMobStateValue(
+                context,
+                "amount",
+                "stress",
+                RetoldMobState::addStress,
+                RetoldMobState::stress
+        );
+    }
+
+    private static int setLookedMobConfidence(CommandContext<CommandSourceStack> context) {
+        return setLookedMobStateValue(
+                context,
+                "value",
+                "confidence",
+                RetoldMobState::setConfidence,
+                RetoldMobState::confidence
+        );
+    }
+
+    private static int addLookedMobConfidence(CommandContext<CommandSourceStack> context) {
+        return addLookedMobStateValue(
+                context,
+                "amount",
+                "confidence",
+                RetoldMobState::addConfidence,
+                RetoldMobState::confidence
+        );
+    }
+
+    private static int setLookedMobStateValue(
+            CommandContext<CommandSourceStack> context,
+            String argumentName,
+            String label,
+            ObjIntConsumer<RetoldMobState> setter,
+            ToIntFunction<RetoldMobState> getter
+    ) {
+        CommandSourceStack source = context.getSource();
         PathfinderMob mob = findLookedMobFromSource(source);
 
         if (mob == null) {
@@ -190,28 +297,28 @@ public final class RetoldBehaviorDebugEvents {
             return 0;
         }
 
-        if (!(mob.level() instanceof ServerLevel level)) {
-            source.sendFailure(
-                    Component.literal("Mob is not in a server level.")
-            );
+        RetoldMobState state = getOrCreateDebugState(
+                source,
+                mob
+        );
+
+        if (state == null) {
             return 0;
         }
 
         int value = IntegerArgumentType.getInteger(
                 context,
-                "value"
+                argumentName
         );
 
-        RetoldMobState state = RetoldMobStates.getOrCreate(
-                mob,
-                level.getGameTime()
+        setter.accept(
+                state,
+                value
         );
-
-        state.setHunger(value);
 
         source.sendSuccess(
                 () -> Component.literal(
-                        "Set hunger of " + getEntityName(mob) + " to " + state.hunger()
+                        "Set " + label + " of " + getEntityName(mob) + " to " + getter.applyAsInt(state)
                 ),
                 true
         );
@@ -219,9 +326,14 @@ public final class RetoldBehaviorDebugEvents {
         return 1;
     }
 
-    private static int addLookedMobHunger(CommandContext<CommandSourceStack> context) {
+    private static int addLookedMobStateValue(
+            CommandContext<CommandSourceStack> context,
+            String argumentName,
+            String label,
+            ObjIntConsumer<RetoldMobState> adder,
+            ToIntFunction<RetoldMobState> getter
+    ) {
         CommandSourceStack source = context.getSource();
-
         PathfinderMob mob = findLookedMobFromSource(source);
 
         if (mob == null) {
@@ -231,28 +343,28 @@ public final class RetoldBehaviorDebugEvents {
             return 0;
         }
 
-        if (!(mob.level() instanceof ServerLevel level)) {
-            source.sendFailure(
-                    Component.literal("Mob is not in a server level.")
-            );
+        RetoldMobState state = getOrCreateDebugState(
+                source,
+                mob
+        );
+
+        if (state == null) {
             return 0;
         }
 
         int amount = IntegerArgumentType.getInteger(
                 context,
-                "amount"
+                argumentName
         );
 
-        RetoldMobState state = RetoldMobStates.getOrCreate(
-                mob,
-                level.getGameTime()
+        adder.accept(
+                state,
+                amount
         );
-
-        state.addHunger(amount);
 
         source.sendSuccess(
                 () -> Component.literal(
-                        "Changed hunger of " + getEntityName(mob) + " by " + amount + ". New hunger: " + state.hunger()
+                        "Changed " + label + " of " + getEntityName(mob) + " by " + amount + ". New " + label + ": " + getter.applyAsInt(state)
                 ),
                 true
         );
@@ -282,6 +394,23 @@ public final class RetoldBehaviorDebugEvents {
         );
 
         return 1;
+    }
+
+    private static RetoldMobState getOrCreateDebugState(
+            CommandSourceStack source,
+            PathfinderMob mob
+    ) {
+        if (!(mob.level() instanceof ServerLevel level)) {
+            source.sendFailure(
+                    Component.literal("Mob is not in a server level.")
+            );
+            return null;
+        }
+
+        return RetoldMobStates.getOrCreate(
+                mob,
+                level.getGameTime()
+        );
     }
 
     private static int printCounts(CommandContext<CommandSourceStack> context) {
@@ -407,6 +536,8 @@ public final class RetoldBehaviorDebugEvents {
     ) {
         RetoldMobState state = RetoldMobStates.get(mob);
         RetoldAiControlMode controlMode = RetoldAiControl.getMode(mob);
+        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
 
         boolean managed = RetoldMobRules.isManagedMob(mob);
         boolean predator = RetoldMobRules.isManagedPredator(mob);
@@ -420,13 +551,15 @@ public final class RetoldBehaviorDebugEvents {
                 : getEntityName(mob.getTarget());
 
         String thresholds = managed
-                ? " eat@" + RetoldMobRules.eatThreshold(mob) + " hunt@" + getSafeHuntThreshold(mob)
+                ? " eat@" + RetoldMobRules.eatThreshold(mob) + " hunt@" + getSafeHuntThresholdText(mob, state)
                 : "";
 
         return "Retold "
                 + getEntityName(mob)
                 + " h=" + hunger
                 + thresholds
+                + " profile=" + profileType
+                + " home=" + shortHomeText(home)
                 + " ctrl=" + controlMode
                 + " managed=" + yesNo(managed)
                 + " pred=" + yesNo(predator)
@@ -443,26 +576,85 @@ public final class RetoldBehaviorDebugEvents {
         );
 
         LivingEntity target = mob.getTarget();
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
 
         return "\nRetold behavior debug"
                 + "\nMob: " + getEntityName(mob) + " #" + mob.getId()
+                + "\nProfile: " + RetoldMobRules.profileType(mob)
+                + "\nHome: " + fullHomeText(home, gameTime)
                 + "\nManaged: " + yesNo(RetoldMobRules.isManagedMob(mob))
                 + "\nPredator: " + yesNo(RetoldMobRules.isManagedPredator(mob))
                 + "\nHunger: " + state.hunger()
                 + "\nEat threshold: " + RetoldMobRules.eatThreshold(mob)
-                + "\nHunt threshold: " + getSafeHuntThreshold(mob)
+                + "\nHunt threshold: " + getSafeBaseHuntThreshold(mob)
+                + "\nAdjusted hunt threshold: " + getSafeAdjustedHuntThreshold(mob, state)
                 + "\nHunger interval: " + RetoldMobRules.hungerInterval(mob) + " ticks"
                 + "\nStress: " + state.stress()
                 + "\nConfidence: " + state.confidence()
                 + "\nControl: " + RetoldAiControl.getMode(mob)
+                + "\nControl owner: " + RetoldAiControl.getOwner(mob)
+                + "\nControl priority: " + RetoldAiControl.getPriority(mob)
                 + "\nLast ate: " + ticksAgoText(gameTime, state.lastAteAt())
+                + "\nLast danger: " + ticksAgoText(gameTime, state.lastDangerAt())
+                + "\nLast flee end: " + ticksAgoText(gameTime, state.lastFleeEndedAt())
                 + "\nLast hunger tick: " + ticksAgoText(gameTime, state.lastHungerTickAt())
                 + "\nTarget: " + (target == null ? "none" : getEntityName(target) + " #" + target.getId());
     }
 
-    private static int getSafeHuntThreshold(PathfinderMob mob) {
+    private static String shortHomeText(RetoldAnimalHomeMemory home) {
+        if (home == null) {
+            return "none";
+        }
+
+        return home.type().name();
+    }
+
+    private static String fullHomeText(RetoldAnimalHomeMemory home, long gameTime) {
+        if (home == null) {
+            return "none";
+        }
+
+        return home.type()
+                + " @ "
+                + home.pos().toShortString()
+                + " used "
+                + ticksAgoText(gameTime, home.lastUsedAt());
+    }
+
+    private static String getSafeHuntThresholdText(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        int base = getSafeBaseHuntThreshold(mob);
+        int adjusted = getSafeAdjustedHuntThreshold(
+                mob,
+                state
+        );
+
+        if (base == adjusted) {
+            return Integer.toString(base);
+        }
+
+        return base + "/" + adjusted;
+    }
+
+    private static int getSafeBaseHuntThreshold(PathfinderMob mob) {
         try {
             return RetoldMobRules.huntThreshold(mob);
+        } catch (Throwable ignored) {
+            return -1;
+        }
+    }
+
+    private static int getSafeAdjustedHuntThreshold(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        try {
+            return RetoldMobRules.adjustedHuntThreshold(
+                    mob,
+                    state
+            );
         } catch (Throwable ignored) {
             return -1;
         }

@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldPackHuntingEvents {
+    private static final RetoldAiControlOwner CONTROL_OWNER = RetoldAiControlOwner.PACK_HUNTING;
+
     private static final Map<PathfinderMob, HuntingParty> PARTIES_BY_LEADER = new WeakHashMap<>();
     private static final Map<PathfinderMob, PathfinderMob> LEADER_BY_MEMBER = new WeakHashMap<>();
 
@@ -30,6 +32,7 @@ public final class RetoldPackHuntingEvents {
     private static final int PARTY_HUNT_CONTROL_TICKS = 20 * 5;
     private static final int PARTY_RETURN_CONTROL_TICKS = 20 * 6;
     private static final int PARTY_FEED_CONTROL_TICKS = 20 * 8;
+    private static final int PARTY_FEED_PRIORITY = 57;
 
     private static final int PARTY_SEARCH_DIRECTION_LIFE_TICKS = 20 * 45;
 
@@ -211,11 +214,6 @@ public final class RetoldPackHuntingEvents {
                 Comparator.comparingDouble(candidate -> leader.distanceToSqr(candidate))
         );
 
-        BlockPos packCenter = calculatePackCenter(
-                leader,
-                nearbyPack
-        );
-
         List<PathfinderMob> selectedMembers = new ArrayList<>();
 
         for (PathfinderMob candidate : nearbyPack) {
@@ -227,7 +225,7 @@ public final class RetoldPackHuntingEvents {
                 break;
             }
 
-            if (!canBeSelectedForHuntingParty(candidate)) {
+            if (!canBeSelectedForHuntingParty(candidate, gameTime)) {
                 continue;
             }
 
@@ -239,6 +237,19 @@ public final class RetoldPackHuntingEvents {
         if (totalPartySize < getMinPartySize(path)) {
             return;
         }
+
+        BlockPos calculatedPackCenter = calculatePackCenter(
+                leader,
+                selectedMembers
+        );
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.getOrCreatePackHome(
+                level,
+                leader,
+                selectedMembers,
+                calculatedPackCenter,
+                gameTime
+        );
+        BlockPos packCenter = home == null ? calculatedPackCenter : home.pos();
 
         HuntingParty party = new HuntingParty(
                 packCenter,
@@ -575,14 +586,17 @@ public final class RetoldPackHuntingEvents {
         RetoldPredatorStrike.clear(member);
 
         member.setSprinting(false);
-        member.getNavigation().stop();
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 member,
                 RetoldAiControlMode.FEED,
                 gameTime,
                 PARTY_FEED_CONTROL_TICKS
-        );
+        )) {
+            return false;
+        }
+
+        member.getNavigation().stop();
 
         RetoldAiControl.withNavigationBypass(() -> {
             member.getNavigation().moveTo(
@@ -726,6 +740,33 @@ public final class RetoldPackHuntingEvents {
                 || mode == RetoldAiControlMode.FEED;
     }
 
+    private static boolean claimPartyControl(
+            PathfinderMob mob,
+            RetoldAiControlMode mode,
+            long gameTime,
+            int ticks
+    ) {
+        if (mode == RetoldAiControlMode.FEED) {
+            return RetoldAiControl.tryClaim(
+                    mob,
+                    mode,
+                    CONTROL_OWNER,
+                    PARTY_FEED_PRIORITY,
+                    "party_feed",
+                    gameTime,
+                    ticks
+            );
+        }
+
+        return RetoldAiControl.tryClaim(
+                mob,
+                mode,
+                CONTROL_OWNER,
+                gameTime,
+                ticks
+        );
+    }
+
     private static void forcePartyHunt(
             PathfinderMob leader,
             HuntingParty party,
@@ -736,12 +777,14 @@ public final class RetoldPackHuntingEvents {
             return;
         }
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 leader,
                 RetoldAiControlMode.HUNT,
                 gameTime,
                 PARTY_HUNT_CONTROL_TICKS
-        );
+        )) {
+            return;
+        }
 
         leader.setSprinting(true);
 
@@ -1098,7 +1141,7 @@ public final class RetoldPackHuntingEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.huntThreshold(member);
+        return RetoldMobRules.hasHuntDrive(member, state);
     }
 
     private static boolean canLeadContinuedSearch(PathfinderMob member) {
@@ -1115,12 +1158,14 @@ public final class RetoldPackHuntingEvents {
             HuntingParty party,
             long gameTime
     ) {
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 leader,
                 RetoldAiControlMode.SEARCH,
                 gameTime,
                 PARTY_SEARCH_CONTROL_TICKS
-        );
+        )) {
+            return;
+        }
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 leader,
@@ -1210,12 +1255,14 @@ public final class RetoldPackHuntingEvents {
             return;
         }
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 member,
                 RetoldAiControlMode.REGROUP,
                 gameTime,
                 PARTY_RETURN_CONTROL_TICKS
-        );
+        )) {
+            return;
+        }
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 member,
@@ -1329,12 +1376,14 @@ public final class RetoldPackHuntingEvents {
             return;
         }
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 member,
                 RetoldAiControlMode.SEARCH,
                 gameTime,
                 PARTY_SEARCH_CONTROL_TICKS
-        );
+        )) {
+            return;
+        }
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 member,
@@ -1384,12 +1433,14 @@ public final class RetoldPackHuntingEvents {
             return;
         }
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 member,
                 RetoldAiControlMode.HUNT,
                 gameTime,
                 PARTY_HUNT_CONTROL_TICKS
-        );
+        )) {
+            return;
+        }
 
         member.setSprinting(true);
 
@@ -1474,11 +1525,15 @@ public final class RetoldPackHuntingEvents {
             BlockPos packCenter,
             long gameTime
     ) {
+        if (RetoldAiControl.isControlled(mob) && !RetoldAiControl.isControlledBy(mob, CONTROL_OWNER)) {
+            return false;
+        }
+
         if (mob.blockPosition().distSqr(packCenter) <= PACK_RETURN_DISTANCE_SQUARED) {
             if (
-                    RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.REGROUP)
-                            || RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.SEARCH)
-                            || RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.HUNT)
+                    RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.REGROUP, CONTROL_OWNER)
+                            || RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.SEARCH, CONTROL_OWNER)
+                            || RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.HUNT, CONTROL_OWNER)
             ) {
                 RetoldAiControl.clear(mob);
             }
@@ -1499,12 +1554,14 @@ public final class RetoldPackHuntingEvents {
             return true;
         }
 
-        RetoldAiControl.claim(
+        if (!claimPartyControl(
                 mob,
                 RetoldAiControlMode.REGROUP,
                 gameTime,
                 PARTY_RETURN_CONTROL_TICKS
-        );
+        )) {
+            return false;
+        }
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 mob,
@@ -1718,6 +1775,13 @@ public final class RetoldPackHuntingEvents {
                     candidate,
                     leader
             );
+            RetoldAnimalHomes.getOrCreatePackHome(
+                    level,
+                    leader,
+                    party.members,
+                    party.packCenter,
+                    gameTime
+            );
 
             joined++;
         }
@@ -1755,7 +1819,7 @@ public final class RetoldPackHuntingEvents {
             return false;
         }
 
-        if (!canBeSelectedForHuntingParty(candidate)) {
+        if (!canBeSelectedForHuntingParty(candidate, gameTime)) {
             return false;
         }
 
@@ -1794,7 +1858,10 @@ public final class RetoldPackHuntingEvents {
         return leader.distanceToSqr(candidate) <= radiusSquared;
     }
 
-    private static boolean canBeSelectedForHuntingParty(PathfinderMob candidate) {
+    private static boolean canBeSelectedForHuntingParty(
+            PathfinderMob candidate,
+            long gameTime
+    ) {
         if (candidate == null) {
             return false;
         }
@@ -1813,7 +1880,16 @@ public final class RetoldPackHuntingEvents {
             return false;
         }
 
-        return candidate.getTarget() == null || !candidate.getTarget().isAlive();
+        if (candidate.getTarget() != null && candidate.getTarget().isAlive()) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                candidate,
+                gameTime
+        );
+
+        return RetoldMobRules.hasHuntDrive(candidate, state);
     }
 
     private static boolean canOverrideMemberMode(PathfinderMob member) {
@@ -1873,15 +1949,11 @@ public final class RetoldPackHuntingEvents {
     private static void releaseMember(PathfinderMob member) {
         LEADER_BY_MEMBER.remove(member);
 
-        RetoldAiControlMode mode = RetoldAiControl.getMode(member);
-
-        if (
-                mode == RetoldAiControlMode.SEARCH
-                        || mode == RetoldAiControlMode.HUNT
-                        || mode == RetoldAiControlMode.REGROUP
-        ) {
-            RetoldAiControl.clear(member);
+        if (!canClearPartyEffects(member)) {
+            return;
         }
+
+        RetoldAiControl.clearIfOwnedBy(member, CONTROL_OWNER);
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 member,
@@ -1898,15 +1970,11 @@ public final class RetoldPackHuntingEvents {
     }
 
     private static void clearPartyControlIfOwnedByParty(PathfinderMob mob) {
-        RetoldAiControlMode mode = RetoldAiControl.getMode(mob);
-
-        if (
-                mode == RetoldAiControlMode.SEARCH
-                        || mode == RetoldAiControlMode.HUNT
-                        || mode == RetoldAiControlMode.REGROUP
-        ) {
-            RetoldAiControl.clear(mob);
+        if (!canClearPartyEffects(mob)) {
+            return;
         }
+
+        RetoldAiControl.clearIfOwnedBy(mob, CONTROL_OWNER);
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 mob,
@@ -1920,6 +1988,11 @@ public final class RetoldPackHuntingEvents {
 
         RetoldPredatorStrike.clear(mob);
         mob.setSprinting(false);
+    }
+
+    private static boolean canClearPartyEffects(PathfinderMob mob) {
+        return !RetoldAiControl.isControlled(mob)
+                || RetoldAiControl.isControlledBy(mob, CONTROL_OWNER);
     }
 
     private static BlockPos calculatePackCenter(
@@ -1990,10 +2063,7 @@ public final class RetoldPackHuntingEvents {
     }
 
     private static boolean isPackHunter(PathfinderMob mob) {
-        String path = getPath(mob);
-
-        return path.equals("wolf")
-                || path.equals("dolphin");
+        return RetoldMobRules.isPackSocialHunter(mob);
     }
 
     private static double getPackRadius(String path) {

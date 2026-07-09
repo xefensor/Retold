@@ -172,7 +172,7 @@ public final class RetoldPredatorSearchEvents {
                 gameTime
         );
 
-        if (state.hunger() < RetoldMobRules.huntThreshold(predator)) {
+        if (!RetoldMobRules.hasHuntDrive(predator, state)) {
             return false;
         }
 

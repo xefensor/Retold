@@ -34,6 +34,7 @@ public final class RetoldControlledRegroupEvents {
     private static final double LOOSE_REGROUP_START_DISTANCE_BLOCKS = 6.0D;
     private static final double LOOSE_REGROUP_START_DISTANCE_SQUARED =
             LOOSE_REGROUP_START_DISTANCE_BLOCKS * LOOSE_REGROUP_START_DISTANCE_BLOCKS;
+    private static final double FEAR_REGROUP_START_BONUS_BLOCKS = 5.0D;
 
     private static final double PREDATOR_PRESSURE_RADIUS_BLOCKS = 20.0D;
     private static final double PREDATOR_PRESSURE_RADIUS_SQUARED =
@@ -41,6 +42,7 @@ public final class RetoldControlledRegroupEvents {
 
     private static final double HERD_REGROUP_SPEED = 0.82D;
     private static final double LOOSE_REGROUP_SPEED = 0.72D;
+    private static final double FEAR_REGROUP_SPEED_BONUS = 0.12D;
 
     private static final int MIN_HERD_NEIGHBORS = 2;
     private static final int MIN_LOOSE_NEIGHBORS = 1;
@@ -104,9 +106,7 @@ public final class RetoldControlledRegroupEvents {
             return;
         }
 
-        double startDistanceSquared = isLooseGroupAnimal(animal)
-                ? LOOSE_REGROUP_START_DISTANCE_SQUARED
-                : HERD_REGROUP_START_DISTANCE_SQUARED;
+        double startDistanceSquared = getRegroupStartDistanceSquared(animal);
 
         if (
                 distanceSquared < startDistanceSquared
@@ -339,7 +339,7 @@ public final class RetoldControlledRegroupEvents {
         RetoldMobState predatorState = RetoldMobStates.get(predator);
 
         return predatorState != null
-                && predatorState.hunger() >= RetoldMobRules.huntThreshold(predator)
+                && RetoldMobRules.hasHuntDrive(predator, predatorState)
                 && animal.distanceToSqr(predator) <= 81.0D;
     }
 
@@ -357,9 +357,10 @@ public final class RetoldControlledRegroupEvents {
 
         animal.setSprinting(false);
 
-        double speed = isLooseGroupAnimal(animal)
+        double baseSpeed = isLooseGroupAnimal(animal)
                 ? LOOSE_REGROUP_SPEED
                 : HERD_REGROUP_SPEED;
+        double speed = baseSpeed + getSocialPressure(animal) * FEAR_REGROUP_SPEED_BONUS;
 
         RetoldAiControl.withNavigationBypass(() -> {
             animal.getNavigation().moveTo(
@@ -387,6 +388,55 @@ public final class RetoldControlledRegroupEvents {
     private static boolean isLooseGroupAnimal(PathfinderMob mob) {
         return isLooseGroupAnimalPath(
                 getPath(mob)
+        );
+    }
+
+    private static double getRegroupStartDistanceSquared(PathfinderMob animal) {
+        double baseDistance = isLooseGroupAnimal(animal)
+                ? LOOSE_REGROUP_START_DISTANCE_BLOCKS
+                : HERD_REGROUP_START_DISTANCE_BLOCKS;
+
+        double distance = baseDistance
+                + getSocialPressure(animal) * FEAR_REGROUP_START_BONUS_BLOCKS;
+
+        return distance * distance;
+    }
+
+    private static double getSocialPressure(PathfinderMob animal) {
+        RetoldMobState state = RetoldMobStates.get(animal);
+
+        if (state == null) {
+            return 0.0D;
+        }
+
+        double stressPressure = Math.max(
+                0.0D,
+                (state.stress() - 10.0D) / 90.0D
+        );
+        double confidencePressure = Math.max(
+                0.0D,
+                (55.0D - state.confidence()) / 55.0D
+        );
+
+        return clamp(
+                stressPressure * 0.55D + confidencePressure * 0.55D,
+                0.0D,
+                1.0D
+        );
+    }
+
+    private static double clamp(
+            double value,
+            double min,
+            double max
+    ) {
+        if (value < min) {
+            return min;
+        }
+
+        return Math.min(
+                value,
+                max
         );
     }
 

@@ -1,0 +1,16 @@
+package cz.xefensor.retold.behavior;
+
+public enum RetoldMobProfileType {
+    NONE,
+    HUNGRY_GRAZER,
+    SMALL_FORAGER,
+    PACK_PREDATOR,
+    SOLO_OPPORTUNIST,
+    AQUATIC_PREDATOR,
+    HUNGRY_SWARM_PREDATOR,
+    HIVE_COLONY,
+    NETHER_HUNGRY,
+    UNDEAD_HUNGRY,
+    SLIME_HUNGRY,
+    AQUATIC_TERRITORY_GUARD
+}

@@ -28,12 +28,63 @@ public final class RetoldAiControl {
                 mob,
                 new ControlState(
                         mode,
-                        gameTime + Math.max(
-                                1,
-                                ticks
-                        )
+                        RetoldAiControlOwner.SYSTEM,
+                        defaultPriority(mode),
+                        null,
+                        expiresAt(gameTime, ticks)
                 )
         );
+    }
+
+    public static boolean tryClaim(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            long gameTime,
+            int ticks
+    ) {
+        return tryClaim(
+                mob,
+                mode,
+                owner,
+                defaultPriority(mode),
+                null,
+                gameTime,
+                ticks
+        );
+    }
+
+    public static boolean tryClaim(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            int priority,
+            String reason,
+            long gameTime,
+            int ticks
+    ) {
+        if (mob == null || mode == null || mode == RetoldAiControlMode.NONE) {
+            return false;
+        }
+
+        ControlState current = getActiveState(mob);
+
+        if (!canReplace(current, owner, priority)) {
+            return false;
+        }
+
+        CONTROLLED_MOBS.put(
+                mob,
+                new ControlState(
+                        mode,
+                        owner == null ? RetoldAiControlOwner.SYSTEM : owner,
+                        priority,
+                        reason,
+                        expiresAt(gameTime, ticks)
+                )
+        );
+
+        return true;
     }
 
     public static void refresh(
@@ -45,6 +96,30 @@ public final class RetoldAiControl {
         claim(
                 mob,
                 mode,
+                gameTime,
+                ticks
+        );
+    }
+
+    public static boolean refreshIfOwnedBy(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            long gameTime,
+            int ticks
+    ) {
+        ControlState current = getActiveState(mob);
+
+        if (current == null || current.owner() != owner) {
+            return false;
+        }
+
+        return tryClaim(
+                mob,
+                mode,
+                owner,
+                current.priority(),
+                current.reason(),
                 gameTime,
                 ticks
         );
@@ -72,6 +147,28 @@ public final class RetoldAiControl {
                 && state.mode() == mode;
     }
 
+    public static boolean isControlledBy(
+            Mob mob,
+            RetoldAiControlOwner owner
+    ) {
+        ControlState state = getActiveState(mob);
+
+        return state != null
+                && state.owner() == owner;
+    }
+
+    public static boolean isControlledAsBy(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner
+    ) {
+        ControlState state = getActiveState(mob);
+
+        return state != null
+                && state.mode() == mode
+                && state.owner() == owner;
+    }
+
     public static RetoldAiControlMode getMode(Mob mob) {
         ControlState state = getActiveState(mob);
 
@@ -80,6 +177,49 @@ public final class RetoldAiControl {
         }
 
         return state.mode();
+    }
+
+    public static RetoldAiControlOwner getOwner(Mob mob) {
+        ControlState state = getActiveState(mob);
+
+        if (state == null) {
+            return RetoldAiControlOwner.SYSTEM;
+        }
+
+        return state.owner();
+    }
+
+    public static int getPriority(Mob mob) {
+        ControlState state = getActiveState(mob);
+
+        if (state == null) {
+            return 0;
+        }
+
+        return state.priority();
+    }
+
+    public static String getReason(Mob mob) {
+        ControlState state = getActiveState(mob);
+
+        if (state == null) {
+            return null;
+        }
+
+        return state.reason();
+    }
+
+    public static void clearIfOwnedBy(
+            Mob mob,
+            RetoldAiControlOwner owner
+    ) {
+        if (mob == null || owner == null) {
+            return;
+        }
+
+        if (isControlledBy(mob, owner)) {
+            CONTROLLED_MOBS.remove(mob);
+        }
     }
 
     public static int activeCount() {
@@ -197,8 +337,44 @@ public final class RetoldAiControl {
         return state;
     }
 
+    private static boolean canReplace(
+            ControlState current,
+            RetoldAiControlOwner owner,
+            int priority
+    ) {
+        if (current == null) {
+            return true;
+        }
+
+        RetoldAiControlOwner safeOwner = owner == null ? RetoldAiControlOwner.SYSTEM : owner;
+
+        return current.owner() == safeOwner
+                || priority > current.priority();
+    }
+
+    private static long expiresAt(long gameTime, int ticks) {
+        return gameTime + Math.max(1, ticks);
+    }
+
+    private static int defaultPriority(RetoldAiControlMode mode) {
+        return switch (mode) {
+            case NONE -> 0;
+            case REGROUP -> 20;
+            case SEARCH -> 30;
+            case HUNT -> 45;
+            case FEED -> 55;
+            case FLEE -> 75;
+            case SHELTER -> 80;
+            case ATTACK -> 85;
+            case TERRITORY -> 95;
+        };
+    }
+
     private record ControlState(
             RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            int priority,
+            String reason,
             long expiresAt
     ) {
         public boolean isExpired(long gameTime) {

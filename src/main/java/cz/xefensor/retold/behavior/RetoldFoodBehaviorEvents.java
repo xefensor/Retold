@@ -14,9 +14,12 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import java.util.List;
 
 public final class RetoldFoodBehaviorEvents {
+    private static final RetoldAiControlOwner CONTROL_OWNER = RetoldAiControlOwner.FOOD;
+
     private static final int THINK_INTERVAL_TICKS = 20;
     private static final int CLEANUP_INTERVAL_TICKS = 20 * 10;
     private static final int FEED_CONTROL_TICKS = 20 * 4;
+    private static final int FEED_PRIORITY = 56;
 
     private static final double DROPPED_FOOD_RADIUS = 8.0D;
     private static final double DROPPED_FOOD_RADIUS_SQUARED =
@@ -254,12 +257,9 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.refresh(
-                mob,
-                RetoldAiControlMode.FEED,
-                gameTime,
-                FEED_CONTROL_TICKS
-        );
+        if (!claimFoodControl(mob, gameTime)) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             mob.getNavigation().moveTo(
@@ -294,9 +294,7 @@ public final class RetoldFoodBehaviorEvents {
                 )
         );
 
-        state.addStress(-1);
-        state.addConfidence(1);
-        state.markAte(gameTime);
+        state.markFed(gameTime);
 
         stack.shrink(1);
 
@@ -373,12 +371,9 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.refresh(
-                mob,
-                RetoldAiControlMode.FEED,
-                gameTime,
-                FEED_CONTROL_TICKS
-        );
+        if (!claimFoodControl(mob, gameTime)) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             mob.getNavigation().moveTo(
@@ -412,9 +407,7 @@ public final class RetoldFoodBehaviorEvents {
                 )
         );
 
-        state.addStress(-1);
-        state.addConfidence(1);
-        state.markAte(gameTime);
+        state.markFed(gameTime);
 
         destroyForageBlock(
                 level,
@@ -452,5 +445,20 @@ public final class RetoldFoodBehaviorEvents {
         }
 
         return PASSIVE_FOOD_SPEED;
+    }
+
+    private static boolean claimFoodControl(
+            PathfinderMob mob,
+            long gameTime
+    ) {
+        return RetoldAiControl.tryClaim(
+                mob,
+                RetoldAiControlMode.FEED,
+                CONTROL_OWNER,
+                FEED_PRIORITY,
+                "seek_food",
+                gameTime,
+                FEED_CONTROL_TICKS
+        );
     }
 }

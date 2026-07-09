@@ -8,6 +8,8 @@ public final class RetoldMobState {
     private long lastHungerTickAt;
     private long lastAteAt;
     private long lastSeenAt;
+    private long lastDangerAt;
+    private long lastFleeEndedAt;
 
     public int hunger() {
         return hunger;
@@ -61,12 +63,34 @@ public final class RetoldMobState {
         lastAteAt = gameTime;
     }
 
+    public void markFed(long gameTime) {
+        addStress(-2);
+        addConfidence(2);
+        markAte(gameTime);
+    }
+
     public long lastSeenAt() {
         return lastSeenAt;
     }
 
     public void markSeen(long gameTime) {
         lastSeenAt = gameTime;
+    }
+
+    public long lastDangerAt() {
+        return lastDangerAt;
+    }
+
+    public void markDanger(long gameTime) {
+        lastDangerAt = gameTime;
+    }
+
+    public long lastFleeEndedAt() {
+        return lastFleeEndedAt;
+    }
+
+    public void markFleeEnded(long gameTime) {
+        lastFleeEndedAt = gameTime;
     }
 
     private static int clampPercent(int value) {

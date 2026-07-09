@@ -122,6 +122,7 @@ public final class RetoldHeldFoodConsumptionEvents {
         state.addHunger(
                 -relief
         );
+        state.markFed(gameTime);
 
         RetoldAiControl.claim(
                 mob,

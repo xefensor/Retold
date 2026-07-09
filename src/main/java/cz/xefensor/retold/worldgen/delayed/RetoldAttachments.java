@@ -1,6 +1,7 @@
 package cz.xefensor.retold.worldgen.delayed;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.behavior.RetoldAnimalHomeData;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -17,6 +18,17 @@ public final class RetoldAttachments {
                     () -> AttachmentType
                             .builder(() -> RetoldChunkStructureData.EMPTY)
                             .serialize(RetoldChunkStructureData.CODEC.fieldOf("data"))
+                            .build()
+            );
+    public static final Supplier<AttachmentType<RetoldAnimalHomeData>> ANIMAL_HOME_DATA =
+            ATTACHMENT_TYPES.register(
+                    "animal_home_data",
+                    () -> AttachmentType
+                            .builder(() -> RetoldAnimalHomeData.EMPTY)
+                            .serialize(
+                                    RetoldAnimalHomeData.CODEC.fieldOf("data"),
+                                    RetoldAnimalHomeData::shouldSerialize
+                            )
                             .build()
             );
 

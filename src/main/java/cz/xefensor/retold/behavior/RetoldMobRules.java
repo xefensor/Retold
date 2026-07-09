@@ -9,29 +9,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class RetoldMobRules {
-    private static final int GRAZER_HUNGER_INTERVAL = 440;
-    private static final int SMALL_PASSIVE_HUNGER_INTERVAL = 390;
-
-    /*
-     * Predators should enter the food loop around 3 times per Minecraft day.
-     * 18 hunger * 460 ticks = 8,280 ticks.
-     * 24,000 / 8,280 = about 2.9.
-     */
-    private static final int PREDATOR_HUNGER_INTERVAL = 460;
-
-    private static final int NETHER_HUNGRY_INTERVAL = 380;
-    private static final int UNDEAD_HUNGRY_INTERVAL = 360;
-    private static final int SLIME_HUNGER_INTERVAL = 360;
-    private static final int DEFAULT_HUNGER_INTERVAL = 460;
-
-    private static final int DEFAULT_EAT_THRESHOLD = 18;
-
-    /*
-     * Hunting starts after the mob already tried easier food.
-     * This is intentionally not 80+ starvation anymore.
-     */
-    private static final int DEFAULT_HUNT_THRESHOLD = 36;
-    private static final int SPIDER_NIGHT_HUNT_THRESHOLD = 30;
+    private static final int DESPERATE_HUNT_HUNGER = 86;
+    private static final int LOW_CONFIDENCE_HUNT_GATE = 35;
+    private static final int HIGH_STRESS_HUNT_GATE = 55;
 
     private RetoldMobRules() {
     }
@@ -43,19 +23,7 @@ public final class RetoldMobRules {
 
         String path = getEntityTypePath(entity.getType());
 
-        if (path.equals("villager")) {
-            return false;
-        }
-
-        return isGrazer(path)
-                || isSmallPassive(path)
-                || isPredator(path)
-                || isNetherHungry(path)
-                || isUndeadHungry(path)
-                || isSlime(path)
-                || path.equals("bee")
-                || path.equals("guardian")
-                || path.equals("elder_guardian");
+        return RetoldMobProfiles.isManaged(path);
     }
 
     public static boolean isManagedPredator(Entity entity) {
@@ -63,9 +31,25 @@ public final class RetoldMobRules {
             return false;
         }
 
-        return isPredator(
-                getEntityTypePath(entity.getType())
-        );
+        return RetoldMobProfiles.get(entity).predator();
+    }
+
+    public static RetoldMobProfile profile(Entity entity) {
+        return RetoldMobProfiles.get(entity);
+    }
+
+    public static RetoldMobProfileType profileType(Entity entity) {
+        return RetoldMobProfiles.get(entity).type();
+    }
+
+    public static boolean isPackSocialHunter(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        RetoldMobProfile profile = RetoldMobProfiles.get(entity);
+
+        return profile.predator() && profile.packSocial();
     }
 
     public static boolean shouldBlockVanillaPredatorTarget(
@@ -96,47 +80,61 @@ public final class RetoldMobRules {
     }
 
     public static int hungerInterval(PathfinderMob mob) {
-        String path = getEntityTypePath(mob.getType());
-
-        if (isGrazer(path)) {
-            return GRAZER_HUNGER_INTERVAL;
-        }
-
-        if (isSmallPassive(path)) {
-            return SMALL_PASSIVE_HUNGER_INTERVAL;
-        }
-
-        if (isPredator(path)) {
-            return PREDATOR_HUNGER_INTERVAL;
-        }
-
-        if (isNetherHungry(path)) {
-            return NETHER_HUNGRY_INTERVAL;
-        }
-
-        if (isUndeadHungry(path)) {
-            return UNDEAD_HUNGRY_INTERVAL;
-        }
-
-        if (isSlime(path)) {
-            return SLIME_HUNGER_INTERVAL;
-        }
-
-        return DEFAULT_HUNGER_INTERVAL;
+        return RetoldMobProfiles.get(mob).hungerIntervalTicks();
     }
 
     public static int eatThreshold(PathfinderMob mob) {
-        return DEFAULT_EAT_THRESHOLD;
+        return RetoldMobProfiles.get(mob).eatThreshold();
     }
 
     public static int huntThreshold(PathfinderMob mob) {
-        String path = getEntityTypePath(mob.getType());
+        return RetoldMobProfiles.get(mob).huntThreshold();
+    }
 
-        if (isSpider(path)) {
-            return SPIDER_NIGHT_HUNT_THRESHOLD;
+    public static boolean hasHuntDrive(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        if (mob == null || state == null) {
+            return false;
         }
 
-        return DEFAULT_HUNT_THRESHOLD;
+        int hunger = state.hunger();
+
+        if (hunger >= DESPERATE_HUNT_HUNGER) {
+            return true;
+        }
+
+        return hunger >= adjustedHuntThreshold(
+                mob,
+                state
+        );
+    }
+
+    public static int adjustedHuntThreshold(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        int threshold = huntThreshold(mob);
+
+        if (state == null) {
+            return threshold;
+        }
+
+        int confidencePenalty = Math.max(
+                0,
+                LOW_CONFIDENCE_HUNT_GATE - state.confidence()
+        ) / 2;
+
+        int stressPenalty = Math.max(
+                0,
+                state.stress() - HIGH_STRESS_HUNT_GATE
+        ) / 3;
+
+        return Math.min(
+                DESPERATE_HUNT_HUNGER,
+                threshold + confidencePenalty + stressPenalty
+        );
     }
 
     public static int foodRelief(
@@ -380,56 +378,31 @@ public final class RetoldMobRules {
     }
 
     private static boolean isPredator(String path) {
-        return path.equals("wolf")
-                || path.equals("fox")
-                || path.equals("cat")
-                || path.equals("ocelot")
-                || isSpider(path)
-                || path.equals("dolphin");
+        return RetoldMobProfiles.isPredator(path);
     }
 
     private static boolean isSpider(String path) {
-        return path.equals("spider")
-                || path.equals("cave_spider");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.HUNGRY_SWARM_PREDATOR);
     }
 
     private static boolean isGrazer(String path) {
-        return path.equals("cow")
-                || path.equals("sheep")
-                || path.equals("goat")
-                || path.equals("horse")
-                || path.equals("donkey")
-                || path.equals("mule")
-                || path.equals("llama")
-                || path.equals("trader_llama")
-                || path.equals("camel");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.HUNGRY_GRAZER);
     }
 
     private static boolean isSmallPassive(String path) {
-        return path.equals("pig")
-                || path.equals("chicken")
-                || path.equals("rabbit");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.SMALL_FORAGER);
     }
 
     private static boolean isNetherHungry(String path) {
-        return path.equals("piglin")
-                || path.equals("piglin_brute")
-                || path.equals("hoglin");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.NETHER_HUNGRY);
     }
 
     private static boolean isUndeadHungry(String path) {
-        return path.equals("zombie")
-                || path.equals("zombie_villager")
-                || path.equals("husk")
-                || path.equals("drowned")
-                || path.equals("phantom")
-                || path.equals("ghast")
-                || path.equals("zoglin");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.UNDEAD_HUNGRY);
     }
 
     private static boolean isSlime(String path) {
-        return path.equals("slime")
-                || path.equals("magma_cube");
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.SLIME_HUNGRY);
     }
 
     private static boolean isPassiveFoodPrey(String path) {

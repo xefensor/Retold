@@ -1,0 +1,256 @@
+package cz.xefensor.retold.behavior;
+
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public final class RetoldMobProfiles {
+    private static final int DEFAULT_EAT_THRESHOLD = 18;
+    private static final int DEFAULT_HUNT_THRESHOLD = 36;
+
+    private static final RetoldMobProfile NONE = new RetoldMobProfile(
+            RetoldMobProfileType.NONE,
+            false,
+            false,
+            false,
+            false,
+            460,
+            DEFAULT_EAT_THRESHOLD,
+            DEFAULT_HUNT_THRESHOLD
+    );
+
+    private static final Map<String, RetoldMobProfile> PROFILES = new HashMap<>();
+
+    static {
+        registerGrazer("cow", "sheep", "goat", "horse", "donkey", "mule", "llama", "trader_llama", "camel");
+        registerSmallForager("pig", "chicken", "rabbit");
+        registerPackPredator("wolf");
+        registerSoloOpportunist("fox", "cat", "ocelot");
+        registerAquaticPredator("dolphin");
+        registerHungrySwarmPredator("spider", "cave_spider");
+        registerHiveColony("bee");
+        registerNetherHungry("piglin", "piglin_brute", "hoglin");
+        registerUndeadHungry("zombie", "zombie_villager", "husk", "drowned", "phantom", "ghast", "zoglin");
+        registerSlimeHungry("slime", "magma_cube");
+        registerAquaticTerritoryGuard("guardian", "elder_guardian");
+    }
+
+    private RetoldMobProfiles() {
+    }
+
+    public static RetoldMobProfile get(Entity entity) {
+        if (entity == null) {
+            return NONE;
+        }
+
+        return get(entity.getType());
+    }
+
+    public static RetoldMobProfile get(EntityType<?> entityType) {
+        return get(RetoldMobRules.getEntityTypePath(entityType));
+    }
+
+    public static RetoldMobProfile get(String entityPath) {
+        return PROFILES.getOrDefault(entityPath, NONE);
+    }
+
+    public static boolean isManaged(String entityPath) {
+        return get(entityPath).managed();
+    }
+
+    public static boolean isPredator(String entityPath) {
+        return get(entityPath).predator();
+    }
+
+    public static boolean isPackSocial(String entityPath) {
+        return get(entityPath).packSocial();
+    }
+
+    public static boolean isType(String entityPath, RetoldMobProfileType type) {
+        return get(entityPath).is(type);
+    }
+
+    private static void registerGrazer(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.HUNGRY_GRAZER,
+                        true,
+                        false,
+                        true,
+                        false,
+                        440,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerSmallForager(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.SMALL_FORAGER,
+                        true,
+                        false,
+                        true,
+                        false,
+                        390,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerPackPredator(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.PACK_PREDATOR,
+                        true,
+                        true,
+                        true,
+                        false,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerSoloOpportunist(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.SOLO_OPPORTUNIST,
+                        true,
+                        true,
+                        false,
+                        false,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerAquaticPredator(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.AQUATIC_PREDATOR,
+                        true,
+                        true,
+                        true,
+                        false,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerHungrySwarmPredator(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.HUNGRY_SWARM_PREDATOR,
+                        true,
+                        true,
+                        false,
+                        false,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        30
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerHiveColony(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.HIVE_COLONY,
+                        true,
+                        false,
+                        true,
+                        false,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerNetherHungry(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.NETHER_HUNGRY,
+                        true,
+                        false,
+                        true,
+                        false,
+                        380,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerUndeadHungry(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.UNDEAD_HUNGRY,
+                        true,
+                        false,
+                        true,
+                        false,
+                        360,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerSlimeHungry(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.SLIME_HUNGRY,
+                        true,
+                        false,
+                        false,
+                        false,
+                        360,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void registerAquaticTerritoryGuard(String... entityPaths) {
+        register(
+                new RetoldMobProfile(
+                        RetoldMobProfileType.AQUATIC_TERRITORY_GUARD,
+                        true,
+                        false,
+                        true,
+                        true,
+                        460,
+                        DEFAULT_EAT_THRESHOLD,
+                        DEFAULT_HUNT_THRESHOLD
+                ),
+                entityPaths
+        );
+    }
+
+    private static void register(RetoldMobProfile profile, String... entityPaths) {
+        for (String entityPath : entityPaths) {
+            PROFILES.put(entityPath, profile);
+        }
+    }
+}
