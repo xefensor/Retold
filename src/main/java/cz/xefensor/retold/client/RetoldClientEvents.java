@@ -1,6 +1,7 @@
 package cz.xefensor.retold.client;
 
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
+import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.sky.RetoldClientEndSky;
 import cz.xefensor.retold.client.sky.RetoldEndSkyPatcher;
 import net.minecraft.client.Minecraft;
@@ -19,6 +20,7 @@ public final class RetoldClientEvents {
 
     public static void register(IEventBus modEventBus) {
         modEventBus.addListener(RetoldClientEvents::addEntityRenderLayers);
+        RetoldChronolithBeamClient.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientTick);
     }
 

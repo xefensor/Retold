@@ -16,6 +16,20 @@ public final class RetoldPlayerSyncEvents {
 
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        syncPlayer(event);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        syncPlayer(event);
+    }
+
+    @SubscribeEvent
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        syncPlayer(event);
+    }
+
+    private static void syncPlayer(PlayerEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer serverPlayer)) {
             return;
         }
@@ -34,5 +48,7 @@ public final class RetoldPlayerSyncEvents {
                 serverPlayer,
                 new RetoldEndSkySeedSyncPayload(endSkyData.getSeed())
         );
+
+        AenderChronolithEvents.syncToPlayer(serverPlayer);
     }
 }

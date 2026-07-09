@@ -1,6 +1,7 @@
 package cz.xefensor.retold.network;
 
 import cz.xefensor.retold.client.RetoldTeachingPreviewClient;
+import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.stage.RetoldClientStage;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.villager.RetoldVillagerTeaching;
@@ -50,6 +51,12 @@ public final class RetoldNetworking {
                         RetoldVillagerTeaching.sendPreviewToClient(player);
                     }
                 }
+        );
+
+        registrar.playToClient(
+                RetoldChronolithBeamPayload.TYPE,
+                RetoldChronolithBeamPayload.STREAM_CODEC,
+                (payload, context) -> RetoldChronolithBeamClient.handleSync(payload)
         );
 
         registrar.playToClient(
