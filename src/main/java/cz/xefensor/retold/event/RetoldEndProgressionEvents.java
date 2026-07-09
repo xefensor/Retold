@@ -1,6 +1,8 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.effect.RetoldRitualEffects;
+import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
@@ -22,6 +24,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public final class RetoldEndProgressionEvents {
+    private static final int DRAGON_EGG_CRACK_BREAKER_ID = -4711026;
+    private static final int DRAGON_EGG_CRACK_REFRESH_INTERVAL_TICKS = 20;
+
     private RetoldEndProgressionEvents() {
     }
 
@@ -48,6 +53,8 @@ public final class RetoldEndProgressionEvents {
         if (data.getStage() == RetoldWorldStage.STAGE_1) {
             RetoldStageManager.setStage(endLevel, RetoldWorldStage.STAGE_2);
         }
+
+        refreshDragonEggElementCrack(endLevel, data);
     }
 
     @SubscribeEvent
@@ -69,12 +76,18 @@ public final class RetoldEndProgressionEvents {
         }
 
         ItemStack stack = event.getItemStack();
+        RetoldWorldData data = RetoldWorldData.get(serverLevel);
+        RetoldElementType element = getElementForStack(stack);
 
-        if (!stack.is(Items.NETHER_STAR)) {
+        if (element != null) {
+            handleElementUse(event, serverLevel, data, stack, element);
             return;
         }
 
-        RetoldWorldData data = RetoldWorldData.get(serverLevel);
+        // Temporary dev shortcut until all four element paths exist.
+        if (!stack.is(Items.NETHER_STAR)) {
+            return;
+        }
 
         if (data.getStage() != RetoldWorldStage.STAGE_2) {
             Player player = event.getEntity();
@@ -92,13 +105,112 @@ public final class RetoldEndProgressionEvents {
             stack.shrink(1);
         }
 
-        RetoldRitualEffects.playDragonEggStage3Ritual(serverLevel, event.getPos());
-
-        serverLevel.removeBlock(event.getPos(), false);
-        RetoldStageManager.setStage(serverLevel, RetoldWorldStage.STAGE_3);
+        hatchDragonEgg(serverLevel, event.getPos());
 
         event.setCancellationResult(InteractionResult.SUCCESS);
         event.setCanceled(true);
+    }
+
+    private static void handleElementUse(
+            PlayerInteractEvent.RightClickBlock event,
+            ServerLevel serverLevel,
+            RetoldWorldData data,
+            ItemStack stack,
+            RetoldElementType element
+    ) {
+        Player player = event.getEntity();
+
+        if (data.getStage() != RetoldWorldStage.STAGE_2) {
+            player.sendOverlayMessage(
+                    Component.literal("The egg does not respond.")
+            );
+
+            event.setCancellationResult(InteractionResult.FAIL);
+            event.setCanceled(true);
+            return;
+        }
+
+        if (data.hasElementOffered(element)) {
+            player.sendOverlayMessage(
+                    Component.literal("The egg has already absorbed " + element.absorbedName() + ".")
+            );
+
+            event.setCancellationResult(InteractionResult.FAIL);
+            event.setCanceled(true);
+            return;
+        }
+
+        if (!player.isCreative()) {
+            stack.shrink(1);
+        }
+
+        data.offerElement(element);
+        data.setDragonEggPos(event.getPos());
+        RetoldRitualEffects.playDragonEggElementAccepted(serverLevel, event.getPos());
+        showDragonEggElementCrack(serverLevel, event.getPos(), data.offeredElementCount());
+        player.sendOverlayMessage(
+                Component.literal("The egg absorbs the " + element.displayName() + ".")
+        );
+
+        if (data.hasAllElements()) {
+            hatchDragonEgg(serverLevel, event.getPos());
+        }
+
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
+    }
+
+    private static RetoldElementType getElementForStack(ItemStack stack) {
+        if (stack.is(RetoldBlocks.WATER_ELEMENT)) {
+            return RetoldElementType.WATER;
+        }
+
+        return null;
+    }
+
+    private static void hatchDragonEgg(ServerLevel serverLevel, BlockPos pos) {
+        RetoldRitualEffects.playDragonEggStage3Ritual(serverLevel, pos);
+        serverLevel.destroyBlockProgress(DRAGON_EGG_CRACK_BREAKER_ID, pos, -1);
+
+        serverLevel.removeBlock(pos, false);
+        RetoldWorldData.get(serverLevel).clearDragonEggPos();
+        RetoldStageManager.setStage(serverLevel, RetoldWorldStage.STAGE_3);
+    }
+
+    private static void refreshDragonEggElementCrack(ServerLevel level, RetoldWorldData data) {
+        if (data.getStage() != RetoldWorldStage.STAGE_2) {
+            return;
+        }
+
+        int offeredElementCount = data.offeredElementCount();
+
+        if (offeredElementCount <= 0) {
+            return;
+        }
+
+        BlockPos dragonEggPos = data.getDragonEggPos();
+
+        if (dragonEggPos == null) {
+            return;
+        }
+
+        if (!level.getBlockState(dragonEggPos).is(Blocks.DRAGON_EGG)) {
+            level.destroyBlockProgress(DRAGON_EGG_CRACK_BREAKER_ID, dragonEggPos, -1);
+            data.clearDragonEggPos();
+            return;
+        }
+
+        if (level.getGameTime() % DRAGON_EGG_CRACK_REFRESH_INTERVAL_TICKS != 0) {
+            return;
+        }
+
+        showDragonEggElementCrack(level, dragonEggPos, offeredElementCount);
+    }
+
+    private static void showDragonEggElementCrack(ServerLevel level, BlockPos pos, int offeredElementCount) {
+        int crackProgress = Math.min(9, Math.max(1, offeredElementCount * 2));
+
+        level.destroyBlockProgress(DRAGON_EGG_CRACK_BREAKER_ID, pos, crackProgress);
     }
 
     @SubscribeEvent

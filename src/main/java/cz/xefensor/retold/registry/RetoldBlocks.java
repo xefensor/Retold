@@ -1,6 +1,7 @@
 package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.item.WaterElementItem;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
 import cz.xefensor.retold.block.AenderChronolithBlock;
@@ -8,6 +9,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.SoundType;
@@ -20,6 +22,14 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public final class RetoldBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(Retold.MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Retold.MODID);
+
+    public static final DeferredItem<WaterElementItem> WATER_ELEMENT = ITEMS.registerItem(
+            "water_element",
+            WaterElementItem::new,
+            properties -> properties
+                    .stacksTo(1)
+                    .rarity(Rarity.EPIC)
+    );
 
     public static final DeferredBlock<Block> AENDER_STABILIZER = BLOCKS.register(
             "aender_stabilizer",

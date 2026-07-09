@@ -1,3 +1,5 @@
 {
-  "block.retold.aender_stabilizer": "Aender Stabilizer"
+  "block.retold.aender_stabilizer": "Aender Stabilizer",
+  "item.retold.water_element": "Water Element",
+  "item.retold.water_element.tooltip": "A condensed current of living energy."
 }

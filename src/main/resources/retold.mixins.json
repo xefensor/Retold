@@ -22,7 +22,8 @@
     "PathNavigationMixin",
     "MobHurtTargetMixin",
     "BedBlockMixin",
-    "ServerLevelSleepMixin"
+    "ServerLevelSleepMixin",
+    "ElderGuardianMixin"
   ],
   "client": [
     "MerchantScreenMixin"
