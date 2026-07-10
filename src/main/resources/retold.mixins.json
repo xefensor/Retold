@@ -27,6 +27,7 @@
     "ElderGuardianMixin"
   ],
   "client": [
+    "AenderEntityLightingMixin",
     "AenderRenderSectionRegionLightingMixin",
     "MerchantScreenMixin"
   ],

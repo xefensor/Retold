@@ -31,15 +31,12 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             ).apply(instance, AenderChunkGenerator::new));
 
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
+    private static final BlockState WATER = Blocks.WATER.defaultBlockState();
     private static final BlockState SHORT_GRASS = Blocks.SHORT_GRASS.defaultBlockState();
     private static final BlockState FERN = Blocks.FERN.defaultBlockState();
     private static final BlockState[] FLOWERS = {
-            Blocks.DANDELION.defaultBlockState(),
-            Blocks.POPPY.defaultBlockState(),
             Blocks.ALLIUM.defaultBlockState(),
-            Blocks.AZURE_BLUET.defaultBlockState(),
-            Blocks.CORNFLOWER.defaultBlockState(),
-            Blocks.OXEYE_DAISY.defaultBlockState()
+            Blocks.PINK_PETALS.defaultBlockState()
     };
 
     public AenderChunkGenerator(BiomeSource biomeSource) {
@@ -185,7 +182,14 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
+                LakeColumn lake = lakeColumnAt(island, x, z, surfaceY);
+
+                if (lake != null && carveLakeColumn(chunk, column, x, z, surfaceY, lake, pos)) {
+                    continue;
+                }
+
                 placeUndersideSpur(chunk, column, x, z, island.seed(), pos);
+                placeUndersideGrowth(chunk, column, x, z, island.seed(), pos);
 
                 pos.set(x, surfaceY, z);
 
@@ -331,6 +335,141 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         return distance <= 1 || (distance == 2 && unit(cellSeed ^ x ^ ((long) z << 32)) < 0.45D);
     }
 
+    private static LakeColumn lakeColumnAt(AenderIslandSampler.Island island, int x, int z, int surfaceY) {
+        int cellX = Math.floorDiv(x, 64);
+        int cellZ = Math.floorDiv(z, 64);
+
+        for (int cx = cellX - 1; cx <= cellX + 1; cx++) {
+            for (int cz = cellZ - 1; cz <= cellZ + 1; cz++) {
+                long lakeSeed = mix64(island.seed()
+                        ^ (long) cx * 0xD1342543DE82EF95L
+                        ^ (long) cz * 0xC6BC279692B5CC83L
+                        ^ 0x1A4E5EADL);
+
+                if (unit(lakeSeed) >= 0.24D) {
+                    continue;
+                }
+
+                int centerX = cx * 64 + 18 + (int) (unit(lakeSeed ^ 0x11L) * 28.0D);
+                int centerZ = cz * 64 + 18 + (int) (unit(lakeSeed ^ 0x12L) * 28.0D);
+                double radiusX = 5.0D + unit(lakeSeed ^ 0x21L) * 8.0D;
+                double radiusZ = 5.0D + unit(lakeSeed ^ 0x22L) * 8.0D;
+
+                double dx = (x - centerX) / radiusX;
+                double dz = (z - centerZ) / radiusZ;
+                double distance = dx * dx + dz * dz;
+                boolean spill = unit(lakeSeed ^ 0x31L) < 0.45D;
+                double outletAngle = unit(lakeSeed ^ 0x32L) * Math.PI * 2.0D;
+                double outletX = Math.cos(outletAngle);
+                double outletZ = Math.sin(outletAngle);
+                double alongOutlet = dx * outletX + dz * outletZ;
+                double acrossOutlet = Math.abs(-dx * outletZ + dz * outletX);
+                boolean outlet = spill
+                        && alongOutlet > 0.68D
+                        && alongOutlet < 1.72D
+                        && acrossOutlet < 0.15D + (alongOutlet - 0.68D) * 0.06D;
+
+                if (distance > 1.0D && !outlet) {
+                    continue;
+                }
+
+                AenderIslandSampler.Island.Column centerColumn = island.columnAt(centerX, centerZ);
+
+                if (centerColumn.empty()) {
+                    continue;
+                }
+
+                int waterY = centerColumn.maxY() - 1;
+
+                if (surfaceY < waterY - (outlet ? 1 : 0) || surfaceY > waterY + 4) {
+                    continue;
+                }
+
+                return new LakeColumn(waterY, distance, lakeSeed, outlet);
+            }
+        }
+
+        return null;
+    }
+
+    private static boolean carveLakeColumn(
+            ChunkAccess chunk,
+            AenderIslandSampler.Island.Column column,
+            int x,
+            int z,
+            int surfaceY,
+            LakeColumn lake,
+            BlockPos.MutableBlockPos pos
+    ) {
+        if (lake.outlet()) {
+            int waterY = Math.max(lake.waterY(), surfaceY + 1);
+
+            for (int y = waterY + 1; y <= surfaceY; y++) {
+                pos.set(x, y, z);
+
+                if (isInsideChunk(chunk, pos)) {
+                    chunk.setBlockState(pos, AIR, 0);
+                }
+            }
+
+            pos.set(x, waterY, z);
+
+            if (isInsideChunk(chunk, pos)) {
+                chunk.setBlockState(pos, WATER, 0);
+            }
+
+            int floorY = waterY - 1;
+
+            if (floorY >= column.minY()) {
+                pos.set(x, floorY, z);
+
+                if (isInsideChunk(chunk, pos)) {
+                    chunk.setBlockState(pos, RetoldBlocks.AENDER_SOIL.get().defaultBlockState(), 0);
+                }
+            }
+
+            return true;
+        }
+
+        if (lake.distance() > 0.78D) {
+            pos.set(x, surfaceY, z);
+
+            if (chunk.getBlockState(pos).is(RetoldBlocks.AENDER_GRASS_BLOCK)) {
+                chunk.setBlockState(pos, RetoldBlocks.AENDER_SOIL.get().defaultBlockState(), 0);
+            }
+
+            return true;
+        }
+
+        int waterY = lake.waterY();
+
+        for (int y = waterY + 1; y <= surfaceY; y++) {
+            pos.set(x, y, z);
+
+            if (isInsideChunk(chunk, pos)) {
+                chunk.setBlockState(pos, AIR, 0);
+            }
+        }
+
+        pos.set(x, waterY, z);
+
+        if (isInsideChunk(chunk, pos)) {
+            chunk.setBlockState(pos, WATER, 0);
+        }
+
+        int floorY = waterY - 1;
+
+        if (floorY >= column.minY()) {
+            pos.set(x, floorY, z);
+
+            if (isInsideChunk(chunk, pos)) {
+                chunk.setBlockState(pos, RetoldBlocks.AENDER_SOIL.get().defaultBlockState(), 0);
+            }
+        }
+
+        return true;
+    }
+
     private static void placeGroundDecoration(
             ChunkAccess chunk,
             int x,
@@ -344,16 +483,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 ^ (long) z * 0xC6BC279692B5CC83L
                 ^ 0x61746C696665L);
 
-        if (roll >= 0.27D) {
+        if (roll >= 0.34D) {
             return;
         }
 
         BlockState decoration;
 
-        if (roll < 0.035D) {
+        if (roll < 0.030D) {
+            decoration = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
+        } else if (roll < 0.070D) {
             int flowerIndex = (int) (unit(seed ^ (long) x * 0x9E3779B97F4A7C15L ^ (long) z) * FLOWERS.length);
             decoration = FLOWERS[Math.min(flowerIndex, FLOWERS.length - 1)];
-        } else if (roll < 0.095D) {
+        } else if (roll < 0.130D) {
             decoration = FERN;
         } else {
             decoration = SHORT_GRASS;
@@ -470,6 +611,66 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         }
     }
 
+    private static void placeUndersideGrowth(
+            ChunkAccess chunk,
+            AenderIslandSampler.Island.Column column,
+            int x,
+            int z,
+            long seed,
+            BlockPos.MutableBlockPos pos
+    ) {
+        long growthSeed = mix64(seed
+                ^ (long) x * 0xD6E8FEB86659FD93L
+                ^ (long) z * 0xA5A3564E27F886BFL
+                ^ 0xA11FEAFL);
+
+        if (unit(growthSeed) >= 0.025D || column.minY() <= AenderIslandSampler.MIN_Y + 6) {
+            return;
+        }
+
+        int length = 2 + (int) (unit(growthSeed ^ 0x11L) * 5.0D);
+        BlockState leaves = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
+        BlockState log = RetoldBlocks.AENDER_LOG.get().defaultBlockState();
+
+        for (int dy = 1; dy <= length; dy++) {
+            int y = column.minY() - dy;
+
+            if (y < AenderIslandSampler.MIN_Y) {
+                break;
+            }
+
+            pos.set(x, y, z);
+
+            if (!isInsideChunk(chunk, pos) || !chunk.getBlockState(pos).isAir()) {
+                break;
+            }
+
+            chunk.setBlockState(pos, dy == 1 && unit(growthSeed ^ 0x21L) < 0.35D ? log : leaves, 0);
+
+            if (dy <= 2 && unit(growthSeed ^ dy * 0x632BE59BD9B4E019L) < 0.45D) {
+                placeHangingLeaf(chunk, x + 1, y, z, leaves, pos);
+                placeHangingLeaf(chunk, x - 1, y, z, leaves, pos);
+                placeHangingLeaf(chunk, x, y, z + 1, leaves, pos);
+                placeHangingLeaf(chunk, x, y, z - 1, leaves, pos);
+            }
+        }
+    }
+
+    private static void placeHangingLeaf(
+            ChunkAccess chunk,
+            int x,
+            int y,
+            int z,
+            BlockState leaves,
+            BlockPos.MutableBlockPos pos
+    ) {
+        pos.set(x, y, z);
+
+        if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+            chunk.setBlockState(pos, leaves, 0);
+        }
+    }
+
     private static boolean isTreeOrigin(int x, int z, long seed) {
         int cellX = Math.floorDiv(x, 20);
         int cellZ = Math.floorDiv(z, 20);
@@ -521,41 +722,137 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 ^ (long) x * 0xD1342543DE82EF95L
                 ^ (long) z * 0xC6BC279692B5CC83L
                 ^ 0xA3ADE7L);
-        int height = 4 + (int) (unit(treeSeed ^ 0x11L) * 3.0D);
+        int height = 5 + (int) (unit(treeSeed ^ 0x11L) * 4.0D);
+        int leanX = unit(treeSeed ^ 0x12L) < 0.5D ? -1 : 1;
+        int leanZ = unit(treeSeed ^ 0x13L) < 0.5D ? -1 : 1;
+        boolean leanAlongX = unit(treeSeed ^ 0x14L) < 0.5D;
 
         BlockState log = RetoldBlocks.AENDER_LOG.get().defaultBlockState();
         BlockState leaves = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int y = surfaceY + 1; y <= surfaceY + height; y++) {
-            pos.set(x, y, z);
+        int[] trunkX = new int[height + 1];
+        int[] trunkZ = new int[height + 1];
+
+        for (int dy = 1; dy <= height; dy++) {
+            double curve = dy / (double) height;
+            int offsetX = leanAlongX && curve > 0.45D ? leanX : 0;
+            int offsetZ = !leanAlongX && curve > 0.45D ? leanZ : 0;
+
+            if (curve > 0.72D) {
+                offsetX += leanAlongX ? 0 : leanX;
+                offsetZ += leanAlongX ? leanZ : 0;
+            }
+
+            trunkX[dy] = x + offsetX;
+            trunkZ[dy] = z + offsetZ;
+
+            pos.set(trunkX[dy], surfaceY + dy, trunkZ[dy]);
             chunk.setBlockState(pos, log, 0);
         }
 
-        int canopyBase = surfaceY + height - 2;
-        int canopyTop = surfaceY + height + 1;
+        placeTreeRoots(chunk, x, surfaceY, z, treeSeed, log, pos);
+
+        int crownX = trunkX[height];
+        int crownZ = trunkZ[height];
+        int canopyBase = surfaceY + height - 3;
+        int canopyTop = surfaceY + height + 2;
 
         for (int y = canopyBase; y <= canopyTop; y++) {
             int dy = y - (surfaceY + height);
-            int radius = dy >= 1 ? 1 : 2;
+            int radius = dy >= 1 ? 1 : 2 + (unit(treeSeed ^ y * 0x632BE59BD9B4E019L) < 0.35D ? 1 : 0);
 
             for (int dx = -radius; dx <= radius; dx++) {
                 for (int dz = -radius; dz <= radius; dz++) {
-                    if (Math.abs(dx) + Math.abs(dz) + Math.max(0, dy) > radius + 1) {
+                    int stretchX = leanAlongX ? leanX : 0;
+                    int stretchZ = leanAlongX ? 0 : leanZ;
+                    int localX = dx - stretchX;
+                    int localZ = dz - stretchZ;
+
+                    if (Math.abs(localX) + Math.abs(localZ) + Math.max(0, dy) > radius + 1) {
                         continue;
                     }
 
-                    if (dx == 0 && dz == 0 && y <= surfaceY + height) {
+                    if (crownX + dx == trunkX[Math.min(height, Math.max(1, y - surfaceY))]
+                            && crownZ + dz == trunkZ[Math.min(height, Math.max(1, y - surfaceY))]
+                            && y <= surfaceY + height) {
                         continue;
                     }
 
-                    pos.set(x + dx, y, z + dz);
+                    if (unit(treeSeed ^ dx * 31L ^ dz * 17L ^ y * 13L) < 0.08D + Math.max(0, dy) * 0.08D) {
+                        continue;
+                    }
 
-                    if (chunk.getBlockState(pos).isAir()) {
+                    pos.set(crownX + dx, y, crownZ + dz);
+
+                    if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
                         chunk.setBlockState(pos, leaves, 0);
+
+                        if (dy <= 0
+                                && Math.abs(localX) + Math.abs(localZ) >= radius
+                                && unit(treeSeed ^ dx * 97L ^ dz * 53L ^ y) < 0.20D) {
+                            placeLeafTendril(chunk, crownX + dx, y - 1, crownZ + dz, treeSeed, leaves);
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private static void placeTreeRoots(
+            ChunkAccess chunk,
+            int x,
+            int surfaceY,
+            int z,
+            long treeSeed,
+            BlockState log,
+            BlockPos.MutableBlockPos pos
+    ) {
+        placeRoot(chunk, x + 1, surfaceY + 1, z, treeSeed ^ 0x21L, log, pos);
+        placeRoot(chunk, x - 1, surfaceY + 1, z, treeSeed ^ 0x22L, log, pos);
+        placeRoot(chunk, x, surfaceY + 1, z + 1, treeSeed ^ 0x23L, log, pos);
+        placeRoot(chunk, x, surfaceY + 1, z - 1, treeSeed ^ 0x24L, log, pos);
+    }
+
+    private static void placeRoot(
+            ChunkAccess chunk,
+            int x,
+            int y,
+            int z,
+            long seed,
+            BlockState log,
+            BlockPos.MutableBlockPos pos
+    ) {
+        if (unit(seed) > 0.58D) {
+            return;
+        }
+
+        pos.set(x, y, z);
+
+        if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+            chunk.setBlockState(pos, log, 0);
+        }
+    }
+
+    private static void placeLeafTendril(
+            ChunkAccess chunk,
+            int x,
+            int y,
+            int z,
+            long seed,
+            BlockState leaves
+    ) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int length = 1 + (int) (unit(seed ^ (long) x * 0x632BE59BD9B4E019L ^ (long) z) * 3.0D);
+
+        for (int i = 0; i < length; i++) {
+            pos.set(x, y - i, z);
+
+            if (!isInsideChunk(chunk, pos) || !chunk.getBlockState(pos).isAir()) {
+                return;
+            }
+
+            chunk.setBlockState(pos, leaves, 0);
         }
     }
 
@@ -582,5 +879,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 && pos.getZ() <= minZ + 15
                 && pos.getY() >= AenderIslandSampler.MIN_Y
                 && pos.getY() < AenderIslandSampler.MAX_Y;
+    }
+
+    private record LakeColumn(int waterY, double distance, long seed, boolean outlet) {
     }
 }
