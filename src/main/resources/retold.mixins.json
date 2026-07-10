@@ -27,6 +27,7 @@
     "ElderGuardianMixin"
   ],
   "client": [
+    "AenderRenderSectionRegionLightingMixin",
     "MerchantScreenMixin"
   ],
   "injectors": {

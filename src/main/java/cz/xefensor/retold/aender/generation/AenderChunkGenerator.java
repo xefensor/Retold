@@ -2,6 +2,7 @@ package cz.xefensor.retold.aender.generation;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -30,7 +31,16 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             ).apply(instance, AenderChunkGenerator::new));
 
     private static final BlockState AIR = Blocks.AIR.defaultBlockState();
-    private static final BlockState END_STONE = Blocks.END_STONE.defaultBlockState();
+    private static final BlockState SHORT_GRASS = Blocks.SHORT_GRASS.defaultBlockState();
+    private static final BlockState FERN = Blocks.FERN.defaultBlockState();
+    private static final BlockState[] FLOWERS = {
+            Blocks.DANDELION.defaultBlockState(),
+            Blocks.POPPY.defaultBlockState(),
+            Blocks.ALLIUM.defaultBlockState(),
+            Blocks.AZURE_BLUET.defaultBlockState(),
+            Blocks.CORNFLOWER.defaultBlockState(),
+            Blocks.OXEYE_DAISY.defaultBlockState()
+    };
 
     public AenderChunkGenerator(BiomeSource biomeSource) {
         super(biomeSource);
@@ -89,30 +99,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         List<AenderIslandSampler.Island> islands = AenderIslandSampler.islandsForChunk(chunk);
 
         for (AenderIslandSampler.Island island : islands) {
-            int minX = Math.max(chunkMinX, island.minX());
-            int maxX = Math.min(chunkMaxX, island.maxX());
-            int minY = island.minY();
-            int maxY = island.maxY();
-            int minZ = Math.max(chunkMinZ, island.minZ());
-            int maxZ = Math.min(chunkMaxZ, island.maxZ());
+            generateIslandTerrain(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, pos);
+        }
 
-            for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    AenderIslandSampler.Island.Column column = island.columnAt(x, z);
-
-                    if (column.empty()) {
-                        continue;
-                    }
-
-                    int columnMinY = Math.max(minY, column.minY());
-                    int columnMaxY = Math.min(maxY, column.maxY());
-
-                    for (int y = columnMinY; y <= columnMaxY; y++) {
-                        pos.set(x, y, z);
-                        chunk.setBlockState(pos, END_STONE, 0);
-                    }
-                }
-            }
+        for (AenderIslandSampler.Island island : islands) {
+            decorateIsland(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, pos);
         }
 
         Heightmap.primeHeightmaps(
@@ -127,6 +118,104 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         AenderVolatility.markGenerated(chunk);
     }
 
+    private static void generateIslandTerrain(
+            ChunkAccess chunk,
+            AenderIslandSampler.Island island,
+            int chunkMinX,
+            int chunkMaxX,
+            int chunkMinZ,
+            int chunkMaxZ,
+            BlockPos.MutableBlockPos pos
+    ) {
+        int minX = Math.max(chunkMinX, island.minX());
+        int maxX = Math.min(chunkMaxX, island.maxX());
+        int minY = island.minY();
+        int maxY = island.maxY();
+        int minZ = Math.max(chunkMinZ, island.minZ());
+        int maxZ = Math.min(chunkMaxZ, island.maxZ());
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+                if (column.empty()) {
+                    continue;
+                }
+
+                int columnMinY = Math.max(minY, column.minY());
+                int columnMaxY = Math.min(maxY, column.maxY());
+
+                for (int y = columnMinY; y <= columnMaxY; y++) {
+                    pos.set(x, y, z);
+                    chunk.setBlockState(
+                            pos,
+                            terrainBlockForDepth(island.seed(), x, z, columnMaxY - y),
+                            0
+                    );
+                }
+            }
+        }
+    }
+
+    private static void decorateIsland(
+            ChunkAccess chunk,
+            AenderIslandSampler.Island island,
+            int chunkMinX,
+            int chunkMaxX,
+            int chunkMinZ,
+            int chunkMaxZ,
+            BlockPos.MutableBlockPos pos
+    ) {
+        int minX = Math.max(chunkMinX, island.minX());
+        int maxX = Math.min(chunkMaxX, island.maxX());
+        int minZ = Math.max(chunkMinZ, island.minZ());
+        int maxZ = Math.min(chunkMaxZ, island.maxZ());
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+                if (column.empty()) {
+                    continue;
+                }
+
+                int surfaceY = column.maxY();
+
+                if (surfaceY + 1 >= AenderIslandSampler.MAX_Y) {
+                    continue;
+                }
+
+                placeUndersideSpur(chunk, column, x, z, island.seed(), pos);
+
+                pos.set(x, surfaceY, z);
+
+                if (!chunk.getBlockState(pos).is(RetoldBlocks.AENDER_GRASS_BLOCK)) {
+                    continue;
+                }
+
+                pos.set(x, surfaceY + 1, z);
+
+                if (!chunk.getBlockState(pos).isAir()) {
+                    continue;
+                }
+
+                if (isBoulderOrigin(x, z, island.seed())) {
+                    placeBoulder(chunk, x, surfaceY, z, island.seed());
+                    continue;
+                }
+
+                if (isTreeOrigin(x, z, island.seed())
+                        && hasTreeRoom(chunk, x, surfaceY, z)
+                        && hasGentleGround(island, x, surfaceY, z)) {
+                    placeTree(chunk, x, surfaceY, z, island.seed());
+                    continue;
+                }
+
+                placeGroundDecoration(chunk, x, surfaceY, z, island.seed(), pos);
+            }
+        }
+    }
+
     @Override
     public int getBaseHeight(
             int x,
@@ -135,13 +224,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             LevelHeightAccessor level,
             RandomState random
     ) {
-        for (int y = AenderIslandSampler.MAX_Y - 1; y >= AenderIslandSampler.MIN_Y; y -= 4) {
-            if (AenderIslandSampler.density(x, y, z) > 0.0D) {
-                return Math.min(y + 5, AenderIslandSampler.MAX_Y);
-            }
-        }
-
-        return AenderIslandSampler.MIN_Y;
+        return Math.min(AenderIslandSampler.highestBlockYAt(x, z) + 1, AenderIslandSampler.MAX_Y);
     }
 
     @Override
@@ -155,7 +238,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
         for (int i = 0; i < states.length; i++) {
             int y = AenderIslandSampler.MIN_Y + i;
-            states[i] = AenderIslandSampler.density(x, y, z) > 0.0D ? END_STONE : AIR;
+            int surfaceDepth = AenderIslandSampler.surfaceDepthAt(x, y, z);
+            states[i] = surfaceDepth >= 0 ? terrainBlockForDepth(0L, x, z, surfaceDepth) : AIR;
         }
 
         return new NoiseColumn(AenderIslandSampler.MIN_Y, states);
@@ -211,5 +295,292 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         info.add("Aender retained chunks: " + AenderVolatility.retainedChunkCount());
         info.add("Aender active regions: " + AenderVolatility.activeRegionCount());
         info.add("Aender generated chunks: " + AenderVolatility.generatedThisSessionCount());
+    }
+
+    private static BlockState terrainBlockForDepth(long seed, int x, int z, int surfaceDepth) {
+        if (seed != 0L && surfaceDepth <= 2 && isStoneOutcrop(seed, x, z)) {
+            return RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        }
+
+        if (surfaceDepth == 0) {
+            return RetoldBlocks.AENDER_GRASS_BLOCK.get().defaultBlockState();
+        }
+
+        if (surfaceDepth <= 4) {
+            return RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
+        }
+
+        return RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+    }
+
+    private static boolean isStoneOutcrop(long seed, int x, int z) {
+        int cellX = Math.floorDiv(x, 13);
+        int cellZ = Math.floorDiv(z, 13);
+        long cellSeed = mix64(seed
+                ^ (long) cellX * 0x9E3779B97F4A7C15L
+                ^ (long) cellZ * 0xC2B2AE3D27D4EB4FL
+                ^ 0x5EED5EEDL);
+
+        if (unit(cellSeed) >= 0.28D) {
+            return false;
+        }
+
+        int centerX = cellX * 13 + 2 + (int) (unit(cellSeed ^ 0x31L) * 9.0D);
+        int centerZ = cellZ * 13 + 2 + (int) (unit(cellSeed ^ 0x32L) * 9.0D);
+        int distance = Math.abs(x - centerX) + Math.abs(z - centerZ);
+        return distance <= 1 || (distance == 2 && unit(cellSeed ^ x ^ ((long) z << 32)) < 0.45D);
+    }
+
+    private static void placeGroundDecoration(
+            ChunkAccess chunk,
+            int x,
+            int surfaceY,
+            int z,
+            long seed,
+            BlockPos.MutableBlockPos pos
+    ) {
+        double roll = unit(seed
+                ^ (long) x * 0xD1342543DE82EF95L
+                ^ (long) z * 0xC6BC279692B5CC83L
+                ^ 0x61746C696665L);
+
+        if (roll >= 0.27D) {
+            return;
+        }
+
+        BlockState decoration;
+
+        if (roll < 0.035D) {
+            int flowerIndex = (int) (unit(seed ^ (long) x * 0x9E3779B97F4A7C15L ^ (long) z) * FLOWERS.length);
+            decoration = FLOWERS[Math.min(flowerIndex, FLOWERS.length - 1)];
+        } else if (roll < 0.095D) {
+            decoration = FERN;
+        } else {
+            decoration = SHORT_GRASS;
+        }
+
+        pos.set(x, surfaceY + 1, z);
+        chunk.setBlockState(pos, decoration, 0);
+    }
+
+    private static boolean isBoulderOrigin(int x, int z, long seed) {
+        int cellX = Math.floorDiv(x, 24);
+        int cellZ = Math.floorDiv(z, 24);
+        long cellSeed = mix64(seed
+                ^ (long) cellX * 0xDB4F0B9175AE2165L
+                ^ (long) cellZ * 0xBBE0563303A4615FL
+                ^ 0xB011D3A5L);
+
+        if (unit(cellSeed) >= 0.22D) {
+            return false;
+        }
+
+        int originX = cellX * 24 + 5 + (int) (unit(cellSeed ^ 0x41L) * 14.0D);
+        int originZ = cellZ * 24 + 5 + (int) (unit(cellSeed ^ 0x42L) * 14.0D);
+        return x == originX && z == originZ;
+    }
+
+    private static void placeBoulder(ChunkAccess chunk, int x, int surfaceY, int z, long seed) {
+        long boulderSeed = mix64(seed
+                ^ (long) x * 0xD1342543DE82EF95L
+                ^ (long) z * 0xC6BC279692B5CC83L
+                ^ 0xB075D32L);
+        int radius = unit(boulderSeed ^ 0x51L) < 0.55D ? 1 : 2;
+        int height = radius + 1;
+        BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int dy = 1; dy <= height; dy++) {
+            int layerRadius = Math.max(0, radius - dy / 2);
+
+            for (int dx = -layerRadius; dx <= layerRadius; dx++) {
+                for (int dz = -layerRadius; dz <= layerRadius; dz++) {
+                    int distance = Math.abs(dx) + Math.abs(dz);
+
+                    if (distance > layerRadius + (dy == 1 ? 1 : 0)) {
+                        continue;
+                    }
+
+                    if (unit(boulderSeed ^ dx * 31L ^ dz * 17L ^ dy * 13L) < 0.12D) {
+                        continue;
+                    }
+
+                    pos.set(x + dx, surfaceY + dy, z + dz);
+
+                    if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+                        chunk.setBlockState(pos, stone, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void placeUndersideSpur(
+            ChunkAccess chunk,
+            AenderIslandSampler.Island.Column column,
+            int x,
+            int z,
+            long seed,
+            BlockPos.MutableBlockPos pos
+    ) {
+        long spurSeed = mix64(seed
+                ^ (long) x * 0xA24BAED4963EE407L
+                ^ (long) z * 0x9FB21C651E98DF25L
+                ^ 0x5F013E5DL);
+
+        if (unit(spurSeed) >= 0.045D || column.minY() <= AenderIslandSampler.MIN_Y + 4) {
+            return;
+        }
+
+        int length = 2 + (int) (unit(spurSeed ^ 0x61L) * 7.0D);
+        BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockState soil = RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
+
+        for (int dy = 1; dy <= length; dy++) {
+            int y = column.minY() - dy;
+
+            if (y < AenderIslandSampler.MIN_Y) {
+                break;
+            }
+
+            pos.set(x, y, z);
+            chunk.setBlockState(pos, dy < 3 && unit(spurSeed ^ dy) < 0.35D ? soil : stone, 0);
+
+            if (dy <= 2 && unit(spurSeed ^ 0x71L ^ dy) < 0.55D) {
+                placeSpurShoulder(chunk, x + 1, y, z, stone, pos);
+                placeSpurShoulder(chunk, x - 1, y, z, stone, pos);
+                placeSpurShoulder(chunk, x, y, z + 1, stone, pos);
+                placeSpurShoulder(chunk, x, y, z - 1, stone, pos);
+            }
+        }
+    }
+
+    private static void placeSpurShoulder(
+            ChunkAccess chunk,
+            int x,
+            int y,
+            int z,
+            BlockState state,
+            BlockPos.MutableBlockPos pos
+    ) {
+        pos.set(x, y, z);
+
+        if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+            chunk.setBlockState(pos, state, 0);
+        }
+    }
+
+    private static boolean isTreeOrigin(int x, int z, long seed) {
+        int cellX = Math.floorDiv(x, 20);
+        int cellZ = Math.floorDiv(z, 20);
+        long cellSeed = mix64(seed
+                ^ (long) cellX * 0x632BE59BD9B4E019L
+                ^ (long) cellZ * 0x85157AF5C91D1B35L
+                ^ 0x7472656573L);
+
+        double grove = unit(mix64(seed
+                ^ (long) cellX * 0x8CB92BA72F3D8DD7L
+                ^ (long) cellZ * 0xB5AD4ECEDA1CE2A9L
+                ^ 0x6500D5L));
+
+        if (unit(cellSeed) >= (grove < 0.38D ? 0.62D : 0.32D)) {
+            return false;
+        }
+
+        int originX = cellX * 20 + 4 + (int) (unit(cellSeed ^ 0xA1L) * 12.0D);
+        int originZ = cellZ * 20 + 4 + (int) (unit(cellSeed ^ 0xA2L) * 12.0D);
+        return x == originX && z == originZ;
+    }
+
+    private static boolean hasTreeRoom(ChunkAccess chunk, int x, int surfaceY, int z) {
+        int minX = chunk.getPos().getMinBlockX() + 3;
+        int maxX = chunk.getPos().getMinBlockX() + 12;
+        int minZ = chunk.getPos().getMinBlockZ() + 3;
+        int maxZ = chunk.getPos().getMinBlockZ() + 12;
+        return x >= minX
+                && x <= maxX
+                && z >= minZ
+                && z <= maxZ
+                && surfaceY + 8 < AenderIslandSampler.MAX_Y;
+    }
+
+    private static boolean hasGentleGround(AenderIslandSampler.Island island, int x, int surfaceY, int z) {
+        return surfaceDelta(island, x + 2, z, surfaceY) <= 3
+                && surfaceDelta(island, x - 2, z, surfaceY) <= 3
+                && surfaceDelta(island, x, z + 2, surfaceY) <= 3
+                && surfaceDelta(island, x, z - 2, surfaceY) <= 3;
+    }
+
+    private static int surfaceDelta(AenderIslandSampler.Island island, int x, int z, int surfaceY) {
+        AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+        return column.empty() ? 99 : Math.abs(column.maxY() - surfaceY);
+    }
+
+    private static void placeTree(ChunkAccess chunk, int x, int surfaceY, int z, long seed) {
+        long treeSeed = mix64(seed
+                ^ (long) x * 0xD1342543DE82EF95L
+                ^ (long) z * 0xC6BC279692B5CC83L
+                ^ 0xA3ADE7L);
+        int height = 4 + (int) (unit(treeSeed ^ 0x11L) * 3.0D);
+
+        BlockState log = RetoldBlocks.AENDER_LOG.get().defaultBlockState();
+        BlockState leaves = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int y = surfaceY + 1; y <= surfaceY + height; y++) {
+            pos.set(x, y, z);
+            chunk.setBlockState(pos, log, 0);
+        }
+
+        int canopyBase = surfaceY + height - 2;
+        int canopyTop = surfaceY + height + 1;
+
+        for (int y = canopyBase; y <= canopyTop; y++) {
+            int dy = y - (surfaceY + height);
+            int radius = dy >= 1 ? 1 : 2;
+
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) + Math.abs(dz) + Math.max(0, dy) > radius + 1) {
+                        continue;
+                    }
+
+                    if (dx == 0 && dz == 0 && y <= surfaceY + height) {
+                        continue;
+                    }
+
+                    pos.set(x + dx, y, z + dz);
+
+                    if (chunk.getBlockState(pos).isAir()) {
+                        chunk.setBlockState(pos, leaves, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    private static double unit(long seed) {
+        long value = mix64(seed);
+        return (value >>> 11) * 0x1.0p-53;
+    }
+
+    private static long mix64(long value) {
+        value ^= value >>> 33;
+        value *= 0xff51afd7ed558ccdL;
+        value ^= value >>> 33;
+        value *= 0xc4ceb9fe1a85ec53L;
+        value ^= value >>> 33;
+        return value;
+    }
+
+    private static boolean isInsideChunk(ChunkAccess chunk, BlockPos pos) {
+        int minX = chunk.getPos().getMinBlockX();
+        int minZ = chunk.getPos().getMinBlockZ();
+        return pos.getX() >= minX
+                && pos.getX() <= minX + 15
+                && pos.getZ() >= minZ
+                && pos.getZ() <= minZ + 15
+                && pos.getY() >= AenderIslandSampler.MIN_Y
+                && pos.getY() < AenderIslandSampler.MAX_Y;
     }
 }

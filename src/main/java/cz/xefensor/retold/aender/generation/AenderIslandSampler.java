@@ -1,6 +1,5 @@
 package cz.xefensor.retold.aender.generation;
 
-import net.minecraft.util.Mth;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import java.util.ArrayList;
@@ -89,6 +88,71 @@ public final class AenderIslandSampler {
         return best;
     }
 
+    public static int highestBlockYAt(int x, int z) {
+        Island.Column column = highestColumnAt(x, z);
+        return column.empty() ? MIN_Y - 1 : column.maxY();
+    }
+
+    public static int surfaceDepthAt(int x, int y, int z) {
+        int bestDepth = Integer.MAX_VALUE;
+
+        int regionX = Math.floorDiv(x, REGION_SIZE);
+        int regionZ = Math.floorDiv(z, REGION_SIZE);
+        int layerY = Math.floorDiv(y, LAYER_HEIGHT);
+
+        for (int rx = regionX - 1; rx <= regionX + 1; rx++) {
+            for (int rz = regionZ - 1; rz <= regionZ + 1; rz++) {
+                for (int ly = layerY - 1; ly <= layerY + 1; ly++) {
+                    Island island = islandAt(rx, rz, ly);
+
+                    if (island == null) {
+                        continue;
+                    }
+
+                    Island.Column column = island.columnAt(x, z);
+
+                    if (column.empty() || y < column.minY() || y > column.maxY()) {
+                        continue;
+                    }
+
+                    bestDepth = Math.min(bestDepth, column.maxY() - y);
+                }
+            }
+        }
+
+        return bestDepth == Integer.MAX_VALUE ? -1 : bestDepth;
+    }
+
+    private static Island.Column highestColumnAt(int x, int z) {
+        Island.Column best = Island.Column.EMPTY;
+
+        int regionX = Math.floorDiv(x, REGION_SIZE);
+        int regionZ = Math.floorDiv(z, REGION_SIZE);
+
+        int minLayer = Math.floorDiv(MIN_Y, LAYER_HEIGHT) - 1;
+        int maxLayer = Math.floorDiv(MAX_Y - 1, LAYER_HEIGHT) + 1;
+
+        for (int rx = regionX - 1; rx <= regionX + 1; rx++) {
+            for (int rz = regionZ - 1; rz <= regionZ + 1; rz++) {
+                for (int ly = minLayer; ly <= maxLayer; ly++) {
+                    Island island = islandAt(rx, rz, ly);
+
+                    if (island == null) {
+                        continue;
+                    }
+
+                    Island.Column column = island.columnAt(x, z);
+
+                    if (!column.empty() && (best.empty() || column.maxY() > best.maxY())) {
+                        best = column;
+                    }
+                }
+            }
+        }
+
+        return best;
+    }
+
     private static Island islandAt(int regionX, int regionZ, int layerY) {
         long regionSeed = AenderVolatility.islandSeed(regionX, regionZ, layerY);
 
@@ -113,9 +177,17 @@ public final class AenderIslandSampler {
             return null;
         }
 
-        double radiusX = 75.0D + unit(s ^ 0xB1L) * 80.0D;
-        double radiusZ = 75.0D + unit(s ^ 0xB2L) * 80.0D;
-        double height = 34.0D + unit(s ^ 0xB3L) * 26.0D;
+        double radiusX = 68.0D + unit(s ^ 0xB1L) * 96.0D;
+        double radiusZ = 68.0D + unit(s ^ 0xB2L) * 96.0D;
+        double height = 34.0D + unit(s ^ 0xB3L) * 36.0D;
+
+        if (unit(s ^ 0xB4L) < 0.30D) {
+            radiusX *= 1.28D;
+            radiusZ *= 0.78D;
+        } else if (unit(s ^ 0xB5L) < 0.30D) {
+            radiusX *= 0.78D;
+            radiusZ *= 1.28D;
+        }
 
         return new Island(centerX, centerY, centerZ, radiusX, radiusZ, height, s);
     }
@@ -185,8 +257,8 @@ public final class AenderIslandSampler {
             double height,
             long seed
     ) {
-        private static final double BOUND_SCALE = 1.35D;
-        private static final double BOUND_MARGIN = 24.0D;
+        private static final double BOUND_SCALE = 1.48D;
+        private static final double BOUND_MARGIN = 32.0D;
 
         public int minX() {
             return (int) Math.floor(centerX - radiusX * BOUND_SCALE - BOUND_MARGIN);
@@ -216,48 +288,69 @@ public final class AenderIslandSampler {
             double lx = x - centerX;
             double lz = z - centerZ;
 
-            // Cheap 2D warp. Jen per x/z column, ne per y blok.
             double warpX =
-                    signedNoise2D(x * 0.014D, z * 0.014D, seed ^ 0x1010L) * radiusX * 0.22D +
-                            signedNoise2D(x * 0.037D, z * 0.037D, seed ^ 0x1011L) * radiusX * 0.07D;
+                    signedNoise2D(x * 0.010D, z * 0.010D, seed ^ 0x1010L) * radiusX * 0.25D +
+                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x1011L) * radiusX * 0.10D +
+                            signedNoise2D(x * 0.070D, z * 0.070D, seed ^ 0x1012L) * radiusX * 0.025D;
 
             double warpZ =
-                    signedNoise2D(x * 0.014D, z * 0.014D, seed ^ 0x2020L) * radiusZ * 0.22D +
-                            signedNoise2D(x * 0.037D, z * 0.037D, seed ^ 0x2021L) * radiusZ * 0.07D;
+                    signedNoise2D(x * 0.010D, z * 0.010D, seed ^ 0x2020L) * radiusZ * 0.25D +
+                            signedNoise2D(x * 0.031D, z * 0.031D, seed ^ 0x2021L) * radiusZ * 0.10D +
+                            signedNoise2D(x * 0.070D, z * 0.070D, seed ^ 0x2022L) * radiusZ * 0.025D;
 
             double coast =
                     1.0D +
-                            signedNoise2D(x * 0.010D, z * 0.010D, seed ^ 0x3030L) * 0.24D +
-                            signedNoise2D(x * 0.026D, z * 0.026D, seed ^ 0x3031L) * 0.10D;
+                            signedNoise2D(x * 0.007D, z * 0.007D, seed ^ 0x3030L) * 0.28D +
+                            signedNoise2D(x * 0.020D, z * 0.020D, seed ^ 0x3031L) * 0.16D +
+                            signedNoise2D(x * 0.052D, z * 0.052D, seed ^ 0x3032L) * 0.045D;
 
-            coast = clamp(coast, 0.68D, 1.34D);
+            coast = clamp(coast, 0.60D, 1.48D);
 
             double dx = (lx + warpX) / (radiusX * coast);
             double dz = (lz + warpZ) / (radiusZ * coast);
 
             double r = Math.sqrt(dx * dx + dz * dz);
+            double angle = Math.atan2(dz, dx);
+            double lobes =
+                    Math.sin(angle * 3.0D + unit(seed ^ 0x6060L) * Math.PI * 2.0D) * 0.040D +
+                            Math.sin(angle * 7.0D + unit(seed ^ 0x6061L) * Math.PI * 2.0D) * 0.026D;
 
-            if (r > 1.0D) {
+            if (r > 1.0D + lobes) {
                 return Column.EMPTY;
             }
 
-            // Rim = kraj ostrova. Střed zůstane plochý, okraj jde níž.
-            double rim = smoothStep(0.52D, 1.0D, r);
+            double rim = smoothStep(0.56D, 1.0D, r);
+            double core = 1.0D - smoothStep(0.0D, 0.72D, r);
+            double mid = 1.0D - Math.abs(r - 0.42D) / 0.42D;
+            mid = clamp(mid, 0.0D, 1.0D);
 
             double topY = centerY + 5.0D;
+            topY += core * height * 0.11D;
+            topY += mid * signedNoise2D(x * 0.012D, z * 0.012D, seed ^ 0x4042L) * height * 0.10D;
+            topY -= rim * height * 0.34D;
+            topY -= smoothStep(0.88D, 1.0D, r) * height * 0.18D;
 
-            // Okraje jsou níž, ale střed není "dortový kopec".
-            topY -= rim * height * 0.22D;
+            topY += signedNoise2D(x * 0.017D, z * 0.017D, seed ^ 0x4040L) * 4.0D;
+            topY += signedNoise2D(x * 0.043D, z * 0.043D, seed ^ 0x4041L) * 1.8D * (0.35D + rim);
+            topY += ridgeAt(dx, dz, seed ^ 0x7070L) * height * 0.11D;
 
-            // Jemné zvlnění povrchu.
-            topY += signedNoise2D(x * 0.018D, z * 0.018D, seed ^ 0x4040L) * 2.5D;
-            topY += signedNoise2D(x * 0.045D, z * 0.045D, seed ^ 0x4041L) * 1.2D * rim;
+            double terrace = signedNoise2D(x * 0.010D, z * 0.010D, seed ^ 0x8080L);
+            if (r > 0.34D && terrace > 0.22D) {
+                topY = Math.floor(topY / 3.0D) * 3.0D;
+            }
 
-            // Tloušťka: silnější uprostřed, tenčí u krajů.
-            double thickness = height * (1.02D - 0.62D * r * r);
-            thickness += signedNoise2D(x * 0.016D, z * 0.016D, seed ^ 0x5050L) * height * 0.06D;
+            double thickness = height * (1.16D - 0.78D * Math.pow(r, 1.55D));
+            thickness += core * height * 0.18D;
+            thickness += ridgeAt(dx * 1.2D + 0.19D, dz * 1.2D - 0.11D, seed ^ 0x9090L) * height * 0.20D;
+            thickness += signedNoise2D(x * 0.014D, z * 0.014D, seed ^ 0x5050L) * height * 0.09D;
+            thickness -= smoothStep(0.82D, 1.0D, r) * height * 0.18D;
 
-            thickness = Math.max(8.0D, thickness);
+            double hangingRoot = signedNoise2D(x * 0.050D, z * 0.050D, seed ^ 0xA0A0L);
+            if (r < 0.78D && hangingRoot > 0.55D) {
+                thickness += (hangingRoot - 0.55D) * height * 0.55D;
+            }
+
+            thickness = Math.max(6.0D, thickness);
 
             double bottomY = topY - thickness;
 
@@ -285,6 +378,13 @@ public final class AenderIslandSampler {
         private static double smoothStep(double edge0, double edge1, double value) {
             double t = clamp((value - edge0) / (edge1 - edge0), 0.0D, 1.0D);
             return t * t * (3.0D - 2.0D * t);
+        }
+
+        private static double ridgeAt(double x, double z, long seed) {
+            double a = signedNoise2D(x * 1.4D + 19.0D, z * 1.4D - 7.0D, seed);
+            double b = signedNoise2D(x * 2.2D - 3.0D, z * 2.2D + 11.0D, seed ^ 0x5F3759DFL);
+            double ridge = 1.0D - Math.abs(a * 0.72D + b * 0.28D);
+            return smoothStep(0.58D, 0.92D, ridge);
         }
 
         private static double clamp(double value, double min, double max) {
