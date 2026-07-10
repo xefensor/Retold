@@ -358,18 +358,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 double dx = (x - centerX) / radiusX;
                 double dz = (z - centerZ) / radiusZ;
                 double distance = dx * dx + dz * dz;
-                boolean spill = unit(lakeSeed ^ 0x31L) < 0.45D;
-                double outletAngle = unit(lakeSeed ^ 0x32L) * Math.PI * 2.0D;
-                double outletX = Math.cos(outletAngle);
-                double outletZ = Math.sin(outletAngle);
-                double alongOutlet = dx * outletX + dz * outletZ;
-                double acrossOutlet = Math.abs(-dx * outletZ + dz * outletX);
-                boolean outlet = spill
-                        && alongOutlet > 0.68D
-                        && alongOutlet < 1.72D
-                        && acrossOutlet < 0.15D + (alongOutlet - 0.68D) * 0.06D;
 
-                if (distance > 1.0D && !outlet) {
+                if (distance > 1.0D) {
                     continue;
                 }
 
@@ -381,11 +371,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
                 int waterY = centerColumn.maxY() - 1;
 
-                if (surfaceY < waterY - (outlet ? 1 : 0) || surfaceY > waterY + 4) {
+                if (surfaceY < waterY || surfaceY > waterY + 4) {
                     continue;
                 }
 
-                return new LakeColumn(waterY, distance, lakeSeed, outlet);
+                return new LakeColumn(waterY, distance);
             }
         }
 
@@ -401,36 +391,6 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             LakeColumn lake,
             BlockPos.MutableBlockPos pos
     ) {
-        if (lake.outlet()) {
-            int waterY = Math.max(lake.waterY(), surfaceY + 1);
-
-            for (int y = waterY + 1; y <= surfaceY; y++) {
-                pos.set(x, y, z);
-
-                if (isInsideChunk(chunk, pos)) {
-                    chunk.setBlockState(pos, AIR, 0);
-                }
-            }
-
-            pos.set(x, waterY, z);
-
-            if (isInsideChunk(chunk, pos)) {
-                chunk.setBlockState(pos, WATER, 0);
-            }
-
-            int floorY = waterY - 1;
-
-            if (floorY >= column.minY()) {
-                pos.set(x, floorY, z);
-
-                if (isInsideChunk(chunk, pos)) {
-                    chunk.setBlockState(pos, RetoldBlocks.AENDER_SOIL.get().defaultBlockState(), 0);
-                }
-            }
-
-            return true;
-        }
-
         if (lake.distance() > 0.78D) {
             pos.set(x, surfaceY, z);
 
@@ -455,6 +415,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
         if (isInsideChunk(chunk, pos)) {
             chunk.setBlockState(pos, WATER, 0);
+            chunk.markPosForPostProcessing(pos);
         }
 
         int floorY = waterY - 1;
@@ -881,6 +842,6 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 && pos.getY() < AenderIslandSampler.MAX_Y;
     }
 
-    private record LakeColumn(int waterY, double distance, long seed, boolean outlet) {
+    private record LakeColumn(int waterY, double distance) {
     }
 }
