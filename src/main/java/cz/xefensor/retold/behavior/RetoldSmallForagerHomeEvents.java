@@ -16,6 +16,8 @@ public final class RetoldSmallForagerHomeEvents {
     private static final String REASON_RETURN_HOME = "return_small_home";
     private static final String REASON_ROOSTING = "roosting";
     private static final String REASON_RESTING = "resting";
+    private static final String REASON_HIDING = "hiding";
+    private static final String REASON_HOME_IDLE = "small_home_idle";
 
     private static final int THINK_INTERVAL_TICKS = 40;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
@@ -24,7 +26,11 @@ public final class RetoldSmallForagerHomeEvents {
     private static final int ROOST_PRIORITY = 16;
     private static final int REST_CONTROL_TICKS = 20 * 5;
     private static final int REST_PRIORITY = 15;
-    private static final int MAX_HOME_MEMBERS = 6;
+    private static final int HIDE_CONTROL_TICKS = 20 * 8;
+    private static final int HIDE_PRIORITY = 22;
+    private static final int HOME_IDLE_CONTROL_TICKS = 20 * 5;
+    private static final int HOME_IDLE_PRIORITY = 10;
+    private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 20;
     private static final int PANIC_RECOVERY_TICKS = 20 * 18;
 
     private static final double HOME_CREATION_RADIUS_BLOCKS = 14.0D;
@@ -43,7 +49,19 @@ public final class RetoldSmallForagerHomeEvents {
     private static final double HOME_RETURN_STOP_SQUARED =
             HOME_RETURN_STOP_BLOCKS * HOME_RETURN_STOP_BLOCKS;
 
+    private static final double HOME_IDLE_RADIUS_BLOCKS = 8.0D;
+    private static final double HOME_IDLE_RADIUS_SQUARED =
+            HOME_IDLE_RADIUS_BLOCKS * HOME_IDLE_RADIUS_BLOCKS;
+
+    private static final double HOME_IDLE_CLOSE_BLOCKS = 4.0D;
+    private static final double HOME_IDLE_CLOSE_SQUARED =
+            HOME_IDLE_CLOSE_BLOCKS * HOME_IDLE_CLOSE_BLOCKS;
+
+    private static final double HOME_IDLE_MIN_STROLL_BLOCKS = 1.5D;
+    private static final double HOME_IDLE_EXTRA_STROLL_BLOCKS = 3.0D;
+
     private static final double HOME_RETURN_SPEED = 0.68D;
+    private static final double HOME_IDLE_STROLL_SPEED = 0.42D;
 
     private RetoldSmallForagerHomeEvents() {
     }
@@ -94,12 +112,11 @@ public final class RetoldSmallForagerHomeEvents {
             PathfinderMob animal,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                animal.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                animal,
+                gameTime,
                 THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % THINK_INTERVAL_TICKS == 0L;
     }
 
     private static RetoldAnimalHomeMemory tryCreateSmallHome(
@@ -123,18 +140,18 @@ public final class RetoldSmallForagerHomeEvents {
                 )
         );
 
-        if (candidates.isEmpty()) {
-            return null;
-        }
-
         candidates.sort(
                 Comparator.comparingDouble(candidate -> animal.distanceToSqr(candidate))
         );
 
         List<PathfinderMob> members = new ArrayList<>();
+        int maxMembers = Math.max(
+                0,
+                RetoldAnimalSocialGroups.maxHomeGroupSize(animal) - 1
+        );
 
         for (PathfinderMob candidate : candidates) {
-            if (members.size() >= MAX_HOME_MEMBERS - 1) {
+            if (members.size() >= maxMembers) {
                 break;
             }
 
@@ -151,11 +168,7 @@ public final class RetoldSmallForagerHomeEvents {
     }
 
     private static boolean canCreateHome(PathfinderMob animal) {
-        if (animal.getTarget() != null && animal.getTarget().isAlive()) {
-            return false;
-        }
-
-        return RetoldAiControl.getMode(animal) == RetoldAiControlMode.NONE;
+        return RetoldBehaviorCoordinator.canStartLowPriorityHomeBehavior(animal);
     }
 
     private static boolean isHomeCandidate(
@@ -171,7 +184,7 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!sameSpecies(animal, candidate)) {
+        if (!RetoldAnimalSocialGroups.canShareHomeOrRange(animal, candidate)) {
             return false;
         }
 
@@ -217,8 +230,10 @@ public final class RetoldSmallForagerHomeEvents {
             long gameTime
     ) {
         RetoldAiControlMode mode = RetoldAiControl.getMode(animal);
+        RetoldAiControlOwner owner = RetoldAiControl.getOwner(animal);
 
         if (!canUseHomeReturn(animal, mode)) {
+            RetoldHomeRestAnimations.stopResting(animal);
             return;
         }
 
@@ -237,26 +252,108 @@ public final class RetoldSmallForagerHomeEvents {
                 animal,
                 gameTime
         );
+        boolean shouldHide = shouldHideAtWarren(
+                animal,
+                home,
+                recoveringFromPanic
+        );
+        boolean forcedReturn = shouldRoost || shouldRest || shouldHide;
+
+        if (
+                !forcedReturn
+                        && RetoldAnimalDailyRhythm.isActive(level, animal)
+                        && distanceSquared < getReturnStartDistanceSquared(recoveringFromPanic)
+        ) {
+            releaseHomeIdleIfOwned(animal);
+            RetoldHomeRestAnimations.stopResting(animal);
+            RetoldAnimalHomes.markUsed(
+                    animal,
+                    gameTime
+            );
+            return;
+        }
 
         if (distanceSquared <= HOME_RETURN_STOP_SQUARED) {
+            if (shouldHide) {
+                holdAtHome(
+                        level,
+                        animal,
+                        home,
+                        gameTime,
+                        HIDE_PRIORITY,
+                        REASON_HIDING,
+                        HIDE_CONTROL_TICKS,
+                        true
+                );
+                return;
+            }
+
             if (shouldRoost) {
                 holdAtHome(
+                        level,
                         animal,
+                        home,
                         gameTime,
                         ROOST_PRIORITY,
                         REASON_ROOSTING,
-                        ROOST_CONTROL_TICKS
+                        ROOST_CONTROL_TICKS,
+                        true
                 );
                 return;
             }
 
             if (shouldRest) {
                 holdAtHome(
+                        level,
                         animal,
+                        home,
                         gameTime,
                         REST_PRIORITY,
                         REASON_RESTING,
-                        REST_CONTROL_TICKS
+                        REST_CONTROL_TICKS,
+                        true
+                );
+                return;
+            }
+
+            if (RetoldAnimalDailyRhythm.isActive(level, animal)) {
+                releaseHomeIdleIfOwned(animal);
+                RetoldHomeRestAnimations.stopResting(animal);
+                RetoldAnimalHomes.markUsed(
+                        animal,
+                        gameTime
+                );
+                return;
+            }
+
+            if (
+                    RetoldAnimalHomeIdle.shouldIdleAtHome(
+                            animal,
+                            home,
+                            mode,
+                            owner,
+                            CONTROL_OWNER,
+                            REASON_HOME_IDLE,
+                            distanceSquared,
+                            HOME_IDLE_RADIUS_SQUARED,
+                            gameTime
+                    )
+            ) {
+                RetoldAnimalHomeIdle.idleAtHome(
+                        level,
+                        animal,
+                        home,
+                        gameTime,
+                        REASON_HOME_IDLE,
+                        HOME_IDLE_PRIORITY,
+                        HOME_IDLE_CONTROL_TICKS,
+                        HOME_IDLE_CLOSE_SQUARED,
+                        HOME_RETURN_SPEED,
+                        HOME_IDLE_STROLL_SPEED,
+                        HOME_IDLE_MIN_STROLL_BLOCKS,
+                        HOME_IDLE_EXTRA_STROLL_BLOCKS,
+                        HOME_IDLE_MOVE_INTERVAL_TICKS,
+                        false
                 );
                 return;
             }
@@ -271,11 +368,14 @@ public final class RetoldSmallForagerHomeEvents {
                             REASON_RETURN_HOME.equals(RetoldAiControl.getReason(animal))
                                     || REASON_ROOSTING.equals(RetoldAiControl.getReason(animal))
                                     || REASON_RESTING.equals(RetoldAiControl.getReason(animal))
+                                    || REASON_HIDING.equals(RetoldAiControl.getReason(animal))
                     )
             ) {
                 RetoldAiControl.clear(animal);
                 animal.getNavigation().stop();
             }
+
+            RetoldHomeRestAnimations.stopResting(animal);
 
             RetoldAnimalHomes.markUsed(
                     animal,
@@ -283,8 +383,6 @@ public final class RetoldSmallForagerHomeEvents {
             );
             return;
         }
-
-        boolean forcedReturn = shouldRoost || shouldRest;
 
         if (
                 !forcedReturn
@@ -296,11 +394,13 @@ public final class RetoldSmallForagerHomeEvents {
 
         int priority = getReturnPriority(
                 shouldRoost,
-                shouldRest
+                shouldRest,
+                shouldHide
         );
         String reason = getReturnReason(
                 shouldRoost,
-                shouldRest
+                shouldRest,
+                shouldHide
         );
 
         if (!RetoldAiControl.tryClaim(
@@ -314,6 +414,8 @@ public final class RetoldSmallForagerHomeEvents {
         )) {
             return;
         }
+
+        RetoldHomeRestAnimations.stopResting(animal);
 
         animal.setSprinting(false);
 
@@ -349,30 +451,30 @@ public final class RetoldSmallForagerHomeEvents {
     }
 
     private static void holdAtHome(
+            ServerLevel level,
             PathfinderMob animal,
+            RetoldAnimalHomeMemory home,
             long gameTime,
             int priority,
             String reason,
-            int ticks
+            int ticks,
+            boolean resting
     ) {
-        if (!RetoldAiControl.tryClaim(
+        RetoldAnimalHomeIdle.idleAtHome(
+                level,
                 animal,
-                RetoldAiControlMode.REGROUP,
-                CONTROL_OWNER,
-                priority,
-                reason,
+                home,
                 gameTime,
-                ticks
-        )) {
-            return;
-        }
-
-        animal.setSprinting(false);
-        animal.getNavigation().stop();
-
-        RetoldAnimalHomes.markUsed(
-                animal,
-                gameTime
+                reason,
+                priority,
+                ticks,
+                HOME_IDLE_CLOSE_SQUARED,
+                HOME_RETURN_SPEED,
+                HOME_IDLE_STROLL_SPEED,
+                HOME_IDLE_MIN_STROLL_BLOCKS,
+                HOME_IDLE_EXTRA_STROLL_BLOCKS,
+                HOME_IDLE_MOVE_INTERVAL_TICKS,
+                resting
         );
     }
 
@@ -385,11 +487,11 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.getEntityTypePath(animal.getType()).equals("chicken")) {
+        if (!RetoldMobRules.isEntityPath(animal, "chicken")) {
             return false;
         }
 
-        return isNight(level)
+        return !RetoldAnimalDailyRhythm.isActive(level, animal)
                 || level.isRainingAt(animal.blockPosition());
     }
 
@@ -402,18 +504,35 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.getEntityTypePath(animal.getType()).equals("pig")) {
+        if (!RetoldMobRules.isEntityPath(animal, "pig")) {
             return false;
         }
 
-        return isNight(level)
-                || level.isRainingAt(animal.blockPosition());
+        return RetoldAnimalDailyRhythm.shouldRestAtHome(level, animal);
+    }
+
+    private static boolean shouldHideAtWarren(
+            PathfinderMob animal,
+            RetoldAnimalHomeMemory home,
+            boolean recoveringFromPanic
+    ) {
+        if (home.type() != RetoldAnimalHomeType.WARREN) {
+            return false;
+        }
+
+        return recoveringFromPanic
+                && RetoldMobRules.isEntityPath(animal, "rabbit");
     }
 
     private static int getReturnPriority(
             boolean shouldRoost,
-            boolean shouldRest
+            boolean shouldRest,
+            boolean shouldHide
     ) {
+        if (shouldHide) {
+            return HIDE_PRIORITY;
+        }
+
         if (shouldRoost) {
             return ROOST_PRIORITY;
         }
@@ -427,8 +546,13 @@ public final class RetoldSmallForagerHomeEvents {
 
     private static String getReturnReason(
             boolean shouldRoost,
-            boolean shouldRest
+            boolean shouldRest,
+            boolean shouldHide
     ) {
+        if (shouldHide) {
+            return REASON_HIDING;
+        }
+
         if (shouldRoost) {
             return REASON_ROOSTING;
         }
@@ -468,6 +592,20 @@ public final class RetoldSmallForagerHomeEvents {
         );
     }
 
+    private static void releaseHomeIdleIfOwned(PathfinderMob animal) {
+        if (
+                RetoldAiControl.isControlledAsBy(
+                        animal,
+                        RetoldAiControlMode.REGROUP,
+                        CONTROL_OWNER
+                )
+                        && REASON_HOME_IDLE.equals(RetoldAiControl.getReason(animal))
+        ) {
+            RetoldAiControl.clear(animal);
+            animal.getNavigation().stop();
+        }
+    }
+
     private static BlockPos calculateHomeCenter(
             PathfinderMob animal,
             List<PathfinderMob> members
@@ -498,11 +636,4 @@ public final class RetoldSmallForagerHomeEvents {
                 && RetoldMobRules.profileType(mob) == RetoldMobProfileType.SMALL_FORAGER;
     }
 
-    private static boolean sameSpecies(
-            PathfinderMob first,
-            PathfinderMob second
-    ) {
-        return RetoldMobRules.getEntityTypePath(first.getType())
-                .equals(RetoldMobRules.getEntityTypePath(second.getType()));
-    }
 }

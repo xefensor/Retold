@@ -161,12 +161,11 @@ public final class RetoldControlledCombatEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                mob.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
                 COMBAT_THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % COMBAT_THINK_INTERVAL_TICKS == 0L;
     }
 
     private static LivingEntity findOwnerThreat(PathfinderMob defender) {
@@ -474,8 +473,9 @@ public final class RetoldControlledCombatEvents {
     }
 
     private static boolean isWolf(PathfinderMob mob) {
-        return RetoldMobRules.getEntityTypePath(
-                mob.getType()
-        ).equals("wolf");
+        return RetoldMobRules.isEntityPath(
+                mob,
+                "wolf"
+        );
     }
 }

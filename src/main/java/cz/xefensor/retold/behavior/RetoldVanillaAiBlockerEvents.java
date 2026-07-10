@@ -53,11 +53,10 @@ public final class RetoldVanillaAiBlockerEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                mob.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
                 CLEANUP_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % CLEANUP_INTERVAL_TICKS == 0L;
     }
 }

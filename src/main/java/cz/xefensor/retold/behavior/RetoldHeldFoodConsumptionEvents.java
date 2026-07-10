@@ -1,7 +1,6 @@
 package cz.xefensor.retold.behavior;
 
 import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
@@ -36,12 +35,20 @@ public final class RetoldHeldFoodConsumptionEvents {
             return;
         }
 
+        if (!RetoldBehaviorCoordinator.canFeedNow(mob)) {
+            return;
+        }
+
         RetoldMobState state = RetoldMobStates.getOrCreate(
                 mob,
                 gameTime
         );
 
         if (state.hunger() < RetoldMobRules.eatThreshold(mob)) {
+            return;
+        }
+
+        if (shouldCarryHeldFoodHome(mob)) {
             return;
         }
 
@@ -61,12 +68,11 @@ public final class RetoldHeldFoodConsumptionEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                mob.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
                 THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % THINK_INTERVAL_TICKS == 0L;
     }
 
     private static boolean isMouthFoodMob(PathfinderMob mob) {
@@ -76,6 +82,28 @@ public final class RetoldHeldFoodConsumptionEvents {
 
         return path.equals("fox")
                 || path.equals("dolphin");
+    }
+
+    private static boolean shouldCarryHeldFoodHome(PathfinderMob mob) {
+        if (!RetoldMobRules.isEntityPath(mob, "fox")) {
+            return false;
+        }
+
+        if (!(mob.level() instanceof ServerLevel level)) {
+            return false;
+        }
+
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
+
+        if (!RetoldAnimalHomes.isValidFor(level, mob, home)) {
+            return false;
+        }
+
+        if (home.type() != RetoldAnimalHomeType.FOX_DEN) {
+            return false;
+        }
+
+        return mob.blockPosition().distSqr(home.pos()) > 6.0D * 6.0D;
     }
 
     private static boolean tryConsumeHeldFood(
@@ -116,20 +144,25 @@ public final class RetoldHeldFoodConsumptionEvents {
     ) {
         int relief = RetoldMobRules.foodRelief(
                 mob,
-                getItemPath(stack)
+                RetoldMobRules.getItemPath(stack)
         );
+
+        if (!RetoldAiControl.tryClaim(
+                mob,
+                RetoldAiControlMode.FEED,
+                RetoldAiControlOwner.FOOD,
+                gameTime,
+                FEED_CONTROL_TICKS
+        )) {
+            return;
+        }
 
         state.addHunger(
                 -relief
         );
         state.markFed(gameTime);
 
-        RetoldAiControl.claim(
-                mob,
-                RetoldAiControlMode.FEED,
-                gameTime,
-                FEED_CONTROL_TICKS
-        );
+        RetoldFeedingAnimations.play(mob);
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 mob,
@@ -161,9 +194,4 @@ public final class RetoldHeldFoodConsumptionEvents {
         }
     }
 
-    private static String getItemPath(ItemStack stack) {
-        return BuiltInRegistries.ITEM.getKey(
-                stack.getItem()
-        ).getPath();
-    }
 }

@@ -132,12 +132,11 @@ public final class RetoldPredatorSearchEvents {
             PathfinderMob predator,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                predator.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                predator,
+                gameTime,
                 SEARCH_THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % SEARCH_THINK_INTERVAL_TICKS == 0L;
     }
 
     private static boolean canUseSearchLayer(

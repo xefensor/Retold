@@ -5,13 +5,22 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.IdentityHashMap;
+import java.util.Map;
 
 public final class RetoldMobRules {
     private static final int DESPERATE_HUNT_HUNGER = 86;
     private static final int LOW_CONFIDENCE_HUNT_GATE = 35;
     private static final int HIGH_STRESS_HUNT_GATE = 55;
+    private static final int RECENT_HUNT_MEMORY_TICKS = 20 * 45;
+    private static final Map<EntityType<?>, String> ENTITY_TYPE_PATHS = new IdentityHashMap<>();
+    private static final Map<Item, String> ITEM_PATHS = new IdentityHashMap<>();
+    private static final Map<Block, String> BLOCK_PATHS = new IdentityHashMap<>();
 
     private RetoldMobRules() {
     }
@@ -21,9 +30,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        String path = getEntityTypePath(entity.getType());
-
-        return RetoldMobProfiles.isManaged(path);
+        return RetoldMobProfiles.get(entity).managed();
     }
 
     public static boolean isManagedPredator(Entity entity) {
@@ -40,6 +47,15 @@ public final class RetoldMobRules {
 
     public static RetoldMobProfileType profileType(Entity entity) {
         return RetoldMobProfiles.get(entity).type();
+    }
+
+    public static boolean isEntityPath(
+            Entity entity,
+            String path
+    ) {
+        return entity != null
+                && path != null
+                && getEntityTypePath(entity.getType()).equals(path);
     }
 
     public static boolean isPackSocialHunter(Entity entity) {
@@ -105,15 +121,32 @@ public final class RetoldMobRules {
             return true;
         }
 
+        long gameTime = mob.level().getGameTime();
+
         return hunger >= adjustedHuntThreshold(
                 mob,
-                state
+                state,
+                gameTime
         );
     }
 
     public static int adjustedHuntThreshold(
             PathfinderMob mob,
             RetoldMobState state
+    ) {
+        long gameTime = mob == null ? 0L : mob.level().getGameTime();
+
+        return adjustedHuntThreshold(
+                mob,
+                state,
+                gameTime
+        );
+    }
+
+    public static int adjustedHuntThreshold(
+            PathfinderMob mob,
+            RetoldMobState state,
+            long gameTime
     ) {
         int threshold = huntThreshold(mob);
 
@@ -131,10 +164,56 @@ public final class RetoldMobRules {
                 state.stress() - HIGH_STRESS_HUNT_GATE
         ) / 3;
 
+        int outcomeAdjustment = getRecentHuntOutcomeAdjustment(
+                state,
+                gameTime
+        );
+
         return Math.min(
                 DESPERATE_HUNT_HUNGER,
-                threshold + confidencePenalty + stressPenalty
+                Math.max(
+                        threshold,
+                        threshold + confidencePenalty + stressPenalty + outcomeAdjustment
+                )
         );
+    }
+
+    private static int getRecentHuntOutcomeAdjustment(
+            RetoldMobState state,
+            long gameTime
+    ) {
+        boolean recentSuccess = isRecent(
+                state.lastSuccessfulHuntAt(),
+                gameTime
+        );
+        boolean recentFailure = isRecent(
+                state.lastFailedHuntAt(),
+                gameTime
+        );
+
+        if (!recentSuccess && !recentFailure) {
+            return 0;
+        }
+
+        if (recentSuccess && !recentFailure) {
+            return -4;
+        }
+
+        if (!recentSuccess) {
+            return 6;
+        }
+
+        return state.lastSuccessfulHuntAt() >= state.lastFailedHuntAt()
+                ? -4
+                : 6;
+    }
+
+    private static boolean isRecent(
+            long timestamp,
+            long gameTime
+    ) {
+        return timestamp > 0L
+                && gameTime - timestamp <= RECENT_HUNT_MEMORY_TICKS;
     }
 
     public static int foodRelief(
@@ -534,35 +613,82 @@ public final class RetoldMobRules {
     }
 
     public static String getItemPath(ItemStack stack) {
-        String id = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        int separator = id.indexOf(':');
-
-        if (separator < 0 || separator + 1 >= id.length()) {
-            return id;
+        if (stack == null || stack.isEmpty()) {
+            return "";
         }
 
-        return id.substring(separator + 1);
+        Item item = stack.getItem();
+        String cached = ITEM_PATHS.get(item);
+
+        if (cached != null) {
+            return cached;
+        }
+
+        String id = BuiltInRegistries.ITEM.getKey(item).toString();
+        int separator = id.indexOf(':');
+
+        String path = separator < 0 || separator + 1 >= id.length()
+                ? id
+                : id.substring(separator + 1);
+
+        ITEM_PATHS.put(
+                item,
+                path
+        );
+
+        return path;
     }
 
     public static String getBlockPath(BlockState state) {
-        String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
-        int separator = id.indexOf(':');
-
-        if (separator < 0 || separator + 1 >= id.length()) {
-            return id;
+        if (state == null) {
+            return "";
         }
 
-        return id.substring(separator + 1);
+        Block block = state.getBlock();
+        String cached = BLOCK_PATHS.get(block);
+
+        if (cached != null) {
+            return cached;
+        }
+
+        String id = BuiltInRegistries.BLOCK.getKey(block).toString();
+        int separator = id.indexOf(':');
+
+        String path = separator < 0 || separator + 1 >= id.length()
+                ? id
+                : id.substring(separator + 1);
+
+        BLOCK_PATHS.put(
+                block,
+                path
+        );
+
+        return path;
     }
 
     public static String getEntityTypePath(EntityType<?> entityType) {
+        if (entityType == null) {
+            return "";
+        }
+
+        String cached = ENTITY_TYPE_PATHS.get(entityType);
+
+        if (cached != null) {
+            return cached;
+        }
+
         String id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString();
         int separator = id.indexOf(':');
 
-        if (separator < 0 || separator + 1 >= id.length()) {
-            return id;
-        }
+        String path = separator < 0 || separator + 1 >= id.length()
+                ? id
+                : id.substring(separator + 1);
 
-        return id.substring(separator + 1);
+        ENTITY_TYPE_PATHS.put(
+                entityType,
+                path
+        );
+
+        return path;
     }
 }

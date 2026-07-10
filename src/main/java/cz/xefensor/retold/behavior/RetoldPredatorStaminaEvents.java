@@ -170,12 +170,11 @@ public final class RetoldPredatorStaminaEvents {
             PathfinderMob predator,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                predator.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                predator,
+                gameTime,
                 THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % THINK_INTERVAL_TICKS == 0L;
     }
 
     private static void updateChaseFatigue(
@@ -285,6 +284,11 @@ public final class RetoldPredatorStaminaEvents {
             StaminaState state,
             long gameTime
     ) {
+        RetoldMobStates.getOrCreate(
+                predator,
+                gameTime
+        ).markFailedHunt(gameTime);
+
         state.fatigue = Math.max(
                 state.fatigue,
                 FATIGUE_SLOW_THRESHOLD

@@ -122,7 +122,10 @@ public final class RetoldControlledHuntingEvents {
             );
 
             if (isStaleHunt(level, hunter, gameTime)) {
-                stopHunt(hunter);
+                stopHunt(
+                        hunter,
+                        gameTime
+                );
                 return;
             }
 
@@ -188,6 +191,11 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
+        RetoldMobStates.getOrCreate(
+                killer,
+                gameTime
+        ).markSuccessfulHunt(gameTime);
+
         clearHuntMemory(killer);
         RetoldPredatorStrike.clear(killer);
 
@@ -216,12 +224,11 @@ public final class RetoldControlledHuntingEvents {
             PathfinderMob hunter,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                hunter.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                hunter,
+                gameTime,
                 HUNT_THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % HUNT_THINK_INTERVAL_TICKS == 0L;
     }
 
     private static boolean shouldStartHunt(
@@ -331,17 +338,26 @@ public final class RetoldControlledHuntingEvents {
                 return;
             }
 
-            stopHunt(hunter);
+            stopHunt(
+                    hunter,
+                    gameTime
+            );
             return;
         }
 
         if (!isValidHuntPrey(hunter, prey, gameTime)) {
-            stopHunt(hunter);
+            stopHunt(
+                    hunter,
+                    gameTime
+            );
             return;
         }
 
         if (hunter.distanceToSqr(prey) > HUNT_ABANDON_DISTANCE_SQUARED) {
-            stopHunt(hunter);
+            stopHunt(
+                    hunter,
+                    gameTime
+            );
             return;
         }
 
@@ -430,7 +446,10 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        stopHunt(hunter);
+        stopHunt(
+                hunter,
+                gameTime
+        );
     }
 
     private static boolean isStaleHunt(
@@ -701,7 +720,10 @@ public final class RetoldControlledHuntingEvents {
             long gameTime
     ) {
         if (memory == null || memory.isExpired(gameTime)) {
-            stopHunt(hunter);
+            stopHunt(
+                    hunter,
+                    gameTime
+            );
             return;
         }
 
@@ -866,7 +888,15 @@ public final class RetoldControlledHuntingEvents {
         hunter.getNavigation().stop();
     }
 
-    private static void stopHunt(PathfinderMob hunter) {
+    private static void stopHunt(
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        RetoldMobStates.getOrCreate(
+                hunter,
+                gameTime
+        ).markFailedHunt(gameTime);
+
         clearHuntMemory(hunter);
         RetoldPredatorStrike.clear(hunter);
 

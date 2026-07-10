@@ -21,6 +21,7 @@
     "BrainMemoryMixin",
     "PathNavigationMixin",
     "MobHurtTargetMixin",
+    "FoxInvoker",
     "BedBlockMixin",
     "ServerLevelSleepMixin",
     "ElderGuardianMixin"

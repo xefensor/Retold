@@ -97,6 +97,8 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldPackHomeEvents.class);
         NeoForge.EVENT_BUS.register(RetoldHerdRangeEvents.class);
         NeoForge.EVENT_BUS.register(RetoldSmallForagerHomeEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldSoloOpportunistHomeEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldAnimalHomeRepairEvents.class);
         NeoForge.EVENT_BUS.register(RetoldMobStateRecoveryEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPredatorStaminaEvents.class);
         NeoForge.EVENT_BUS.register(RetoldHeldFoodConsumptionEvents.class);

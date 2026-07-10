@@ -128,12 +128,11 @@ public final class RetoldFoodBehaviorEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                mob.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
                 THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % THINK_INTERVAL_TICKS == 0L;
     }
 
     private static void tickHunger(
@@ -159,15 +158,17 @@ public final class RetoldFoodBehaviorEvents {
             PathfinderMob mob,
             RetoldMobState state
     ) {
-        if (mob == null || state == null) {
+        if (state == null) {
             return false;
         }
 
-        if (!mob.isAlive() || mob.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.canFeedNow(mob)) {
             return false;
         }
 
-        if (mob.getTarget() != null && mob.getTarget().isAlive()) {
+        RetoldAiControlMode mode = RetoldAiControl.getMode(mob);
+
+        if (mode != RetoldAiControlMode.NONE && mode != RetoldAiControlMode.FEED) {
             return false;
         }
 
@@ -296,6 +297,8 @@ public final class RetoldFoodBehaviorEvents {
 
         state.markFed(gameTime);
 
+        RetoldFeedingAnimations.play(mob);
+
         stack.shrink(1);
 
         if (stack.isEmpty()) {
@@ -316,23 +319,24 @@ public final class RetoldFoodBehaviorEvents {
 
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
         for (int dx = -FORAGE_HORIZONTAL_RADIUS; dx <= FORAGE_HORIZONTAL_RADIUS; dx++) {
             for (int dy = -FORAGE_VERTICAL_RADIUS; dy <= FORAGE_VERTICAL_RADIUS; dy++) {
                 for (int dz = -FORAGE_HORIZONTAL_RADIUS; dz <= FORAGE_HORIZONTAL_RADIUS; dz++) {
-                    BlockPos pos = new BlockPos(
+                    mutablePos.set(
                             center.getX() + dx,
                             center.getY() + dy,
                             center.getZ() + dz
                     );
 
-                    double distanceSquared = center.distSqr(pos);
+                    double distanceSquared = dx * dx + dy * dy + dz * dz;
 
                     if (distanceSquared > FORAGE_HORIZONTAL_RADIUS * FORAGE_HORIZONTAL_RADIUS) {
                         continue;
                     }
 
-                    BlockState blockState = level.getBlockState(pos);
+                    BlockState blockState = level.getBlockState(mutablePos);
 
                     if (!RetoldMobRules.canForageBlock(mob, blockState)) {
                         continue;
@@ -344,7 +348,7 @@ public final class RetoldFoodBehaviorEvents {
 
                     if (distanceSquared < bestScore) {
                         bestScore = distanceSquared;
-                        best = pos.immutable();
+                        best = mutablePos.immutable();
                     }
                 }
             }
@@ -408,6 +412,8 @@ public final class RetoldFoodBehaviorEvents {
         );
 
         state.markFed(gameTime);
+
+        RetoldFeedingAnimations.play(mob);
 
         destroyForageBlock(
                 level,

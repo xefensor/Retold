@@ -69,12 +69,11 @@ public final class RetoldMobStateRecoveryEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                mob.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
                 THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % THINK_INTERVAL_TICKS == 0L;
     }
 
     private static boolean canRecover(
@@ -109,13 +108,15 @@ public final class RetoldMobStateRecoveryEvents {
                 level,
                 mob
         );
-        boolean nearGroup = isNearCompatibleGroup(
+        boolean socialMob = RetoldAnimalSocialGroups.isSocialRecoveryMob(mob);
+        boolean nearGroup = socialMob
+                && isNearCompatibleGroup(
                 level,
                 mob
         );
 
         if (
-                isSocialRecoveryMob(mob)
+                socialMob
                         && !nearHome
                         && !nearGroup
         ) {
@@ -199,55 +200,9 @@ public final class RetoldMobStateRecoveryEvents {
             return false;
         }
 
-        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
-
-        if (profileType != RetoldMobRules.profileType(candidate)) {
-            return false;
-        }
-
-        String mobPath = getPath(mob);
-        String candidatePath = getPath(candidate);
-
-        if (profileType == RetoldMobProfileType.HUNGRY_GRAZER) {
-            return herdGroup(mobPath).equals(
-                    herdGroup(candidatePath)
-            );
-        }
-
-        return mobPath.equals(candidatePath);
-    }
-
-    private static boolean isSocialRecoveryMob(PathfinderMob mob) {
-        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
-
-        return profileType == RetoldMobProfileType.HUNGRY_GRAZER
-                || profileType == RetoldMobProfileType.SMALL_FORAGER
-                || profileType == RetoldMobProfileType.PACK_PREDATOR
-                || profileType == RetoldMobProfileType.AQUATIC_PREDATOR;
-    }
-
-    private static String herdGroup(String path) {
-        if (
-                path.equals("horse")
-                        || path.equals("donkey")
-                        || path.equals("mule")
-        ) {
-            return "equine";
-        }
-
-        if (
-                path.equals("llama")
-                        || path.equals("trader_llama")
-        ) {
-            return "llama";
-        }
-
-        return path;
-    }
-
-    private static String getPath(PathfinderMob mob) {
-        return RetoldMobRules.getEntityTypePath(
-                mob.getType()
+        return RetoldAnimalSocialGroups.canRecoverWith(
+                mob,
+                candidate
         );
     }
 }

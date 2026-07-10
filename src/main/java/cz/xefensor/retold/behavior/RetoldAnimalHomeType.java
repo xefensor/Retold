@@ -9,7 +9,10 @@ public enum RetoldAnimalHomeType {
     HERD_RANGE,
     FORAGING_RANGE,
     ROOST,
-    WARREN;
+    WARREN,
+    FOX_DEN,
+    CAT_TERRITORY,
+    OCELOT_TERRITORY;
 
     public static final Codec<RetoldAnimalHomeType> CODEC =
             Codec.STRING.xmap(

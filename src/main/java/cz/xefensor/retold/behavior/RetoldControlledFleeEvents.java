@@ -218,12 +218,11 @@ public final class RetoldControlledFleeEvents {
             PathfinderMob prey,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                prey.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                prey,
+                gameTime,
                 FLEE_THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % FLEE_THINK_INTERVAL_TICKS == 0L;
     }
 
     private static LivingEntity findBestThreat(

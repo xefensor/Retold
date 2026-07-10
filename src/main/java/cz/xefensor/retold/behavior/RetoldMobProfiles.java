@@ -4,6 +4,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 
 public final class RetoldMobProfiles {
@@ -22,6 +23,7 @@ public final class RetoldMobProfiles {
     );
 
     private static final Map<String, RetoldMobProfile> PROFILES = new HashMap<>();
+    private static final Map<EntityType<?>, RetoldMobProfile> PROFILES_BY_TYPE = new IdentityHashMap<>();
 
     static {
         registerGrazer("cow", "sheep", "goat", "horse", "donkey", "mule", "llama", "trader_llama", "camel");
@@ -49,7 +51,14 @@ public final class RetoldMobProfiles {
     }
 
     public static RetoldMobProfile get(EntityType<?> entityType) {
-        return get(RetoldMobRules.getEntityTypePath(entityType));
+        if (entityType == null) {
+            return NONE;
+        }
+
+        return PROFILES_BY_TYPE.computeIfAbsent(
+                entityType,
+                type -> get(RetoldMobRules.getEntityTypePath(type))
+        );
     }
 
     public static RetoldMobProfile get(String entityPath) {

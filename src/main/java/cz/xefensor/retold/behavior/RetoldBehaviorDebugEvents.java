@@ -4,20 +4,24 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.ObjIntConsumer;
 import java.util.function.ToIntFunction;
@@ -29,6 +33,10 @@ public final class RetoldBehaviorDebugEvents {
     private static final int DISPLAY_INTERVAL_TICKS = 10;
     private static final double LOOK_DISTANCE_BLOCKS = 24.0D;
     private static final double LOOK_DOT_THRESHOLD = 0.985D;
+    private static final int DEFAULT_NEARBY_RADIUS_BLOCKS = 24;
+    private static final int MAX_NEARBY_RADIUS_BLOCKS = 96;
+    private static final int MAX_NEARBY_MOBS_SHOWN = 32;
+    private static final int DEFAULT_SHOW_HOME_RADIUS_BLOCKS = 32;
 
     private RetoldBehaviorDebugEvents() {
     }
@@ -45,6 +53,60 @@ public final class RetoldBehaviorDebugEvents {
                         .then(
                                 Commands.literal("get")
                                         .executes(RetoldBehaviorDebugEvents::printLookedMobDebug)
+                        )
+                        .then(
+                                Commands.literal("home")
+                                        .executes(RetoldBehaviorDebugEvents::printLookedMobHomeDebug)
+                        )
+                        .then(
+                                Commands.literal("showhomes")
+                                        .executes(context -> showNearbyHomes(
+                                                context,
+                                                DEFAULT_SHOW_HOME_RADIUS_BLOCKS
+                                        ))
+                                        .then(
+                                                Commands.argument(
+                                                                "radius",
+                                                                IntegerArgumentType.integer(
+                                                                        1,
+                                                                        MAX_NEARBY_RADIUS_BLOCKS
+                                                                )
+                                                        )
+                                                        .executes(context -> showNearbyHomes(
+                                                                context,
+                                                                IntegerArgumentType.getInteger(
+                                                                        context,
+                                                                        "radius"
+                                                                )
+                                                        ))
+                                        )
+                        )
+                        .then(
+                                Commands.literal("pack")
+                                        .executes(RetoldBehaviorDebugEvents::printLookedMobPackDebug)
+                        )
+                        .then(
+                                Commands.literal("nearby")
+                                        .executes(context -> printNearbyBehaviorDebug(
+                                                context,
+                                                DEFAULT_NEARBY_RADIUS_BLOCKS
+                                        ))
+                                        .then(
+                                                Commands.argument(
+                                                                "radius",
+                                                                IntegerArgumentType.integer(
+                                                                        1,
+                                                                        MAX_NEARBY_RADIUS_BLOCKS
+                                                                )
+                                                        )
+                                                        .executes(context -> printNearbyBehaviorDebug(
+                                                                context,
+                                                                IntegerArgumentType.getInteger(
+                                                                        context,
+                                                                        "radius"
+                                                                )
+                                                        ))
+                                        )
                         )
                         .then(
                                 Commands.literal("sethunger")
@@ -109,6 +171,10 @@ public final class RetoldBehaviorDebugEvents {
                         .then(
                                 Commands.literal("clearcontrol")
                                         .executes(RetoldBehaviorDebugEvents::clearLookedMobControl)
+                        )
+                        .then(
+                                Commands.literal("clearhome")
+                                        .executes(RetoldBehaviorDebugEvents::clearLookedMobHome)
                         )
                         .then(
                                 Commands.literal("count")
@@ -211,6 +277,171 @@ public final class RetoldBehaviorDebugEvents {
                 () -> Component.literal(
                         buildFullDebugText(
                                 mob,
+                                gameTime
+                        )
+                ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int printLookedMobHomeDebug(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        long gameTime = mob.level() instanceof ServerLevel level
+                ? level.getGameTime()
+                : 0L;
+
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        getEntityName(mob)
+                                + " home: "
+                                + fullHomeText(
+                                mob,
+                                home,
+                                gameTime
+                        )
+                ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int printLookedMobPackDebug(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        RetoldPackHuntingEvents.debugPackText(mob)
+                ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int showNearbyHomes(
+            CommandContext<CommandSourceStack> context,
+            int radius
+    ) {
+        CommandSourceStack source = context.getSource();
+
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(
+                    Component.literal("This command must be run by a player.")
+            );
+            return 0;
+        }
+
+        if (!(player.level() instanceof ServerLevel level)) {
+            source.sendFailure(
+                    Component.literal("Player is not in a server level.")
+            );
+            return 0;
+        }
+
+        double radiusSquared = (double) radius * (double) radius;
+        AABB area = player.getBoundingBox().inflate(radius);
+        List<PathfinderMob> mobs = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                candidate -> candidate.isAlive()
+                        && !candidate.isRemoved()
+                        && candidate.distanceToSqr(player) <= radiusSquared
+                        && RetoldAnimalHomes.get(candidate) != null
+        );
+
+        int shown = 0;
+
+        for (PathfinderMob mob : mobs) {
+            RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
+
+            if (!RetoldAnimalHomes.isValidFor(level, mob, home)) {
+                continue;
+            }
+
+            showHomeParticles(
+                    level,
+                    home.pos()
+            );
+            shown++;
+        }
+
+        int finalShown = shown;
+
+        source.sendSuccess(
+                () -> Component.literal("Shown Retold homes: " + finalShown),
+                false
+        );
+
+        return shown > 0 ? 1 : 0;
+    }
+
+    private static int printNearbyBehaviorDebug(
+            CommandContext<CommandSourceStack> context,
+            int radius
+    ) {
+        CommandSourceStack source = context.getSource();
+
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(
+                    Component.literal("This command must be run by a player.")
+            );
+            return 0;
+        }
+
+        if (!(player.level() instanceof ServerLevel level)) {
+            source.sendFailure(
+                    Component.literal("Player is not in a server level.")
+            );
+            return 0;
+        }
+
+        long gameTime = level.getGameTime();
+        double radiusSquared = (double) radius * (double) radius;
+        AABB area = player.getBoundingBox().inflate(radius);
+        List<PathfinderMob> mobs = new ArrayList<>(
+                level.getEntitiesOfClass(
+                        PathfinderMob.class,
+                        area,
+                        candidate -> candidate.isAlive()
+                                && !candidate.isRemoved()
+                                && candidate.distanceToSqr(player) <= radiusSquared
+                                && isUsefulNearbyDebugMob(candidate)
+                )
+        );
+
+        mobs.sort(
+                Comparator.comparingDouble(candidate -> candidate.distanceToSqr(player))
+        );
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        buildNearbyDebugText(
+                                level,
+                                player,
+                                mobs,
+                                radius,
                                 gameTime
                         )
                 ),
@@ -396,6 +627,29 @@ public final class RetoldBehaviorDebugEvents {
         return 1;
     }
 
+    private static int clearLookedMobHome(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        RetoldAnimalHomes.remove(mob);
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        "Cleared Retold home for " + getEntityName(mob)
+                ),
+                true
+        );
+
+        return 1;
+    }
+
     private static RetoldMobState getOrCreateDebugState(
             CommandSourceStack source,
             PathfinderMob mob
@@ -560,7 +814,9 @@ public final class RetoldBehaviorDebugEvents {
                 + thresholds
                 + " profile=" + profileType
                 + " home=" + shortHomeText(home)
+                + " rhythm=" + rhythmText(mob)
                 + " ctrl=" + controlMode
+                + controlReasonText(mob)
                 + " managed=" + yesNo(managed)
                 + " pred=" + yesNo(predator)
                 + " target=" + target;
@@ -581,7 +837,8 @@ public final class RetoldBehaviorDebugEvents {
         return "\nRetold behavior debug"
                 + "\nMob: " + getEntityName(mob) + " #" + mob.getId()
                 + "\nProfile: " + RetoldMobRules.profileType(mob)
-                + "\nHome: " + fullHomeText(home, gameTime)
+                + "\nHome: " + fullHomeText(mob, home, gameTime)
+                + "\nRhythm: " + rhythmText(mob)
                 + "\nManaged: " + yesNo(RetoldMobRules.isManagedMob(mob))
                 + "\nPredator: " + yesNo(RetoldMobRules.isManagedPredator(mob))
                 + "\nHunger: " + state.hunger()
@@ -594,11 +851,159 @@ public final class RetoldBehaviorDebugEvents {
                 + "\nControl: " + RetoldAiControl.getMode(mob)
                 + "\nControl owner: " + RetoldAiControl.getOwner(mob)
                 + "\nControl priority: " + RetoldAiControl.getPriority(mob)
+                + "\nControl reason: " + safeControlReason(mob)
                 + "\nLast ate: " + ticksAgoText(gameTime, state.lastAteAt())
                 + "\nLast danger: " + ticksAgoText(gameTime, state.lastDangerAt())
                 + "\nLast flee end: " + ticksAgoText(gameTime, state.lastFleeEndedAt())
+                + "\nLast hunt success: " + ticksAgoText(gameTime, state.lastSuccessfulHuntAt())
+                + "\nLast hunt fail: " + ticksAgoText(gameTime, state.lastFailedHuntAt())
                 + "\nLast hunger tick: " + ticksAgoText(gameTime, state.lastHungerTickAt())
                 + "\nTarget: " + (target == null ? "none" : getEntityName(target) + " #" + target.getId());
+    }
+
+    private static String buildNearbyDebugText(
+            ServerLevel level,
+            ServerPlayer player,
+            List<PathfinderMob> mobs,
+            int radius,
+            long gameTime
+    ) {
+        StringBuilder text = new StringBuilder();
+
+        text.append("\nRetold nearby behavior debug");
+        text.append("\nRadius: ").append(radius);
+        text.append(" blocks");
+        text.append("\nMobs: ").append(mobs.size());
+
+        int shown = Math.min(
+                mobs.size(),
+                MAX_NEARBY_MOBS_SHOWN
+        );
+
+        if (shown <= 0) {
+            text.append("\nNo Retold-managed mobs found nearby.");
+            return text.toString();
+        }
+
+        text.append("\nShowing: ").append(shown);
+
+        if (mobs.size() > shown) {
+            text.append("/").append(mobs.size());
+        }
+
+        for (int index = 0; index < shown; index++) {
+            PathfinderMob mob = mobs.get(index);
+
+            text.append("\n- ");
+            text.append(getEntityName(mob));
+            text.append(" #").append(mob.getId());
+            text.append(" d=").append(Math.round(Math.sqrt(mob.distanceToSqr(player))));
+            text.append(" h=").append(hungerText(mob));
+            text.append(" mode=").append(RetoldAiControl.getMode(mob));
+            text.append(" target=").append(targetText(mob.getTarget()));
+            text.append(" home=").append(nearbyHomeText(
+                    level,
+                    mob,
+                    gameTime
+            ));
+        }
+
+        return text.toString();
+    }
+
+    private static boolean isUsefulNearbyDebugMob(PathfinderMob mob) {
+        return RetoldMobRules.isManagedMob(mob)
+                || RetoldMobStates.get(mob) != null
+                || RetoldAnimalHomes.get(mob) != null
+                || RetoldAiControl.isControlled(mob);
+    }
+
+    private static String nearbyHomeText(
+            ServerLevel level,
+            PathfinderMob mob,
+            long gameTime
+    ) {
+        RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
+
+        if (home == null) {
+            return "none";
+        }
+
+        int currentGroupSize = RetoldAnimalHomes.currentHomeMemberCount(
+                level,
+                mob,
+                home
+        );
+        int maxGroupSize = RetoldAnimalSocialGroups.maxHomeGroupSize(mob);
+
+        return home.type()
+                + "@"
+                + home.pos().toShortString()
+                + " "
+                + currentGroupSize
+                + "/"
+                + maxGroupSize
+                + " valid="
+                + RetoldAnimalHomes.invalidReason(
+                level,
+                mob,
+                home
+        )
+                + " used="
+                + ticksAgoText(
+                gameTime,
+                home.lastUsedAt()
+        );
+    }
+
+    private static void showHomeParticles(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        double x = pos.getX() + 0.5D;
+        double y = pos.getY() + 1.0D;
+        double z = pos.getZ() + 0.5D;
+
+        level.sendParticles(
+                ParticleTypes.HAPPY_VILLAGER,
+                x,
+                y,
+                z,
+                8,
+                0.35D,
+                0.25D,
+                0.35D,
+                0.02D
+        );
+        level.sendParticles(
+                ParticleTypes.END_ROD,
+                x,
+                y + 0.3D,
+                z,
+                4,
+                0.2D,
+                0.15D,
+                0.2D,
+                0.01D
+        );
+    }
+
+    private static String hungerText(PathfinderMob mob) {
+        RetoldMobState state = RetoldMobStates.get(mob);
+
+        if (state == null) {
+            return "-";
+        }
+
+        return Integer.toString(state.hunger());
+    }
+
+    private static String targetText(LivingEntity target) {
+        if (target == null) {
+            return "none";
+        }
+
+        return getEntityName(target) + " #" + target.getId();
     }
 
     private static String shortHomeText(RetoldAnimalHomeMemory home) {
@@ -609,16 +1014,103 @@ public final class RetoldBehaviorDebugEvents {
         return home.type().name();
     }
 
-    private static String fullHomeText(RetoldAnimalHomeMemory home, long gameTime) {
+    private static String fullHomeText(
+            PathfinderMob mob,
+            RetoldAnimalHomeMemory home,
+            long gameTime
+    ) {
         if (home == null) {
             return "none";
+        }
+
+        String validity = "unknown";
+        String chunkLoaded = "unknown";
+        String distance = "unknown";
+        int maxGroupSize = RetoldAnimalSocialGroups.maxHomeGroupSize(mob);
+        int currentGroupSize = 0;
+        long separation = Math.round(
+                RetoldAnimalSocialGroups.homeSeparationBlocks(mob)
+        );
+
+        if (mob.level() instanceof ServerLevel level) {
+            validity = RetoldAnimalHomes.invalidReason(
+                    level,
+                    mob,
+                    home
+            );
+            chunkLoaded = yesNo(
+                    RetoldAnimalHomes.isChunkLoaded(
+                            level,
+                            home
+                    )
+            );
+
+            double distanceSquared = RetoldAnimalHomes.distanceSquaredToHome(
+                    mob,
+                    home
+            );
+            currentGroupSize = RetoldAnimalHomes.currentHomeMemberCount(
+                    level,
+                    mob,
+                    home
+            );
+
+            if (distanceSquared >= 0.0D) {
+                distance = Long.toString(
+                        Math.round(
+                                Math.sqrt(distanceSquared)
+                        )
+                );
+            }
         }
 
         return home.type()
                 + " @ "
                 + home.pos().toShortString()
+                + " valid="
+                + validity
+                + " dist="
+                + distance
+                + " loaded="
+                + chunkLoaded
+                + " members="
+                + currentGroupSize
+                + "/"
+                + maxGroupSize
+                + " separate="
+                + separation
                 + " used "
                 + ticksAgoText(gameTime, home.lastUsedAt());
+    }
+
+    private static String controlReasonText(PathfinderMob mob) {
+        String reason = RetoldAiControl.getReason(mob);
+
+        if (reason == null || reason.isBlank()) {
+            return "";
+        }
+
+        return "(" + reason + ")";
+    }
+
+    private static String safeControlReason(PathfinderMob mob) {
+        String reason = RetoldAiControl.getReason(mob);
+
+        if (reason == null || reason.isBlank()) {
+            return "none";
+        }
+
+        return reason;
+    }
+
+    private static String rhythmText(PathfinderMob mob) {
+        if (!(mob.level() instanceof ServerLevel level)) {
+            return "unknown";
+        }
+
+        return RetoldAnimalDailyRhythm.isActive(level, mob)
+                ? "active"
+                : "home";
     }
 
     private static String getSafeHuntThresholdText(
@@ -685,17 +1177,6 @@ public final class RetoldBehaviorDebugEvents {
             return "none";
         }
 
-        return getEntityTypePath(entity.getType());
-    }
-
-    private static String getEntityTypePath(EntityType<?> entityType) {
-        String id = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString();
-        int separator = id.indexOf(':');
-
-        if (separator < 0 || separator + 1 >= id.length()) {
-            return id;
-        }
-
-        return id.substring(separator + 1);
+        return RetoldMobRules.getEntityTypePath(entity.getType());
     }
 }

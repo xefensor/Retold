@@ -70,15 +70,15 @@ public final class RetoldControlledRegroupEvents {
             return;
         }
 
+        if (!canRegroupNow(animal)) {
+            return;
+        }
+
         if (hasPredatorPressure(level, animal, gameTime)) {
             if (RetoldAiControl.isControlledAs(animal, RetoldAiControlMode.REGROUP)) {
                 stopRegroup(animal);
             }
 
-            return;
-        }
-
-        if (!canRegroupNow(animal)) {
             return;
         }
 
@@ -126,12 +126,11 @@ public final class RetoldControlledRegroupEvents {
             PathfinderMob animal,
             long gameTime
     ) {
-        int offset = Math.floorMod(
-                animal.getId(),
+        return RetoldBehaviorTiming.shouldThink(
+                animal,
+                gameTime,
                 REGROUP_THINK_INTERVAL_TICKS
         );
-
-        return (gameTime + offset) % REGROUP_THINK_INTERVAL_TICKS == 0L;
     }
 
     private static boolean canRegroupNow(PathfinderMob animal) {
@@ -256,23 +255,10 @@ public final class RetoldControlledRegroupEvents {
             PathfinderMob animal,
             PathfinderMob candidate
     ) {
-        String animalPath = getPath(animal);
-        String candidatePath = getPath(candidate);
-
-        if (animalPath.equals(candidatePath)) {
-            return true;
-        }
-
-        if (isLooseGroupAnimal(animal) || isLooseGroupAnimal(candidate)) {
-            return false;
-        }
-
-        /*
-         * Large passive animals can loosely gather with other herd animals.
-         * This keeps fields from looking permanently scattered after panic.
-         */
-        return isHerdAnimalPath(animalPath)
-                && isHerdAnimalPath(candidatePath);
+        return RetoldAnimalSocialGroups.canRecoverWith(
+                animal,
+                candidate
+        );
     }
 
     private static boolean hasPredatorPressure(
@@ -379,16 +365,14 @@ public final class RetoldControlledRegroupEvents {
     }
 
     private static boolean isRegroupAnimal(PathfinderMob mob) {
-        String path = getPath(mob);
+        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
 
-        return isHerdAnimalPath(path)
-                || isLooseGroupAnimalPath(path);
+        return profileType == RetoldMobProfileType.HUNGRY_GRAZER
+                || profileType == RetoldMobProfileType.SMALL_FORAGER;
     }
 
     private static boolean isLooseGroupAnimal(PathfinderMob mob) {
-        return isLooseGroupAnimalPath(
-                getPath(mob)
-        );
+        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.SMALL_FORAGER;
     }
 
     private static double getRegroupStartDistanceSquared(PathfinderMob animal) {
@@ -437,30 +421,6 @@ public final class RetoldControlledRegroupEvents {
         return Math.min(
                 value,
                 max
-        );
-    }
-
-    private static boolean isLooseGroupAnimalPath(String path) {
-        return path.equals("pig")
-                || path.equals("chicken")
-                || path.equals("rabbit");
-    }
-
-    private static boolean isHerdAnimalPath(String path) {
-        return path.equals("cow")
-                || path.equals("sheep")
-                || path.equals("goat")
-                || path.equals("horse")
-                || path.equals("donkey")
-                || path.equals("mule")
-                || path.equals("llama")
-                || path.equals("trader_llama")
-                || path.equals("camel");
-    }
-
-    private static String getPath(PathfinderMob mob) {
-        return RetoldMobRules.getEntityTypePath(
-                mob.getType()
         );
     }
 
