@@ -5,11 +5,13 @@ import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.sky.RetoldClientEndSky;
 import cz.xefensor.retold.client.sky.RetoldEndSkyPatcher;
+import cz.xefensor.retold.registry.RetoldEntityTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.RandomSource;
 import net.minecraft.client.renderer.entity.EndermanRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
@@ -29,9 +31,17 @@ public final class RetoldClientEvents {
     }
 
     public static void register(IEventBus modEventBus) {
+        modEventBus.addListener(RetoldClientEvents::registerEntityRenderers);
         modEventBus.addListener(RetoldClientEvents::addEntityRenderLayers);
         RetoldChronolithBeamClient.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientTick);
+    }
+
+    private static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(
+                RetoldEntityTypes.AENDER_EYE.get(),
+                context -> new ThrownItemRenderer<>(context, 1.8F, true)
+        );
     }
 
     private static void addEntityRenderLayers(EntityRenderersEvent.AddLayers event) {

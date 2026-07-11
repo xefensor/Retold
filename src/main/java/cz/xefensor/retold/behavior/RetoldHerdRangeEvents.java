@@ -26,6 +26,8 @@ public final class RetoldHerdRangeEvents {
     private static final int RANGE_MIGRATION_CONTROL_TICKS = 20 * 8;
     private static final int RANGE_MIGRATION_PRIORITY = 16;
     private static final int RANGE_MIGRATION_HUNGER = 48;
+    private static final int RANGE_DEPLETED_FORAGE_SCORE = 8;
+    private static final int RANGE_TARGET_FORAGE_SCORE = 18;
     private static final int PANIC_RECOVERY_TICKS = 20 * 18;
 
     private static final double RANGE_CREATION_RADIUS_BLOCKS = 18.0D;
@@ -61,8 +63,6 @@ public final class RetoldHerdRangeEvents {
     private static final double RANGE_RETURN_SPEED = 0.72D;
     private static final double RANGE_IDLE_STROLL_SPEED = 0.46D;
     private static final double RANGE_MIGRATION_SPEED = 0.62D;
-    private static final double RANGE_MIGRATION_MIN_BLOCKS = 14.0D;
-    private static final double RANGE_MIGRATION_EXTRA_BLOCKS = 10.0D;
 
     private RetoldHerdRangeEvents() {
     }
@@ -189,11 +189,7 @@ public final class RetoldHerdRangeEvents {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
-            return false;
-        }
-
-        if (animal.level() != candidate.level()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(animal, candidate)) {
             return false;
         }
 
@@ -201,7 +197,7 @@ public final class RetoldHerdRangeEvents {
             return false;
         }
 
-        if (candidate.getTarget() != null && candidate.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(candidate)) {
             return false;
         }
 
@@ -316,14 +312,12 @@ public final class RetoldHerdRangeEvents {
                 return;
             }
 
-            if (
-                    RetoldAiControl.isControlledAsBy(
-                            animal,
-                            RetoldAiControlMode.REGROUP,
-                            CONTROL_OWNER
-                    )
-                            && REASON_RETURN_RANGE.equals(RetoldAiControl.getReason(animal))
-            ) {
+            if (RetoldAiControl.isControlledAsByWithReason(
+                    animal,
+                    RetoldAiControlMode.REGROUP,
+                    CONTROL_OWNER,
+                    REASON_RETURN_RANGE
+            )) {
                 RetoldAiControl.clear(animal);
                 animal.getNavigation().stop();
             }
@@ -410,7 +404,29 @@ public final class RetoldHerdRangeEvents {
             return false;
         }
 
-        if (hasNearbyForage(level, animal, range.pos())) {
+        int currentScore = RetoldRangeForage.forageScore(
+                level,
+                animal,
+                range.pos(),
+                RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
+                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS
+        );
+
+        if (currentScore > RANGE_DEPLETED_FORAGE_SCORE) {
+            return false;
+        }
+
+        BlockPos newRangeCenter = RetoldRangeForage.findBetterForageCenter(
+                level,
+                animal,
+                range.pos(),
+                RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
+                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS,
+                currentScore,
+                RANGE_TARGET_FORAGE_SCORE
+        );
+
+        if (newRangeCenter == null) {
             return false;
         }
 
@@ -426,21 +442,25 @@ public final class RetoldHerdRangeEvents {
             return false;
         }
 
-        RetoldAnimalHomes.remove(animal);
+        RetoldAnimalHomes.replacePackHome(
+                level,
+                animal,
+                findCurrentRangeMembers(
+                        level,
+                        animal,
+                        range
+                ),
+                newRangeCenter,
+                gameTime
+        );
         RetoldHomeRestAnimations.stopResting(animal);
         animal.setSprinting(false);
 
-        double angle = animal.getRandom().nextDouble() * Math.PI * 2.0D;
-        double distance = RANGE_MIGRATION_MIN_BLOCKS
-                + animal.getRandom().nextDouble() * RANGE_MIGRATION_EXTRA_BLOCKS;
-        double x = animal.getX() + Math.cos(angle) * distance;
-        double z = animal.getZ() + Math.sin(angle) * distance;
-
         RetoldAiControl.withNavigationBypass(() -> {
             animal.getNavigation().moveTo(
-                    x,
-                    animal.getY(),
-                    z,
+                    newRangeCenter.getX() + 0.5D,
+                    newRangeCenter.getY(),
+                    newRangeCenter.getZ() + 0.5D,
                     RANGE_MIGRATION_SPEED
             );
         });
@@ -448,34 +468,24 @@ public final class RetoldHerdRangeEvents {
         return true;
     }
 
-    private static boolean hasNearbyForage(
+    private static List<PathfinderMob> findCurrentRangeMembers(
             ServerLevel level,
             PathfinderMob animal,
-            BlockPos center
+            RetoldAnimalHomeMemory range
     ) {
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+        double radius = RetoldAnimalSocialGroups.homeSeparationBlocks(animal);
 
-        for (int dx = -RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS; dx <= RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS; dx++) {
-            for (int dz = -RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS; dz <= RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS; dz++) {
-                if (dx * dx + dz * dz > RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS * RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS) {
-                    continue;
-                }
-
-                for (int dy = -RANGE_FORAGE_SCAN_VERTICAL_BLOCKS; dy <= RANGE_FORAGE_SCAN_VERTICAL_BLOCKS; dy++) {
-                    mutablePos.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (RetoldMobRules.canForageBlock(animal, level.getBlockState(mutablePos))) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return level.getEntitiesOfClass(
+                PathfinderMob.class,
+                new AABB(range.pos()).inflate(radius),
+                candidate -> candidate != animal
+                        && isGrazer(candidate)
+                        && RetoldAnimalHomes.hasSameValidHomeAs(
+                        level,
+                        candidate,
+                        range
+                )
+        );
     }
 
     private static boolean shouldRestAtRange(
@@ -505,31 +515,21 @@ public final class RetoldHerdRangeEvents {
             PathfinderMob animal,
             RetoldAiControlMode mode
     ) {
-        if (animal.getTarget() != null && animal.getTarget().isAlive()) {
-            return false;
-        }
-
-        if (mode == RetoldAiControlMode.NONE) {
-            return true;
-        }
-
-        return RetoldAiControl.isControlledAsBy(
+        return RetoldBehaviorCoordinator.canUseOwnedModeWithoutLiveTarget(
                 animal,
+                mode,
                 RetoldAiControlMode.REGROUP,
                 CONTROL_OWNER
         );
     }
 
     private static void releaseRangeIdleIfOwned(PathfinderMob animal) {
-        if (
-                RetoldAiControl.isControlledAsBy(
-                        animal,
-                        RetoldAiControlMode.REGROUP,
-                        CONTROL_OWNER
-                )
-                        && REASON_RANGE_IDLE.equals(RetoldAiControl.getReason(animal))
-        ) {
-            RetoldAiControl.clear(animal);
+        if (RetoldAiControl.clearIfControlledAsByWithReason(
+                animal,
+                RetoldAiControlMode.REGROUP,
+                CONTROL_OWNER,
+                REASON_RANGE_IDLE
+        )) {
             animal.getNavigation().stop();
         }
     }

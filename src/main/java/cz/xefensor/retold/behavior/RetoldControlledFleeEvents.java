@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -204,7 +203,7 @@ public final class RetoldControlledFleeEvents {
         }
 
         if (RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)) {
-            RetoldAiControl.clear(prey);
+            RetoldAiControl.clearIfControlledAs(prey, RetoldAiControlMode.FLEE);
             prey.setSprinting(false);
             prey.getNavigation().stop();
             markFleeEnded(
@@ -298,15 +297,7 @@ public final class RetoldControlledFleeEvents {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
-            return false;
-        }
-
-        if (candidate instanceof Player player && (player.isCreative() || player.isSpectator())) {
-            return false;
-        }
-
-        if (prey.level() != candidate.level()) {
+        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(prey, candidate)) {
             return false;
         }
 
@@ -322,7 +313,11 @@ public final class RetoldControlledFleeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.canHuntPrey(threatMob, prey, gameTime)) {
+        if (!RetoldPreyTargeting.isValidMobRulePrey(
+                threatMob,
+                prey,
+                gameTime
+        )) {
             return false;
         }
 
@@ -445,11 +440,7 @@ public final class RetoldControlledFleeEvents {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
-            return false;
-        }
-
-        if (prey.level() != candidate.level()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(prey, candidate)) {
             return false;
         }
 
@@ -1079,6 +1070,7 @@ public final class RetoldControlledFleeEvents {
         }
 
         return path.equals("cow")
+                || path.equals("mooshroom")
                 || path.equals("sheep")
                 || path.equals("pig")
                 || path.equals("chicken")
@@ -1098,6 +1090,7 @@ public final class RetoldControlledFleeEvents {
 
     private static boolean isLandPreyPath(String path) {
         return path.equals("cow")
+                || path.equals("mooshroom")
                 || path.equals("sheep")
                 || path.equals("pig")
                 || path.equals("chicken")

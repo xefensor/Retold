@@ -115,7 +115,7 @@ public final class RetoldAnimalHomeRepairEvents {
         RetoldAnimalHomes.remove(mob);
 
         if (RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.REGROUP)) {
-            RetoldAiControl.clear(mob);
+            RetoldAiControl.clearIfControlledAs(mob, RetoldAiControlMode.REGROUP);
             mob.getNavigation().stop();
         }
     }

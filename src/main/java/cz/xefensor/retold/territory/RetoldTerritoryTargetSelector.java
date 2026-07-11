@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
@@ -174,15 +175,12 @@ public final class RetoldTerritoryTargetSelector {
             long gameTime
     ) {
         return target != null
-                && target.isAlive()
-                && mob.level() == target.level()
+                && RetoldAiTargets.isAliveInSameLevel(mob, target)
                 && isPossibleIntruder(level, mob, target, config, gameTime);
     }
 
     public static boolean isValidAttackTarget(PathfinderMob mob, LivingEntity target) {
-        return target != null
-                && target.isAlive()
-                && mob.level() == target.level()
+        return RetoldAiTargets.isValidAssignmentTarget(mob, target)
                 && mob.distanceToSqr(target) <= RetoldTerritoryConstants.ATTACK_TARGET_RELEASE_DISTANCE_SQUARED;
     }
 
@@ -197,11 +195,7 @@ public final class RetoldTerritoryTargetSelector {
             return false;
         }
 
-        if (!intruder.isAlive()) {
-            return false;
-        }
-
-        if (mob.level() != intruder.level()) {
+        if (!RetoldAiTargets.isAliveInSameLevel(mob, intruder)) {
             return false;
         }
 
@@ -209,10 +203,8 @@ public final class RetoldTerritoryTargetSelector {
             return false;
         }
 
-        if (intruder instanceof ServerPlayer player) {
-            if (player.isCreative() || player.isSpectator()) {
-                return false;
-            }
+        if (RetoldAiTargets.isInvalidPlayerTarget(intruder)) {
+            return false;
         }
 
         RetoldFaction intruderFaction = RetoldFactionMembers.getFaction(intruder);
@@ -247,7 +239,7 @@ public final class RetoldTerritoryTargetSelector {
             return true;
         }
 
-        return RetoldFactionMembers.getFaction(target) == RetoldFaction.PLAYER;
+        return RetoldFactionMembers.isMemberOf(target, RetoldFaction.PLAYER);
     }
 
     private static boolean canTriggerTerritoryWarning(
@@ -271,7 +263,7 @@ public final class RetoldTerritoryTargetSelector {
     }
 
     private static boolean canSeeTarget(PathfinderMob mob, LivingEntity target) {
-        return mob.getSensing().hasLineOfSight(target);
+        return RetoldAiTargets.isVisibleTo(mob, target);
     }
 
     private static double getStableTieBreaker(Entity first, Entity second) {

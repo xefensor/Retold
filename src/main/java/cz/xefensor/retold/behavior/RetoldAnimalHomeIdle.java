@@ -29,7 +29,7 @@ final class RetoldAnimalHomeIdle {
             return false;
         }
 
-        if (mob.getTarget() != null && mob.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(mob)) {
             return false;
         }
 
@@ -46,9 +46,12 @@ final class RetoldAnimalHomeIdle {
             return true;
         }
 
-        return mode == RetoldAiControlMode.REGROUP
-                && owner == controlOwner
-                && reason.equals(RetoldAiControl.getReason(mob));
+        return RetoldAiControl.isControlledAsByWithReason(
+                mob,
+                RetoldAiControlMode.REGROUP,
+                controlOwner,
+                reason
+        );
     }
 
     static void idleAtHome(

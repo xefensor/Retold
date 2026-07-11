@@ -15,6 +15,8 @@ import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.worldgen.delayed.*;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldEntityEvents;
+import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.aender.RetoldAenderRegistries;
 import cz.xefensor.retold.aender.stability.AenderChunkEvents;
 import cz.xefensor.retold.aender.stability.AenderStabilizerEvents;
@@ -49,9 +51,12 @@ public final class Retold {
         RetoldWorldgenRegistries.register(modEventBus);
         RetoldAttachments.register(modEventBus);
         RetoldAenderRegistries.register(modEventBus);
+        RetoldEntityTypes.register(modEventBus);
         RetoldGameRules.register(modEventBus);
 
         modEventBus.addListener(RetoldNetworking::registerPayloads);
+        modEventBus.addListener(RetoldEntityEvents::registerAttributes);
+        modEventBus.addListener(RetoldEntityEvents::registerSpawnPlacements);
 
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             RetoldClientEvents.register(modEventBus);
@@ -79,6 +84,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(AenderStabilizerEvents.class);
         NeoForge.EVENT_BUS.register(AenderWorldTickEvents.class);
         NeoForge.EVENT_BUS.register(AenderRealityTickEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldInvalidPlayerTargetEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionCombatEvents.class);
         NeoForge.EVENT_BUS.register(RetoldTerritoryEvents.class);
         NeoForge.EVENT_BUS.register(RetoldFactionAssistEvents.class);
@@ -92,6 +98,24 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldControlledCombatEvents.class);
         NeoForge.EVENT_BUS.register(RetoldControlledFleeEvents.class);
         NeoForge.EVENT_BUS.register(RetoldControlledRegroupEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldIllagerRoamingEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldCommanderSupportEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldUndeadHordeEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldSkeletonRangedEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldZoglinRampagerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldGhastArtilleryEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldPhantomStalkerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldNetherBehaviorEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldSwarmScavengerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldHiveColonyEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldDolphinPodEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldNeutralWildlifeEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldTurtleBeachEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldAmphibianForagerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldAxolotlHelperEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldPandaBambooEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldSnifferForagerEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldArmadilloDefenseEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPredatorSearchEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPackHuntingEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPackHomeEvents.class);
@@ -100,6 +124,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldSoloOpportunistHomeEvents.class);
         NeoForge.EVENT_BUS.register(RetoldAnimalHomeRepairEvents.class);
         NeoForge.EVENT_BUS.register(RetoldMobStateRecoveryEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldTerritoryGuardEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPredatorStaminaEvents.class);
         NeoForge.EVENT_BUS.register(RetoldHeldFoodConsumptionEvents.class);
         NeoForge.EVENT_BUS.register(AenderChronolithEvents.class);

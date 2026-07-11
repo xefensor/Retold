@@ -44,7 +44,7 @@ public final class RetoldTerritoryDetector {
             BlockPos structurePos = findTerritoryAnchor(level, pos, config);
 
             if (structurePos == null) {
-                continue;
+                structurePos = fallbackTerritoryAnchor(pos);
             }
 
             return new RetoldTerritoryContext(
@@ -195,6 +195,14 @@ public final class RetoldTerritoryDetector {
         }
 
         return null;
+    }
+
+    private static BlockPos fallbackTerritoryAnchor(BlockPos pos) {
+        return new BlockPos(
+                pos.getX() >> 4 << 4,
+                pos.getY(),
+                pos.getZ() >> 4 << 4
+        );
     }
 
     private static String getDimensionId(ServerLevel level) {

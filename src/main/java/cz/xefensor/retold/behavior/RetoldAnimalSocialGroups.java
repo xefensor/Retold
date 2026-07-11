@@ -58,7 +58,7 @@ public final class RetoldAnimalSocialGroups {
         return switch (path) {
             case "wolf" -> 5;
             case "dolphin" -> 6;
-            case "cow" -> 7;
+            case "cow", "mooshroom" -> 7;
             case "sheep" -> 9;
             case "goat" -> 6;
             case "horse", "donkey", "mule" -> 5;
@@ -67,6 +67,12 @@ public final class RetoldAnimalSocialGroups {
             case "pig" -> 6;
             case "chicken" -> 10;
             case "rabbit" -> 7;
+            case "turtle" -> 6;
+            case "frog" -> 5;
+            case "axolotl" -> 5;
+            case "panda" -> 4;
+            case "sniffer" -> 3;
+            case "armadillo" -> 4;
             case "fox", "cat", "ocelot" -> 1;
             default -> DEFAULT_HOME_GROUP_SIZE;
         };
@@ -84,13 +90,19 @@ public final class RetoldAnimalSocialGroups {
         return switch (path) {
             case "wolf" -> 24.0D;
             case "dolphin" -> 32.0D;
-            case "cow", "sheep", "goat" -> 22.0D;
+            case "cow", "mooshroom", "sheep", "goat" -> 22.0D;
             case "horse", "donkey", "mule" -> 32.0D;
             case "llama", "trader_llama" -> 28.0D;
             case "camel" -> 36.0D;
             case "pig" -> 18.0D;
             case "chicken" -> 14.0D;
             case "rabbit" -> 16.0D;
+            case "turtle" -> 24.0D;
+            case "frog" -> 18.0D;
+            case "axolotl" -> 20.0D;
+            case "panda" -> 22.0D;
+            case "sniffer" -> 34.0D;
+            case "armadillo" -> 18.0D;
             case "fox" -> 28.0D;
             case "cat" -> 18.0D;
             case "ocelot" -> 24.0D;

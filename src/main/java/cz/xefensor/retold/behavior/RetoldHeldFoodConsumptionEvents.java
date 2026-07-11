@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
@@ -164,15 +163,7 @@ public final class RetoldHeldFoodConsumptionEvents {
 
         RetoldFeedingAnimations.play(mob);
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                mob,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                mob,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(mob, null, false);
 
         mob.setSprinting(false);
         mob.getNavigation().stop();

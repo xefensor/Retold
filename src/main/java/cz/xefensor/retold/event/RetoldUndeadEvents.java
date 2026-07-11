@@ -72,6 +72,6 @@ public final class RetoldUndeadEvents {
     }
 
     private static boolean isRetoldUndead(Entity entity) {
-        return RetoldFactionMembers.getFaction(entity) == RetoldFaction.UNDEAD;
+        return RetoldFactionMembers.isMemberOf(entity, RetoldFaction.UNDEAD);
     }
 }

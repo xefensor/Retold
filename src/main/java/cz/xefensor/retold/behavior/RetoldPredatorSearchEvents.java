@@ -1,13 +1,11 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -162,7 +160,7 @@ public final class RetoldPredatorSearchEvents {
             return false;
         }
 
-        if (predator.getTarget() != null && predator.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(predator)) {
             return false;
         }
 
@@ -285,15 +283,7 @@ public final class RetoldPredatorSearchEvents {
 
         predator.setSprinting(true);
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                predator,
-                prey
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                predator,
-                true
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(predator, prey, true);
 
         predator.getLookControl().setLookAt(
                 prey,
@@ -585,27 +575,7 @@ public final class RetoldPredatorSearchEvents {
             LivingEntity prey,
             long gameTime
     ) {
-        if (predator == null || prey == null) {
-            return false;
-        }
-
-        if (predator == prey) {
-            return false;
-        }
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (predator.level() != prey.level()) {
-            return false;
-        }
-
-        if (prey instanceof Player player && (player.isCreative() || player.isSpectator())) {
-            return false;
-        }
-
-        return RetoldMobRules.canHuntPrey(
+        return RetoldPreyTargeting.isValidMobRulePrey(
                 predator,
                 prey,
                 gameTime

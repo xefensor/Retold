@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 
@@ -58,15 +57,7 @@ final class RetoldPackHuntMovement {
 
         member.setSprinting(true);
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                member,
-                prey
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                member,
-                true
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(member, prey, true);
 
         member.getLookControl().setLookAt(
                 prey,

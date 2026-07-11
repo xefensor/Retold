@@ -66,6 +66,19 @@ public final class RetoldTerritoryTargetBlocker {
             return true;
         }
 
-        return !RetoldTerritoryReputation.shouldAttack(territoryContext, target);
+        if (RetoldTerritoryReputation.shouldAttack(territoryContext, target)) {
+            return false;
+        }
+
+        RetoldTerritoryMobState warningState = RetoldTerritoryMobStates.getOrCreate(mob);
+        warningState.territoryContext = territoryContext;
+        RetoldTerritoryController.setWarningTarget(
+                warningState,
+                mob,
+                target,
+                gameTime
+        );
+
+        return true;
     }
 }

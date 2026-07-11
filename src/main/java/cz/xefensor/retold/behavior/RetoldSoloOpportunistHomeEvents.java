@@ -219,18 +219,14 @@ public final class RetoldSoloOpportunistHomeEvents {
                 return;
             }
 
-            if (
-                    RetoldAiControl.isControlledAsBy(
-                            animal,
-                            RetoldAiControlMode.REGROUP,
-                            CONTROL_OWNER
-                    )
-                            && (
-                            REASON_RETURN_HOME.equals(RetoldAiControl.getReason(animal))
-                                    || REASON_RETURN_CACHE.equals(RetoldAiControl.getReason(animal))
-                                    || REASON_RETURN_AFTER_HUNT.equals(RetoldAiControl.getReason(animal))
-                    )
-            ) {
+            if (RetoldAiControl.isControlledAsByWithAnyReason(
+                    animal,
+                    RetoldAiControlMode.REGROUP,
+                    CONTROL_OWNER,
+                    REASON_RETURN_HOME,
+                    REASON_RETURN_CACHE,
+                    REASON_RETURN_AFTER_HUNT
+            )) {
                 RetoldAiControl.clear(animal);
                 animal.getNavigation().stop();
             }
@@ -437,31 +433,21 @@ public final class RetoldSoloOpportunistHomeEvents {
             PathfinderMob animal,
             RetoldAiControlMode mode
     ) {
-        if (animal.getTarget() != null && animal.getTarget().isAlive()) {
-            return false;
-        }
-
-        if (mode == RetoldAiControlMode.NONE) {
-            return true;
-        }
-
-        return RetoldAiControl.isControlledAsBy(
+        return RetoldBehaviorCoordinator.canUseOwnedModeWithoutLiveTarget(
                 animal,
+                mode,
                 RetoldAiControlMode.REGROUP,
                 CONTROL_OWNER
         );
     }
 
     private static void releaseSoloIdleIfOwned(PathfinderMob animal) {
-        if (
-                RetoldAiControl.isControlledAsBy(
-                        animal,
-                        RetoldAiControlMode.REGROUP,
-                        CONTROL_OWNER
-                )
-                        && REASON_SOLO_IDLE.equals(RetoldAiControl.getReason(animal))
-        ) {
-            RetoldAiControl.clear(animal);
+        if (RetoldAiControl.clearIfControlledAsByWithReason(
+                animal,
+                RetoldAiControlMode.REGROUP,
+                CONTROL_OWNER,
+                REASON_SOLO_IDLE
+        )) {
             animal.getNavigation().stop();
         }
     }

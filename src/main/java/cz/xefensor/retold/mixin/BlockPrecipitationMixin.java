@@ -1,5 +1,6 @@
 package cz.xefensor.retold.mixin;
 
+import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,6 +29,10 @@ public abstract class BlockPrecipitationMixin {
             CallbackInfo ci
     ) {
         if (level.isClientSide()) {
+            return;
+        }
+
+        if (level.dimension() == RetoldAenderDimensions.AENDER) {
             return;
         }
 

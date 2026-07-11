@@ -1,13 +1,12 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -91,10 +90,6 @@ public final class RetoldTerritoryBrainGuards {
             return false;
         }
 
-        if (!(mob instanceof AbstractPiglin)) {
-            return false;
-        }
-
         if (!(mob.level() instanceof ServerLevel level)) {
             return false;
         }
@@ -105,11 +100,16 @@ public final class RetoldTerritoryBrainGuards {
             return false;
         }
 
+        if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
+            clearInvalidAttackState(mob, target);
+            return true;
+        }
+
         if (!RetoldTerritoryTargetBlocker.shouldBlockTargetDuringWarning(mob, target)) {
             return false;
         }
 
-        blockPiglinAttackState(mob, target);
+        blockAttackState(mob, target);
         return true;
     }
 
@@ -151,15 +151,17 @@ public final class RetoldTerritoryBrainGuards {
         return null;
     }
 
-    private static void blockPiglinAttackState(
+    private static void blockAttackState(
             PathfinderMob mob,
             LivingEntity target
     ) {
-        if (mob.getTarget() == target) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
-        }
+        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
+    }
 
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
-        mob.getNavigation().stop();
+    private static void clearInvalidAttackState(
+            PathfinderMob mob,
+            LivingEntity target
+    ) {
+        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
     }
 }

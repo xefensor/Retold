@@ -130,9 +130,7 @@ final class RetoldPackHomeReturn {
             PathfinderMob mob,
             long gameTime
     ) {
-        if (RetoldAiControl.isControlledBy(mob, CONTROL_OWNER)) {
-            RetoldAiControl.clear(mob);
-        }
+        RetoldAiControl.clearIfOwnedBy(mob, CONTROL_OWNER);
 
         RetoldAnimalHomes.markUsed(
                 mob,
@@ -149,7 +147,7 @@ final class RetoldPackHomeReturn {
             long gameTime
     ) {
         if (RetoldAiControl.isControlledBy(mob, CONTROL_OWNER)) {
-            RetoldAiControl.clear(mob);
+            RetoldAiControl.clearIfOwnedBy(mob, CONTROL_OWNER);
             RetoldPackHomeControl.clearCombatState(mob);
         }
 

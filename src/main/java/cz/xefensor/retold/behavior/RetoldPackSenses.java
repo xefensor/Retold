@@ -4,7 +4,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -141,23 +140,7 @@ final class RetoldPackSenses {
             LivingEntity prey,
             long gameTime
     ) {
-        if (predator == null || prey == null) {
-            return false;
-        }
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (predator.level() != prey.level()) {
-            return false;
-        }
-
-        if (prey instanceof Player player && (player.isCreative() || player.isSpectator())) {
-            return false;
-        }
-
-        return RetoldMobRules.canHuntPrey(
+        return RetoldPreyTargeting.isValidMobRulePrey(
                 predator,
                 prey,
                 gameTime

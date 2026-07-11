@@ -7,11 +7,11 @@
   "ambient_light": 1.0,
   "fixed_time": 6000,
   "attributes": {
-    "minecraft:visual/ambient_light_color": "#b7a5c7",
-    "minecraft:visual/fog_color": "#d2b9c2",
-    "minecraft:visual/sky_color": "#d2b9c2",
-    "minecraft:visual/sky_light_color": "#cbb3da",
-    "minecraft:visual/sky_light_factor": 0.0
+    "minecraft:visual/ambient_light_color": "#f7dce4",
+    "minecraft:visual/fog_color": "#f8d7dd",
+    "minecraft:visual/sky_color": "#f8d7dd",
+    "minecraft:visual/sky_light_color": "#ffe8ec",
+    "minecraft:visual/sky_light_factor": 0.2
   },
   "piglin_safe": false,
   "bed_works": false,
@@ -23,6 +23,6 @@
   "infiniburn": "#minecraft:infiniburn_end",
   "skybox": "none",
   "has_ender_dragon_fight": false,
-  "monster_spawn_light_level": 0,
+  "monster_spawn_light_level": 15,
   "monster_spawn_block_light_limit": 0
 }

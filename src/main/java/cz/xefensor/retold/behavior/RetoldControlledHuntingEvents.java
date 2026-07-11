@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -8,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -187,7 +185,11 @@ public final class RetoldControlledHuntingEvents {
 
         long gameTime = level.getGameTime();
 
-        if (!RetoldMobRules.canHuntPrey(killer, killed, gameTime)) {
+        if (!RetoldPreyTargeting.isValidMobRulePrey(
+                killer,
+                killed,
+                gameTime
+        )) {
             return;
         }
 
@@ -206,15 +208,7 @@ public final class RetoldControlledHuntingEvents {
                 FEED_LOCK_AFTER_KILL_TICKS
         );
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                killer,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                killer,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(killer, null, false);
 
         killer.setSprinting(false);
         killer.getNavigation().stop();
@@ -248,7 +242,7 @@ public final class RetoldControlledHuntingEvents {
             return false;
         }
 
-        if (hunter.getTarget() != null && hunter.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(hunter)) {
             return false;
         }
 
@@ -288,15 +282,7 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(true);
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                hunter,
-                prey
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                hunter,
-                true
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(hunter, prey, true);
 
         hunter.getLookControl().setLookAt(
                 prey,
@@ -401,15 +387,7 @@ public final class RetoldControlledHuntingEvents {
 
             hunter.setSprinting(true);
 
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                    hunter,
-                    prey
-            );
-
-            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                    hunter,
-                    true
-            );
+            RetoldBehaviorTargets.setTargetAndAggression(hunter, prey, true);
 
             boolean struck = RetoldPredatorStrike.tryStrike(
                     level,
@@ -547,15 +525,11 @@ public final class RetoldControlledHuntingEvents {
             LivingEntity prey,
             long gameTime
     ) {
-        if (!isValidHuntPrey(hunter, prey, gameTime)) {
-            return false;
-        }
-
-        if (prey instanceof Player player && (player.isCreative() || player.isSpectator())) {
-            return false;
-        }
-
-        return hunter.distanceToSqr(prey) <= PREY_SEARCH_RADIUS_SQUARED;
+        return isValidHuntPrey(
+                hunter,
+                prey,
+                gameTime
+        ) && hunter.distanceToSqr(prey) <= PREY_SEARCH_RADIUS_SQUARED;
     }
 
     private static boolean isValidHuntPrey(
@@ -563,23 +537,7 @@ public final class RetoldControlledHuntingEvents {
             LivingEntity prey,
             long gameTime
     ) {
-        if (hunter == null || prey == null) {
-            return false;
-        }
-
-        if (hunter == prey) {
-            return false;
-        }
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (hunter.level() != prey.level()) {
-            return false;
-        }
-
-        return RetoldMobRules.canHuntPrey(
+        return RetoldPreyTargeting.isValidMobRulePrey(
                 hunter,
                 prey,
                 gameTime
@@ -874,15 +832,7 @@ public final class RetoldControlledHuntingEvents {
                 FEED_LOCK_AFTER_KILL_TICKS
         );
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                hunter,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                hunter,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(hunter, null, false);
 
         hunter.setSprinting(false);
         hunter.getNavigation().stop();
@@ -902,15 +852,7 @@ public final class RetoldControlledHuntingEvents {
 
         RetoldAiControl.clear(hunter);
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                hunter,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                hunter,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(hunter, null, false);
 
         hunter.setSprinting(false);
         hunter.getNavigation().stop();

@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -78,15 +77,7 @@ final class RetoldPackFeeding {
             return false;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                member,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                member,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(member, null, false);
 
         RetoldPredatorStrike.clear(member);
 

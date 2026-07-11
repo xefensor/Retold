@@ -1,6 +1,6 @@
 {
   "attributes": {
-    "minecraft:visual/sky_color": "#D9A980"
+    "minecraft:visual/sky_color": "#F8D7DD"
   },
   "temperature": 0.5,
   "downfall": 0.0,
@@ -8,7 +8,7 @@
   "effects": {
     "water_color": "#8E83B4",
     "water_fog_color": "#484769",
-    "fog_color": "#D2B9C2",
+    "fog_color": "#F8D7DD",
     "grass_color": "#8F6399",
     "foliage_color": "#80649A"
   },
@@ -28,11 +28,25 @@
   ],
   "spawn_costs": {},
   "spawners": {
-    "ambient": [],
+    "ambient": [
+      {
+        "type": "retold:aender_eye",
+        "maxCount": 2,
+        "minCount": 1,
+        "weight": 4
+      }
+    ],
     "axolotls": [],
     "creature": [],
     "misc": [],
-    "monster": [],
+    "monster": [
+      {
+        "type": "minecraft:enderman",
+        "maxCount": 4,
+        "minCount": 4,
+        "weight": 10
+      }
+    ],
     "underground_water_creature": [],
     "water_ambient": [],
     "water_creature": []

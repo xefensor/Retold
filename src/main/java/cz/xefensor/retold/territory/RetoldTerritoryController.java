@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -132,7 +133,7 @@ public final class RetoldTerritoryController {
 
         maintainContinuousBehavior(level, mob, state, config, mobStates, gameTime);
 
-        if (!canCountWarningPulse(level, mob, warningTarget, config, state.territoryContext, mobStates, gameTime)) {
+        if (!canCountWarningPulse(level, mob, warningTarget, config, state.territoryContext, gameTime)) {
             state.nextWarningPulseAt = Math.max(state.nextWarningPulseAt, gameTime + 10L);
             return;
         }
@@ -408,7 +409,6 @@ public final class RetoldTerritoryController {
             LivingEntity target,
             RetoldTerritoryConfig config,
             RetoldTerritoryContext territoryContext,
-            Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
         if (territoryContext == null) {
@@ -423,20 +423,7 @@ public final class RetoldTerritoryController {
             return false;
         }
 
-        RetoldWarningLevel warningLevel = RetoldTerritoryReputation.getWarningLevel(
-                territoryContext,
-                target
-        );
-
-        return RetoldWarningMovement.isWithinWarningPressureDistance(
-                level,
-                mob,
-                config,
-                mobStates.getOrDefault(mob, new RetoldTerritoryMobState()),
-                target,
-                warningLevel,
-                mobStates
-        );
+        return true;
     }
 
     private static int getWarningPulseInterval(
@@ -523,7 +510,7 @@ public final class RetoldTerritoryController {
                 mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
                 target -> RetoldTerritoryTargetSelector.isPossibleIntruder(level, mob, target, config, gameTime)
                         && canSeeTarget(mob, target)
-                        && canCountWarningPulse(level, mob, target, config, state.territoryContext, mobStates, gameTime)
+                        && canCountWarningPulse(level, mob, target, config, state.territoryContext, gameTime)
         );
 
         for (LivingEntity intruder : nearbyIntruders) {
@@ -613,7 +600,7 @@ public final class RetoldTerritoryController {
     }
 
     private static boolean canSeeTarget(PathfinderMob mob, LivingEntity target) {
-        return mob.getSensing().hasLineOfSight(target);
+        return RetoldAiTargets.isVisibleTo(mob, target);
     }
 
     private static float rotateToward(float current, float target, float maxChange) {

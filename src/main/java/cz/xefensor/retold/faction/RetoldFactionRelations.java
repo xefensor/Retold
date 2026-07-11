@@ -215,11 +215,15 @@ public final class RetoldFactionRelations {
     }
 
     public static boolean shouldAttack(Entity attacker, LivingEntity target) {
+        if (attacker == null || target == null) {
+            return false;
+        }
+
         if (attacker == target) {
             return false;
         }
 
-        if (!target.isAlive()) {
+        if (!target.isAlive() || target.isRemoved()) {
             return false;
         }
 

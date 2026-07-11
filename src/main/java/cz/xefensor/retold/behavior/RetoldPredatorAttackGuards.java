@@ -36,7 +36,7 @@ public final class RetoldPredatorAttackGuards {
          * This does NOT block things like wolves fighting skeletons,
          * because skeletons are enemies, not wolf food.
          */
-        return RetoldMobRules.canHuntPrey(
+        return RetoldPreyTargeting.isValidMobRulePrey(
                 predator,
                 target,
                 predator.level().getGameTime()

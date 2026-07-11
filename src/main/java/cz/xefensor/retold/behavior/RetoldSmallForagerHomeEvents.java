@@ -18,6 +18,7 @@ public final class RetoldSmallForagerHomeEvents {
     private static final String REASON_RESTING = "resting";
     private static final String REASON_HIDING = "hiding";
     private static final String REASON_HOME_IDLE = "small_home_idle";
+    private static final String REASON_MIGRATE_RANGE = "migrate_foraging_range";
 
     private static final int THINK_INTERVAL_TICKS = 40;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
@@ -31,6 +32,11 @@ public final class RetoldSmallForagerHomeEvents {
     private static final int HOME_IDLE_CONTROL_TICKS = 20 * 5;
     private static final int HOME_IDLE_PRIORITY = 10;
     private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 20;
+    private static final int RANGE_MIGRATION_CONTROL_TICKS = 20 * 7;
+    private static final int RANGE_MIGRATION_PRIORITY = 15;
+    private static final int RANGE_MIGRATION_HUNGER = 45;
+    private static final int RANGE_DEPLETED_FORAGE_SCORE = 5;
+    private static final int RANGE_TARGET_FORAGE_SCORE = 12;
     private static final int PANIC_RECOVERY_TICKS = 20 * 18;
 
     private static final double HOME_CREATION_RADIUS_BLOCKS = 14.0D;
@@ -62,6 +68,10 @@ public final class RetoldSmallForagerHomeEvents {
 
     private static final double HOME_RETURN_SPEED = 0.68D;
     private static final double HOME_IDLE_STROLL_SPEED = 0.42D;
+    private static final double RANGE_MIGRATION_SPEED = 0.56D;
+
+    private static final int RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS = 8;
+    private static final int RANGE_FORAGE_SCAN_VERTICAL_BLOCKS = 2;
 
     private RetoldSmallForagerHomeEvents() {
     }
@@ -196,7 +206,7 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (candidate.getTarget() != null && candidate.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(candidate)) {
             return false;
         }
 
@@ -234,6 +244,10 @@ public final class RetoldSmallForagerHomeEvents {
 
         if (!canUseHomeReturn(animal, mode)) {
             RetoldHomeRestAnimations.stopResting(animal);
+            return;
+        }
+
+        if (tryMigrateFromDepletedForagingRange(level, animal, home, gameTime)) {
             return;
         }
 
@@ -358,19 +372,15 @@ public final class RetoldSmallForagerHomeEvents {
                 return;
             }
 
-            if (
-                    RetoldAiControl.isControlledAsBy(
-                            animal,
-                            RetoldAiControlMode.REGROUP,
-                            CONTROL_OWNER
-                    )
-                            && (
-                            REASON_RETURN_HOME.equals(RetoldAiControl.getReason(animal))
-                                    || REASON_ROOSTING.equals(RetoldAiControl.getReason(animal))
-                                    || REASON_RESTING.equals(RetoldAiControl.getReason(animal))
-                                    || REASON_HIDING.equals(RetoldAiControl.getReason(animal))
-                    )
-            ) {
+            if (RetoldAiControl.isControlledAsByWithAnyReason(
+                    animal,
+                    RetoldAiControlMode.REGROUP,
+                    CONTROL_OWNER,
+                    REASON_RETURN_HOME,
+                    REASON_ROOSTING,
+                    REASON_RESTING,
+                    REASON_HIDING
+            )) {
                 RetoldAiControl.clear(animal);
                 animal.getNavigation().stop();
             }
@@ -448,6 +458,119 @@ public final class RetoldSmallForagerHomeEvents {
 
         return state != null
                 && gameTime - state.lastFleeEndedAt() <= PANIC_RECOVERY_TICKS;
+    }
+
+    private static boolean tryMigrateFromDepletedForagingRange(
+            ServerLevel level,
+            PathfinderMob animal,
+            RetoldAnimalHomeMemory home,
+            long gameTime
+    ) {
+        if (home.type() != RetoldAnimalHomeType.FORAGING_RANGE) {
+            return false;
+        }
+
+        if (!RetoldMobRules.isEntityPath(animal, "pig")) {
+            return false;
+        }
+
+        if (!RetoldAnimalDailyRhythm.isActive(level, animal)) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                animal,
+                gameTime
+        );
+
+        if (state.hunger() < RANGE_MIGRATION_HUNGER) {
+            return false;
+        }
+
+        int currentScore = RetoldRangeForage.forageScore(
+                level,
+                animal,
+                home.pos(),
+                RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
+                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS
+        );
+
+        if (currentScore > RANGE_DEPLETED_FORAGE_SCORE) {
+            return false;
+        }
+
+        BlockPos newRangeCenter = RetoldRangeForage.findBetterForageCenter(
+                level,
+                animal,
+                home.pos(),
+                RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
+                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS,
+                currentScore,
+                RANGE_TARGET_FORAGE_SCORE
+        );
+
+        if (newRangeCenter == null) {
+            return false;
+        }
+
+        if (!RetoldAiControl.tryClaim(
+                animal,
+                RetoldAiControlMode.REGROUP,
+                CONTROL_OWNER,
+                RANGE_MIGRATION_PRIORITY,
+                REASON_MIGRATE_RANGE,
+                gameTime,
+                RANGE_MIGRATION_CONTROL_TICKS
+        )) {
+            return false;
+        }
+
+        RetoldAnimalHomes.replacePackHome(
+                level,
+                animal,
+                findCurrentForagingRangeMembers(
+                        level,
+                        animal,
+                        home
+                ),
+                newRangeCenter,
+                gameTime
+        );
+
+        RetoldHomeRestAnimations.stopResting(animal);
+        animal.setSprinting(false);
+
+        RetoldAiControl.withNavigationBypass(() -> {
+            animal.getNavigation().moveTo(
+                    newRangeCenter.getX() + 0.5D,
+                    newRangeCenter.getY(),
+                    newRangeCenter.getZ() + 0.5D,
+                    RANGE_MIGRATION_SPEED
+            );
+        });
+
+        return true;
+    }
+
+    private static List<PathfinderMob> findCurrentForagingRangeMembers(
+            ServerLevel level,
+            PathfinderMob animal,
+            RetoldAnimalHomeMemory home
+    ) {
+        double radius = RetoldAnimalSocialGroups.homeSeparationBlocks(animal);
+
+        return level.getEntitiesOfClass(
+                PathfinderMob.class,
+                new AABB(home.pos()).inflate(radius),
+                candidate -> candidate != animal
+                        && isSmallForager(candidate)
+                        && RetoldMobRules.isEntityPath(candidate, "pig")
+                        && RetoldAnimalHomes.hasSameValidHomeAs(
+                        level,
+                        candidate,
+                        home
+                )
+        );
     }
 
     private static void holdAtHome(
@@ -577,31 +700,21 @@ public final class RetoldSmallForagerHomeEvents {
             PathfinderMob animal,
             RetoldAiControlMode mode
     ) {
-        if (animal.getTarget() != null && animal.getTarget().isAlive()) {
-            return false;
-        }
-
-        if (mode == RetoldAiControlMode.NONE) {
-            return true;
-        }
-
-        return RetoldAiControl.isControlledAsBy(
+        return RetoldBehaviorCoordinator.canUseOwnedModeWithoutLiveTarget(
                 animal,
+                mode,
                 RetoldAiControlMode.REGROUP,
                 CONTROL_OWNER
         );
     }
 
     private static void releaseHomeIdleIfOwned(PathfinderMob animal) {
-        if (
-                RetoldAiControl.isControlledAsBy(
-                        animal,
-                        RetoldAiControlMode.REGROUP,
-                        CONTROL_OWNER
-                )
-                        && REASON_HOME_IDLE.equals(RetoldAiControl.getReason(animal))
-        ) {
-            RetoldAiControl.clear(animal);
+        if (RetoldAiControl.clearIfControlledAsByWithReason(
+                animal,
+                RetoldAiControlMode.REGROUP,
+                CONTROL_OWNER,
+                REASON_HOME_IDLE
+        )) {
             animal.getNavigation().stop();
         }
     }

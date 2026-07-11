@@ -1,14 +1,13 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
+import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 
 import java.util.List;
 import java.util.Map;
@@ -163,8 +162,6 @@ public final class RetoldTerritoryCombat {
         if (RetoldFactionTargetMemory.isOwnedByAny(
                 mob,
                 existingTarget,
-                RetoldTargetSource.FACTION_ASSIST,
-                RetoldTargetSource.FACTION_COMBAT,
                 RetoldTargetSource.TERRITORY_ATTACK,
                 RetoldTargetSource.RETALIATION
         )) {
@@ -200,14 +197,6 @@ public final class RetoldTerritoryCombat {
     ) {
         if (target == null) {
             return;
-        }
-
-        if (!state.firedPreparedWarningShot) {
-            state.firedPreparedWarningShot = RetoldWarningPose.tryFirePreparedWarningOpeningShot(
-                    level,
-                    mob,
-                    target
-            );
         }
 
         RetoldWarningPose.stopWarningPose(mob);
@@ -320,7 +309,7 @@ public final class RetoldTerritoryCombat {
                 caller.getBoundingBox().inflate(RetoldTerritoryConstants.ATTACK_CHAIN_RADIUS_BLOCKS),
                 other -> other != caller
                         && other.isAlive()
-                        && RetoldFactionMembers.getFaction(other) == config.faction
+                        && RetoldFactionMembers.isMemberOf(other, config.faction)
         );
 
         for (PathfinderMob guard : nearbyGuards) {
@@ -368,22 +357,7 @@ public final class RetoldTerritoryCombat {
             LivingEntity target,
             RetoldTargetSource source
     ) {
-        boolean applied = RetoldFactionTargetMemory.trySetTarget(mob, target, source);
-
-        if (!applied && mob.getTarget() != target) {
-            return;
-        }
-
-        mob.setAggressive(true);
-        mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
-
-        if (mob instanceof AbstractPiglin piglin) {
-            if (piglin.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) != target) {
-                piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
-            }
-
-            piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
-        }
+        RetoldCombatTargets.applyAttackTarget(mob, target, source);
     }
 
     private static LivingEntity getCurrentCombatTarget(PathfinderMob mob) {
@@ -393,13 +367,7 @@ public final class RetoldTerritoryCombat {
             return target;
         }
 
-        if (!(mob instanceof AbstractPiglin piglin)) {
-            return null;
-        }
-
-        return piglin.getBrain()
-                .getMemory(MemoryModuleType.ATTACK_TARGET)
-                .orElse(null);
+        return RetoldAiTargets.getBrainAttackTargetSafely(mob);
     }
 
     private static void clearUnauthorizedCombatTarget(
@@ -410,23 +378,7 @@ public final class RetoldTerritoryCombat {
             return;
         }
 
-        if (mob.getTarget() == target) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
-        }
-
-        if (mob instanceof AbstractPiglin piglin) {
-            LivingEntity brainTarget = piglin.getBrain()
-                    .getMemory(MemoryModuleType.ATTACK_TARGET)
-                    .orElse(null);
-
-            if (brainTarget == target) {
-                piglin.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-                piglin.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
-            }
-        }
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
-        mob.getNavigation().stop();
+        RetoldCombatTargets.clearTargetReferencesAndAggression(mob, target, true);
     }
 
     private static void returnToWarningMode(

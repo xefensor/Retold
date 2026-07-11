@@ -107,7 +107,7 @@ final class RetoldPackRecruitment {
             return false;
         }
 
-        if (candidate.getTarget() != null && candidate.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(candidate)) {
             return false;
         }
 

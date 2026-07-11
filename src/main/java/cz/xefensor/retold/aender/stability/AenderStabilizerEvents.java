@@ -23,26 +23,26 @@ import java.util.List;
 import java.util.Map;
 
 public final class AenderStabilizerEvents {
-    private static final int WALL_INTERVAL_TICKS = 4;
+    private static final int WALL_INTERVAL_TICKS = 2;
     private static final int WALL_VIEW_RADIUS_CHUNKS = 8;
 
     // Random floating membrane points.
-    private static final int FLOATING_PARTICLES_PER_16_BLOCKS = 128;
+    private static final int FLOATING_PARTICLES_PER_16_BLOCKS = 64;
 
     // Soft organic particle clusters.
-    private static final int EDDIES_PER_16_BLOCKS = 3;
-    private static final int PARTICLES_PER_EDDY = 7;
+    private static final int EDDIES_PER_16_BLOCKS = 2;
+    private static final int PARTICLES_PER_EDDY = 6;
 
     private static final double WALL_THICKNESS = 1.10D;
 
     private static final DustParticleOptions GREEN_WALL_PARTICLE =
-            new DustParticleOptions(0x26FF40, 1.00F);
+            new DustParticleOptions(0x87FF7A, 1.45F);
 
     private static final DustParticleOptions BRIGHT_GREEN_WALL_PARTICLE =
-            new DustParticleOptions(0x9DFF75, 1.22F);
+            new DustParticleOptions(0xB7FFAA, 1.75F);
 
     private static final DustParticleOptions CYAN_GREEN_WALL_PARTICLE =
-            new DustParticleOptions(0x00FFC8, 0.82F);
+            new DustParticleOptions(0x9CFF8F, 1.55F);
 
     private static int wallTick;
 
@@ -470,6 +470,8 @@ public final class AenderStabilizerEvents {
 
         level.sendParticles(
                 particle,
+                true,
+                true,
                 x,
                 y + 0.5D,
                 z,

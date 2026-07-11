@@ -1,0 +1,877 @@
+package cz.xefensor.retold.behavior;
+
+import cz.xefensor.retold.combat.RetoldTargetSource;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.phys.AABB;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
+
+import java.util.List;
+
+public final class RetoldSwarmScavengerEvents {
+    private static final int THINK_INTERVAL_TICKS = 12;
+
+    private static final int SPIDER_SWARM_CONTROL_TICKS = 20 * 4;
+    private static final int SLIME_SWARM_CONTROL_TICKS = 20 * 4;
+    private static final int SMALL_ARTHROPOD_SWARM_CONTROL_TICKS = 20 * 4;
+    private static final int SCAVENGE_CONTROL_TICKS = 20 * 5;
+
+    private static final int SPIDER_SWARM_PRIORITY = 44;
+    private static final int SLIME_SWARM_PRIORITY = 52;
+    private static final int SMALL_ARTHROPOD_SWARM_PRIORITY = 48;
+    private static final int SCAVENGE_PRIORITY = 50;
+
+    private static final double SPIDER_SWARM_RADIUS_BLOCKS = 18.0D;
+    private static final double SPIDER_SWARM_RADIUS_SQUARED =
+            SPIDER_SWARM_RADIUS_BLOCKS * SPIDER_SWARM_RADIUS_BLOCKS;
+
+    private static final double SLIME_SWARM_RADIUS_BLOCKS = 14.0D;
+    private static final double SLIME_SWARM_RADIUS_SQUARED =
+            SLIME_SWARM_RADIUS_BLOCKS * SLIME_SWARM_RADIUS_BLOCKS;
+
+    private static final double SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS = 10.0D;
+    private static final double SMALL_ARTHROPOD_SWARM_RADIUS_SQUARED =
+            SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS * SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS;
+
+    private static final double SCAVENGE_RADIUS_BLOCKS = 14.0D;
+    private static final double SCAVENGE_RADIUS_SQUARED =
+            SCAVENGE_RADIUS_BLOCKS * SCAVENGE_RADIUS_BLOCKS;
+
+    private static final double SPIDER_SWARM_SPEED = 1.12D;
+    private static final double SLIME_SWARM_SPEED = 0.92D;
+    private static final double SMALL_ARTHROPOD_SWARM_SPEED = 1.08D;
+    private static final double SCAVENGE_SPEED = 0.72D;
+
+    private RetoldSwarmScavengerEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onEntityTickPost(EntityTickEvent.Post event) {
+        if (!(event.getEntity() instanceof PathfinderMob mob)) {
+            return;
+        }
+
+        if (!(mob.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+
+        if (!shouldThink(mob, gameTime)) {
+            return;
+        }
+
+        if (isSpiderSwarmPredator(mob)) {
+            handleSpiderSwarm(
+                    level,
+                    mob,
+                    gameTime
+            );
+            return;
+        }
+
+        if (isSlimeScavenger(mob)) {
+            handleSlimeScavenger(
+                    level,
+                    mob,
+                    gameTime
+            );
+            return;
+        }
+
+        if (isSmallArthropodSwarm(mob)) {
+            handleSmallArthropodSwarm(
+                    level,
+                    mob,
+                    gameTime
+            );
+        }
+    }
+
+    private static boolean shouldThink(
+            PathfinderMob mob,
+            long gameTime
+    ) {
+        return RetoldBehaviorTiming.shouldThink(
+                mob,
+                gameTime,
+                THINK_INTERVAL_TICKS
+        );
+    }
+
+    private static boolean isSpiderSwarmPredator(PathfinderMob mob) {
+        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.HUNGRY_SWARM_PREDATOR;
+    }
+
+    private static boolean isSlimeScavenger(PathfinderMob mob) {
+        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.SLIME_HUNGRY;
+    }
+
+    private static boolean isSmallArthropodSwarm(PathfinderMob mob) {
+        return RetoldMobRules.isSmallArthropodSwarm(mob);
+    }
+
+    private static void handleSpiderSwarm(
+            ServerLevel level,
+            PathfinderMob spider,
+            long gameTime
+    ) {
+        LivingEntity target = spider.getTarget();
+
+        if (!isValidSpiderFoodTarget(spider, target, gameTime)) {
+            target = findSharedSpiderTarget(
+                    level,
+                    spider,
+                    gameTime
+            );
+        } else {
+            spreadSpiderTarget(
+                    level,
+                    spider,
+                    target,
+                    gameTime
+            );
+            return;
+        }
+
+        if (target == null || !canJoinSpiderSwarm(spider, gameTime)) {
+            return;
+        }
+
+        joinSpiderHunt(
+                spider,
+                target,
+                gameTime
+        );
+    }
+
+    private static LivingEntity findSharedSpiderTarget(
+            ServerLevel level,
+            PathfinderMob spider,
+            long gameTime
+    ) {
+        AABB area = spider.getBoundingBox().inflate(SPIDER_SWARM_RADIUS_BLOCKS);
+
+        List<PathfinderMob> sources = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                source -> isValidSpiderSwarmSource(
+                        spider,
+                        source,
+                        gameTime
+                )
+        );
+
+        LivingEntity bestTarget = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (PathfinderMob source : sources) {
+            LivingEntity target = source.getTarget();
+
+            if (!isValidSpiderFoodTarget(spider, target, gameTime)) {
+                continue;
+            }
+
+            double score = spider.distanceToSqr(source);
+
+            if (source.hasLineOfSight(target)) {
+                score -= 20.0D;
+            }
+
+            if (spider.hasLineOfSight(source)) {
+                score -= 8.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestTarget = target;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    private static void spreadSpiderTarget(
+            ServerLevel level,
+            PathfinderMob source,
+            LivingEntity target,
+            long gameTime
+    ) {
+        AABB area = source.getBoundingBox().inflate(SPIDER_SWARM_RADIUS_BLOCKS);
+
+        for (PathfinderMob recruit : level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                candidate -> isValidSpiderRecruit(
+                        source,
+                        candidate,
+                        gameTime
+                )
+        )) {
+            joinSpiderHunt(
+                    recruit,
+                    target,
+                    gameTime
+            );
+        }
+    }
+
+    private static boolean isValidSpiderSwarmSource(
+            PathfinderMob spider,
+            PathfinderMob source,
+            long gameTime
+    ) {
+        if (source == null || source == spider) {
+            return false;
+        }
+
+        if (!isSpiderSwarmPredator(source)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(spider, source)) {
+            return false;
+        }
+
+        if (spider.distanceToSqr(source) > SPIDER_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return isValidSpiderFoodTarget(
+                spider,
+                source.getTarget(),
+                gameTime
+        );
+    }
+
+    private static boolean isValidSpiderRecruit(
+            PathfinderMob source,
+            PathfinderMob recruit,
+            long gameTime
+    ) {
+        if (recruit == null || recruit == source) {
+            return false;
+        }
+
+        if (!isSpiderSwarmPredator(recruit)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(source, recruit)) {
+            return false;
+        }
+
+        if (source.distanceToSqr(recruit) > SPIDER_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return canJoinSpiderSwarm(
+                recruit,
+                gameTime
+        );
+    }
+
+    private static boolean canJoinSpiderSwarm(
+            PathfinderMob spider,
+            long gameTime
+    ) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(spider)) {
+            return false;
+        }
+
+        RetoldAiControlMode mode = RetoldAiControl.getMode(spider);
+
+        if (
+                mode != RetoldAiControlMode.NONE
+                        && !RetoldAiControl.isControlledAsBy(
+                        spider,
+                        RetoldAiControlMode.HUNT,
+                        RetoldAiControlOwner.SWARM
+                )
+        ) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                spider,
+                gameTime
+        );
+
+        return RetoldMobRules.hasHuntDrive(
+                spider,
+                state
+        );
+    }
+
+    private static boolean isValidSpiderFoodTarget(
+            PathfinderMob spider,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (target == null || target == spider) {
+            return false;
+        }
+
+        return RetoldPreyTargeting.isValidMobRulePrey(
+                spider,
+                target,
+                gameTime
+        );
+    }
+
+    private static void joinSpiderHunt(
+            PathfinderMob spider,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!RetoldAiControl.tryClaim(
+                spider,
+                RetoldAiControlMode.HUNT,
+                RetoldAiControlOwner.SWARM,
+                SPIDER_SWARM_PRIORITY,
+                "spider_swarm",
+                gameTime,
+                SPIDER_SWARM_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        RetoldBehaviorTargets.setTargetAndAggression(spider, target, true);
+
+        spider.setSprinting(true);
+
+        RetoldAiControl.withNavigationBypass(() -> {
+            spider.getNavigation().moveTo(
+                    target,
+                    SPIDER_SWARM_SPEED
+            );
+        });
+    }
+
+    private static void handleSlimeScavenger(
+            ServerLevel level,
+            PathfinderMob slime,
+            long gameTime
+    ) {
+        LivingEntity target = slime.getTarget();
+
+        if (isValidSlimeTarget(slime, target)) {
+            spreadSlimeTarget(
+                    level,
+                    slime,
+                    target,
+                    gameTime
+            );
+            return;
+        }
+
+        LivingEntity sharedTarget = findSharedSlimeTarget(
+                level,
+                slime
+        );
+
+        if (sharedTarget != null && canJoinSlimeSwarm(slime)) {
+            joinSlimeAttack(
+                    slime,
+                    sharedTarget,
+                    gameTime
+            );
+            return;
+        }
+
+        ItemEntity food = findBestOrganicScrap(
+                level,
+                slime
+        );
+
+        if (food != null && canScavenge(slime, gameTime)) {
+            moveToOrganicScrap(
+                    slime,
+                    food,
+                    gameTime
+            );
+        }
+    }
+
+    private static LivingEntity findSharedSlimeTarget(
+            ServerLevel level,
+            PathfinderMob slime
+    ) {
+        AABB area = slime.getBoundingBox().inflate(SLIME_SWARM_RADIUS_BLOCKS);
+
+        List<PathfinderMob> sources = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                source -> isValidSlimeSource(
+                        slime,
+                        source
+                )
+        );
+
+        LivingEntity bestTarget = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (PathfinderMob source : sources) {
+            LivingEntity target = source.getTarget();
+
+            if (!isValidSlimeTarget(slime, target)) {
+                continue;
+            }
+
+            double score = slime.distanceToSqr(source);
+
+            if (source.hasLineOfSight(target)) {
+                score -= 14.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestTarget = target;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    private static void spreadSlimeTarget(
+            ServerLevel level,
+            PathfinderMob source,
+            LivingEntity target,
+            long gameTime
+    ) {
+        AABB area = source.getBoundingBox().inflate(SLIME_SWARM_RADIUS_BLOCKS);
+
+        for (PathfinderMob recruit : level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                candidate -> isValidSlimeRecruit(
+                        source,
+                        candidate
+                )
+        )) {
+            joinSlimeAttack(
+                    recruit,
+                    target,
+                    gameTime
+            );
+        }
+    }
+
+    private static boolean isValidSlimeSource(
+            PathfinderMob slime,
+            PathfinderMob source
+    ) {
+        if (source == null || source == slime) {
+            return false;
+        }
+
+        if (!isSlimeScavenger(source)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(slime, source)) {
+            return false;
+        }
+
+        if (slime.distanceToSqr(source) > SLIME_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return isValidSlimeTarget(
+                slime,
+                source.getTarget()
+        );
+    }
+
+    private static boolean isValidSlimeRecruit(
+            PathfinderMob source,
+            PathfinderMob recruit
+    ) {
+        if (recruit == null || recruit == source) {
+            return false;
+        }
+
+        if (!isSlimeScavenger(recruit)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(source, recruit)) {
+            return false;
+        }
+
+        if (source.distanceToSqr(recruit) > SLIME_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return canJoinSlimeSwarm(recruit);
+    }
+
+    private static boolean canJoinSlimeSwarm(PathfinderMob slime) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(slime)) {
+            return false;
+        }
+
+        return RetoldBehaviorCombat.canUseAttackControl(
+                slime,
+                RetoldAiControlOwner.SWARM
+        );
+    }
+
+    private static boolean isValidSlimeTarget(
+            PathfinderMob slime,
+            LivingEntity target
+    ) {
+        return RetoldBehaviorCombat.isValidEnemyTarget(
+                slime,
+                target,
+                Double.MAX_VALUE,
+                false
+        );
+    }
+
+    private static void joinSlimeAttack(
+            PathfinderMob slime,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!RetoldBehaviorCombat.claimAttackControl(
+                slime,
+                RetoldAiControlOwner.SWARM,
+                SLIME_SWARM_PRIORITY,
+                "slime_swarm",
+                gameTime,
+                SLIME_SWARM_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        RetoldBehaviorCombat.applyAttackTarget(
+                slime,
+                target,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+
+        RetoldAiControl.withNavigationBypass(() -> {
+            slime.getNavigation().moveTo(
+                    target,
+                    SLIME_SWARM_SPEED
+            );
+        });
+    }
+
+    private static ItemEntity findBestOrganicScrap(
+            ServerLevel level,
+            PathfinderMob slime
+    ) {
+        AABB area = slime.getBoundingBox().inflate(SCAVENGE_RADIUS_BLOCKS);
+
+        List<ItemEntity> items = level.getEntitiesOfClass(
+                ItemEntity.class,
+                area,
+                item -> isValidOrganicScrap(
+                        slime,
+                        item
+                )
+        );
+
+        ItemEntity best = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (ItemEntity item : items) {
+            double distanceSquared = slime.distanceToSqr(item);
+
+            if (distanceSquared > SCAVENGE_RADIUS_SQUARED) {
+                continue;
+            }
+
+            double score = distanceSquared;
+
+            if (slime.hasLineOfSight(item)) {
+                score -= 10.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                best = item;
+            }
+        }
+
+        return best;
+    }
+
+    private static boolean isValidOrganicScrap(
+            PathfinderMob slime,
+            ItemEntity item
+    ) {
+        if (item == null || !item.isAlive() || item.isRemoved()) {
+            return false;
+        }
+
+        if (slime.distanceToSqr(item) > SCAVENGE_RADIUS_SQUARED) {
+            return false;
+        }
+
+        if (!slime.hasLineOfSight(item) && slime.distanceToSqr(item) > 49.0D) {
+            return false;
+        }
+
+        return RetoldMobRules.canEatDroppedItem(
+                slime,
+                item.getItem()
+        );
+    }
+
+    private static boolean canScavenge(
+            PathfinderMob slime,
+            long gameTime
+    ) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(slime)) {
+            return false;
+        }
+
+        RetoldAiControlMode mode = RetoldAiControl.getMode(slime);
+
+        if (
+                mode != RetoldAiControlMode.NONE
+                        && !RetoldAiControl.isControlledAsBy(
+                        slime,
+                        RetoldAiControlMode.FEED,
+                        RetoldAiControlOwner.SCAVENGER
+                )
+        ) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                slime,
+                gameTime
+        );
+
+        return state.hunger() >= RetoldMobRules.eatThreshold(slime);
+    }
+
+    private static void moveToOrganicScrap(
+            PathfinderMob slime,
+            ItemEntity food,
+            long gameTime
+    ) {
+        if (!RetoldAiControl.tryClaim(
+                slime,
+                RetoldAiControlMode.FEED,
+                RetoldAiControlOwner.SCAVENGER,
+                SCAVENGE_PRIORITY,
+                "slime_scavenge",
+                gameTime,
+                SCAVENGE_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        RetoldAiControl.withNavigationBypass(() -> {
+            slime.getNavigation().moveTo(
+                    food,
+                    SCAVENGE_SPEED
+            );
+                });
+    }
+
+    private static void handleSmallArthropodSwarm(
+            ServerLevel level,
+            PathfinderMob arthropod,
+            long gameTime
+    ) {
+        LivingEntity target = arthropod.getTarget();
+
+        if (isValidSmallArthropodTarget(arthropod, target)) {
+            spreadSmallArthropodTarget(
+                    level,
+                    arthropod,
+                    target,
+                    gameTime
+            );
+            return;
+        }
+
+        LivingEntity sharedTarget = findSharedSmallArthropodTarget(
+                level,
+                arthropod
+        );
+
+        if (sharedTarget != null && canJoinSmallArthropodSwarm(arthropod)) {
+            joinSmallArthropodAttack(
+                    arthropod,
+                    sharedTarget,
+                    gameTime
+            );
+        }
+    }
+
+    private static LivingEntity findSharedSmallArthropodTarget(
+            ServerLevel level,
+            PathfinderMob arthropod
+    ) {
+        AABB area = arthropod.getBoundingBox().inflate(SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS);
+
+        List<PathfinderMob> sources = level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                source -> isValidSmallArthropodSource(
+                        arthropod,
+                        source
+                )
+        );
+
+        LivingEntity bestTarget = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (PathfinderMob source : sources) {
+            LivingEntity target = source.getTarget();
+
+            if (!isValidSmallArthropodTarget(arthropod, target)) {
+                continue;
+            }
+
+            double score = arthropod.distanceToSqr(source);
+
+            if (source.hasLineOfSight(target)) {
+                score -= 12.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestTarget = target;
+            }
+        }
+
+        return bestTarget;
+    }
+
+    private static void spreadSmallArthropodTarget(
+            ServerLevel level,
+            PathfinderMob source,
+            LivingEntity target,
+            long gameTime
+    ) {
+        AABB area = source.getBoundingBox().inflate(SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS);
+
+        for (PathfinderMob recruit : level.getEntitiesOfClass(
+                PathfinderMob.class,
+                area,
+                candidate -> isValidSmallArthropodRecruit(
+                        source,
+                        candidate
+                )
+        )) {
+            joinSmallArthropodAttack(
+                    recruit,
+                    target,
+                    gameTime
+            );
+        }
+    }
+
+    private static boolean isValidSmallArthropodSource(
+            PathfinderMob arthropod,
+            PathfinderMob source
+    ) {
+        if (source == null || source == arthropod) {
+            return false;
+        }
+
+        if (!isSmallArthropodSwarm(source)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(arthropod, source)) {
+            return false;
+        }
+
+        if (arthropod.distanceToSqr(source) > SMALL_ARTHROPOD_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return isValidSmallArthropodTarget(
+                arthropod,
+                source.getTarget()
+        );
+    }
+
+    private static boolean isValidSmallArthropodRecruit(
+            PathfinderMob source,
+            PathfinderMob recruit
+    ) {
+        if (recruit == null || recruit == source) {
+            return false;
+        }
+
+        if (!isSmallArthropodSwarm(recruit)) {
+            return false;
+        }
+
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(source, recruit)) {
+            return false;
+        }
+
+        if (source.distanceToSqr(recruit) > SMALL_ARTHROPOD_SWARM_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return canJoinSmallArthropodSwarm(recruit);
+    }
+
+    private static boolean canJoinSmallArthropodSwarm(PathfinderMob arthropod) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(arthropod)) {
+            return false;
+        }
+
+        return RetoldBehaviorCombat.canUseAttackControl(
+                arthropod,
+                RetoldAiControlOwner.SWARM
+        );
+    }
+
+    private static boolean isValidSmallArthropodTarget(
+            PathfinderMob arthropod,
+            LivingEntity target
+    ) {
+        return RetoldBehaviorCombat.isValidEnemyTarget(
+                arthropod,
+                target,
+                Double.MAX_VALUE,
+                false
+        );
+    }
+
+    private static void joinSmallArthropodAttack(
+            PathfinderMob arthropod,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!RetoldBehaviorCombat.claimAttackControl(
+                arthropod,
+                RetoldAiControlOwner.SWARM,
+                SMALL_ARTHROPOD_SWARM_PRIORITY,
+                "small_arthropod_swarm",
+                gameTime,
+                SMALL_ARTHROPOD_SWARM_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        RetoldBehaviorCombat.applyAttackTarget(
+                arthropod,
+                target,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+
+        RetoldAiControl.withNavigationBypass(() -> {
+            arthropod.getNavigation().moveTo(
+                    target,
+                    SMALL_ARTHROPOD_SWARM_SPEED
+            );
+        });
+    }
+}

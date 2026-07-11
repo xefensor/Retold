@@ -1,5 +1,6 @@
 package cz.xefensor.retold.event;
 
+import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
@@ -46,6 +47,10 @@ public final class TorchWeatherEvents {
             return;
         }
 
+        if (isAender(level)) {
+            return;
+        }
+
         long chunkKey = chunkKey(event.getChunk().getPos());
 
         PENDING_CHUNK_INDEXES
@@ -56,6 +61,10 @@ public final class TorchWeatherEvents {
     @SubscribeEvent
     public static void onChunkUnload(ChunkEvent.Unload event) {
         if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+
+        if (isAender(level)) {
             return;
         }
 
@@ -87,6 +96,10 @@ public final class TorchWeatherEvents {
             return;
         }
 
+        if (isAender(level)) {
+            return;
+        }
+
         BlockState state = event.getPlacedBlock();
 
         if (isLitTorch(state)) {
@@ -97,6 +110,10 @@ public final class TorchWeatherEvents {
     @SubscribeEvent
     public static void onLevelTick(LevelTickEvent.Post event) {
         if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+
+        if (isAender(level)) {
             return;
         }
 
@@ -124,6 +141,10 @@ public final class TorchWeatherEvents {
             return;
         }
 
+        if (isAender(serverLevel)) {
+            return;
+        }
+
         if (!isLitTorch(state)) {
             return;
         }
@@ -139,6 +160,10 @@ public final class TorchWeatherEvents {
 
     public static void untrackTorch(Level level, BlockPos pos) {
         if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+
+        if (isAender(serverLevel)) {
             return;
         }
 
@@ -395,5 +420,9 @@ public final class TorchWeatherEvents {
 
     private static long chunkKey(ChunkPos chunkPos) {
         return ChunkPos.pack(chunkPos.x(), chunkPos.z());
+    }
+
+    private static boolean isAender(ServerLevel level) {
+        return level.dimension() == RetoldAenderDimensions.AENDER;
     }
 }

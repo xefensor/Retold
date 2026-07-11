@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -30,7 +31,7 @@ public final class RetoldTerritoryWitnesses {
                 PathfinderMob.class,
                 player.getBoundingBox().inflate(witnessRadiusBlocks),
                 mob -> mob.isAlive()
-                        && RetoldFactionMembers.getFaction(mob) == faction
+                        && RetoldFactionMembers.isMemberOf(mob, faction)
                         && mob.distanceToSqr(
                         actionPos.getX() + 0.5D,
                         actionPos.getY() + 0.5D,
@@ -39,7 +40,7 @@ public final class RetoldTerritoryWitnesses {
         );
 
         for (PathfinderMob witness : possibleWitnesses) {
-            if (witness.getSensing().hasLineOfSight(player)) {
+            if (RetoldAiTargets.isVisibleTo(witness, player)) {
                 return true;
             }
         }
@@ -73,13 +74,13 @@ public final class RetoldTerritoryWitnesses {
                 PathfinderMob.class,
                 player.getBoundingBox().inflate(witnessRadiusBlocks),
                 mob -> mob.isAlive()
-                        && RetoldFactionMembers.getFaction(mob) == faction
+                        && RetoldFactionMembers.isMemberOf(mob, faction)
                         && mob.distanceToSqr(
                         actionPos.getX() + 0.5D,
                         actionPos.getY() + 0.5D,
                         actionPos.getZ() + 0.5D
                 ) <= witnessRadiusBlocks * witnessRadiusBlocks
-                        && mob.getSensing().hasLineOfSight(player)
+                        && RetoldAiTargets.isVisibleTo(mob, player)
         );
 
         long gameTime = level.getGameTime();

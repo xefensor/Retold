@@ -1,5 +1,7 @@
 package cz.xefensor.retold.event;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
@@ -62,7 +64,7 @@ public final class RetoldFactionCombatEvents {
         if (entity instanceof PathfinderMob) {
             PathfinderMob pathfinderMob = (PathfinderMob) entity;
 
-            if (RetoldFactionMembers.getFaction(pathfinderMob) != null) {
+            if (RetoldFactionMembers.hasFaction(pathfinderMob)) {
                 addRetaliationGoal(pathfinderMob);
             }
         }
@@ -131,11 +133,7 @@ public final class RetoldFactionCombatEvents {
             return false;
         }
 
-        if (!target.isAlive()) {
-            return false;
-        }
-
-        if (mob.level() != target.level()) {
+        if (!RetoldAiTargets.isAliveInSameLevel(mob, target)) {
             return false;
         }
 
@@ -235,11 +233,7 @@ public final class RetoldFactionCombatEvents {
     }
 
     private static boolean isValidForcedTarget(Mob mob, LivingEntity target) {
-        if (!target.isAlive()) {
-            return false;
-        }
-
-        if (mob.level() != target.level()) {
+        if (!RetoldAiTargets.isAliveInSameLevel(mob, target)) {
             return false;
         }
 
@@ -257,18 +251,16 @@ public final class RetoldFactionCombatEvents {
     }
 
     private static void forceTarget(Mob mob, LivingEntity target, long gameTime) {
-        boolean applied = RetoldFactionTargetMemory.trySetTarget(
+        boolean applied = RetoldCombatTargets.applyAttackTarget(
                 mob,
                 target,
                 RetoldTargetSource.FACTION_COMBAT
         );
 
-        if (!applied && mob.getTarget() != target) {
+        if (!applied) {
             return;
         }
 
-        mob.setAggressive(true);
-        mob.getLookControl().setLookAt(target, 30.0F, 30.0F);
         LAST_FORCED_TARGET_REFRESH_AT.put(mob, gameTime);
     }
 

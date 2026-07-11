@@ -1,5 +1,6 @@
 package cz.xefensor.retold.behavior;
 
+import cz.xefensor.retold.territory.RetoldTerritoryDebug;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -34,6 +35,7 @@ public final class RetoldBehaviorDebugEvents {
     private static final double LOOK_DISTANCE_BLOCKS = 24.0D;
     private static final double LOOK_DOT_THRESHOLD = 0.985D;
     private static final int DEFAULT_NEARBY_RADIUS_BLOCKS = 24;
+    private static final int DEFAULT_TARGET_RADIUS_BLOCKS = 18;
     private static final int MAX_NEARBY_RADIUS_BLOCKS = 96;
     private static final int MAX_NEARBY_MOBS_SHOWN = 32;
     private static final int DEFAULT_SHOW_HOME_RADIUS_BLOCKS = 32;
@@ -57,6 +59,22 @@ public final class RetoldBehaviorDebugEvents {
                         .then(
                                 Commands.literal("home")
                                         .executes(RetoldBehaviorDebugEvents::printLookedMobHomeDebug)
+                        )
+                        .then(
+                                Commands.literal("guardpost")
+                                        .executes(RetoldBehaviorDebugEvents::printLookedMobGuardPostDebug)
+                        )
+                        .then(
+                                Commands.literal("warning")
+                                        .executes(RetoldBehaviorDebugEvents::printLookedMobWarningDebug)
+                        )
+                        .then(
+                                Commands.literal("setguardpost")
+                                        .executes(RetoldBehaviorDebugEvents::setLookedMobGuardPost)
+                        )
+                        .then(
+                                Commands.literal("clearguardpost")
+                                        .executes(RetoldBehaviorDebugEvents::clearLookedMobGuardPost)
                         )
                         .then(
                                 Commands.literal("showhomes")
@@ -100,6 +118,29 @@ public final class RetoldBehaviorDebugEvents {
                                                                 )
                                                         )
                                                         .executes(context -> printNearbyBehaviorDebug(
+                                                                context,
+                                                                IntegerArgumentType.getInteger(
+                                                                        context,
+                                                                        "radius"
+                                                                )
+                                                        ))
+                                        )
+                        )
+                        .then(
+                                Commands.literal("targets")
+                                        .executes(context -> printLookedMobTargetCandidates(
+                                                context,
+                                                DEFAULT_TARGET_RADIUS_BLOCKS
+                                        ))
+                                        .then(
+                                                Commands.argument(
+                                                                "radius",
+                                                                IntegerArgumentType.integer(
+                                                                        1,
+                                                                        MAX_NEARBY_RADIUS_BLOCKS
+                                                                )
+                                                        )
+                                                        .executes(context -> printLookedMobTargetCandidates(
                                                                 context,
                                                                 IntegerArgumentType.getInteger(
                                                                         context,
@@ -286,6 +327,61 @@ public final class RetoldBehaviorDebugEvents {
         return 1;
     }
 
+    private static int printLookedMobGuardPostDebug(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        getEntityName(mob)
+                                + " guard post: "
+                                + RetoldTerritoryGuardEvents.debugPostText(mob)
+                ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int printLookedMobWarningDebug(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        long gameTime = mob.level() instanceof ServerLevel level
+                ? level.getGameTime()
+                : 0L;
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        getEntityName(mob)
+                                + " #"
+                                + mob.getId()
+                                + "\n"
+                                + RetoldTerritoryDebug.fullWarningText(
+                                mob,
+                                gameTime
+                        )
+                ),
+                false
+        );
+
+        return 1;
+    }
+
     private static int printLookedMobHomeDebug(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         PathfinderMob mob = findLookedMobFromSource(source);
@@ -340,6 +436,64 @@ public final class RetoldBehaviorDebugEvents {
         return 1;
     }
 
+    private static int setLookedMobGuardPost(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        long gameTime = mob.level() instanceof ServerLevel level
+                ? level.getGameTime()
+                : 0L;
+
+        if (!RetoldTerritoryGuardEvents.setGuardPostToCurrentPosition(mob, gameTime)) {
+            source.sendFailure(
+                    Component.literal("Looked mob is not a Retold territory guard.")
+            );
+            return 0;
+        }
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        "Set guard post for "
+                                + getEntityName(mob)
+                                + " to "
+                                + mob.blockPosition().toShortString()
+                ),
+                true
+        );
+
+        return 1;
+    }
+
+    private static int clearLookedMobGuardPost(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob mob = findLookedMobFromSource(source);
+
+        if (mob == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        RetoldTerritoryGuardEvents.clearGuardPost(mob);
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        "Cleared guard post for " + getEntityName(mob)
+                ),
+                true
+        );
+
+        return 1;
+    }
+
     private static int showNearbyHomes(
             CommandContext<CommandSourceStack> context,
             int radius
@@ -372,6 +526,8 @@ public final class RetoldBehaviorDebugEvents {
         );
 
         int shown = 0;
+        List<String> homeLines = new ArrayList<>();
+        long gameTime = level.getGameTime();
 
         for (PathfinderMob mob : mobs) {
             RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
@@ -385,12 +541,31 @@ public final class RetoldBehaviorDebugEvents {
                     home.pos()
             );
             shown++;
+
+            if (homeLines.size() < MAX_NEARBY_MOBS_SHOWN) {
+                homeLines.add(
+                        "- "
+                                + getEntityName(mob)
+                                + " #"
+                                + mob.getId()
+                                + " "
+                                + fullHomeText(
+                                mob,
+                                home,
+                                gameTime
+                        )
+                );
+            }
         }
 
         int finalShown = shown;
+        String message = buildShowHomesText(
+                finalShown,
+                homeLines
+        );
 
         source.sendSuccess(
-                () -> Component.literal("Shown Retold homes: " + finalShown),
+                () -> Component.literal(message),
                 false
         );
 
@@ -441,6 +616,60 @@ public final class RetoldBehaviorDebugEvents {
                                 level,
                                 player,
                                 mobs,
+                                radius,
+                                gameTime
+                        )
+                ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int printLookedMobTargetCandidates(
+            CommandContext<CommandSourceStack> context,
+            int radius
+    ) {
+        CommandSourceStack source = context.getSource();
+        PathfinderMob hunter = findLookedMobFromSource(source);
+
+        if (hunter == null) {
+            source.sendFailure(
+                    Component.literal("No mob found in view.")
+            );
+            return 0;
+        }
+
+        if (!(hunter.level() instanceof ServerLevel level)) {
+            source.sendFailure(
+                    Component.literal("Looked mob is not in a server level.")
+            );
+            return 0;
+        }
+
+        long gameTime = level.getGameTime();
+        double radiusSquared = (double) radius * (double) radius;
+        AABB area = hunter.getBoundingBox().inflate(radius);
+        List<LivingEntity> candidates = new ArrayList<>(
+                level.getEntitiesOfClass(
+                        LivingEntity.class,
+                        area,
+                        candidate -> candidate != hunter
+                                && candidate.isAlive()
+                                && !candidate.isRemoved()
+                                && candidate.distanceToSqr(hunter) <= radiusSquared
+                )
+        );
+
+        candidates.sort(
+                Comparator.comparingDouble(candidate -> candidate.distanceToSqr(hunter))
+        );
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        buildTargetCandidatesText(
+                                hunter,
+                                candidates,
                                 radius,
                                 gameTime
                         )
@@ -803,6 +1032,11 @@ public final class RetoldBehaviorDebugEvents {
         String target = mob.getTarget() == null
                 ? "none"
                 : getEntityName(mob.getTarget());
+        String preyDecision = RetoldPreyTargeting.shortMobRulePreyDecision(
+                mob,
+                mob.getTarget(),
+                gameTime
+        );
 
         String thresholds = managed
                 ? " eat@" + RetoldMobRules.eatThreshold(mob) + " hunt@" + getSafeHuntThresholdText(mob, state)
@@ -814,12 +1048,15 @@ public final class RetoldBehaviorDebugEvents {
                 + thresholds
                 + " profile=" + profileType
                 + " home=" + shortHomeText(home)
+                + " guardPost=" + shortGuardPostText(mob)
+                + " warning=" + RetoldTerritoryDebug.shortWarningText(mob, gameTime)
                 + " rhythm=" + rhythmText(mob)
                 + " ctrl=" + controlMode
                 + controlReasonText(mob)
                 + " managed=" + yesNo(managed)
                 + " pred=" + yesNo(predator)
-                + " target=" + target;
+                + " target=" + target
+                + " prey=" + preyDecision;
     }
 
     private static String buildFullDebugText(
@@ -838,6 +1075,8 @@ public final class RetoldBehaviorDebugEvents {
                 + "\nMob: " + getEntityName(mob) + " #" + mob.getId()
                 + "\nProfile: " + RetoldMobRules.profileType(mob)
                 + "\nHome: " + fullHomeText(mob, home, gameTime)
+                + "\nGuard post: " + RetoldTerritoryGuardEvents.debugPostText(mob)
+                + "\n" + RetoldTerritoryDebug.fullWarningText(mob, gameTime)
                 + "\nRhythm: " + rhythmText(mob)
                 + "\nManaged: " + yesNo(RetoldMobRules.isManagedMob(mob))
                 + "\nPredator: " + yesNo(RetoldMobRules.isManagedPredator(mob))
@@ -858,7 +1097,12 @@ public final class RetoldBehaviorDebugEvents {
                 + "\nLast hunt success: " + ticksAgoText(gameTime, state.lastSuccessfulHuntAt())
                 + "\nLast hunt fail: " + ticksAgoText(gameTime, state.lastFailedHuntAt())
                 + "\nLast hunger tick: " + ticksAgoText(gameTime, state.lastHungerTickAt())
-                + "\nTarget: " + (target == null ? "none" : getEntityName(target) + " #" + target.getId());
+                + "\nTarget: " + targetDebugText(target)
+                + "\nTarget decision: " + RetoldPreyTargeting.debugMobRulePreyDecision(
+                        mob,
+                        target,
+                        gameTime
+                );
     }
 
     private static String buildNearbyDebugText(
@@ -901,9 +1145,72 @@ public final class RetoldBehaviorDebugEvents {
             text.append(" h=").append(hungerText(mob));
             text.append(" mode=").append(RetoldAiControl.getMode(mob));
             text.append(" target=").append(targetText(mob.getTarget()));
+            text.append(" prey=").append(RetoldPreyTargeting.shortMobRulePreyDecision(
+                    mob,
+                    mob.getTarget(),
+                    gameTime
+            ));
             text.append(" home=").append(nearbyHomeText(
                     level,
                     mob,
+                    gameTime
+            ));
+            text.append(" guard=").append(shortGuardPostText(mob));
+            text.append(" warning=").append(RetoldTerritoryDebug.shortWarningText(
+                    mob,
+                    gameTime
+            ));
+        }
+
+        return text.toString();
+    }
+
+    private static String buildTargetCandidatesText(
+            PathfinderMob hunter,
+            List<LivingEntity> candidates,
+            int radius,
+            long gameTime
+    ) {
+        StringBuilder text = new StringBuilder();
+
+        text.append("\nRetold target candidates");
+        text.append("\nHunter: ").append(getEntityName(hunter));
+        text.append(" #").append(hunter.getId());
+        text.append(" profile=").append(RetoldMobRules.profileType(hunter));
+        text.append(" hunger=").append(hungerText(hunter));
+        text.append(" hunt@").append(getSafeHuntThresholdText(
+                hunter,
+                RetoldMobStates.get(hunter)
+        ));
+        text.append("\nRadius: ").append(radius).append(" blocks");
+        text.append("\nCandidates: ").append(candidates.size());
+
+        int shown = Math.min(
+                candidates.size(),
+                MAX_NEARBY_MOBS_SHOWN
+        );
+
+        if (shown <= 0) {
+            text.append("\nNo living candidates found nearby.");
+            return text.toString();
+        }
+
+        text.append("\nShowing: ").append(shown);
+
+        if (candidates.size() > shown) {
+            text.append("/").append(candidates.size());
+        }
+
+        for (int index = 0; index < shown; index++) {
+            LivingEntity candidate = candidates.get(index);
+
+            text.append("\n- ");
+            text.append(getEntityName(candidate));
+            text.append(" #").append(candidate.getId());
+            text.append(" d=").append(Math.round(Math.sqrt(hunter.distanceToSqr(candidate))));
+            text.append(" decision=").append(RetoldPreyTargeting.debugMobRulePreyDecision(
+                    hunter,
+                    candidate,
                     gameTime
             ));
         }
@@ -915,6 +1222,8 @@ public final class RetoldBehaviorDebugEvents {
         return RetoldMobRules.isManagedMob(mob)
                 || RetoldMobStates.get(mob) != null
                 || RetoldAnimalHomes.get(mob) != null
+                || RetoldTerritoryGuardEvents.hasGuardPost(mob)
+                || RetoldTerritoryDebug.hasWarningDebug(mob)
                 || RetoldAiControl.isControlled(mob);
     }
 
@@ -936,7 +1245,9 @@ public final class RetoldBehaviorDebugEvents {
         );
         int maxGroupSize = RetoldAnimalSocialGroups.maxHomeGroupSize(mob);
 
-        return home.type()
+        return homeRoleText(home.type())
+                + " "
+                + home.type()
                 + "@"
                 + home.pos().toShortString()
                 + " "
@@ -1006,12 +1317,24 @@ public final class RetoldBehaviorDebugEvents {
         return getEntityName(target) + " #" + target.getId();
     }
 
+    private static String targetDebugText(LivingEntity target) {
+        return targetText(target);
+    }
+
     private static String shortHomeText(RetoldAnimalHomeMemory home) {
         if (home == null) {
             return "none";
         }
 
-        return home.type().name();
+        return homeRoleText(home.type()) + "/" + home.type().name();
+    }
+
+    private static String shortGuardPostText(PathfinderMob mob) {
+        if (!RetoldTerritoryGuardEvents.hasGuardPost(mob)) {
+            return "none";
+        }
+
+        return RetoldTerritoryGuardEvents.debugPostText(mob);
     }
 
     private static String fullHomeText(
@@ -1064,7 +1387,9 @@ public final class RetoldBehaviorDebugEvents {
             }
         }
 
-        return home.type()
+        return homeRoleText(home.type())
+                + " "
+                + home.type()
                 + " @ "
                 + home.pos().toShortString()
                 + " valid="
@@ -1081,6 +1406,54 @@ public final class RetoldBehaviorDebugEvents {
                 + separation
                 + " used "
                 + ticksAgoText(gameTime, home.lastUsedAt());
+    }
+
+    private static String buildShowHomesText(
+            int shown,
+            List<String> homeLines
+    ) {
+        StringBuilder text = new StringBuilder();
+
+        text.append("Shown Retold homes/ranges: ").append(shown);
+
+        if (homeLines.isEmpty()) {
+            return text.toString();
+        }
+
+        text.append("\nShowing details: ").append(homeLines.size());
+
+        if (shown > homeLines.size()) {
+            text.append("/").append(shown);
+        }
+
+        for (String line : homeLines) {
+            text.append("\n").append(line);
+        }
+
+        return text.toString();
+    }
+
+    private static String homeRoleText(RetoldAnimalHomeType type) {
+        if (type == null) {
+            return "home";
+        }
+
+        return switch (type) {
+            case WOLF_DEN, FOX_DEN -> "den";
+            case DOLPHIN_POD_RANGE -> "pod range";
+            case HERD_RANGE -> "grazing range";
+            case FORAGING_RANGE -> "foraging range";
+            case ROOST -> "roost";
+            case WARREN -> "warren";
+            case CAT_TERRITORY, OCELOT_TERRITORY -> "territory";
+            case PANDA_BAMBOO_GROVE -> "bamboo grove";
+            case SNIFFER_FORAGING_RANGE -> "sniffing range";
+            case ARMADILLO_SCRUB_RANGE -> "scrub range";
+            case TURTLE_BEACH -> "beach memory";
+            case AMPHIBIAN_WETLAND -> "wetland range";
+            case AXOLOTL_WATER_RANGE -> "water range";
+            case NONE -> "home";
+        };
     }
 
     private static String controlReasonText(PathfinderMob mob) {

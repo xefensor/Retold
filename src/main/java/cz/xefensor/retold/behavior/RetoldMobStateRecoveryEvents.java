@@ -81,7 +81,7 @@ public final class RetoldMobStateRecoveryEvents {
             RetoldMobState state,
             long gameTime
     ) {
-        if (mob.getTarget() != null && mob.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(mob)) {
             return false;
         }
 

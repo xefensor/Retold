@@ -41,24 +41,28 @@ public final class RetoldTerritoryTick {
             return;
         }
 
-        if (gameTime % MOB_DECISION_INTERVAL_TICKS != Math.floorMod(mob.getId(), MOB_DECISION_INTERVAL_TICKS)) {
-            RetoldTerritoryMobState state = RetoldTerritoryMobStates.get(mob);
+        RetoldTerritoryMobState state = RetoldTerritoryMobStates.getOrCreate(mob);
 
-            if (state != null) {
-                RetoldTerritoryController.maintainContinuousBehavior(
-                        level,
-                        mob,
-                        state,
-                        config,
-                        RetoldTerritoryMobStates.states(),
-                        gameTime
-                );
-            }
+        RetoldTerritoryCombat.suppressExistingTargetDuringWarning(
+                level,
+                mob,
+                config,
+                RetoldTerritoryMobStates.states(),
+                gameTime
+        );
+
+        if (gameTime % MOB_DECISION_INTERVAL_TICKS != Math.floorMod(mob.getId(), MOB_DECISION_INTERVAL_TICKS)) {
+            RetoldTerritoryController.maintainContinuousBehavior(
+                    level,
+                    mob,
+                    state,
+                    config,
+                    RetoldTerritoryMobStates.states(),
+                    gameTime
+            );
 
             return;
         }
-
-        RetoldTerritoryMobState state = RetoldTerritoryMobStates.getOrCreate(mob);
 
         RetoldTerritoryController.updateMobTerritoryLogic(
                 level,

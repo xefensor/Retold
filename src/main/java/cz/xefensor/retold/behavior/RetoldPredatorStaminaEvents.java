@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -298,15 +297,7 @@ public final class RetoldPredatorStaminaEvents {
         state.chaseStartedAt = 0L;
         state.lastCloseAt = 0L;
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                predator,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                predator,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(predator, null, false);
 
         RetoldPredatorStrike.clear(predator);
 
@@ -327,15 +318,7 @@ public final class RetoldPredatorStaminaEvents {
             long gameTime
     ) {
         if (RetoldAiControl.isControlledAs(predator, RetoldAiControlMode.HUNT)) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                    predator,
-                    null
-            );
-
-            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                    predator,
-                    false
-            );
+            RetoldBehaviorTargets.setTargetAndAggression(predator, null, false);
 
             RetoldPredatorStrike.clear(predator);
 
@@ -388,19 +371,7 @@ public final class RetoldPredatorStaminaEvents {
             LivingEntity prey,
             long gameTime
     ) {
-        if (predator == null || prey == null) {
-            return false;
-        }
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (predator.level() != prey.level()) {
-            return false;
-        }
-
-        return RetoldMobRules.canHuntPrey(
+        return RetoldPreyTargeting.isValidMobRulePrey(
                 predator,
                 prey,
                 gameTime

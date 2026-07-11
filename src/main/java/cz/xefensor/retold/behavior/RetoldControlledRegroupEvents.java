@@ -225,11 +225,7 @@ public final class RetoldControlledRegroupEvents {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
-            return false;
-        }
-
-        if (animal.level() != candidate.level()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(animal, candidate)) {
             return false;
         }
 
@@ -294,11 +290,7 @@ public final class RetoldControlledRegroupEvents {
             return false;
         }
 
-        if (!predator.isAlive() || predator.isRemoved()) {
-            return false;
-        }
-
-        if (animal.level() != predator.level()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(animal, predator)) {
             return false;
         }
 
@@ -310,7 +302,11 @@ public final class RetoldControlledRegroupEvents {
             return false;
         }
 
-        if (!RetoldMobRules.canHuntPrey(predator, animal, gameTime)) {
+        if (!RetoldPreyTargeting.isValidMobRulePrey(
+                predator,
+                animal,
+                gameTime
+        )) {
             return false;
         }
 

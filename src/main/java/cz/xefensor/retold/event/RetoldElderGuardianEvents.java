@@ -38,7 +38,12 @@ public final class RetoldElderGuardianEvents {
             return;
         }
 
+        if (event.getEntity() instanceof Guardian guardian) {
+            RetoldGuardianDefenseAssist.onIncomingDamage(event, guardian);
+        }
+
         if (event.getEntity() instanceof ElderGuardian elderGuardian) {
+            RetoldElderGuardianSentinel.onIncomingDamage(event, elderGuardian);
             RetoldElderGuardianBoss.onIncomingDamage(event, elderGuardian);
         }
     }
@@ -51,6 +56,7 @@ public final class RetoldElderGuardianEvents {
 
         if (event.getEntity() instanceof ElderGuardian elderGuardian) {
             RetoldElderGuardianBoss.onElderGuardianTick(elderGuardian);
+            RetoldElderGuardianSentinel.onElderGuardianTick(elderGuardian);
         }
     }
 

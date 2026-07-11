@@ -65,34 +65,6 @@ public final class RetoldWarningMovement {
         updateWarningMovement(mob, warningTarget, state, profile, gameTime);
     }
 
-    public static boolean isWithinWarningPressureDistance(
-            ServerLevel level,
-            PathfinderMob mob,
-            RetoldTerritoryConfig config,
-            RetoldTerritoryMobState state,
-            LivingEntity target,
-            RetoldWarningLevel warningLevel,
-            Map<PathfinderMob, RetoldTerritoryMobState> mobStates
-    ) {
-        int focusCount = countNearbyFactionMobsFocusedOn(
-                level,
-                mob,
-                config,
-                target,
-                mobStates
-        );
-
-        WarningMovementProfile profile = getWarningMovementProfile(
-                mob,
-                target,
-                focusCount,
-                warningLevel
-        );
-
-        double countDistance = profile.maxDistance + 1.5D;
-        return mob.distanceToSqr(target) <= countDistance * countDistance;
-    }
-
     public static int countNearbyFactionMobsFocusedOn(
             ServerLevel level,
             PathfinderMob mob,
@@ -105,7 +77,7 @@ public final class RetoldWarningMovement {
                 mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
                 other -> other != mob
                         && other.isAlive()
-                        && RetoldFactionMembers.getFaction(other) == config.faction
+                        && RetoldFactionMembers.isMemberOf(other, config.faction)
         );
 
         int count = 0;
@@ -142,7 +114,7 @@ public final class RetoldWarningMovement {
                 PathfinderMob.class,
                 mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
                 other -> other.isAlive()
-                        && RetoldFactionMembers.getFaction(other) == config.faction
+                        && RetoldFactionMembers.isMemberOf(other, config.faction)
                         && isFocusedOnIntruder(other, intruder, mobStates)
         );
 

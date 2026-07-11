@@ -1,12 +1,10 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -118,17 +116,7 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
-        if (killer.getTarget() == killed) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                    killer,
-                    null
-            );
-        }
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                killer,
-                false
-        );
+        RetoldBehaviorTargets.clearTargetAndAggression(killer, killed, false);
 
         killer.getNavigation().stop();
         RetoldAiControl.clear(killer);
@@ -201,27 +189,19 @@ public final class RetoldControlledCombatEvents {
             return false;
         }
 
-        if (!defender.isAlive() || defender.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isUsableEntity(defender)) {
             return false;
         }
 
-        if (!owner.isAlive() || owner.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(defender, owner)) {
             return false;
         }
 
-        if (!threat.isAlive() || threat.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(defender, threat)) {
             return false;
         }
 
         if (threat == owner || threat == defender) {
-            return false;
-        }
-
-        if (defender.level() != owner.level() || defender.level() != threat.level()) {
-            return false;
-        }
-
-        if (threat instanceof Player player && (player.isCreative() || player.isSpectator())) {
             return false;
         }
 
@@ -293,15 +273,11 @@ public final class RetoldControlledCombatEvents {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(wolf, candidate)) {
             return false;
         }
 
-        if (wolf.level() != candidate.level()) {
-            return false;
-        }
-
-        if (candidate instanceof Player player && (player.isCreative() || player.isSpectator())) {
+        if (RetoldBehaviorCoordinator.isInvalidPlayerTarget(candidate)) {
             return false;
         }
 
@@ -337,15 +313,7 @@ public final class RetoldControlledCombatEvents {
                 ATTACK_CONTROL_TICKS
         );
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                attacker,
-                target
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                attacker,
-                true
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(attacker, target, true);
 
         attacker.getLookControl().setLookAt(
                 target,
@@ -379,10 +347,7 @@ public final class RetoldControlledCombatEvents {
                 ATTACK_CONTROL_TICKS
         );
 
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                attacker,
-                true
-        );
+        RetoldBehaviorTargets.setAggression(attacker, true);
 
         attacker.getLookControl().setLookAt(
                 target,
@@ -406,19 +371,11 @@ public final class RetoldControlledCombatEvents {
             return false;
         }
 
-        if (!attacker.isAlive() || attacker.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isUsableEntity(attacker)) {
             return false;
         }
 
-        if (!target.isAlive() || target.isRemoved()) {
-            return false;
-        }
-
-        if (attacker.level() != target.level()) {
-            return false;
-        }
-
-        if (target instanceof Player player && (player.isCreative() || player.isSpectator())) {
+        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(attacker, target)) {
             return false;
         }
 
@@ -446,15 +403,7 @@ public final class RetoldControlledCombatEvents {
     }
 
     private static void stopAttack(PathfinderMob attacker) {
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                attacker,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                attacker,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(attacker, null, false);
 
         attacker.getNavigation().stop();
 

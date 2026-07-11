@@ -2,10 +2,10 @@ package cz.xefensor.retold.combat;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
+import net.minecraft.world.entity.PathfinderMob;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -27,18 +27,25 @@ public final class RetoldFactionTargetMemory {
             return false;
         }
 
-        if (!target.isAlive()) {
+        if (!RetoldAiTargets.isValidAssignmentTarget(mob, target)) {
             return false;
         }
 
-        if (target.level() != mob.level()) {
+        if (shouldBlockDuringTerritoryWarning(mob, target, source)) {
+            clearBlockedWarningTarget(mob, target);
             return false;
         }
 
         RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, target);
-        TARGET_OWNERS.put(mob, new TargetOwnership(target, source));
 
-        return mob.getTarget() == target;
+        if (mob.getTarget() != target) {
+            return false;
+        }
+
+        TARGET_OWNERS.put(mob, new TargetOwnership(target, source));
+        RetoldAiTargets.setPiglinBrainTargetIfNeeded(mob, target);
+
+        return true;
     }
 
     public static void clearTargetIfOwnedBy(
@@ -132,15 +139,32 @@ public final class RetoldFactionTargetMemory {
         if (
                 currentTarget == ownership.target
                         && currentTarget != null
-                        && currentTarget.isAlive()
-                        && currentTarget.level() == mob.level()
+                        && RetoldAiTargets.isValidAssignmentTarget(mob, currentTarget)
         ) {
             return;
         }
 
-        clearPiglinBrainTargetIfOwned(mob, ownership.target);
+        RetoldAiTargets.clearPiglinBrainTargetIfPresent(mob, ownership.target);
         TARGET_OWNERS.remove(mob);
 
+        clearIdleIllagerAggression(mob);
+    }
+
+    public static void clearTargetReferences(
+            Mob mob,
+            LivingEntity target
+    ) {
+        if (mob == null || target == null) {
+            return;
+        }
+
+        TargetOwnership ownership = TARGET_OWNERS.get(mob);
+
+        if (ownership != null && ownership.target == target) {
+            TARGET_OWNERS.remove(mob);
+        }
+
+        RetoldAiTargets.clearTargetAndAggression(mob, target, false);
         clearIdleIllagerAggression(mob);
     }
 
@@ -158,35 +182,38 @@ public final class RetoldFactionTargetMemory {
             RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
         }
 
-        clearPiglinBrainTargetIfOwned(mob, target);
+        RetoldAiTargets.clearPiglinBrainTargetIfPresent(mob, target);
         clearIdleIllagerAggression(mob);
     }
 
-    private static void clearPiglinBrainTargetIfOwned(
+    private static boolean shouldBlockDuringTerritoryWarning(
+            Mob mob,
+            LivingEntity target,
+            RetoldTargetSource source
+    ) {
+        if (source == RetoldTargetSource.TERRITORY_ATTACK || source == RetoldTargetSource.RETALIATION) {
+            return false;
+        }
+
+        if (!(mob instanceof PathfinderMob pathfinderMob)) {
+            return false;
+        }
+
+        return RetoldTerritoryTargetBlocker.shouldBlockTargetDuringWarning(
+                pathfinderMob,
+                target
+        );
+    }
+
+    private static void clearBlockedWarningTarget(
             Mob mob,
             LivingEntity target
     ) {
-        if (!(mob instanceof AbstractPiglin piglin)) {
-            return;
-        }
-
-        LivingEntity brainTarget = piglin.getBrain()
-                .getMemory(MemoryModuleType.ATTACK_TARGET)
-                .orElse(null);
-
-        if (brainTarget != target) {
-            return;
-        }
-
-        piglin.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-
-        if (target != null) {
-            piglin.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
-        }
+        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
     }
 
     private static void clearIdleIllagerAggression(Mob mob) {
-        if (RetoldFactionMembers.getFaction(mob) != RetoldFaction.ILLAGERS) {
+        if (!RetoldFactionMembers.isMemberOf(mob, RetoldFaction.ILLAGERS)) {
             return;
         }
 

@@ -3,6 +3,8 @@ package cz.xefensor.retold.event;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
@@ -21,13 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-final class RetoldElderGuardianBoss {
+public final class RetoldElderGuardianBoss {
     private static final double MONUMENT_BOUNDS_INFLATE = 1.0D;
 
     private static final int DRYING_DAMAGE_INTERVAL_TICKS = 40;
     private static final float DRYING_DAMAGE = 2.0F;
 
     private static final int BLOCK_FEEDBACK_COOLDOWN_TICKS = 10;
+    private static final int BLOCKED_HIT_MINING_FATIGUE_TICKS = 20 * 6;
+    private static final int BLOCKED_HIT_MINING_FATIGUE_AMPLIFIER = 2;
     private static final int PROJECTILE_BLOCK_PARTICLES = 24;
     private static final int MELEE_BLOCK_PARTICLES = 28;
     private static final double PROJECTILE_BLOCK_SPREAD = 0.3D;
@@ -93,6 +97,22 @@ final class RetoldElderGuardianBoss {
         handleBlockedWaterHit(elderGuardian, event.getSource().getEntity(), event.getSource().getDirectEntity());
     }
 
+    public static void onInvulnerableHitAttempt(
+            ElderGuardian elderGuardian,
+            Entity attacker,
+            Entity directEntity
+    ) {
+        if (elderGuardian == null || !elderGuardian.isInWater()) {
+            return;
+        }
+
+        handleBlockedWaterHit(
+                elderGuardian,
+                attacker,
+                directEntity
+        );
+    }
+
     private static void handleMonumentGuardianJoin(
             EntityJoinLevelEvent event,
             ServerLevel level,
@@ -154,6 +174,7 @@ final class RetoldElderGuardianBoss {
         }
 
         boolean playFeedback = shouldPlayBlockedHitFeedback(level, elderGuardian);
+        applyBlockedHitCurse(attacker);
 
         if (directEntity instanceof Projectile projectile) {
             if (playFeedback) {
@@ -182,6 +203,20 @@ final class RetoldElderGuardianBoss {
                     MELEE_BLOCK_SPREAD
             );
         }
+    }
+
+    private static void applyBlockedHitCurse(Entity attacker) {
+        if (!(attacker instanceof net.minecraft.world.entity.LivingEntity livingEntity)) {
+            return;
+        }
+
+        livingEntity.addEffect(
+                new MobEffectInstance(
+                        MobEffects.MINING_FATIGUE,
+                        BLOCKED_HIT_MINING_FATIGUE_TICKS,
+                        BLOCKED_HIT_MINING_FATIGUE_AMPLIFIER
+                )
+        );
     }
 
     private static boolean shouldPlayBlockedHitFeedback(ServerLevel level, ElderGuardian elderGuardian) {

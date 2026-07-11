@@ -9,7 +9,6 @@ import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 
 public final class RetoldFactionTargetGuards {
@@ -28,6 +27,10 @@ public final class RetoldFactionTargetGuards {
     ) {
         if (mob == null || target == null) {
             return false;
+        }
+
+        if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
+            return true;
         }
 
         if (IGNORE_TARGET_GUARD.get()) {
@@ -143,37 +146,18 @@ public final class RetoldFactionTargetGuards {
             return false;
         }
 
-        if (RetoldFactionMembers.getFaction(piglin) != RetoldFaction.NETHER_REMNANTS) {
+        if (!RetoldFactionMembers.isMemberOf(piglin, RetoldFaction.NETHER_REMNANTS)) {
             return false;
         }
 
         LivingEntity mobTarget = piglin.getTarget();
 
-        if (isValidTargetForMob(piglin, mobTarget)) {
+        if (RetoldAiTargets.isValidAssignmentTarget(piglin, mobTarget)) {
             return false;
         }
 
-        LivingEntity brainAttackTarget = getBrainAttackTargetSafely(piglin);
+        LivingEntity brainAttackTarget = RetoldAiTargets.getBrainAttackTargetSafely(piglin);
 
-        return !isValidTargetForMob(piglin, brainAttackTarget);
-    }
-
-    private static LivingEntity getBrainAttackTargetSafely(Mob mob) {
-        try {
-            return mob.getBrain()
-                    .getMemory(MemoryModuleType.ATTACK_TARGET)
-                    .orElse(null);
-        } catch (IllegalStateException ignored) {
-            return null;
-        }
-    }
-
-    private static boolean isValidTargetForMob(
-            Mob mob,
-            LivingEntity target
-    ) {
-        return target != null
-                && target.isAlive()
-                && target.level() == mob.level();
+        return !RetoldAiTargets.isValidAssignmentTarget(piglin, brainAttackTarget);
     }
 }

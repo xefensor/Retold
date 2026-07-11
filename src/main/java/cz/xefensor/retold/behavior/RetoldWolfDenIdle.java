@@ -50,7 +50,7 @@ final class RetoldWolfDenIdle {
             return false;
         }
 
-        if (mob.getTarget() != null && mob.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(mob)) {
             return false;
         }
 
@@ -67,9 +67,12 @@ final class RetoldWolfDenIdle {
             return true;
         }
 
-        return mode == RetoldAiControlMode.REGROUP
-                && owner == RetoldAiControlOwner.REGROUP
-                && REASON_DEN_IDLE.equals(RetoldAiControl.getReason(mob));
+        return RetoldAiControl.isControlledAsByWithReason(
+                mob,
+                RetoldAiControlMode.REGROUP,
+                RetoldAiControlOwner.REGROUP,
+                REASON_DEN_IDLE
+        );
     }
 
     static void idleAtHome(

@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -35,17 +34,7 @@ public final class RetoldVanillaAiBlockerEvents {
                 target != null
                         && RetoldMobRules.shouldBlockVanillaPredatorTarget(mob, target)
         ) {
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                    mob,
-                    null
-            );
-
-            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                    mob,
-                    false
-            );
-
-            mob.getNavigation().stop();
+            RetoldBehaviorTargets.clearTargetAndAggression(mob, target, true);
         }
     }
 

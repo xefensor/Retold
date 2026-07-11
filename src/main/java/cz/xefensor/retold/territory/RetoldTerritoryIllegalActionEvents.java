@@ -15,6 +15,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 
 import java.util.Set;
 
@@ -71,24 +72,6 @@ public final class RetoldTerritoryIllegalActionEvents {
     }
 
     @SubscribeEvent
-    public static void onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        if (!(event.getLevel() instanceof ServerLevel level)) {
-            return;
-        }
-
-        addVisibleIllegalSuspicion(
-                level,
-                player,
-                event.getPos(),
-                IllegalActionType.BLOCK_BREAK
-        );
-    }
-
-    @SubscribeEvent
     public static void onLivingIncomingDamage(LivingIncomingDamageEvent event) {
         Entity attacker = event.getSource().getEntity();
 
@@ -130,6 +113,24 @@ public final class RetoldTerritoryIllegalActionEvents {
                 victim.blockPosition(),
                 RetoldTerritoryMobStates.states(),
                 RetoldTerritoryConstants.ILLEGAL_ACTION_WITNESS_RADIUS_BLOCKS
+        );
+    }
+
+    @SubscribeEvent
+    public static void onBreakBlock(BreakBlockEvent event) {
+        if (!(event.getPlayer() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+
+        addVisibleIllegalSuspicion(
+                level,
+                player,
+                event.getPos(),
+                IllegalActionType.BLOCK_BREAK
         );
     }
 

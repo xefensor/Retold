@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.phys.Vec3;
@@ -101,15 +100,7 @@ final class RetoldPackReturnMovement {
             return;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                member,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                member,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(member, null, false);
 
         RetoldPredatorStrike.clear(member);
 
@@ -187,23 +178,15 @@ final class RetoldPackReturnMovement {
         }
 
         if (mob.blockPosition().distSqr(packCenter) <= PACK_RETURN_DISTANCE_SQUARED) {
-            if (
-                    RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.REGROUP, RetoldPackControl.OWNER)
-                            || RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.SEARCH, RetoldPackControl.OWNER)
-                            || RetoldAiControl.isControlledAsBy(mob, RetoldAiControlMode.HUNT, RetoldPackControl.OWNER)
-            ) {
-                RetoldAiControl.clear(mob);
-            }
-
-            RetoldFactionTargetGuards.setTargetIgnoringGuard(
+            RetoldAiControl.clearIfControlledAsByAny(
                     mob,
-                    null
+                    RetoldPackControl.OWNER,
+                    RetoldAiControlMode.REGROUP,
+                    RetoldAiControlMode.SEARCH,
+                    RetoldAiControlMode.HUNT
             );
 
-            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                    mob,
-                    false
-            );
+            RetoldBehaviorTargets.setTargetAndAggression(mob, null, false);
 
             RetoldPredatorStrike.clear(mob);
             mob.setSprinting(false);
@@ -220,15 +203,7 @@ final class RetoldPackReturnMovement {
             return false;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                mob,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                mob,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(mob, null, false);
 
         RetoldPredatorStrike.clear(mob);
 

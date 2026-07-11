@@ -116,7 +116,7 @@ final class RetoldWolfDenCreation {
             return false;
         }
 
-        if (candidate.getTarget() != null && candidate.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(candidate)) {
             return false;
         }
 

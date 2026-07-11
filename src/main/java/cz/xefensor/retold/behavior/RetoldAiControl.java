@@ -222,6 +222,89 @@ public final class RetoldAiControl {
         }
     }
 
+    public static void clearIfControlledAs(
+            Mob mob,
+            RetoldAiControlMode mode
+    ) {
+        if (mob == null || mode == null) {
+            return;
+        }
+
+        if (isControlledAs(mob, mode)) {
+            CONTROLLED_MOBS.remove(mob);
+        }
+    }
+
+    public static void clearIfControlledAsByAny(
+            Mob mob,
+            RetoldAiControlOwner owner,
+            RetoldAiControlMode... modes
+    ) {
+        if (mob == null || owner == null || modes == null) {
+            return;
+        }
+
+        for (RetoldAiControlMode mode : modes) {
+            if (mode != null && isControlledAsBy(mob, mode, owner)) {
+                CONTROLLED_MOBS.remove(mob);
+                return;
+            }
+        }
+    }
+
+    public static boolean isControlledAsByWithReason(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            String reason
+    ) {
+        ControlState state = getActiveState(mob);
+
+        return state != null
+                && state.mode() == mode
+                && state.owner() == owner
+                && reason != null
+                && reason.equals(state.reason());
+    }
+
+    public static boolean isControlledAsByWithAnyReason(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            String... reasons
+    ) {
+        ControlState state = getActiveState(mob);
+
+        if (state == null
+                || state.mode() != mode
+                || state.owner() != owner
+                || reasons == null) {
+            return false;
+        }
+
+        for (String reason : reasons) {
+            if (reason != null && reason.equals(state.reason())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean clearIfControlledAsByWithReason(
+            Mob mob,
+            RetoldAiControlMode mode,
+            RetoldAiControlOwner owner,
+            String reason
+    ) {
+        if (isControlledAsByWithReason(mob, mode, owner, reason)) {
+            CONTROLLED_MOBS.remove(mob);
+            return true;
+        }
+
+        return false;
+    }
+
     public static int activeCount() {
         return CONTROLLED_MOBS.size();
     }
@@ -241,6 +324,7 @@ public final class RetoldAiControl {
                 || mode == RetoldAiControlMode.SEARCH
                 || mode == RetoldAiControlMode.HUNT
                 || mode == RetoldAiControlMode.ATTACK
+                || mode == RetoldAiControlMode.SUPPORT
                 || mode == RetoldAiControlMode.FLEE
                 || mode == RetoldAiControlMode.REGROUP
                 || mode == RetoldAiControlMode.SHELTER
@@ -361,6 +445,7 @@ public final class RetoldAiControl {
             case NONE -> 0;
             case REGROUP -> 20;
             case SEARCH -> 30;
+            case SUPPORT -> 35;
             case HUNT -> 45;
             case FEED -> 55;
             case FLEE -> 75;

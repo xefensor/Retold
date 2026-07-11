@@ -18,7 +18,6 @@ public final class AenderVolatility {
     private static final Map<RegionKey, Integer> REGION_REFS = new HashMap<>();
 
     private static final Set<Long> RETAINED_CHUNKS = new HashSet<>();
-
     /*
      * Stores the "reality signature" that a chunk was last generated with.
      * If surrounding region epochs change, this signature changes and the chunk must regenerate.

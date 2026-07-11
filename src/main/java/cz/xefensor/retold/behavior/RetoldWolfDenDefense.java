@@ -1,11 +1,10 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
@@ -61,9 +60,8 @@ final class RetoldWolfDenDefense {
             return false;
         }
 
-        if (!RetoldAiControl.tryClaim(
+        if (!RetoldBehaviorCombat.claimAttackControl(
                 mob,
-                RetoldAiControlMode.ATTACK,
                 RetoldAiControlOwner.COMBAT,
                 DEN_DEFENSE_PRIORITY,
                 REASON_DEN_DEFENSE,
@@ -73,14 +71,10 @@ final class RetoldWolfDenDefense {
             return false;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
+        RetoldBehaviorCombat.applyAttackTarget(
                 mob,
-                enemy
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                mob,
-                true
+                enemy,
+                RetoldTargetSource.FACTION_COMBAT
         );
 
         mob.getLookControl().setLookAt(
@@ -104,7 +98,7 @@ final class RetoldWolfDenDefense {
             RetoldAiControlMode mode,
             RetoldAiControlOwner owner
     ) {
-        if (mob.getTarget() != null && mob.getTarget().isAlive()) {
+        if (RetoldBehaviorCoordinator.hasLiveTarget(mob)) {
             return false;
         }
 
@@ -120,10 +114,12 @@ final class RetoldWolfDenDefense {
             return true;
         }
 
-        return owner == RetoldAiControlOwner.REGROUP
-                && (
-                REASON_DEN_IDLE.equals(RetoldAiControl.getReason(mob))
-                        || REASON_RETURN_HOME.equals(RetoldAiControl.getReason(mob))
+        return RetoldAiControl.isControlledAsByWithAnyReason(
+                mob,
+                mode,
+                RetoldAiControlOwner.REGROUP,
+                REASON_DEN_IDLE,
+                REASON_RETURN_HOME
         );
     }
 
@@ -184,15 +180,11 @@ final class RetoldWolfDenDefense {
             return false;
         }
 
-        if (!candidate.isAlive() || candidate.isRemoved()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(wolf, candidate)) {
             return false;
         }
 
-        if (wolf.level() != candidate.level()) {
-            return false;
-        }
-
-        if (candidate instanceof Player player && (player.isCreative() || player.isSpectator())) {
+        if (RetoldBehaviorCoordinator.isInvalidPlayerTarget(candidate)) {
             return false;
         }
 

@@ -219,6 +219,30 @@ public final class RetoldAnimalHomes {
             return RetoldAnimalHomeType.OCELOT_TERRITORY;
         }
 
+        if (path.equals("panda")) {
+            return RetoldAnimalHomeType.PANDA_BAMBOO_GROVE;
+        }
+
+        if (path.equals("sniffer")) {
+            return RetoldAnimalHomeType.SNIFFER_FORAGING_RANGE;
+        }
+
+        if (path.equals("armadillo")) {
+            return RetoldAnimalHomeType.ARMADILLO_SCRUB_RANGE;
+        }
+
+        if (path.equals("turtle")) {
+            return RetoldAnimalHomeType.TURTLE_BEACH;
+        }
+
+        if (path.equals("frog")) {
+            return RetoldAnimalHomeType.AMPHIBIAN_WETLAND;
+        }
+
+        if (path.equals("axolotl")) {
+            return RetoldAnimalHomeType.AXOLOTL_WATER_RANGE;
+        }
+
         return RetoldAnimalHomeType.NONE;
     }
 
@@ -288,6 +312,45 @@ public final class RetoldAnimalHomes {
                 gameTime
         );
         return created;
+    }
+
+    public static RetoldAnimalHomeMemory replacePackHome(
+            ServerLevel level,
+            PathfinderMob leader,
+            List<PathfinderMob> members,
+            BlockPos pos,
+            long gameTime
+    ) {
+        if (level == null || leader == null || pos == null) {
+            return null;
+        }
+
+        RetoldAnimalHomeType type = homeTypeFor(leader);
+
+        if (type == RetoldAnimalHomeType.NONE) {
+            return null;
+        }
+
+        List<PathfinderMob> cappedMembers = cappedMembers(
+                leader,
+                members
+        );
+        RetoldAnimalHomeMemory replacement = new RetoldAnimalHomeMemory(
+                type,
+                level.dimension(),
+                pos,
+                gameTime
+        );
+
+        assignPackHome(
+                level,
+                leader,
+                cappedMembers,
+                replacement,
+                gameTime
+        );
+
+        return replacement;
     }
 
     public static void remove(PathfinderMob mob) {

@@ -4,165 +4,110 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 public final class RetoldFactionMembers {
-    private static final Set<Identifier> NETHER_REMNANTS = Set.of(
-            id("piglin"),
-            id("piglin_brute"),
-            id("blaze")
-    );
+    private static final Map<Identifier, RetoldFaction> EXACT_MEMBERS = new HashMap<>();
 
-    private static final Set<Identifier> ILLAGERS = Set.of(
-            id("pillager"),
-            id("vindicator"),
-            id("evoker"),
-            id("illusioner"),
-            id("ravager"),
-            id("vex"),
+    private static final Set<Identifier> ILLAGER_LOOSE_ALLIES = Set.of(
             id("witch")
     );
 
-    private static final Set<Identifier> UNDEAD = Set.of(
-            id("zombie"),
-            id("zombie_villager"),
-            id("husk"),
-            id("drowned"),
-            id("skeleton"),
-            id("stray"),
-            id("bogged"),
-            id("wither_skeleton"),
-            id("zombified_piglin"),
-            id("phantom"),
-            id("ghast"),
-            id("zoglin")
-    );
-
-    private static final Set<Identifier> SLIMES = Set.of(
-            id("slime"),
-            id("magma_cube")
-    );
-
-    private static final Set<Identifier> AQUATIC_HOSTILES = Set.of(
-            id("guardian"),
-            id("elder_guardian")
-    );
-
-    private static final Set<Identifier> CREEPERS = Set.of(
-            id("creeper")
-    );
-
-    private static final Set<Identifier> ARTHROPODS = Set.of(
-            id("spider"),
-            id("cave_spider"),
-            id("silverfish"),
-            id("endermite")
-    );
-
-    private static final Set<Identifier> NETHER_BEASTS = Set.of(
-            id("hoglin")
-    );
-
-    private static final Set<Identifier> BREEZES = Set.of(
-            id("breeze")
-    );
-
-    private static final Set<Identifier> WARDENS = Set.of(
-            id("warden")
-    );
-
-    private static final Set<Identifier> BOSSES = Set.of(
-            id("wither"),
-            id("ender_dragon")
-    );
-
-    private static final Set<Identifier> CREAKINGS = Set.of(
-            id("creaking")
-    );
-
-    private static final Set<Identifier> VILLAGE_DEFENDERS = Set.of(
-            id("iron_golem"),
-            id("snow_golem")
-    );
-
-    private static final Set<Identifier> ENDERS = Set.of(
-            id("enderman"),
-            id("shulker")
-    );
+    static {
+        register(RetoldFaction.NETHER_REMNANTS, "piglin", "piglin_brute", "blaze");
+        register(RetoldFaction.ILLAGERS, "pillager", "vindicator", "evoker", "illusioner", "ravager", "vex");
+        register(
+                RetoldFaction.UNDEAD,
+                "zombie",
+                "zombie_villager",
+                "husk",
+                "drowned",
+                "skeleton",
+                "stray",
+                "bogged",
+                "wither_skeleton",
+                "zombified_piglin",
+                "phantom",
+                "ghast",
+                "zoglin"
+        );
+        register(RetoldFaction.SLIMES, "slime", "magma_cube");
+        register(RetoldFaction.AQUATIC_HOSTILES, "guardian", "elder_guardian");
+        register(RetoldFaction.CREEPERS, "creeper");
+        register(RetoldFaction.ARTHROPODS, "spider", "cave_spider", "silverfish", "endermite");
+        register(RetoldFaction.NETHER_BEASTS, "hoglin");
+        register(RetoldFaction.BREEZES, "breeze");
+        register(RetoldFaction.WARDENS, "warden");
+        register(RetoldFaction.BOSSES, "wither", "ender_dragon");
+        register(RetoldFaction.CREAKINGS, "creaking");
+        register(RetoldFaction.VILLAGE_DEFENDERS, "iron_golem", "snow_golem");
+        register(RetoldFaction.ENDERS, "enderman", "shulker");
+    }
 
     private RetoldFactionMembers() {
     }
 
     public static RetoldFaction getFaction(Entity entity) {
+        if (entity == null) {
+            return null;
+        }
+
         if (entity instanceof Player) {
             return RetoldFaction.PLAYER;
         }
 
-        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
-
-        if (NETHER_REMNANTS.contains(id)) {
-            return RetoldFaction.NETHER_REMNANTS;
-        }
-
-        if (ILLAGERS.contains(id)) {
-            return RetoldFaction.ILLAGERS;
-        }
-
-        if (UNDEAD.contains(id)) {
-            return RetoldFaction.UNDEAD;
-        }
-
-        if (SLIMES.contains(id)) {
-            return RetoldFaction.SLIMES;
-        }
-
-        if (AQUATIC_HOSTILES.contains(id)) {
-            return RetoldFaction.AQUATIC_HOSTILES;
-        }
-
-        if (CREEPERS.contains(id)) {
-            return RetoldFaction.CREEPERS;
-        }
-
-        if (ARTHROPODS.contains(id)) {
-            return RetoldFaction.ARTHROPODS;
-        }
-
-        if (NETHER_BEASTS.contains(id)) {
-            return RetoldFaction.NETHER_BEASTS;
-        }
-
-        if (BREEZES.contains(id)) {
-            return RetoldFaction.BREEZES;
-        }
-
-        if (WARDENS.contains(id)) {
-            return RetoldFaction.WARDENS;
-        }
-
-        if (BOSSES.contains(id)) {
-            return RetoldFaction.BOSSES;
-        }
-
-        if (CREAKINGS.contains(id)) {
-            return RetoldFaction.CREAKINGS;
-        }
-
-        if (VILLAGE_DEFENDERS.contains(id)) {
+        if (isDefendingTamedWolf(entity)) {
             return RetoldFaction.VILLAGE_DEFENDERS;
         }
 
-        if (ENDERS.contains(id)) {
-            return RetoldFaction.ENDERS;
-        }
-
-        return null;
+        return EXACT_MEMBERS.get(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
     }
 
     public static boolean isMemberOf(Entity entity, RetoldFaction faction) {
+        if (entity == null || faction == null) {
+            return false;
+        }
+
         return getFaction(entity) == faction;
+    }
+
+    public static boolean hasFaction(Entity entity) {
+        return getFaction(entity) != null;
+    }
+
+    public static boolean isAlignedWith(Entity entity, RetoldFaction faction) {
+        return isMemberOf(entity, faction)
+                || isLooseAllyOf(entity, faction);
+    }
+
+    public static boolean isLooseAllyOf(Entity entity, RetoldFaction faction) {
+        if (entity == null || faction == null) {
+            return false;
+        }
+
+        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+
+        return faction == RetoldFaction.ILLAGERS
+                && ILLAGER_LOOSE_ALLIES.contains(id);
+    }
+
+    public static RetoldFaction getFactionOrLooseAllyFaction(Entity entity) {
+        RetoldFaction faction = getFaction(entity);
+
+        if (faction != null) {
+            return faction;
+        }
+
+        if (isLooseAllyOf(entity, RetoldFaction.ILLAGERS)) {
+            return RetoldFaction.ILLAGERS;
+        }
+
+        return null;
     }
 
     public static boolean isTargetableMemberOf(LivingEntity entity, RetoldFaction faction) {
@@ -173,7 +118,32 @@ public final class RetoldFactionMembers {
         return isMemberOf(entity, RetoldFaction.NETHER_REMNANTS);
     }
 
+    private static boolean isDefendingTamedWolf(Entity entity) {
+        if (!(entity instanceof Wolf wolf)) {
+            return false;
+        }
+
+        if (!wolf.isTame()) {
+            return false;
+        }
+
+        LivingEntity target = wolf.getTarget();
+
+        return target != null
+                && target.isAlive()
+                && target.level() == wolf.level();
+    }
+
     private static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath("minecraft", path);
+    }
+
+    private static void register(
+            RetoldFaction faction,
+            String... paths
+    ) {
+        for (String path : paths) {
+            EXACT_MEMBERS.put(id(path), faction);
+        }
     }
 }

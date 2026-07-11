@@ -68,6 +68,82 @@ public final class RetoldMobRules {
         return profile.predator() && profile.packSocial();
     }
 
+    public static boolean isTerritoryGuard(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        return RetoldMobProfiles.get(entity).territoryGuard();
+    }
+
+    public static boolean isCommanderSupport(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.COMMANDER_SUPPORT;
+    }
+
+    public static boolean isIllagerRaider(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.ILLAGER_RAIDER;
+    }
+
+    public static boolean isSmallArthropodSwarm(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.SMALL_ARTHROPOD_SWARM;
+    }
+
+    public static boolean isProtectiveNeutral(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.PROTECTIVE_NEUTRAL;
+    }
+
+    public static boolean isPandaBamboo(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.PANDA_BAMBOO;
+    }
+
+    public static boolean isSnifferForager(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.SNIFFER_FORAGER;
+    }
+
+    public static boolean isArmadilloDefensive(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.ARMADILLO_DEFENSIVE;
+    }
+
+    public static boolean isTurtleBeach(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.TURTLE_BEACH;
+    }
+
+    public static boolean isAmphibianForager(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.AMPHIBIAN_FORAGER;
+    }
+
+    public static boolean isAquaticHelperPredator(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.AQUATIC_HELPER_PREDATOR;
+    }
+
+    public static boolean isSpecialVanilla(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.SPECIAL_VANILLA;
+    }
+
+    public static boolean isApexOrBoss(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.APEX_OR_BOSS;
+    }
+
+    public static boolean isSpecialUndead(Entity entity) {
+        RetoldMobProfileType type = profileType(entity);
+
+        return type == RetoldMobProfileType.PHANTOM_STALKER
+                || type == RetoldMobProfileType.GHAST_ARTILLERY
+                || type == RetoldMobProfileType.ZOGLIN_RAMPAGER;
+    }
+
+    public static boolean isPhantomStalker(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.PHANTOM_STALKER;
+    }
+
+    public static boolean isGhastArtillery(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.GHAST_ARTILLERY;
+    }
+
+    public static boolean isZoglinRampager(Entity entity) {
+        return profileType(entity) == RetoldMobProfileType.ZOGLIN_RAMPAGER;
+    }
+
     public static boolean shouldBlockVanillaPredatorTarget(
             PathfinderMob mob,
             LivingEntity target
@@ -115,6 +191,10 @@ public final class RetoldMobRules {
             return false;
         }
 
+        if (!isManagedPredator(mob)) {
+            return false;
+        }
+
         int hunger = state.hunger();
 
         if (hunger >= DESPERATE_HUNT_HUNGER) {
@@ -149,6 +229,10 @@ public final class RetoldMobRules {
             long gameTime
     ) {
         int threshold = huntThreshold(mob);
+
+        if (!isManagedPredator(mob)) {
+            return threshold;
+        }
 
         if (state == null) {
             return threshold;
@@ -242,6 +326,10 @@ public final class RetoldMobRules {
             return 20;
         }
 
+        if (isPandaBamboo(mob)) {
+            return itemPath.equals("bamboo") ? 28 : 16;
+        }
+
         if (isSlime(mobPath)) {
             return 18;
         }
@@ -312,6 +400,10 @@ public final class RetoldMobRules {
             return isFlower(itemPath);
         }
 
+        if (isPandaBamboo(mob)) {
+            return itemPath.equals("bamboo");
+        }
+
         if (isNetherHungry(mobPath)) {
             return isMeatItem(itemPath)
                     || isNetherFungusItem(itemPath);
@@ -362,7 +454,7 @@ public final class RetoldMobRules {
         }
 
         if (mobPath.equals("bee")) {
-            return isFlower(blockPath);
+            return false;
         }
 
         if (mobPath.equals("hoglin")) {
@@ -370,6 +462,13 @@ public final class RetoldMobRules {
         }
 
         return false;
+    }
+
+    public static boolean isFlowerBlock(BlockState state) {
+        return state != null
+                && isFlower(
+                getBlockPath(state)
+        );
     }
 
     public static boolean canHuntPrey(
@@ -381,11 +480,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        if (!prey.isAlive() || prey.isRemoved()) {
-            return false;
-        }
-
-        if (hunter.level() != prey.level()) {
+        if (!RetoldBehaviorCoordinator.isAliveInSameLevel(hunter, prey)) {
             return false;
         }
 

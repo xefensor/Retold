@@ -12,7 +12,13 @@ public enum RetoldAnimalHomeType {
     WARREN,
     FOX_DEN,
     CAT_TERRITORY,
-    OCELOT_TERRITORY;
+    OCELOT_TERRITORY,
+    PANDA_BAMBOO_GROVE,
+    SNIFFER_FORAGING_RANGE,
+    ARMADILLO_SCRUB_RANGE,
+    TURTLE_BEACH,
+    AMPHIBIAN_WETLAND,
+    AXOLOTL_WATER_RANGE;
 
     public static final Codec<RetoldAnimalHomeType> CODEC =
             Codec.STRING.xmap(

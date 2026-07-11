@@ -6,6 +6,7 @@ public enum RetoldAiControlMode {
     SEARCH,
     HUNT,
     ATTACK,
+    SUPPORT,
     FLEE,
     REGROUP,
     SHELTER,

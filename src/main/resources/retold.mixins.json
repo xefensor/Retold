@@ -15,12 +15,15 @@
     "AbstractFurnaceBlockEntityMixin",
     "EndPortalBlockMixin",
     "AenderChunkMapSaveMixin",
+    "AenderWeatherMixin",
     "MobTargetMixin",
     "MobAggressiveMixin",
     "MobBrainMemoryOwnerMixin",
     "BrainMemoryMixin",
+    "PiglinAiMixin",
     "PathNavigationMixin",
     "MobHurtTargetMixin",
+    "ElderGuardianInvulnerableHitMixin",
     "FoxInvoker",
     "BedBlockMixin",
     "ServerLevelSleepMixin",
@@ -29,7 +32,10 @@
   "client": [
     "AenderEntityLightingMixin",
     "AenderRenderSectionRegionLightingMixin",
-    "MerchantScreenMixin"
+    "EndermanParticleMixin",
+    "LivingEntityTeleportParticleMixin",
+    "MerchantScreenMixin",
+    "PortalParticleMixin"
   ],
   "injectors": {
     "defaultRequire": 1

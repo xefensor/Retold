@@ -1,6 +1,6 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -29,7 +29,7 @@ public final class RetoldWarningPose {
             return;
         }
 
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, true);
+        RetoldAiTargets.setAggression(mob, true);
 
         if (warningLevel != RetoldWarningLevel.FINAL_WARNING && warningLevel != RetoldWarningLevel.ATTACK) {
             return;
@@ -58,7 +58,7 @@ public final class RetoldWarningPose {
             return;
         }
 
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
+        RetoldAiTargets.setAggression(mob, false);
 
         if (mob instanceof CrossbowAttackMob crossbowAttackMob) {
             crossbowAttackMob.setChargingCrossbow(false);

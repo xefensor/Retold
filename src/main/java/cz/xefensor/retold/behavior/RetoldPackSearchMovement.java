@@ -1,6 +1,5 @@
 package cz.xefensor.retold.behavior;
 
-import cz.xefensor.retold.combat.RetoldFactionTargetGuards;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.phys.Vec3;
 
@@ -54,15 +53,7 @@ final class RetoldPackSearchMovement {
             return;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                leader,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                leader,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(leader, null, false);
 
         RetoldPredatorStrike.clear(leader);
 
@@ -136,15 +127,7 @@ final class RetoldPackSearchMovement {
             return;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(
-                member,
-                null
-        );
-
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                member,
-                false
-        );
+        RetoldBehaviorTargets.setTargetAndAggression(member, null, false);
 
         member.setSprinting(false);
 

@@ -1,17 +1,17 @@
 package cz.xefensor.retold.event;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
-import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.territory.RetoldTerritoryEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
@@ -54,16 +54,12 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!attacker.isAlive()) {
+        if (!RetoldAiTargets.isAliveInSameLevel(victim, attacker)) {
             return;
         }
 
-        if (attacker.level() != victim.level()) {
-            return;
-        }
-
-        RetoldFaction victimFaction = RetoldFactionMembers.getFaction(victim);
-        RetoldFaction attackerFaction = RetoldFactionMembers.getFaction(attacker);
+        RetoldFaction victimFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(victim);
+        RetoldFaction attackerFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(attacker);
 
         if (victimFaction != null && victimFaction != attackerFaction) {
             if (attackerFaction != null) {
@@ -102,7 +98,7 @@ public final class RetoldFactionAssistEvents {
         }
 
         ServerLevel level = (ServerLevel) mob.level();
-        RetoldFaction mobFaction = RetoldFactionMembers.getFaction(mob);
+        RetoldFaction mobFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(mob);
 
         if (mobFaction == null) {
             clearAnnouncements(mob);
@@ -111,17 +107,12 @@ public final class RetoldFactionAssistEvents {
 
         LivingEntity target = mob.getTarget();
 
-        if (target == null || !target.isAlive()) {
+        if (target == null || !RetoldAiTargets.isAliveInSameLevel(mob, target)) {
             clearAnnouncements(mob);
             return;
         }
 
-        if (target.level() != mob.level()) {
-            clearAnnouncements(mob);
-            return;
-        }
-
-        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+        RetoldFaction targetFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(target);
 
         if (targetFaction == mobFaction) {
             clearAnnouncements(mob);
@@ -165,26 +156,22 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!target.isAlive()) {
+        if (!RetoldAiTargets.isAliveInSameLevel(caller, target)) {
             return;
         }
 
-        if (caller.level() != target.level()) {
+        if (!RetoldFactionMembers.isAlignedWith(caller, callerFaction)) {
             return;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(caller, callerFaction)) {
-            return;
-        }
-
-        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
+        RetoldFaction targetFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(target);
 
         if (targetFaction != null && targetFaction != callerFaction) {
             callForFactionHelpAgainstFaction(level, caller, targetFaction, callerFaction);
             return;
         }
 
-        if (RetoldFactionMembers.isMemberOf(target, callerFaction)) {
+        if (RetoldFactionMembers.isAlignedWith(target, callerFaction)) {
             return;
         }
 
@@ -208,7 +195,7 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(caller, callerFaction)) {
+        if (!RetoldFactionMembers.isAlignedWith(caller, callerFaction)) {
             return;
         }
 
@@ -357,15 +344,8 @@ public final class RetoldFactionAssistEvents {
             LivingEntity caller,
             RetoldFaction callerFaction
     ) {
-        if (!ally.isAlive()) {
-            return false;
-        }
-
-        if (ally.level() != caller.level()) {
-            return false;
-        }
-
-        return RetoldFactionMembers.isMemberOf(ally, callerFaction);
+        return RetoldAiTargets.isAliveInSameLevel(caller, ally)
+                && RetoldFactionMembers.isAlignedWith(ally, callerFaction);
     }
 
     private static boolean isValidEnemyFactionMember(
@@ -373,19 +353,12 @@ public final class RetoldFactionAssistEvents {
             LivingEntity observer,
             RetoldFaction enemyFaction
     ) {
-        if (!enemy.isAlive()) {
-            return false;
-        }
-
         if (enemy == observer) {
             return false;
         }
 
-        if (enemy.level() != observer.level()) {
-            return false;
-        }
-
-        return RetoldFactionMembers.isMemberOf(enemy, enemyFaction);
+        return RetoldAiTargets.isAliveInSameLevel(observer, enemy)
+                && RetoldFactionMembers.isAlignedWith(enemy, enemyFaction);
     }
 
     private static boolean canDetectEnemy(PathfinderMob ally, LivingEntity enemy) {
@@ -394,31 +367,22 @@ public final class RetoldFactionAssistEvents {
             return false;
         }
 
-        return ally.getSensing().hasLineOfSight(enemy);
+        return RetoldAiTargets.isVisibleTo(ally, enemy);
     }
 
     private static void makeAllyAttack(PathfinderMob ally, LivingEntity target) {
-        boolean applied = RetoldFactionTargetMemory.trySetTarget(
+        if (RetoldTerritoryEvents.shouldBlockTargetDuringWarning(ally, target)) {
+            return;
+        }
+
+        boolean applied = RetoldCombatTargets.applyAttackTarget(
                 ally,
                 target,
                 RetoldTargetSource.FACTION_ASSIST
         );
 
-        if (!applied && ally.getTarget() != target) {
+        if (!applied) {
             return;
-        }
-
-        ally.setAggressive(true);
-        ally.getLookControl().setLookAt(target, 30.0F, 30.0F);
-
-        if (ally instanceof AbstractPiglin) {
-            AbstractPiglin piglin = (AbstractPiglin) ally;
-
-            if (piglin.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) != target) {
-                piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
-            }
-
-            piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
         }
     }
 
