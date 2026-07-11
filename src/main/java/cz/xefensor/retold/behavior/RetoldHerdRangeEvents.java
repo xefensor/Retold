@@ -19,12 +19,12 @@ public final class RetoldHerdRangeEvents {
 
     private static final int THINK_INTERVAL_TICKS = 40;
     private static final int RANGE_RETURN_CONTROL_TICKS = 20 * 6;
-    private static final int RANGE_RETURN_PRIORITY = 18;
+    private static final int RANGE_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 3);
     private static final int RANGE_IDLE_CONTROL_TICKS = 20 * 5;
-    private static final int RANGE_IDLE_PRIORITY = 10;
+    private static final int RANGE_IDLE_PRIORITY = RetoldAiPriorities.HOME_IDLE;
     private static final int RANGE_IDLE_MOVE_INTERVAL_TICKS = 20 * 24;
     private static final int RANGE_MIGRATION_CONTROL_TICKS = 20 * 8;
-    private static final int RANGE_MIGRATION_PRIORITY = 16;
+    private static final int RANGE_MIGRATION_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 1);
     private static final int RANGE_MIGRATION_HUNGER = 48;
     private static final int RANGE_DEPLETED_FORAGE_SCORE = 8;
     private static final int RANGE_TARGET_FORAGE_SCORE = 18;
@@ -400,7 +400,10 @@ public final class RetoldHerdRangeEvents {
                 gameTime
         );
 
-        if (state.hunger() < RANGE_MIGRATION_HUNGER) {
+        if (!RetoldMobRules.hasHungerAtLeast(
+                state,
+                RANGE_MIGRATION_HUNGER
+        )) {
             return false;
         }
 
@@ -507,7 +510,7 @@ public final class RetoldHerdRangeEvents {
             return false;
         }
 
-        return RetoldMobRules.isEntityPath(animal, "camel")
+        return RetoldMobRules.isCamel(animal)
                 && RetoldAnimalDailyRhythm.shouldRestAtHome(level, animal);
     }
 
@@ -561,7 +564,8 @@ public final class RetoldHerdRangeEvents {
         return mob != null
                 && mob.isAlive()
                 && !mob.isRemoved()
-                && RetoldMobRules.profileType(mob) == RetoldMobProfileType.HUNGRY_GRAZER;
+                && RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isHungryGrazer(mob);
     }
 
 }

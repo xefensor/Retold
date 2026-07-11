@@ -1,6 +1,8 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -112,7 +114,13 @@ final class RetoldElderGuardianSentinel {
         cooldowns.put(elderGuardian.getUUID(), gameTime);
 
         if (elderGuardian.hasLineOfSight(target)) {
-            RetoldAiTargets.setTargetAndAggression(elderGuardian, target, true);
+            if (!RetoldCombatTargets.applyAttackTarget(
+                    elderGuardian,
+                    target,
+                    RetoldTargetSource.FACTION_ASSIST
+            )) {
+                return;
+            }
         }
 
         RetoldGuardianAlertController.alertNearby(

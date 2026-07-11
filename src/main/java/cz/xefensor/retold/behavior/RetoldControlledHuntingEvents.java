@@ -93,7 +93,7 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedPredator(hunter)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(hunter)) {
             clearHuntMemory(hunter);
             RetoldPredatorStrike.clear(hunter);
             return;
@@ -179,7 +179,7 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedPredator(killer)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(killer)) {
             return;
         }
 
@@ -282,7 +282,14 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(true);
 
-        RetoldBehaviorTargets.setTargetAndAggression(hunter, prey, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearMode(
+                hunter,
+                prey,
+                RetoldAiControlMode.HUNT
+        )) {
+            hunter.setSprinting(false);
+            return;
+        }
 
         hunter.getLookControl().setLookAt(
                 prey,
@@ -387,7 +394,14 @@ public final class RetoldControlledHuntingEvents {
 
             hunter.setSprinting(true);
 
-            RetoldBehaviorTargets.setTargetAndAggression(hunter, prey, true);
+            if (!RetoldBehaviorTargets.setAttackTargetOrClearMode(
+                    hunter,
+                    prey,
+                    RetoldAiControlMode.HUNT
+            )) {
+                hunter.setSprinting(false);
+                return;
+            }
 
             boolean struck = RetoldPredatorStrike.tryStrike(
                     level,
@@ -764,7 +778,10 @@ public final class RetoldControlledHuntingEvents {
                 gameTime
         );
 
-        if (state.hunger() < RetoldMobRules.eatThreshold(hunter)) {
+        if (!RetoldMobRules.hasEatDrive(
+                hunter,
+                state
+        )) {
             return false;
         }
 

@@ -114,8 +114,28 @@ public final class RetoldFactionMembers {
         return isMemberOf(entity, faction);
     }
 
+    public static boolean isPlayer(Entity entity) {
+        return isMemberOf(entity, RetoldFaction.PLAYER);
+    }
+
     public static boolean isNetherRemnant(Entity entity) {
         return isMemberOf(entity, RetoldFaction.NETHER_REMNANTS);
+    }
+
+    public static boolean isIllager(Entity entity) {
+        return isMemberOf(entity, RetoldFaction.ILLAGERS);
+    }
+
+    public static boolean isIllagerAligned(Entity entity) {
+        return isAlignedWith(entity, RetoldFaction.ILLAGERS);
+    }
+
+    public static boolean isUndead(Entity entity) {
+        return isMemberOf(entity, RetoldFaction.UNDEAD);
+    }
+
+    public static boolean isVillageDefender(Entity entity) {
+        return isMemberOf(entity, RetoldFaction.VILLAGE_DEFENDERS);
     }
 
     private static boolean isDefendingTamedWolf(Entity entity) {

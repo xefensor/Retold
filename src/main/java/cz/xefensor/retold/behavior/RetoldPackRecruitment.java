@@ -122,7 +122,10 @@ final class RetoldPackRecruitment {
 
         return leader != null
                 && RetoldMobRules.isPackSocialHunter(candidate)
-                && state.hunger() >= RetoldMobRules.eatThreshold(candidate);
+                && RetoldMobRules.hasEatDrive(
+                        candidate,
+                        state
+                );
     }
 
     private static boolean isLateJoinCandidate(

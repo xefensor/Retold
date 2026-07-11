@@ -1,7 +1,6 @@
 package cz.xefensor.retold.aender.stability;
 
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
-import cz.xefensor.retold.aender.generation.AenderChunkGenerator;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -47,8 +46,7 @@ public final class AenderChunkEvents {
         }
 
         if (AenderVolatility.needsRegeneration(chunk)) {
-            System.out.println("[Aender] regenerating loaded unstable chunk " + chunk.getPos());
-            AenderChunkGenerator.regenerateLoadedChunk(chunk);
+            AenderRealityTickEvents.enqueueIfNeeded(level, chunk);
         }
     }
 

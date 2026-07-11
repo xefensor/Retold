@@ -22,31 +22,28 @@ final class RetoldAnimalDailyRhythm {
             return true;
         }
 
-        String path = RetoldMobRules.getEntityTypePath(
-                mob.getType()
-        );
-
-        if (path.equals("fox")) {
+        if (RetoldMobRules.isFox(mob)) {
             return isDay(level);
         }
 
-        if (path.equals("cat") || path.equals("ocelot")) {
+        if (RetoldMobRules.isCatOrOcelot(mob)) {
             return isDay(level) || isLateNight(level);
         }
 
-        if (path.equals("wolf")) {
+        if (RetoldMobRules.isWolf(mob)) {
             return isDay(level);
         }
 
-        if (path.equals("dolphin")) {
+        if (RetoldMobRules.isDolphin(mob)) {
             return isLateNight(level);
         }
 
-        if (RetoldMobRules.profileType(mob) == RetoldMobProfileType.HUNGRY_GRAZER) {
+        if (RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isHungryGrazer(mob)) {
             return isNight(level);
         }
 
-        if (RetoldMobRules.isEntityPath(mob, "pig")) {
+        if (RetoldMobRules.isPig(mob)) {
             return isNight(level);
         }
 
@@ -57,39 +54,36 @@ final class RetoldAnimalDailyRhythm {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        String path = RetoldMobRules.getEntityTypePath(
-                mob.getType()
-        );
-
-        if (path.equals("fox")) {
+        if (RetoldMobRules.isFox(mob)) {
             return isNight(level) || isDawn(level) || isDusk(level);
         }
 
-        if (path.equals("cat") || path.equals("ocelot")) {
+        if (RetoldMobRules.isCatOrOcelot(mob)) {
             return isDawn(level) || isDusk(level) || isNight(level);
         }
 
-        if (path.equals("wolf")) {
+        if (RetoldMobRules.isWolf(mob)) {
             return isDawn(level) || isDusk(level) || isNight(level);
         }
 
-        if (path.equals("dolphin")) {
+        if (RetoldMobRules.isDolphin(mob)) {
             return !isLateNight(level);
         }
 
-        if (path.equals("chicken")) {
+        if (RetoldMobRules.isChicken(mob)) {
             return isDay(level) && !level.isRainingAt(mob.blockPosition());
         }
 
-        if (path.equals("rabbit")) {
+        if (RetoldMobRules.isRabbit(mob)) {
             return isDawn(level) || isDay(level) || isDusk(level);
         }
 
-        if (path.equals("pig")) {
+        if (RetoldMobRules.isPig(mob)) {
             return isDay(level) || isDusk(level);
         }
 
-        if (RetoldMobRules.profileType(mob) == RetoldMobProfileType.HUNGRY_GRAZER) {
+        if (RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isHungryGrazer(mob)) {
             return isDay(level) || isDusk(level);
         }
 

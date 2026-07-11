@@ -38,12 +38,13 @@ public final class RetoldAnimalSocialGroups {
     }
 
     public static boolean isSocialRecoveryMob(PathfinderMob mob) {
-        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
-
-        return profileType == RetoldMobProfileType.HUNGRY_GRAZER
-                || profileType == RetoldMobProfileType.SMALL_FORAGER
-                || profileType == RetoldMobProfileType.PACK_PREDATOR
-                || profileType == RetoldMobProfileType.AQUATIC_PREDATOR;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && (
+                RetoldMobRules.isHungryGrazer(mob)
+                        || RetoldMobRules.isSmallForager(mob)
+                        || RetoldMobRules.isPackPredator(mob)
+                        || RetoldMobRules.isAquaticPredator(mob)
+        );
     }
 
     public static int maxHomeGroupSize(PathfinderMob mob) {

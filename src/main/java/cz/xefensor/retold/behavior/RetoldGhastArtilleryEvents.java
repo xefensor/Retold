@@ -16,7 +16,7 @@ import java.util.List;
 public final class RetoldGhastArtilleryEvents {
     private static final int THINK_INTERVAL_TICKS = 16;
     private static final int ARTILLERY_CONTROL_TICKS = 20 * 5;
-    private static final int ARTILLERY_PRIORITY = 62;
+    private static final int ARTILLERY_PRIORITY = RetoldAiPriorities.SPECIAL_RANGED;
 
     private static final double TARGET_SEARCH_RADIUS_BLOCKS = 64.0D;
     private static final double TARGET_SEARCH_RADIUS_SQUARED =
@@ -124,11 +124,11 @@ public final class RetoldGhastArtilleryEvents {
                 score -= 120.0D;
             }
 
-            if (RetoldFactionMembers.isMemberOf(candidate, RetoldFaction.NETHER_REMNANTS)) {
+            if (RetoldFactionMembers.isNetherRemnant(candidate)) {
                 score -= 80.0D;
             }
 
-            if (RetoldFactionMembers.isMemberOf(candidate, RetoldFaction.UNDEAD)) {
+            if (RetoldFactionMembers.isUndead(candidate)) {
                 score += 300.0D;
             }
 
@@ -161,11 +161,14 @@ public final class RetoldGhastArtilleryEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 ghast,
                 target,
-                RetoldTargetSource.FACTION_COMBAT
-        );
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldAiControlOwner.SPECIAL_UNDEAD
+        )) {
+            return;
+        }
     }
 
     private static boolean canAcquireTarget(Mob ghast) {

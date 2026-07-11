@@ -86,7 +86,7 @@ public final class RetoldPredatorSearchEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedPredator(predator)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(predator)) {
             return;
         }
 
@@ -283,7 +283,14 @@ public final class RetoldPredatorSearchEvents {
 
         predator.setSprinting(true);
 
-        RetoldBehaviorTargets.setTargetAndAggression(predator, prey, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearMode(
+                predator,
+                prey,
+                RetoldAiControlMode.HUNT
+        )) {
+            predator.setSprinting(false);
+            return;
+        }
 
         predator.getLookControl().setLookAt(
                 prey,

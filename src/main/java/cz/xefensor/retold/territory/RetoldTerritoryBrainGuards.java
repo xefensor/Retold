@@ -1,6 +1,7 @@
 package cz.xefensor.retold.territory;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -155,13 +156,13 @@ public final class RetoldTerritoryBrainGuards {
             PathfinderMob mob,
             LivingEntity target
     ) {
-        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
+        RetoldCombatTargets.clearTargetReferencesAndAggression(mob, target, true);
     }
 
     private static void clearInvalidAttackState(
             PathfinderMob mob,
             LivingEntity target
     ) {
-        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
+        RetoldCombatTargets.clearTargetReferencesAndAggression(mob, target, true);
     }
 }

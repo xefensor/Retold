@@ -28,6 +28,10 @@ public final class RetoldCombatTargets {
             boolean aggressive,
             boolean faceTarget
     ) {
+        if (mob == null || target == null) {
+            return false;
+        }
+
         boolean applied = RetoldFactionTargetMemory.trySetTarget(
                 mob,
                 target,
@@ -63,7 +67,7 @@ public final class RetoldCombatTargets {
             return;
         }
 
-        RetoldFactionTargetMemory.clearTargetReferences(
+        RetoldFactionTargetMemory.clearTargetOwnership(
                 mob,
                 target
         );

@@ -5,7 +5,7 @@ import net.minecraft.world.entity.PathfinderMob;
 final class RetoldPackControl {
     static final RetoldAiControlOwner OWNER = RetoldAiControlOwner.PACK_HUNTING;
 
-    private static final int PARTY_FEED_PRIORITY = 57;
+    private static final int PARTY_FEED_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.FEED, 2);
 
     private RetoldPackControl() {
     }

@@ -12,7 +12,7 @@ import java.util.List;
 public final class RetoldDolphinPodEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
     private static final int POD_HUNT_CONTROL_TICKS = 20 * 4;
-    private static final int POD_HUNT_PRIORITY = 46;
+    private static final int POD_HUNT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 1);
 
     private static final double POD_SHARE_RADIUS_BLOCKS = 28.0D;
     private static final double POD_SHARE_RADIUS_SQUARED =
@@ -73,10 +73,7 @@ public final class RetoldDolphinPodEvents {
     }
 
     private static boolean isDolphin(PathfinderMob mob) {
-        return RetoldMobRules.isEntityPath(
-                mob,
-                "dolphin"
-        );
+        return RetoldMobRules.isDolphin(mob);
     }
 
     private static boolean shouldThink(
@@ -277,7 +274,13 @@ public final class RetoldDolphinPodEvents {
             return;
         }
 
-        RetoldBehaviorTargets.setTargetAndAggression(dolphin, target, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
+                dolphin,
+                target,
+                RetoldAiControlOwner.AQUATIC_POD
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             dolphin.getNavigation().moveTo(

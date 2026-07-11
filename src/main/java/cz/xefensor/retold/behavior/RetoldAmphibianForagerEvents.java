@@ -15,8 +15,8 @@ public final class RetoldAmphibianForagerEvents {
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
 
-    private static final int HUNT_PRIORITY = 46;
-    private static final int RETURN_PRIORITY = 22;
+    private static final int HUNT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 1);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 2);
 
     private static final int WETLAND_SEARCH_HORIZONTAL_RADIUS = 14;
     private static final int WETLAND_SEARCH_VERTICAL_RADIUS = 4;
@@ -215,7 +215,10 @@ public final class RetoldAmphibianForagerEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.huntThreshold(frog);
+        return RetoldMobRules.hasProfileHuntDrive(
+                frog,
+                state
+        );
     }
 
     private static LivingEntity findBestPrey(
@@ -326,7 +329,13 @@ public final class RetoldAmphibianForagerEvents {
             PathfinderMob frog,
             LivingEntity prey
     ) {
-        RetoldBehaviorTargets.setTargetAndAggression(frog, prey, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
+                frog,
+                prey,
+                RetoldAiControlOwner.AMPHIBIAN_FORAGER
+        )) {
+            return;
+        }
 
         frog.getLookControl().setLookAt(
                 prey,

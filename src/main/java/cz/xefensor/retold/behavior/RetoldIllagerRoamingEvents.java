@@ -24,7 +24,7 @@ public final class RetoldIllagerRoamingEvents {
 
     private static final int THINK_INTERVAL_TICKS = 30;
     private static final int ROAM_CONTROL_TICKS = 20 * 8;
-    private static final int ROAM_PRIORITY = 24;
+    private static final int ROAM_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
     private static final double ROAM_SEGMENT_BLOCKS = 30.0D;
     private static final double ROAM_SIDE_WOBBLE_BLOCKS = 7.0D;
@@ -89,7 +89,7 @@ public final class RetoldIllagerRoamingEvents {
 
     private static boolean isRoamingRaider(PathfinderMob mob) {
         return RetoldMobRules.isIllagerRaider(mob)
-                && !RetoldMobRules.isEntityPath(mob, "vex");
+                && !RetoldMobRules.isVex(mob);
     }
 
     private static boolean shouldThink(

@@ -27,7 +27,7 @@ public final class RetoldPredatorAttackGuards {
             return false;
         }
 
-        if (!RetoldMobRules.isManagedPredator(predator)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(predator)) {
             return false;
         }
 

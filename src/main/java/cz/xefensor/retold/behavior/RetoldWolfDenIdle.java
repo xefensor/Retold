@@ -11,7 +11,7 @@ final class RetoldWolfDenIdle {
     private static final String REASON_DEN_IDLE = "den_idle";
 
     private static final int HOME_IDLE_CONTROL_TICKS = 20 * 5;
-    private static final int HOME_IDLE_PRIORITY = 10;
+    private static final int HOME_IDLE_PRIORITY = RetoldAiPriorities.HOME_IDLE;
     private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 18;
     private static final int HOME_IDLE_CROWD_MOVE_INTERVAL_TICKS = 20 * 7;
 
@@ -175,9 +175,6 @@ final class RetoldWolfDenIdle {
     }
 
     private static boolean isWolf(PathfinderMob mob) {
-        return RetoldMobRules.isEntityPath(
-                mob,
-                "wolf"
-        );
+        return RetoldMobRules.isWolf(mob);
     }
 }

@@ -18,9 +18,9 @@ public final class RetoldArmadilloDefenseEvents {
     private static final int RETREAT_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
 
-    private static final int SHELTER_PRIORITY = 82;
-    private static final int RETREAT_PRIORITY = 72;
-    private static final int RETURN_PRIORITY = 24;
+    private static final int SHELTER_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.SHELTER, 2);
+    private static final int RETREAT_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 3);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
     private static final int SCRUB_SEARCH_HORIZONTAL_RADIUS = 14;
     private static final int SCRUB_SEARCH_VERTICAL_RADIUS = 4;

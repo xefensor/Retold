@@ -30,13 +30,14 @@ public final class RetoldTerritoryTargetBlocker {
             return false;
         }
 
-        if (!RetoldTerritoryRules.canUseTerritoryBehavior(level, mob, config)) {
-            return false;
-        }
-
         long gameTime = level.getGameTime();
 
-        if (!RetoldTerritoryDetector.isNearTerritory(level, mob, config, gameTime)) {
+        if (!RetoldTerritoryRules.canUseNearbyTerritoryBehavior(
+                level,
+                mob,
+                config,
+                gameTime
+        )) {
             return false;
         }
 
@@ -54,15 +55,14 @@ public final class RetoldTerritoryTargetBlocker {
 
         RetoldTerritoryMobState state = RetoldTerritoryMobStates.get(mob);
 
-        RetoldTerritoryContext territoryContext = state == null
-                ? RetoldTerritoryDetector.getContextAt(level, mob.blockPosition())
-                : state.territoryContext;
+        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.refreshMatchingContext(
+                state == null ? null : state.territoryContext,
+                level,
+                mob,
+                config
+        );
 
-        if (territoryContext == null || territoryContext.faction() != config.faction) {
-            territoryContext = RetoldTerritoryDetector.getContextAt(level, mob.blockPosition());
-        }
-
-        if (territoryContext == null || territoryContext.faction() != config.faction) {
+        if (territoryContext == null) {
             return true;
         }
 

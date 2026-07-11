@@ -31,12 +31,12 @@ public final class RetoldTerritoryTick {
 
         RetoldFactionTargetMemory.cleanupTargetState(mob);
 
-        if (!RetoldTerritoryRules.canUseTerritoryBehavior(level, mob, config)) {
-            RetoldTerritoryMobStates.clearMobState(mob);
-            return;
-        }
-
-        if (!RetoldTerritoryDetector.isNearTerritory(level, mob, config, gameTime)) {
+        if (!RetoldTerritoryRules.canUseNearbyTerritoryBehavior(
+                level,
+                mob,
+                config,
+                gameTime
+        )) {
             RetoldTerritoryMobStates.clearMobState(mob);
             return;
         }

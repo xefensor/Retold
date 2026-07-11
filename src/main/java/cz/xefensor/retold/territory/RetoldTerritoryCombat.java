@@ -201,14 +201,16 @@ public final class RetoldTerritoryCombat {
 
         RetoldWarningPose.stopWarningPose(mob);
 
+        if (!applyAttackTarget(mob, target, source)) {
+            return;
+        }
+
         state.hasStartedAttack = true;
         state.attackTarget = target;
         state.warningTarget = target;
         state.warningPulses = 0;
         state.nextAttackRefreshAt = gameTime + 20L;
         state.warnedIntruders.add(target.getUUID());
-
-        applyAttackTarget(mob, target, source);
     }
 
     public static void updateAttackState(
@@ -318,12 +320,13 @@ public final class RetoldTerritoryCombat {
                     ignored -> new RetoldTerritoryMobState()
             );
 
-            guardState.territoryContext = RetoldTerritoryDetector.getContextAt(
+            guardState.territoryContext = RetoldTerritoryRules.getMatchingContext(
                     level,
-                    guard.blockPosition()
+                    guard,
+                    config
             );
 
-            if (guardState.territoryContext == null || guardState.territoryContext.faction() != config.faction) {
+            if (guardState.territoryContext == null) {
                 continue;
             }
 
@@ -352,12 +355,12 @@ public final class RetoldTerritoryCombat {
         }
     }
 
-    private static void applyAttackTarget(
+    private static boolean applyAttackTarget(
             PathfinderMob mob,
             LivingEntity target,
             RetoldTargetSource source
     ) {
-        RetoldCombatTargets.applyAttackTarget(mob, target, source);
+        return RetoldCombatTargets.applyAttackTarget(mob, target, source);
     }
 
     private static LivingEntity getCurrentCombatTarget(PathfinderMob mob) {

@@ -22,18 +22,18 @@ public final class RetoldSmallForagerHomeEvents {
 
     private static final int THINK_INTERVAL_TICKS = 40;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
-    private static final int HOME_RETURN_PRIORITY = 17;
+    private static final int HOME_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 2);
     private static final int ROOST_CONTROL_TICKS = 20 * 5;
-    private static final int ROOST_PRIORITY = 16;
+    private static final int ROOST_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 1);
     private static final int REST_CONTROL_TICKS = 20 * 5;
-    private static final int REST_PRIORITY = 15;
+    private static final int REST_PRIORITY = RetoldAiPriorities.REST;
     private static final int HIDE_CONTROL_TICKS = 20 * 8;
-    private static final int HIDE_PRIORITY = 22;
+    private static final int HIDE_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 2);
     private static final int HOME_IDLE_CONTROL_TICKS = 20 * 5;
-    private static final int HOME_IDLE_PRIORITY = 10;
+    private static final int HOME_IDLE_PRIORITY = RetoldAiPriorities.HOME_IDLE;
     private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 20;
     private static final int RANGE_MIGRATION_CONTROL_TICKS = 20 * 7;
-    private static final int RANGE_MIGRATION_PRIORITY = 15;
+    private static final int RANGE_MIGRATION_PRIORITY = RetoldAiPriorities.REST;
     private static final int RANGE_MIGRATION_HUNGER = 45;
     private static final int RANGE_DEPLETED_FORAGE_SCORE = 5;
     private static final int RANGE_TARGET_FORAGE_SCORE = 12;
@@ -470,7 +470,7 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.isEntityPath(animal, "pig")) {
+        if (!RetoldMobRules.isPig(animal)) {
             return false;
         }
 
@@ -483,7 +483,10 @@ public final class RetoldSmallForagerHomeEvents {
                 gameTime
         );
 
-        if (state.hunger() < RANGE_MIGRATION_HUNGER) {
+        if (!RetoldMobRules.hasHungerAtLeast(
+                state,
+                RANGE_MIGRATION_HUNGER
+        )) {
             return false;
         }
 
@@ -564,7 +567,7 @@ public final class RetoldSmallForagerHomeEvents {
                 new AABB(home.pos()).inflate(radius),
                 candidate -> candidate != animal
                         && isSmallForager(candidate)
-                        && RetoldMobRules.isEntityPath(candidate, "pig")
+                        && RetoldMobRules.isPig(candidate)
                         && RetoldAnimalHomes.hasSameValidHomeAs(
                         level,
                         candidate,
@@ -610,7 +613,7 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.isEntityPath(animal, "chicken")) {
+        if (!RetoldMobRules.isChicken(animal)) {
             return false;
         }
 
@@ -627,7 +630,7 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
-        if (!RetoldMobRules.isEntityPath(animal, "pig")) {
+        if (!RetoldMobRules.isPig(animal)) {
             return false;
         }
 
@@ -644,7 +647,7 @@ public final class RetoldSmallForagerHomeEvents {
         }
 
         return recoveringFromPanic
-                && RetoldMobRules.isEntityPath(animal, "rabbit");
+                && RetoldMobRules.isRabbit(animal);
     }
 
     private static int getReturnPriority(
@@ -746,7 +749,8 @@ public final class RetoldSmallForagerHomeEvents {
         return mob != null
                 && mob.isAlive()
                 && !mob.isRemoved()
-                && RetoldMobRules.profileType(mob) == RetoldMobProfileType.SMALL_FORAGER;
+                && RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isSmallForager(mob);
     }
 
 }

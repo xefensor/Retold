@@ -117,7 +117,10 @@ final class RetoldPackFeeding {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(member);
+        return RetoldMobRules.hasEatDrive(
+                member,
+                state
+        );
     }
 
     private static boolean canOverrideMemberForFood(PathfinderMob member) {

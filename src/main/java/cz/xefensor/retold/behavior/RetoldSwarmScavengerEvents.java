@@ -19,10 +19,10 @@ public final class RetoldSwarmScavengerEvents {
     private static final int SMALL_ARTHROPOD_SWARM_CONTROL_TICKS = 20 * 4;
     private static final int SCAVENGE_CONTROL_TICKS = 20 * 5;
 
-    private static final int SPIDER_SWARM_PRIORITY = 44;
-    private static final int SLIME_SWARM_PRIORITY = 52;
-    private static final int SMALL_ARTHROPOD_SWARM_PRIORITY = 48;
-    private static final int SCAVENGE_PRIORITY = 50;
+    private static final int SPIDER_SWARM_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.HUNT, 1);
+    private static final int SLIME_SWARM_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 3);
+    private static final int SMALL_ARTHROPOD_SWARM_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 3);
+    private static final int SCAVENGE_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 5);
 
     private static final double SPIDER_SWARM_RADIUS_BLOCKS = 18.0D;
     private static final double SPIDER_SWARM_RADIUS_SQUARED =
@@ -103,11 +103,13 @@ public final class RetoldSwarmScavengerEvents {
     }
 
     private static boolean isSpiderSwarmPredator(PathfinderMob mob) {
-        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.HUNGRY_SWARM_PREDATOR;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isHungrySwarmPredator(mob);
     }
 
     private static boolean isSlimeScavenger(PathfinderMob mob) {
-        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.SLIME_HUNGRY;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isSlimeHungry(mob);
     }
 
     private static boolean isSmallArthropodSwarm(PathfinderMob mob) {
@@ -339,7 +341,13 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldBehaviorTargets.setTargetAndAggression(spider, target, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
+                spider,
+                target,
+                RetoldAiControlOwner.SWARM
+        )) {
+            return;
+        }
 
         spider.setSprinting(true);
 
@@ -548,11 +556,14 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 slime,
                 target,
-                RetoldTargetSource.FACTION_ASSIST
-        );
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldAiControlOwner.SWARM
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             slime.getNavigation().moveTo(
@@ -650,7 +661,10 @@ public final class RetoldSwarmScavengerEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(slime);
+        return RetoldMobRules.hasEatDrive(
+                slime,
+                state
+        );
     }
 
     private static void moveToOrganicScrap(
@@ -861,11 +875,14 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 arthropod,
                 target,
-                RetoldTargetSource.FACTION_ASSIST
-        );
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldAiControlOwner.SWARM
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             arthropod.getNavigation().moveTo(

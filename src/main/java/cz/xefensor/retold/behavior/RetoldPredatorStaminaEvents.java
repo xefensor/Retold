@@ -67,7 +67,7 @@ public final class RetoldPredatorStaminaEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedPredator(predator)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(predator)) {
             STATES.remove(predator);
             return;
         }

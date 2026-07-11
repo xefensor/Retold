@@ -19,7 +19,7 @@ public final class RetoldFoodBehaviorEvents {
     private static final int THINK_INTERVAL_TICKS = 20;
     private static final int CLEANUP_INTERVAL_TICKS = 20 * 10;
     private static final int FEED_CONTROL_TICKS = 20 * 4;
-    private static final int FEED_PRIORITY = 56;
+    private static final int FEED_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.FEED, 1);
 
     private static final double DROPPED_FOOD_RADIUS = 8.0D;
     private static final double DROPPED_FOOD_RADIUS_SQUARED =
@@ -54,7 +54,7 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedMob(mob)) {
+        if (!RetoldMobRules.canUseOrdinaryLifeSystems(mob)) {
             return;
         }
 
@@ -172,7 +172,10 @@ public final class RetoldFoodBehaviorEvents {
             return false;
         }
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(mob);
+        return RetoldMobRules.hasEatDrive(
+                mob,
+                state
+        );
     }
 
     private static ItemEntity findBestDroppedFood(
@@ -446,7 +449,7 @@ public final class RetoldFoodBehaviorEvents {
     }
 
     private static double getFoodSpeed(PathfinderMob mob) {
-        if (RetoldMobRules.isManagedPredator(mob)) {
+        if (RetoldMobRules.canUseOrdinaryPredatorSystems(mob)) {
             return PREDATOR_FOOD_SPEED;
         }
 

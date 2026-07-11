@@ -17,7 +17,7 @@ import java.util.List;
 public final class RetoldCommanderSupportEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
     private static final int SUPPORT_CONTROL_TICKS = 20 * 3;
-    private static final int SUPPORT_PRIORITY = 38;
+    private static final int SUPPORT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.SUPPORT, 3);
 
     private static final double ALLY_SEARCH_RADIUS_BLOCKS = 24.0D;
     private static final double ALLY_SEARCH_RADIUS_SQUARED =
@@ -181,10 +181,7 @@ public final class RetoldCommanderSupportEvents {
             return false;
         }
 
-        return RetoldFactionMembers.isAlignedWith(
-                ally,
-                RetoldFaction.ILLAGERS
-        );
+        return RetoldFactionMembers.isIllagerAligned(ally);
     }
 
     private static boolean isValidSupportTarget(
@@ -199,10 +196,7 @@ public final class RetoldCommanderSupportEvents {
             return false;
         }
 
-        return !RetoldFactionMembers.isAlignedWith(
-                target,
-                RetoldFaction.ILLAGERS
-        );
+        return !RetoldFactionMembers.isIllagerAligned(target);
     }
 
     private static void adoptAllyTargetIfIdle(

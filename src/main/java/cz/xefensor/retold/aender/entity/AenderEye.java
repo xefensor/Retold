@@ -31,13 +31,18 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class AenderEye extends PathfinderMob implements ItemSupplier {
     private static final DustParticleOptions IDLE_PARTICLE = new DustParticleOptions(0x87FF7A, 0.55F);
-    private static final int SPAWN_RELOCATION_ATTEMPTS = 32;
-    private static final int BETWEEN_ISLAND_SEARCH_RADIUS = 80;
+    private static final int SPAWN_RELOCATION_ATTEMPTS = 48;
+    private static final int ABOVE_ISLAND_HORIZONTAL_RANGE = 96;
+    private static final int BETWEEN_ISLAND_HORIZONTAL_RANGE = 160;
+    private static final int BETWEEN_ISLAND_SEARCH_RADIUS = 128;
+    private static final int NEARBY_EYE_SPACING_BLOCKS = 48;
+    private static final int NEARBY_EYE_SPACING_HEIGHT = 40;
 
     public AenderEye(EntityType<? extends AenderEye> type, Level level) {
         super(type, level);
@@ -64,7 +69,8 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
                 && random.nextInt(5) == 0
                 && level.isEmptyBlock(pos)
                 && level.isEmptyBlock(pos.above())
-                && level.getFluidState(pos).isEmpty();
+                && level.getFluidState(pos).isEmpty()
+                && hasRoomForScatteredEye(level, pos);
     }
 
     @Override
@@ -131,7 +137,7 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
 
     @Override
     public int getMaxSpawnClusterSize() {
-        return 2;
+        return 1;
     }
 
     @Override
@@ -177,7 +183,7 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
         BlockPos origin = this.blockPosition();
 
         for (int attempt = 0; attempt < SPAWN_RELOCATION_ATTEMPTS; attempt++) {
-            boolean betweenIslands = attempt > 7 && random.nextBoolean();
+            boolean betweenIslands = attempt > 5 && random.nextInt(3) != 0;
             BlockPos candidate = betweenIslands
                     ? findBetweenIslandSpawn(level, origin, random)
                     : findAboveIslandSpawn(level, origin, random);
@@ -211,8 +217,8 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
             BlockPos origin,
             RandomSource random
     ) {
-        int x = origin.getX() + random.nextInt(65) - 32;
-        int z = origin.getZ() + random.nextInt(65) - 32;
+        int x = origin.getX() + randomOffset(random, ABOVE_ISLAND_HORIZONTAL_RANGE);
+        int z = origin.getZ() + randomOffset(random, ABOVE_ISLAND_HORIZONTAL_RANGE);
         int surfaceY = AenderIslandSampler.highestBlockYAt(x, z);
 
         if (surfaceY < AenderIslandSampler.MIN_Y) {
@@ -228,8 +234,8 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
             BlockPos origin,
             RandomSource random
     ) {
-        int x = origin.getX() + random.nextInt(129) - 64;
-        int z = origin.getZ() + random.nextInt(129) - 64;
+        int x = origin.getX() + randomOffset(random, BETWEEN_ISLAND_HORIZONTAL_RANGE);
+        int z = origin.getZ() + randomOffset(random, BETWEEN_ISLAND_HORIZONTAL_RANGE);
 
         if (AenderIslandSampler.highestBlockYAt(x, z) >= AenderIslandSampler.MIN_Y) {
             return null;
@@ -280,6 +286,24 @@ public class AenderEye extends PathfinderMob implements ItemSupplier {
         }
 
         return best;
+    }
+
+    private static boolean hasRoomForScatteredEye(ServerLevelAccessor level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return true;
+        }
+
+        AABB bounds = new AABB(pos).inflate(
+                NEARBY_EYE_SPACING_BLOCKS,
+                NEARBY_EYE_SPACING_HEIGHT,
+                NEARBY_EYE_SPACING_BLOCKS
+        );
+
+        return serverLevel.getEntitiesOfClass(AenderEye.class, bounds, AenderEye::isAlive).isEmpty();
+    }
+
+    private static int randomOffset(RandomSource random, int radius) {
+        return random.nextInt(radius * 2 + 1) - radius;
     }
 
     private static BlockPos clampToAenderHeight(ServerLevelAccessor level, BlockPos pos) {

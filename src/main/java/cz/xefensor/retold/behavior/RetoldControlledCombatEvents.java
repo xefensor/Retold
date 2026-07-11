@@ -44,7 +44,7 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedPredator(mob)) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(mob)) {
             return;
         }
 
@@ -313,7 +313,13 @@ public final class RetoldControlledCombatEvents {
                 ATTACK_CONTROL_TICKS
         );
 
-        RetoldBehaviorTargets.setTargetAndAggression(attacker, target, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearMode(
+                attacker,
+                target,
+                RetoldAiControlMode.ATTACK
+        )) {
+            return;
+        }
 
         attacker.getLookControl().setLookAt(
                 target,
@@ -422,9 +428,6 @@ public final class RetoldControlledCombatEvents {
     }
 
     private static boolean isWolf(PathfinderMob mob) {
-        return RetoldMobRules.isEntityPath(
-                mob,
-                "wolf"
-        );
+        return RetoldMobRules.isWolf(mob);
     }
 }

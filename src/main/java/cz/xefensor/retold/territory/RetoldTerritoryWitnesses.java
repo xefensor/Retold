@@ -27,6 +27,10 @@ public final class RetoldTerritoryWitnesses {
             return false;
         }
 
+        if (RetoldAiTargets.isInvalidPlayerTarget(player)) {
+            return false;
+        }
+
         List<PathfinderMob> possibleWitnesses = level.getEntitiesOfClass(
                 PathfinderMob.class,
                 player.getBoundingBox().inflate(witnessRadiusBlocks),
@@ -60,6 +64,10 @@ public final class RetoldTerritoryWitnesses {
             return;
         }
 
+        if (RetoldAiTargets.isInvalidPlayerTarget(player)) {
+            return;
+        }
+
         RetoldTerritoryConfig config = RetoldTerritoryConfigs.get(faction);
 
         if (config == null) {
@@ -86,7 +94,12 @@ public final class RetoldTerritoryWitnesses {
         long gameTime = level.getGameTime();
 
         for (PathfinderMob witness : witnesses) {
-            if (!RetoldTerritoryDetector.isNearTerritory(level, witness, config, gameTime)) {
+            if (!RetoldTerritoryRules.canUseNearbyTerritoryBehavior(
+                    level,
+                    witness,
+                    config,
+                    gameTime
+            )) {
                 continue;
             }
 
@@ -95,12 +108,17 @@ public final class RetoldTerritoryWitnesses {
                     ignored -> new RetoldTerritoryMobState()
             );
 
-            state.territoryContext = RetoldTerritoryDetector.getContextAt(
+            state.territoryContext = RetoldTerritoryRules.getMatchingContext(
                     level,
-                    witness.blockPosition()
+                    witness,
+                    config
             );
 
-            if (state.territoryContext == null || state.territoryContext.faction() != faction) {
+            if (state.territoryContext == null) {
+                continue;
+            }
+
+            if (!RetoldTerritoryTargetSelector.isPossibleIntruder(level, witness, player, config, gameTime)) {
                 continue;
             }
 

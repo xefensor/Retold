@@ -57,7 +57,10 @@ final class RetoldPackHuntMovement {
 
         member.setSprinting(true);
 
-        RetoldBehaviorTargets.setTargetAndAggression(member, prey, true);
+        if (!RetoldBehaviorTargets.setTargetAndAggression(member, prey, true)) {
+            RetoldPackControl.clearIfOwned(member);
+            return;
+        }
 
         member.getLookControl().setLookAt(
                 prey,

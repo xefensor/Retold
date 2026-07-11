@@ -7,7 +7,6 @@ import cz.xefensor.retold.aender.generation.AenderVolatility;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
@@ -23,11 +22,14 @@ public final class AenderRealityTickEvents {
     private static final int MAX_ISLAND_RADIUS_BLOCKS = 224;
 
     private static final int REGEN_RADIUS_CHUNKS = 5;
-    private static final int MAX_REGEN_CHUNKS_PER_TICK = 8;
+    private static final int MAX_REGEN_CHUNKS_PER_TICK = 1;
+    private static final int MIN_REGEN_INTERVAL_TICKS = 2;
     private static final int MAX_QUEUE_SIZE = 512;
+    private static final long MAX_REGEN_NANOS_PER_TICK = 2_000_000L;
 
     private static final Queue<Long> REGEN_QUEUE = new ArrayDeque<>();
     private static final Set<Long> QUEUED = new HashSet<>();
+    private static long nextRegenGameTime;
 
     private AenderRealityTickEvents() {
     }
@@ -49,6 +51,22 @@ public final class AenderRealityTickEvents {
         }
 
         processRegenQueue(level);
+    }
+
+    public static void enqueueIfNeeded(ServerLevel level, ChunkAccess chunk) {
+        if (level.dimension() != RetoldAenderDimensions.AENDER) {
+            return;
+        }
+
+        if (AenderStabilityData.get(level).isStable(chunk.getPos())) {
+            return;
+        }
+
+        AenderVolatility.retainForChunk(chunk);
+
+        if (AenderVolatility.needsRegeneration(chunk)) {
+            enqueue(chunk.getPos().x(), chunk.getPos().z());
+        }
     }
 
     private static void queueNearbyStaleChunks(ServerLevel level) {
@@ -88,9 +106,20 @@ public final class AenderRealityTickEvents {
     }
 
     private static void processRegenQueue(ServerLevel level) {
+        long gameTime = level.getGameTime();
+
+        if (gameTime < nextRegenGameTime) {
+            return;
+        }
+
         int regenerated = 0;
+        long startNanos = System.nanoTime();
 
         while (regenerated < MAX_REGEN_CHUNKS_PER_TICK && !REGEN_QUEUE.isEmpty()) {
+            if (System.nanoTime() - startNanos >= MAX_REGEN_NANOS_PER_TICK) {
+                break;
+            }
+
             long key = REGEN_QUEUE.poll();
             QUEUED.remove(key);
 
@@ -111,8 +140,12 @@ public final class AenderRealityTickEvents {
                 continue;
             }
 
-            AenderChunkGenerator.regenerateLoadedChunk(chunk);
+            AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
             regenerated++;
+        }
+
+        if (regenerated > 0) {
+            nextRegenGameTime = gameTime + MIN_REGEN_INTERVAL_TICKS;
         }
     }
 

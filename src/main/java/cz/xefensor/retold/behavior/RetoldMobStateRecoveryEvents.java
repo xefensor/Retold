@@ -39,7 +39,7 @@ public final class RetoldMobStateRecoveryEvents {
             return;
         }
 
-        if (!RetoldMobRules.isManagedMob(mob)) {
+        if (!RetoldMobRules.canUseOrdinaryLifeSystems(mob)) {
             return;
         }
 

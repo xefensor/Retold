@@ -15,8 +15,8 @@ public final class RetoldPandaBambooEvents {
     private static final int FEED_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 6;
 
-    private static final int BAMBOO_FEED_PRIORITY = 52;
-    private static final int RETURN_PRIORITY = 23;
+    private static final int BAMBOO_FEED_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 3);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 3);
 
     private static final int BAMBOO_SEARCH_HORIZONTAL_RADIUS = 12;
     private static final int BAMBOO_SEARCH_VERTICAL_RADIUS = 4;
@@ -279,7 +279,10 @@ public final class RetoldPandaBambooEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(panda);
+        return RetoldMobRules.hasEatDrive(
+                panda,
+                state
+        );
     }
 
     private static void continueBambooFeeding(

@@ -15,7 +15,7 @@ final class RetoldWolfDenDefense {
     private static final String REASON_DEN_DEFENSE = "den_defense";
 
     private static final int DEN_DEFENSE_CONTROL_TICKS = 20 * 4;
-    private static final int DEN_DEFENSE_PRIORITY = 86;
+    private static final int DEN_DEFENSE_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.ATTACK, 1);
 
     private static final double WOLF_DEN_DEFENSE_RADIUS_BLOCKS = 20.0D;
     private static final double WOLF_DEN_DEFENSE_RADIUS_SQUARED =
@@ -71,11 +71,14 @@ final class RetoldWolfDenDefense {
             return false;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 mob,
                 enemy,
-                RetoldTargetSource.FACTION_COMBAT
-        );
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldAiControlOwner.COMBAT
+        )) {
+            return false;
+        }
 
         mob.getLookControl().setLookAt(
                 enemy,

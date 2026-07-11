@@ -17,7 +17,7 @@ import java.util.List;
 public final class RetoldSkeletonRangedEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
     private static final int RANGED_CONTROL_TICKS = 20 * 4;
-    private static final int RANGED_PRIORITY = 54;
+    private static final int RANGED_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 1);
 
     private static final double SHARE_RADIUS_BLOCKS = 24.0D;
     private static final double SHARE_RADIUS_SQUARED =
@@ -230,11 +230,13 @@ public final class RetoldSkeletonRangedEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTarget(
                 skeleton,
                 target,
                 RetoldTargetSource.FACTION_ASSIST
-        );
+        )) {
+            return;
+        }
 
         maintainRange(
                 skeleton,
@@ -399,7 +401,7 @@ public final class RetoldSkeletonRangedEvents {
             return false;
         }
 
-        if (RetoldFactionMembers.isMemberOf(target, RetoldFaction.UNDEAD)) {
+        if (RetoldFactionMembers.isUndead(target)) {
             return false;
         }
 

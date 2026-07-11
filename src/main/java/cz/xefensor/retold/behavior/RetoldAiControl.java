@@ -441,18 +441,7 @@ public final class RetoldAiControl {
     }
 
     private static int defaultPriority(RetoldAiControlMode mode) {
-        return switch (mode) {
-            case NONE -> 0;
-            case REGROUP -> 20;
-            case SEARCH -> 30;
-            case SUPPORT -> 35;
-            case HUNT -> 45;
-            case FEED -> 55;
-            case FLEE -> 75;
-            case SHELTER -> 80;
-            case ATTACK -> 85;
-            case TERRITORY -> 95;
-        };
+        return RetoldAiPriorities.defaultFor(mode);
     }
 
     private record ControlState(

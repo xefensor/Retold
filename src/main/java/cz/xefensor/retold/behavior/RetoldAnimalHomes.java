@@ -181,65 +181,63 @@ public final class RetoldAnimalHomes {
     }
 
     public static RetoldAnimalHomeType homeTypeFor(PathfinderMob mob) {
-        String path = RetoldMobRules.getEntityTypePath(mob.getType());
-
-        if (path.equals("wolf")) {
+        if (RetoldMobRules.isWolf(mob)) {
             return RetoldAnimalHomeType.WOLF_DEN;
         }
 
-        if (path.equals("dolphin")) {
+        if (RetoldMobRules.isDolphin(mob)) {
             return RetoldAnimalHomeType.DOLPHIN_POD_RANGE;
         }
 
-        if (RetoldMobProfiles.isType(path, RetoldMobProfileType.HUNGRY_GRAZER)) {
+        if (RetoldMobRules.isHungryGrazer(mob)) {
             return RetoldAnimalHomeType.HERD_RANGE;
         }
 
-        if (path.equals("pig")) {
+        if (RetoldMobRules.isPig(mob)) {
             return RetoldAnimalHomeType.FORAGING_RANGE;
         }
 
-        if (path.equals("chicken")) {
+        if (RetoldMobRules.isChicken(mob)) {
             return RetoldAnimalHomeType.ROOST;
         }
 
-        if (path.equals("rabbit")) {
+        if (RetoldMobRules.isRabbit(mob)) {
             return RetoldAnimalHomeType.WARREN;
         }
 
-        if (path.equals("fox")) {
+        if (RetoldMobRules.isFox(mob)) {
             return RetoldAnimalHomeType.FOX_DEN;
         }
 
-        if (path.equals("cat")) {
+        if (RetoldMobRules.isCat(mob)) {
             return RetoldAnimalHomeType.CAT_TERRITORY;
         }
 
-        if (path.equals("ocelot")) {
+        if (RetoldMobRules.isOcelot(mob)) {
             return RetoldAnimalHomeType.OCELOT_TERRITORY;
         }
 
-        if (path.equals("panda")) {
+        if (RetoldMobRules.isPandaBamboo(mob)) {
             return RetoldAnimalHomeType.PANDA_BAMBOO_GROVE;
         }
 
-        if (path.equals("sniffer")) {
+        if (RetoldMobRules.isSnifferForager(mob)) {
             return RetoldAnimalHomeType.SNIFFER_FORAGING_RANGE;
         }
 
-        if (path.equals("armadillo")) {
+        if (RetoldMobRules.isArmadilloDefensive(mob)) {
             return RetoldAnimalHomeType.ARMADILLO_SCRUB_RANGE;
         }
 
-        if (path.equals("turtle")) {
+        if (RetoldMobRules.isTurtleBeach(mob)) {
             return RetoldAnimalHomeType.TURTLE_BEACH;
         }
 
-        if (path.equals("frog")) {
+        if (RetoldMobRules.isAmphibianForager(mob)) {
             return RetoldAnimalHomeType.AMPHIBIAN_WETLAND;
         }
 
-        if (path.equals("axolotl")) {
+        if (RetoldMobRules.isAquaticHelperPredator(mob)) {
             return RetoldAnimalHomeType.AXOLOTL_WATER_RANGE;
         }
 

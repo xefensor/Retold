@@ -160,11 +160,7 @@ final class RetoldPackHomeReturn {
     }
 
     private static double getHomeReturnSpeed(PathfinderMob mob) {
-        String path = RetoldMobRules.getEntityTypePath(
-                mob.getType()
-        );
-
-        if (path.equals("dolphin")) {
+        if (RetoldMobRules.isDolphin(mob)) {
             return DOLPHIN_HOME_RETURN_SPEED;
         }
 

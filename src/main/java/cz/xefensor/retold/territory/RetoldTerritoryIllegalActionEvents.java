@@ -2,6 +2,7 @@ package cz.xefensor.retold.territory;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -79,6 +80,10 @@ public final class RetoldTerritoryIllegalActionEvents {
             return;
         }
 
+        if (RetoldAiTargets.isInvalidPlayerTarget(player)) {
+            return;
+        }
+
         LivingEntity victim = event.getEntity();
 
         if (!(victim.level() instanceof ServerLevel level)) {
@@ -142,6 +147,10 @@ public final class RetoldTerritoryIllegalActionEvents {
             return;
         }
 
+        if (RetoldAiTargets.isInvalidPlayerTarget(player)) {
+            return;
+        }
+
         LivingEntity victim = event.getEntity();
 
         if (!(victim.level() instanceof ServerLevel level)) {
@@ -185,6 +194,10 @@ public final class RetoldTerritoryIllegalActionEvents {
             BlockPos pos,
             IllegalActionType actionType
     ) {
+        if (RetoldAiTargets.isInvalidPlayerTarget(player)) {
+            return;
+        }
+
         RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
                 level,
                 pos

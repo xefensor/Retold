@@ -31,7 +31,7 @@
     "ambient": [
       {
         "type": "retold:aender_eye",
-        "maxCount": 2,
+        "maxCount": 1,
         "minCount": 1,
         "weight": 4
       }

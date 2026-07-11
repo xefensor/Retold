@@ -3,6 +3,7 @@ package cz.xefensor.retold.event;
 import cz.xefensor.retold.behavior.RetoldAiControl;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -25,6 +26,8 @@ public final class RetoldInvalidPlayerTargetEvents {
         if (!(mob.level() instanceof ServerLevel level)) {
             return;
         }
+
+        RetoldFactionTargetMemory.cleanupTargetState(mob);
 
         boolean cleared = clearInvalidMobTarget(mob);
         cleared = clearInvalidBrainTarget(level, mob) || cleared;

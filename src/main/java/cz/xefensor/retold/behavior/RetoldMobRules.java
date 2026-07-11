@@ -14,7 +14,6 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 
 public final class RetoldMobRules {
-    private static final int DESPERATE_HUNT_HUNGER = 86;
     private static final int LOW_CONFIDENCE_HUNT_GATE = 35;
     private static final int HIGH_STRESS_HUNT_GATE = 55;
     private static final int RECENT_HUNT_MEMORY_TICKS = 20 * 45;
@@ -49,6 +48,18 @@ public final class RetoldMobRules {
         return RetoldMobProfiles.get(entity).type();
     }
 
+    public static boolean hasProfile(
+            Entity entity,
+            RetoldMobProfileType type
+    ) {
+        return entity != null
+                && type != null
+                && RetoldMobIdentity.of(
+                        entity,
+                        entity instanceof PathfinderMob mob ? RetoldMobStates.get(mob) : null
+                ).isProfile(type);
+    }
+
     public static boolean isEntityPath(
             Entity entity,
             String path
@@ -56,6 +67,94 @@ public final class RetoldMobRules {
         return entity != null
                 && path != null
                 && getEntityTypePath(entity.getType()).equals(path);
+    }
+
+    public static boolean isPig(Entity entity) {
+        return isEntityPath(entity, "pig");
+    }
+
+    public static boolean isChicken(Entity entity) {
+        return isEntityPath(entity, "chicken");
+    }
+
+    public static boolean isRabbit(Entity entity) {
+        return isEntityPath(entity, "rabbit");
+    }
+
+    public static boolean isFox(Entity entity) {
+        return isEntityPath(entity, "fox");
+    }
+
+    public static boolean isCat(Entity entity) {
+        return isEntityPath(entity, "cat");
+    }
+
+    public static boolean isOcelot(Entity entity) {
+        return isEntityPath(entity, "ocelot");
+    }
+
+    public static boolean isCatOrOcelot(Entity entity) {
+        return isCat(entity)
+                || isOcelot(entity);
+    }
+
+    public static boolean isFoxCatOrOcelot(Entity entity) {
+        return isFox(entity)
+                || isCatOrOcelot(entity);
+    }
+
+    public static boolean isWolf(Entity entity) {
+        return isEntityPath(entity, "wolf");
+    }
+
+    public static boolean isDolphin(Entity entity) {
+        return isEntityPath(entity, "dolphin");
+    }
+
+    public static boolean isCamel(Entity entity) {
+        return isEntityPath(entity, "camel");
+    }
+
+    public static boolean isHoglin(Entity entity) {
+        return isEntityPath(entity, "hoglin");
+    }
+
+    public static boolean isVex(Entity entity) {
+        return isEntityPath(entity, "vex");
+    }
+
+    public static boolean isPassiveFoodPrey(LivingEntity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        return isPassiveFoodPreyPath(
+                getEntityTypePath(entity.getType())
+        );
+    }
+
+    public static boolean isFishEntity(LivingEntity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        return isFishEntityPath(
+                getEntityTypePath(entity.getType())
+        );
+    }
+
+    public static boolean isZombieHordeUndead(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+
+        String path = getEntityTypePath(entity.getType());
+
+        return path.equals("zombie")
+                || path.equals("zombie_villager")
+                || path.equals("husk")
+                || path.equals("drowned")
+                || path.equals("zombified_piglin");
     }
 
     public static boolean isPackSocialHunter(Entity entity) {
@@ -77,71 +176,129 @@ public final class RetoldMobRules {
     }
 
     public static boolean isCommanderSupport(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.COMMANDER_SUPPORT;
+        return hasProfile(entity, RetoldMobProfileType.COMMANDER_SUPPORT);
     }
 
     public static boolean isIllagerRaider(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.ILLAGER_RAIDER;
+        return hasProfile(entity, RetoldMobProfileType.ILLAGER_RAIDER);
     }
 
     public static boolean isSmallArthropodSwarm(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.SMALL_ARTHROPOD_SWARM;
+        return hasProfile(entity, RetoldMobProfileType.SMALL_ARTHROPOD_SWARM);
     }
 
     public static boolean isProtectiveNeutral(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.PROTECTIVE_NEUTRAL;
+        return hasProfile(entity, RetoldMobProfileType.PROTECTIVE_NEUTRAL);
     }
 
     public static boolean isPandaBamboo(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.PANDA_BAMBOO;
+        return hasProfile(entity, RetoldMobProfileType.PANDA_BAMBOO);
     }
 
     public static boolean isSnifferForager(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.SNIFFER_FORAGER;
+        return hasProfile(entity, RetoldMobProfileType.SNIFFER_FORAGER);
     }
 
     public static boolean isArmadilloDefensive(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.ARMADILLO_DEFENSIVE;
+        return hasProfile(entity, RetoldMobProfileType.ARMADILLO_DEFENSIVE);
     }
 
     public static boolean isTurtleBeach(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.TURTLE_BEACH;
+        return hasProfile(entity, RetoldMobProfileType.TURTLE_BEACH);
     }
 
     public static boolean isAmphibianForager(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.AMPHIBIAN_FORAGER;
+        return hasProfile(entity, RetoldMobProfileType.AMPHIBIAN_FORAGER);
     }
 
     public static boolean isAquaticHelperPredator(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.AQUATIC_HELPER_PREDATOR;
+        return hasProfile(entity, RetoldMobProfileType.AQUATIC_HELPER_PREDATOR);
+    }
+
+    public static boolean isHungryGrazer(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.HUNGRY_GRAZER);
+    }
+
+    public static boolean isSmallForager(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.SMALL_FORAGER);
+    }
+
+    public static boolean isPackPredator(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.PACK_PREDATOR);
+    }
+
+    public static boolean isSoloOpportunist(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.SOLO_OPPORTUNIST);
+    }
+
+    public static boolean isAquaticPredator(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.AQUATIC_PREDATOR);
+    }
+
+    public static boolean isHiveColony(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.HIVE_COLONY);
+    }
+
+    public static boolean isHungrySwarmPredator(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.HUNGRY_SWARM_PREDATOR);
+    }
+
+    public static boolean isSlimeHungry(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.SLIME_HUNGRY);
+    }
+
+    public static boolean isNetherHungry(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.NETHER_HUNGRY);
     }
 
     public static boolean isSpecialVanilla(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.SPECIAL_VANILLA;
+        return hasProfile(entity, RetoldMobProfileType.SPECIAL_VANILLA);
     }
 
     public static boolean isApexOrBoss(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.APEX_OR_BOSS;
+        return hasProfile(entity, RetoldMobProfileType.APEX_OR_BOSS);
     }
 
     public static boolean isSpecialUndead(Entity entity) {
-        RetoldMobProfileType type = profileType(entity);
+        return isPhantomStalker(entity)
+                || isGhastArtillery(entity)
+                || isZoglinRampager(entity);
+    }
 
-        return type == RetoldMobProfileType.PHANTOM_STALKER
-                || type == RetoldMobProfileType.GHAST_ARTILLERY
-                || type == RetoldMobProfileType.ZOGLIN_RAMPAGER;
+    public static boolean isSpecialProfile(Entity entity) {
+        return isSpecialVanilla(entity)
+                || isApexOrBoss(entity)
+                || isSpecialUndead(entity);
+    }
+
+    public static boolean shouldSkipOrdinaryLifeSystems(Entity entity) {
+        return entity == null
+                || isSpecialProfile(entity)
+                || isTerritoryGuard(entity)
+                || isCommanderSupport(entity)
+                || isIllagerRaider(entity);
+    }
+
+    public static boolean canUseOrdinaryLifeSystems(Entity entity) {
+        return isManagedMob(entity)
+                && !shouldSkipOrdinaryLifeSystems(entity);
+    }
+
+    public static boolean canUseOrdinaryPredatorSystems(Entity entity) {
+        return canUseOrdinaryLifeSystems(entity)
+                && isManagedPredator(entity);
     }
 
     public static boolean isPhantomStalker(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.PHANTOM_STALKER;
+        return hasProfile(entity, RetoldMobProfileType.PHANTOM_STALKER);
     }
 
     public static boolean isGhastArtillery(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.GHAST_ARTILLERY;
+        return hasProfile(entity, RetoldMobProfileType.GHAST_ARTILLERY);
     }
 
     public static boolean isZoglinRampager(Entity entity) {
-        return profileType(entity) == RetoldMobProfileType.ZOGLIN_RAMPAGER;
+        return hasProfile(entity, RetoldMobProfileType.ZOGLIN_RAMPAGER);
     }
 
     public static boolean shouldBlockVanillaPredatorTarget(
@@ -152,7 +309,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        if (!isManagedPredator(mob)) {
+        if (!canUseOrdinaryPredatorSystems(mob)) {
             return false;
         }
 
@@ -179,8 +336,92 @@ public final class RetoldMobRules {
         return RetoldMobProfiles.get(mob).eatThreshold();
     }
 
+    public static boolean hasEatDrive(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        if (mob == null || state == null) {
+            return false;
+        }
+
+        int threshold = eatThreshold(mob);
+
+        return hasHungerAtLeast(
+                state,
+                threshold
+        );
+    }
+
     public static int huntThreshold(PathfinderMob mob) {
         return RetoldMobProfiles.get(mob).huntThreshold();
+    }
+
+    public static boolean hasProfileHuntDrive(
+            PathfinderMob mob,
+            RetoldMobState state
+    ) {
+        if (mob == null || state == null) {
+            return false;
+        }
+
+        int threshold = huntThreshold(mob);
+
+        return hasHungerAtLeast(
+                state,
+                threshold
+        );
+    }
+
+    public static boolean hasHungerAtLeast(
+            RetoldMobState state,
+            int threshold
+    ) {
+        return state != null
+                && threshold <= 100
+                && state.hunger() >= threshold;
+    }
+
+    public static RetoldHungerStage hungerStage(RetoldMobState state) {
+        if (state == null) {
+            return RetoldHungerStage.FULL;
+        }
+
+        return RetoldHungerStage.fromHunger(state.hunger());
+    }
+
+    public static boolean isAtLeastHungerStage(
+            RetoldMobState state,
+            RetoldHungerStage stage
+    ) {
+        return hungerStage(state).isAtLeast(stage);
+    }
+
+    public static boolean hasEasyFoodDrive(RetoldMobState state) {
+        return isAtLeastHungerStage(
+                state,
+                RetoldHungerStage.EASY_FOOD
+        );
+    }
+
+    public static boolean hasActiveSearchDrive(RetoldMobState state) {
+        return isAtLeastHungerStage(
+                state,
+                RetoldHungerStage.ACTIVE_SEARCH
+        );
+    }
+
+    public static boolean hasRiskyFoodDrive(RetoldMobState state) {
+        return isAtLeastHungerStage(
+                state,
+                RetoldHungerStage.RISKY_FOOD
+        );
+    }
+
+    public static boolean hasDesperateFoodDrive(RetoldMobState state) {
+        return isAtLeastHungerStage(
+                state,
+                RetoldHungerStage.DESPERATE
+        );
     }
 
     public static boolean hasHuntDrive(
@@ -191,22 +432,23 @@ public final class RetoldMobRules {
             return false;
         }
 
-        if (!isManagedPredator(mob)) {
+        if (!canUseOrdinaryPredatorSystems(mob)) {
             return false;
         }
 
-        int hunger = state.hunger();
-
-        if (hunger >= DESPERATE_HUNT_HUNGER) {
+        if (hasDesperateFoodDrive(state)) {
             return true;
         }
 
         long gameTime = mob.level().getGameTime();
 
-        return hunger >= adjustedHuntThreshold(
-                mob,
+        return hasHungerAtLeast(
                 state,
-                gameTime
+                adjustedHuntThreshold(
+                        mob,
+                        state,
+                        gameTime
+                )
         );
     }
 
@@ -230,7 +472,7 @@ public final class RetoldMobRules {
     ) {
         int threshold = huntThreshold(mob);
 
-        if (!isManagedPredator(mob)) {
+        if (!canUseOrdinaryPredatorSystems(mob)) {
             return threshold;
         }
 
@@ -254,7 +496,7 @@ public final class RetoldMobRules {
         );
 
         return Math.min(
-                DESPERATE_HUNT_HUNGER,
+                RetoldHungerStage.DESPERATE.minInclusive(),
                 Math.max(
                         threshold,
                         threshold + confidencePenalty + stressPenalty + outcomeAdjustment
@@ -494,19 +736,19 @@ public final class RetoldMobRules {
             return preyPath.equals("sheep")
                     || preyPath.equals("rabbit")
                     || preyPath.equals("chicken")
-                    || isFishEntity(preyPath);
+                    || isFishEntityPath(preyPath);
         }
 
         if (hunterPath.equals("fox")) {
             return preyPath.equals("chicken")
                     || preyPath.equals("rabbit")
-                    || isFishEntity(preyPath);
+                    || isFishEntityPath(preyPath);
         }
 
         if (hunterPath.equals("cat") || hunterPath.equals("ocelot")) {
             return preyPath.equals("rabbit")
                     || preyPath.equals("chicken")
-                    || isFishEntity(preyPath)
+                    || isFishEntityPath(preyPath)
                     || preyPath.equals("phantom");
         }
 
@@ -515,12 +757,12 @@ public final class RetoldMobRules {
              * No villager/player spider hunting in this food layer.
              * Combat behavior comes later.
              */
-            return isPassiveFoodPrey(preyPath)
-                    || isFishEntity(preyPath);
+            return isPassiveFoodPreyPath(preyPath)
+                    || isFishEntityPath(preyPath);
         }
 
         if (hunterPath.equals("dolphin")) {
-            return isFishEntity(preyPath);
+            return isFishEntityPath(preyPath);
         }
 
         return false;
@@ -535,7 +777,7 @@ public final class RetoldMobRules {
 
         return path.equals("rabbit")
                 || path.equals("chicken")
-                || isFishEntity(path);
+                || isFishEntityPath(path);
     }
 
     public static boolean isWolfEnemyButNotFood(LivingEntity entity) {
@@ -579,7 +821,7 @@ public final class RetoldMobRules {
         return RetoldMobProfiles.isType(path, RetoldMobProfileType.SLIME_HUNGRY);
     }
 
-    private static boolean isPassiveFoodPrey(String path) {
+    private static boolean isPassiveFoodPreyPath(String path) {
         return path.equals("cow")
                 || path.equals("sheep")
                 || path.equals("pig")
@@ -594,7 +836,7 @@ public final class RetoldMobRules {
                 || path.equals("camel");
     }
 
-    private static boolean isFishEntity(String path) {
+    private static boolean isFishEntityPath(String path) {
         return path.equals("cod")
                 || path.equals("salmon")
                 || path.equals("tropical_fish")

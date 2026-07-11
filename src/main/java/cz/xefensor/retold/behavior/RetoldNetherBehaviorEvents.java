@@ -21,7 +21,7 @@ public final class RetoldNetherBehaviorEvents {
     private static final int THINK_INTERVAL_TICKS = 14;
 
     private static final int REMNANT_ATTACK_CONTROL_TICKS = 20 * 4;
-    private static final int REMNANT_ATTACK_PRIORITY = 72;
+    private static final int REMNANT_ATTACK_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 3);
 
     private static final double UNDEAD_PRESSURE_RADIUS_BLOCKS = 26.0D;
     private static final double UNDEAD_PRESSURE_RADIUS_SQUARED =
@@ -35,7 +35,7 @@ public final class RetoldNetherBehaviorEvents {
     private static final int FORAGE_SEARCH_VERTICAL_RADIUS = 4;
 
     private static final int FOOD_SEARCH_CONTROL_TICKS = 20 * 5;
-    private static final int FOOD_SEARCH_PRIORITY = 52;
+    private static final int FOOD_SEARCH_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 3);
 
     private static final double PIGLIN_FOOD_SEARCH_SPEED = 0.74D;
     private static final double HOGLIN_FOOD_SEARCH_SPEED = 0.78D;
@@ -117,11 +117,14 @@ public final class RetoldNetherBehaviorEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 remnant,
                 target,
-                RetoldTargetSource.FACTION_COMBAT
-        );
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldAiControlOwner.COMBAT
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             remnant.getNavigation().moveTo(
@@ -219,7 +222,7 @@ public final class RetoldNetherBehaviorEvents {
             return false;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(candidate, RetoldFaction.UNDEAD)) {
+        if (!RetoldFactionMembers.isUndead(candidate)) {
             return false;
         }
 
@@ -232,7 +235,8 @@ public final class RetoldNetherBehaviorEvents {
     }
 
     private static boolean isNetherHungryLife(PathfinderMob mob) {
-        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.NETHER_HUNGRY;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isNetherHungry(mob);
     }
 
     private static void handleNetherFoodSearch(
@@ -302,7 +306,10 @@ public final class RetoldNetherBehaviorEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(mob);
+        return RetoldMobRules.hasEatDrive(
+                mob,
+                state
+        );
     }
 
     private static ItemEntity findBestDroppedFood(
@@ -474,7 +481,7 @@ public final class RetoldNetherBehaviorEvents {
     }
 
     private static double foodSearchSpeed(PathfinderMob mob) {
-        return RetoldMobRules.isEntityPath(mob, "hoglin")
+        return RetoldMobRules.isHoglin(mob)
                 ? HOGLIN_FOOD_SEARCH_SPEED
                 : PIGLIN_FOOD_SEARCH_SPEED;
     }

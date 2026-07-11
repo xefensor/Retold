@@ -84,6 +84,20 @@ public final class RetoldBehaviorCombat {
         );
     }
 
+    public static boolean applyAttackTargetOrClearOwner(
+            Mob mob,
+            LivingEntity target,
+            RetoldTargetSource source,
+            RetoldAiControlOwner owner
+    ) {
+        if (applyAttackTarget(mob, target, source)) {
+            return true;
+        }
+
+        RetoldAiControl.clearIfOwnedBy(mob, owner);
+        return false;
+    }
+
     public static void clearAttackControlIfOwned(
             Mob mob,
             LivingEntity target,

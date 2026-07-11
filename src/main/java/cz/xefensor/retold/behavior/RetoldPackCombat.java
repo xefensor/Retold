@@ -30,7 +30,10 @@ final class RetoldPackCombat {
 
         leader.setSprinting(true);
 
-        RetoldBehaviorTargets.setTargetAndAggression(leader, prey, true);
+        if (!RetoldBehaviorTargets.setTargetAndAggression(leader, prey, true)) {
+            RetoldPackControl.clearIfOwned(leader);
+            return;
+        }
 
         leader.getLookControl().setLookAt(
                 prey,

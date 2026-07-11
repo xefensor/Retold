@@ -19,11 +19,11 @@ public final class RetoldSoloOpportunistHomeEvents {
 
     private static final int THINK_INTERVAL_TICKS = 40;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
-    private static final int HOME_RETURN_PRIORITY = 18;
-    private static final int CACHE_RETURN_PRIORITY = 20;
-    private static final int AFTER_HUNT_RETURN_PRIORITY = 19;
+    private static final int HOME_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 3);
+    private static final int CACHE_RETURN_PRIORITY = RetoldAiPriorities.REGROUP;
+    private static final int AFTER_HUNT_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 4);
     private static final int HOME_IDLE_CONTROL_TICKS = 20 * 5;
-    private static final int HOME_IDLE_PRIORITY = 10;
+    private static final int HOME_IDLE_PRIORITY = RetoldAiPriorities.HOME_IDLE;
     private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 22;
     private static final int PANIC_RECOVERY_TICKS = 20 * 18;
     private static final int AFTER_HUNT_RETURN_TICKS = 20 * 45;
@@ -318,7 +318,7 @@ public final class RetoldSoloOpportunistHomeEvents {
     }
 
     private static boolean shouldReturnToCacheHeldFood(PathfinderMob animal) {
-        if (!RetoldMobRules.isEntityPath(animal, "fox")) {
+        if (!RetoldMobRules.isFox(animal)) {
             return false;
         }
 
@@ -329,9 +329,7 @@ public final class RetoldSoloOpportunistHomeEvents {
             PathfinderMob animal,
             long gameTime
     ) {
-        if (!RetoldMobRules.isEntityPath(animal, "fox")
-                && !RetoldMobRules.isEntityPath(animal, "cat")
-                && !RetoldMobRules.isEntityPath(animal, "ocelot")) {
+        if (!RetoldMobRules.isFoxCatOrOcelot(animal)) {
             return false;
         }
 
@@ -346,7 +344,7 @@ public final class RetoldSoloOpportunistHomeEvents {
             PathfinderMob animal,
             long gameTime
     ) {
-        if (!RetoldMobRules.isEntityPath(animal, "fox")) {
+        if (!RetoldMobRules.isFox(animal)) {
             return false;
         }
 
@@ -355,7 +353,10 @@ public final class RetoldSoloOpportunistHomeEvents {
                 gameTime
         );
 
-        if (state.hunger() >= RetoldMobRules.eatThreshold(animal)) {
+        if (RetoldMobRules.hasEatDrive(
+                animal,
+                state
+        )) {
             return false;
         }
 
@@ -456,6 +457,7 @@ public final class RetoldSoloOpportunistHomeEvents {
         return mob != null
                 && mob.isAlive()
                 && !mob.isRemoved()
-                && RetoldMobRules.profileType(mob) == RetoldMobProfileType.SOLO_OPPORTUNIST;
+                && RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isSoloOpportunist(mob);
     }
 }

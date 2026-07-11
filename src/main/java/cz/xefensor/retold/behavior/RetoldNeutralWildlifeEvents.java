@@ -14,7 +14,7 @@ import java.util.List;
 public final class RetoldNeutralWildlifeEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
     private static final int DEFENSE_CONTROL_TICKS = 20 * 4;
-    private static final int DEFENSE_PRIORITY = 68;
+    private static final int DEFENSE_PRIORITY = RetoldAiPriorities.DEFENSE;
 
     private static final double CUB_SCAN_RADIUS_BLOCKS = 16.0D;
     private static final double CUB_SCAN_RADIUS_SQUARED =
@@ -318,7 +318,13 @@ public final class RetoldNeutralWildlifeEvents {
             PathfinderMob protector,
             LivingEntity target
     ) {
-        RetoldBehaviorTargets.setTargetAndAggression(protector, target, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
+                protector,
+                target,
+                RetoldAiControlOwner.NEUTRAL_WILDLIFE
+        )) {
+            return;
+        }
 
         protector.getLookControl().setLookAt(
                 target,

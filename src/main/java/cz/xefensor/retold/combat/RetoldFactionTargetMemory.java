@@ -3,6 +3,8 @@ package cz.xefensor.retold.combat;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -122,6 +124,20 @@ public final class RetoldFactionTargetMemory {
         return Arrays.asList(sources).contains(ownership.source);
     }
 
+    public static String debugOwnershipText(Mob mob) {
+        TargetOwnership ownership = TARGET_OWNERS.get(mob);
+
+        if (ownership == null) {
+            return "none";
+        }
+
+        LivingEntity currentTarget = mob == null ? null : mob.getTarget();
+        LivingEntity brainTarget = mob == null ? null : RetoldAiTargets.getBrainAttackTargetSafely(mob);
+        String targetState = targetStateText(ownership, currentTarget, brainTarget);
+
+        return ownership.source + ":" + targetState + ":" + entityText(ownership.target);
+    }
+
     public static void cleanupTargetState(Mob mob) {
         if (mob == null) {
             return;
@@ -135,11 +151,11 @@ public final class RetoldFactionTargetMemory {
         }
 
         LivingEntity currentTarget = mob.getTarget();
+        LivingEntity brainTarget = RetoldAiTargets.getBrainAttackTargetSafely(mob);
 
         if (
-                currentTarget == ownership.target
-                        && currentTarget != null
-                        && RetoldAiTargets.isValidAssignmentTarget(mob, currentTarget)
+                isCurrentOwnedTarget(mob, ownership, currentTarget)
+                        || isCurrentOwnedTarget(mob, ownership, brainTarget)
         ) {
             return;
         }
@@ -150,7 +166,7 @@ public final class RetoldFactionTargetMemory {
         clearIdleIllagerAggression(mob);
     }
 
-    public static void clearTargetReferences(
+    public static void clearTargetOwnership(
             Mob mob,
             LivingEntity target
     ) {
@@ -163,9 +179,6 @@ public final class RetoldFactionTargetMemory {
         if (ownership != null && ownership.target == target) {
             TARGET_OWNERS.remove(mob);
         }
-
-        RetoldAiTargets.clearTargetAndAggression(mob, target, false);
-        clearIdleIllagerAggression(mob);
     }
 
     private static void clearOwnedTarget(
@@ -184,6 +197,36 @@ public final class RetoldFactionTargetMemory {
 
         RetoldAiTargets.clearPiglinBrainTargetIfPresent(mob, target);
         clearIdleIllagerAggression(mob);
+    }
+
+    private static boolean isCurrentOwnedTarget(
+            Mob mob,
+            TargetOwnership ownership,
+            LivingEntity target
+    ) {
+        return target == ownership.target
+                && target != null
+                && RetoldAiTargets.isValidAssignmentTarget(mob, target);
+    }
+
+    private static String targetStateText(
+            TargetOwnership ownership,
+            LivingEntity currentTarget,
+            LivingEntity brainTarget
+    ) {
+        if (currentTarget == ownership.target && brainTarget == ownership.target) {
+            return "current+brain";
+        }
+
+        if (currentTarget == ownership.target) {
+            return "current";
+        }
+
+        if (brainTarget == ownership.target) {
+            return "brain";
+        }
+
+        return "stale";
     }
 
     private static boolean shouldBlockDuringTerritoryWarning(
@@ -209,11 +252,11 @@ public final class RetoldFactionTargetMemory {
             Mob mob,
             LivingEntity target
     ) {
-        RetoldAiTargets.clearTargetAndAggression(mob, target, true);
+        RetoldCombatTargets.clearTargetReferencesAndAggression(mob, target, true);
     }
 
     private static void clearIdleIllagerAggression(Mob mob) {
-        if (!RetoldFactionMembers.isMemberOf(mob, RetoldFaction.ILLAGERS)) {
+        if (!RetoldFactionMembers.isIllager(mob)) {
             return;
         }
 
@@ -221,7 +264,16 @@ public final class RetoldFactionTargetMemory {
             return;
         }
 
-        mob.setAggressive(false);
+        RetoldAiTargets.setAggression(mob, false);
+    }
+
+    private static String entityText(LivingEntity entity) {
+        if (entity == null) {
+            return "none";
+        }
+
+        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        return id.getPath() + "#" + entity.getId();
     }
 
     private static final class TargetOwnership {

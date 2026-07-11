@@ -15,8 +15,8 @@ public final class RetoldAxolotlHelperEvents {
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
 
-    private static final int HUNT_PRIORITY = 48;
-    private static final int RETURN_PRIORITY = 24;
+    private static final int HUNT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 3);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
     private static final int WATER_RANGE_SEARCH_HORIZONTAL_RADIUS = 14;
     private static final int WATER_RANGE_SEARCH_VERTICAL_RADIUS = 5;
@@ -228,7 +228,10 @@ public final class RetoldAxolotlHelperEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.huntThreshold(axolotl);
+        return RetoldMobRules.hasProfileHuntDrive(
+                axolotl,
+                state
+        );
     }
 
     private static LivingEntity findBestPrey(
@@ -345,7 +348,13 @@ public final class RetoldAxolotlHelperEvents {
             PathfinderMob axolotl,
             LivingEntity prey
     ) {
-        RetoldBehaviorTargets.setTargetAndAggression(axolotl, prey, true);
+        if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
+                axolotl,
+                prey,
+                RetoldAiControlOwner.AQUATIC_HELPER
+        )) {
+            return;
+        }
 
         axolotl.getLookControl().setLookAt(
                 prey,
@@ -497,7 +506,7 @@ public final class RetoldAxolotlHelperEvents {
 
         return axolotl.distanceToSqr(prey) <= GUARDIAN_SEARCH_RADIUS_SQUARED
                 && state.confidence() >= 45
-                && state.hunger() >= 66;
+                && RetoldMobRules.hasRiskyFoodDrive(state);
     }
 
     private static boolean isLowHealth(PathfinderMob axolotl) {

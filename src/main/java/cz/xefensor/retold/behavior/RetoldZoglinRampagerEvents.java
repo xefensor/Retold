@@ -16,7 +16,7 @@ import java.util.List;
 public final class RetoldZoglinRampagerEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
     private static final int RAMPAGE_CONTROL_TICKS = 20 * 4;
-    private static final int RAMPAGE_PRIORITY = 74;
+    private static final int RAMPAGE_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 1);
 
     private static final double TARGET_SEARCH_RADIUS_BLOCKS = 24.0D;
     private static final double TARGET_SEARCH_RADIUS_SQUARED =
@@ -126,7 +126,7 @@ public final class RetoldZoglinRampagerEvents {
                 score -= 16.0D;
             }
 
-            if (RetoldFactionMembers.isMemberOf(candidate, RetoldFaction.UNDEAD)) {
+            if (RetoldFactionMembers.isUndead(candidate)) {
                 score += 90.0D;
             }
 
@@ -159,11 +159,14 @@ public final class RetoldZoglinRampagerEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 zoglin,
                 target,
-                RetoldTargetSource.FACTION_COMBAT
-        );
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldAiControlOwner.SPECIAL_UNDEAD
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             zoglin.getNavigation().moveTo(

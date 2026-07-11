@@ -361,14 +361,16 @@ public final class RetoldControlledRegroupEvents {
     }
 
     private static boolean isRegroupAnimal(PathfinderMob mob) {
-        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
-
-        return profileType == RetoldMobProfileType.HUNGRY_GRAZER
-                || profileType == RetoldMobProfileType.SMALL_FORAGER;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && (
+                RetoldMobRules.isHungryGrazer(mob)
+                        || RetoldMobRules.isSmallForager(mob)
+        );
     }
 
     private static boolean isLooseGroupAnimal(PathfinderMob mob) {
-        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.SMALL_FORAGER;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isSmallForager(mob);
     }
 
     private static double getRegroupStartDistanceSquared(PathfinderMob animal) {

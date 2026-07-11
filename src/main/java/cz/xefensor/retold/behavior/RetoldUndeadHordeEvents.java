@@ -16,9 +16,7 @@ import java.util.List;
 public final class RetoldUndeadHordeEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
     private static final int HORDE_CONTROL_TICKS = 20 * 4;
-    private static final int HORDE_PRIORITY = 58;
-
-    private static final int ACTIVE_HORDE_HUNGER = 41;
+    private static final int HORDE_PRIORITY = RetoldAiPriorities.FACTION_PRESSURE;
 
     private static final double TARGET_SHARE_RADIUS_BLOCKS = 22.0D;
     private static final double TARGET_SHARE_RADIUS_SQUARED =
@@ -105,13 +103,7 @@ public final class RetoldUndeadHordeEvents {
     }
 
     private static boolean isZombieHordeUndead(PathfinderMob mob) {
-        String path = RetoldMobRules.getEntityTypePath(mob.getType());
-
-        return path.equals("zombie")
-                || path.equals("zombie_villager")
-                || path.equals("husk")
-                || path.equals("drowned")
-                || path.equals("zombified_piglin");
+        return RetoldMobRules.isZombieHordeUndead(mob);
     }
 
     private static boolean canAdoptHordeTarget(PathfinderMob undead) {
@@ -138,7 +130,7 @@ public final class RetoldUndeadHordeEvents {
                 gameTime
         );
 
-        return state.hunger() >= ACTIVE_HORDE_HUNGER;
+        return RetoldMobRules.hasActiveSearchDrive(state);
     }
 
     private static LivingEntity findSharedHordeTarget(
@@ -286,7 +278,7 @@ public final class RetoldUndeadHordeEvents {
             return false;
         }
 
-        if (RetoldFactionMembers.isMemberOf(target, RetoldFaction.UNDEAD)) {
+        if (RetoldFactionMembers.isUndead(target)) {
             return false;
         }
 
@@ -353,12 +345,6 @@ public final class RetoldUndeadHordeEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
-                undead,
-                target,
-                RetoldTargetSource.FACTION_ASSIST
-        );
-
         if (!RetoldBehaviorCombat.claimAttackControl(
                 undead,
                 RetoldAiControlOwner.UNDEAD_HORDE,
@@ -366,6 +352,15 @@ public final class RetoldUndeadHordeEvents {
                 "undead_horde",
                 gameTime,
                 HORDE_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
+                undead,
+                target,
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldAiControlOwner.UNDEAD_HORDE
         )) {
             return;
         }

@@ -1,6 +1,8 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -102,7 +104,14 @@ final class RetoldGuardianAlertController {
         }
 
         if (guardian.hasLineOfSight(player)) {
-            RetoldAiTargets.setTargetAndAggression(guardian, player, true);
+            if (!RetoldCombatTargets.applyAttackTarget(
+                    guardian,
+                    player,
+                    RetoldTargetSource.FACTION_ASSIST
+            )) {
+                removeAlert(guardian.getUUID());
+                return;
+            }
         } else if (guardian.getTarget() == player) {
             RetoldAiTargets.setTargetAndAggression(guardian, null, false);
         }
@@ -130,7 +139,14 @@ final class RetoldGuardianAlertController {
         );
 
         if (guardian.hasLineOfSight(player)) {
-            RetoldAiTargets.setTargetAndAggression(guardian, player, true);
+            if (!RetoldCombatTargets.applyAttackTarget(
+                    guardian,
+                    player,
+                    RetoldTargetSource.FACTION_ASSIST
+            )) {
+                removeAlert(guardian.getUUID());
+                return;
+            }
         }
 
         moveGuardianTowardAlertTarget(level, guardian, player, pathSpeed);

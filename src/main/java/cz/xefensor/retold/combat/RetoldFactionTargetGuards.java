@@ -79,16 +79,6 @@ public final class RetoldFactionTargetGuards {
         }
     }
 
-    public static void setTargetIgnoringWarning(
-            Mob mob,
-            LivingEntity target
-    ) {
-        setTargetIgnoringGuard(
-                mob,
-                target
-        );
-    }
-
     public static void setAggressiveIgnoringGuard(
             Mob mob,
             boolean aggressive
@@ -105,16 +95,6 @@ public final class RetoldFactionTargetGuards {
         } finally {
             IGNORE_AGGRESSIVE_GUARD.set(previous);
         }
-    }
-
-    public static void setAggressiveIgnoringWarning(
-            Mob mob,
-            boolean aggressive
-    ) {
-        setAggressiveIgnoringGuard(
-                mob,
-                aggressive
-        );
     }
 
     public static boolean shouldBlockAggressiveState(
@@ -146,7 +126,7 @@ public final class RetoldFactionTargetGuards {
             return false;
         }
 
-        if (!RetoldFactionMembers.isMemberOf(piglin, RetoldFaction.NETHER_REMNANTS)) {
+        if (!RetoldFactionMembers.isNetherRemnant(piglin)) {
             return false;
         }
 

@@ -13,7 +13,6 @@ public final class RetoldTerritoryMobState {
     public LivingEntity attackTarget;
 
     public boolean hasStartedAttack;
-    public boolean firedPreparedWarningShot;
     public int warningPulses;
 
     public long nextWarningPulseAt;

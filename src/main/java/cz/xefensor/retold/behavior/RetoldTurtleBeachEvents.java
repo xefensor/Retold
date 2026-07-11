@@ -16,8 +16,8 @@ public final class RetoldTurtleBeachEvents {
     private static final int THINK_INTERVAL_TICKS = 20;
     private static final int CONTROL_TICKS = 20 * 5;
 
-    private static final int FLEE_PRIORITY = 74;
-    private static final int RETURN_PRIORITY = 24;
+    private static final int FLEE_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 1);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
     private static final int BEACH_SEARCH_HORIZONTAL_RADIUS = 12;
     private static final int BEACH_SEARCH_VERTICAL_RADIUS = 4;

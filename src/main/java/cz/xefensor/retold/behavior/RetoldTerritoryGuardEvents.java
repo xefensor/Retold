@@ -23,7 +23,7 @@ public final class RetoldTerritoryGuardEvents {
 
     private static final int THINK_INTERVAL_TICKS = 20;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
-    private static final int RETURN_PRIORITY = 95;
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.TERRITORY;
     private static final int DYNAMIC_POST_UPDATE_INTERVAL_TICKS = 20 * 30;
     private static final int STATIC_ANCHOR_REPAIR_INTERVAL_TICKS = 20 * 45;
 
@@ -438,6 +438,7 @@ public final class RetoldTerritoryGuardEvents {
         RetoldFactionTargetMemory.clearTargetIfOwnedByAny(
                 guard,
                 target,
+                RetoldTargetSource.BEHAVIOR_COMBAT,
                 RetoldTargetSource.FACTION_ASSIST,
                 RetoldTargetSource.FACTION_COMBAT,
                 RetoldTargetSource.TERRITORY_ATTACK,

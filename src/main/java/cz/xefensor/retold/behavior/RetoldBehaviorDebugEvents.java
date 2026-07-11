@@ -1,5 +1,6 @@
 package cz.xefensor.retold.behavior;
 
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.territory.RetoldTerritoryDebug;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -51,6 +52,10 @@ public final class RetoldBehaviorDebugEvents {
                         .then(
                                 Commands.literal("toggle")
                                         .executes(RetoldBehaviorDebugEvents::toggleDebug)
+                                        .then(
+                                                Commands.literal("overlay")
+                                                        .executes(RetoldBehaviorDebugEvents::toggleDebug)
+                                        )
                         )
                         .then(
                                 Commands.literal("get")
@@ -1018,16 +1023,19 @@ public final class RetoldBehaviorDebugEvents {
             long gameTime
     ) {
         RetoldMobState state = RetoldMobStates.get(mob);
+        RetoldMobIdentity identity = RetoldMobIdentity.of(
+                mob,
+                state
+        );
         RetoldAiControlMode controlMode = RetoldAiControl.getMode(mob);
-        RetoldMobProfileType profileType = RetoldMobRules.profileType(mob);
         RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
-
-        boolean managed = RetoldMobRules.isManagedMob(mob);
-        boolean predator = RetoldMobRules.isManagedPredator(mob);
 
         String hunger = state == null
                 ? "-"
                 : Integer.toString(state.hunger());
+        String hungerStage = state == null
+                ? "-"
+                : identity.hungerStage().name();
 
         String target = mob.getTarget() == null
                 ? "none"
@@ -1038,24 +1046,29 @@ public final class RetoldBehaviorDebugEvents {
                 gameTime
         );
 
-        String thresholds = managed
+        String thresholds = identity.managed()
                 ? " eat@" + RetoldMobRules.eatThreshold(mob) + " hunt@" + getSafeHuntThresholdText(mob, state)
                 : "";
 
         return "Retold "
                 + getEntityName(mob)
                 + " h=" + hunger
+                + "/" + hungerStage
                 + thresholds
-                + " profile=" + profileType
+                + " profile=" + identity.profileType()
+                + " faction=" + identity.factionText()
                 + " home=" + shortHomeText(home)
                 + " guardPost=" + shortGuardPostText(mob)
                 + " warning=" + RetoldTerritoryDebug.shortWarningText(mob, gameTime)
                 + " rhythm=" + rhythmText(mob)
                 + " ctrl=" + controlMode
                 + controlReasonText(mob)
-                + " managed=" + yesNo(managed)
-                + " pred=" + yesNo(predator)
+                + " managed=" + yesNo(identity.managed())
+                + " pred=" + yesNo(identity.predator())
+                + " ordinaryLife=" + yesNo(RetoldMobRules.canUseOrdinaryLifeSystems(mob))
+                + " ordinaryPred=" + yesNo(RetoldMobRules.canUseOrdinaryPredatorSystems(mob))
                 + " target=" + target
+                + " owner=" + RetoldFactionTargetMemory.debugOwnershipText(mob)
                 + " prey=" + preyDecision;
     }
 
@@ -1067,20 +1080,29 @@ public final class RetoldBehaviorDebugEvents {
                 mob,
                 gameTime
         );
+        RetoldMobIdentity identity = RetoldMobIdentity.of(
+                mob,
+                state
+        );
 
         LivingEntity target = mob.getTarget();
         RetoldAnimalHomeMemory home = RetoldAnimalHomes.get(mob);
 
         return "\nRetold behavior debug"
                 + "\nMob: " + getEntityName(mob) + " #" + mob.getId()
-                + "\nProfile: " + RetoldMobRules.profileType(mob)
+                + "\nSpecies: " + identity.species()
+                + "\nProfile: " + identity.profileType()
+                + "\nFaction: " + identity.factionText()
                 + "\nHome: " + fullHomeText(mob, home, gameTime)
                 + "\nGuard post: " + RetoldTerritoryGuardEvents.debugPostText(mob)
                 + "\n" + RetoldTerritoryDebug.fullWarningText(mob, gameTime)
                 + "\nRhythm: " + rhythmText(mob)
-                + "\nManaged: " + yesNo(RetoldMobRules.isManagedMob(mob))
-                + "\nPredator: " + yesNo(RetoldMobRules.isManagedPredator(mob))
+                + "\nManaged: " + yesNo(identity.managed())
+                + "\nPredator: " + yesNo(identity.predator())
+                + "\nOrdinary life systems: " + yesNo(RetoldMobRules.canUseOrdinaryLifeSystems(mob))
+                + "\nOrdinary predator systems: " + yesNo(RetoldMobRules.canUseOrdinaryPredatorSystems(mob))
                 + "\nHunger: " + state.hunger()
+                + "\nHunger stage: " + identity.hungerStage()
                 + "\nEat threshold: " + RetoldMobRules.eatThreshold(mob)
                 + "\nHunt threshold: " + getSafeBaseHuntThreshold(mob)
                 + "\nAdjusted hunt threshold: " + getSafeAdjustedHuntThreshold(mob, state)
@@ -1090,6 +1112,8 @@ public final class RetoldBehaviorDebugEvents {
                 + "\nControl: " + RetoldAiControl.getMode(mob)
                 + "\nControl owner: " + RetoldAiControl.getOwner(mob)
                 + "\nControl priority: " + RetoldAiControl.getPriority(mob)
+                + " (" + RetoldAiPriorities.describe(RetoldAiControl.getPriority(mob)) + ")"
+                + "\nTarget owner: " + RetoldFactionTargetMemory.debugOwnershipText(mob)
                 + "\nControl reason: " + safeControlReason(mob)
                 + "\nLast ate: " + ticksAgoText(gameTime, state.lastAteAt())
                 + "\nLast danger: " + ticksAgoText(gameTime, state.lastDangerAt())
@@ -1145,6 +1169,7 @@ public final class RetoldBehaviorDebugEvents {
             text.append(" h=").append(hungerText(mob));
             text.append(" mode=").append(RetoldAiControl.getMode(mob));
             text.append(" target=").append(targetText(mob.getTarget()));
+            text.append(" owner=").append(RetoldFactionTargetMemory.debugOwnershipText(mob));
             text.append(" prey=").append(RetoldPreyTargeting.shortMobRulePreyDecision(
                     mob,
                     mob.getTarget(),
@@ -1306,7 +1331,7 @@ public final class RetoldBehaviorDebugEvents {
             return "-";
         }
 
-        return Integer.toString(state.hunger());
+        return state.hunger() + "/" + RetoldMobRules.hungerStage(state).name();
     }
 
     private static String targetText(LivingEntity target) {

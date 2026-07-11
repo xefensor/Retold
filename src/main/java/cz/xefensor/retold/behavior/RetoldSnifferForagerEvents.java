@@ -20,8 +20,8 @@ public final class RetoldSnifferForagerEvents {
     private static final int SEARCH_CONTROL_TICKS = 20 * 7;
     private static final int RETURN_CONTROL_TICKS = 20 * 7;
 
-    private static final int SEARCH_PRIORITY = 28;
-    private static final int RETURN_PRIORITY = 24;
+    private static final int SEARCH_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.SEARCH, 2);
+    private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
     private static final int RANGE_SEARCH_HORIZONTAL_RADIUS = 18;
     private static final int RANGE_SEARCH_VERTICAL_RADIUS = 4;
@@ -308,7 +308,10 @@ public final class RetoldSnifferForagerEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(sniffer)
+        return RetoldMobRules.hasEatDrive(
+                sniffer,
+                state
+        )
                 || state.stress() > 35;
     }
 

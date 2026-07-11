@@ -21,8 +21,8 @@ public final class RetoldHiveColonyEvents {
     private static final int FLOWER_CONTROL_TICKS = 20 * 5;
     private static final int DEFENSE_CONTROL_TICKS = 20 * 4;
 
-    private static final int FLOWER_SEARCH_PRIORITY = 54;
-    private static final int DEFENSE_PRIORITY = 68;
+    private static final int FLOWER_SEARCH_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 1);
+    private static final int DEFENSE_PRIORITY = RetoldAiPriorities.DEFENSE;
 
     private static final double FLOWER_SEARCH_RADIUS_BLOCKS = 18.0D;
     private static final double FLOWER_SEARCH_RADIUS_SQUARED =
@@ -100,7 +100,8 @@ public final class RetoldHiveColonyEvents {
     }
 
     private static boolean isHiveBee(PathfinderMob mob) {
-        return RetoldMobRules.profileType(mob) == RetoldMobProfileType.HIVE_COLONY;
+        return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
+                && RetoldMobRules.isHiveColony(mob);
     }
 
     private static boolean shouldThink(
@@ -269,11 +270,14 @@ public final class RetoldHiveColonyEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 bee,
                 target,
-                RetoldTargetSource.FACTION_ASSIST
-        );
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldAiControlOwner.HIVE_COLONY
+        )) {
+            return;
+        }
 
         RetoldAiControl.withNavigationBypass(() -> {
             bee.getNavigation().moveTo(
@@ -357,7 +361,10 @@ public final class RetoldHiveColonyEvents {
                 gameTime
         );
 
-        return state.hunger() >= RetoldMobRules.eatThreshold(bee);
+        return RetoldMobRules.hasEatDrive(
+                bee,
+                state
+        );
     }
 
     private static BlockPos findBestFlower(

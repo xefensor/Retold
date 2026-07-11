@@ -239,7 +239,7 @@ public final class RetoldTerritoryTargetSelector {
             return true;
         }
 
-        return RetoldFactionMembers.isMemberOf(target, RetoldFaction.PLAYER);
+        return RetoldFactionMembers.isPlayer(target);
     }
 
     private static boolean canTriggerTerritoryWarning(

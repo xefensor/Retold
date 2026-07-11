@@ -16,7 +16,7 @@ import java.util.List;
 public final class RetoldPhantomStalkerEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
     private static final int STALK_CONTROL_TICKS = 20 * 5;
-    private static final int STALK_PRIORITY = 64;
+    private static final int STALK_PRIORITY = RetoldAiPriorities.SPECIAL_STALK;
 
     private static final double TARGET_SEARCH_RADIUS_BLOCKS = 42.0D;
     private static final double TARGET_SEARCH_RADIUS_SQUARED =
@@ -129,7 +129,7 @@ public final class RetoldPhantomStalkerEvents {
                 score -= 120.0D;
             }
 
-            if (RetoldFactionMembers.isMemberOf(candidate, RetoldFaction.UNDEAD)) {
+            if (RetoldFactionMembers.isUndead(candidate)) {
                 score += 300.0D;
             }
 
@@ -166,11 +166,14 @@ public final class RetoldPhantomStalkerEvents {
             return;
         }
 
-        RetoldBehaviorCombat.applyAttackTarget(
+        if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 phantom,
                 target,
-                RetoldTargetSource.FACTION_COMBAT
-        );
+                RetoldTargetSource.FACTION_COMBAT,
+                RetoldAiControlOwner.SPECIAL_UNDEAD
+        )) {
+            return;
+        }
     }
 
     private static boolean canAcquireTarget(

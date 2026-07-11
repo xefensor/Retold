@@ -21,12 +21,13 @@ public final class RetoldTerritoryController {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        RetoldTerritoryContext territoryContext = RetoldTerritoryDetector.getContextAt(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.getMatchingContext(
                 level,
-                mob.blockPosition()
+                mob,
+                config
         );
 
-        if (territoryContext == null || territoryContext.faction() != config.faction) {
+        if (territoryContext == null) {
             clearStateOnly(mob, state, gameTime);
             return;
         }
@@ -214,14 +215,14 @@ public final class RetoldTerritoryController {
             return;
         }
 
-        if (state.territoryContext == null || state.territoryContext.faction() != config.faction) {
-            state.territoryContext = RetoldTerritoryDetector.getContextAt(
-                    level,
-                    mob.blockPosition()
-            );
-        }
+        state.territoryContext = RetoldTerritoryRules.refreshMatchingContext(
+                state.territoryContext,
+                level,
+                mob,
+                config
+        );
 
-        if (state.territoryContext == null || state.territoryContext.faction() != config.faction) {
+        if (state.territoryContext == null) {
             RetoldWarningPose.stopWarningPose(mob);
             return;
         }
@@ -285,7 +286,6 @@ public final class RetoldTerritoryController {
         state.warningTarget = target;
         state.attackTarget = null;
         state.hasStartedAttack = false;
-        state.firedPreparedWarningShot = false;
         state.finalWarningStartedAt = -1L;
         state.warningPulses = 0;
         state.nextWarningPulseAt = gameTime;
@@ -318,7 +318,6 @@ public final class RetoldTerritoryController {
             long gameTime
     ) {
         state.hasStartedAttack = false;
-        state.firedPreparedWarningShot = false;
         state.finalWarningStartedAt = -1L;
         state.attackTarget = null;
         state.warningTarget = null;

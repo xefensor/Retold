@@ -43,7 +43,10 @@ public final class RetoldHeldFoodConsumptionEvents {
                 gameTime
         );
 
-        if (state.hunger() < RetoldMobRules.eatThreshold(mob)) {
+        if (!RetoldMobRules.hasEatDrive(
+                mob,
+                state
+        )) {
             return;
         }
 
@@ -84,7 +87,7 @@ public final class RetoldHeldFoodConsumptionEvents {
     }
 
     private static boolean shouldCarryHeldFoodHome(PathfinderMob mob) {
-        if (!RetoldMobRules.isEntityPath(mob, "fox")) {
+        if (!RetoldMobRules.isFox(mob)) {
             return false;
         }
 

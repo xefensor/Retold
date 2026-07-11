@@ -1,6 +1,8 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.monster.ElderGuardian;
@@ -60,7 +62,13 @@ final class RetoldGuardianDefenseAssist {
                 gameTime
         );
 
-        RetoldAiTargets.setTargetAndAggression(guardian, attacker, true);
+        if (!RetoldCombatTargets.applyAttackTarget(
+                guardian,
+                attacker,
+                RetoldTargetSource.FACTION_ASSIST
+        )) {
+            return;
+        }
 
         RetoldGuardianAlertController.alertNearby(
                 level,

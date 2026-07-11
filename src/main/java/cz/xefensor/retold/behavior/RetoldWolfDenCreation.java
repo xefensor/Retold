@@ -178,9 +178,6 @@ final class RetoldWolfDenCreation {
     }
 
     private static boolean isWolf(PathfinderMob mob) {
-        return RetoldMobRules.isEntityPath(
-                mob,
-                "wolf"
-        );
+        return RetoldMobRules.isWolf(mob);
     }
 }

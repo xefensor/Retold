@@ -1,6 +1,7 @@
 package cz.xefensor.retold.client;
 
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
+import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.sky.RetoldClientEndSky;
@@ -11,7 +12,6 @@ import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.RandomSource;
 import net.minecraft.client.renderer.entity.EndermanRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
-import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
@@ -40,7 +40,7 @@ public final class RetoldClientEvents {
     private static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(
                 RetoldEntityTypes.AENDER_EYE.get(),
-                context -> new ThrownItemRenderer<>(context, 1.8F, true)
+                RetoldAenderEyeRenderer::new
         );
     }
 

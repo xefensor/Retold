@@ -156,12 +156,7 @@ public final class RetoldPreyTargeting {
             return false;
         }
 
-        String path = RetoldMobRules.getEntityTypePath(entity.getType());
-
-        return path.equals("cod")
-                || path.equals("salmon")
-                || path.equals("tropical_fish")
-                || path.equals("pufferfish");
+        return RetoldMobRules.isFishEntity(entity);
     }
 
     public static boolean isSquidPrey(LivingEntity entity) {
