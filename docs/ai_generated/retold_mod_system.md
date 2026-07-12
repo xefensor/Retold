@@ -161,10 +161,10 @@ Current ritual model:
 - The dragon egg crack overlay reflects offered element count.
 - When all four `RetoldElementType` values are offered, the egg is removed and Stage 3 starts.
 
-Temporary/dev behavior:
+Current limitation:
 
-- `nether_star` is still present as a temporary shortcut for hatching until all element paths exist.
 - Only `water_element` has a real item/challenge path right now; fire, earth, and air exist in the enum but do not yet have completed acquisition paths.
+- Because the temporary Nether Star shortcut has been removed, normal survival cannot reach Stage 3 until the remaining element paths are implemented.
 
 End crystal behavior:
 
@@ -814,7 +814,8 @@ Suggested validation passes:
 - start a new world and confirm Stage 1
 - kill dragon and confirm Stage 2
 - offer `water_element` to dragon egg and confirm ritual state
-- complete/shortcut egg ritual and confirm Stage 3
+- confirm `nether_star` does not hatch the dragon egg
+- after all element paths exist, complete the egg ritual and confirm Stage 3
 - verify End portal redirects to Aender at Stage 3
 - place and break Aender stabilizers and confirm forcefield/stability behavior
 - test chronolith start/stop/logout/block break
@@ -861,7 +862,6 @@ Do not:
 These are areas to keep an eye on during future work:
 
 - `Retold.java` has many event registrations and imports; grouping by subsystem would improve readability later.
-- Some temporary progression behavior remains, especially the `nether_star` dragon egg shortcut.
 - Recipe/advancement overrides under `data/minecraft` are broad and should be reviewed carefully when Minecraft updates.
 - Mixins touch several sensitive vanilla systems; version updates need focused regression tests.
 - AI performance is improved but should continue to be checked with `/retoldbehavior perf`.

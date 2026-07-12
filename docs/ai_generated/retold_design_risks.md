@@ -10,7 +10,6 @@ AI agents: before implementing anything here, read [`README.md`](README.md), [`r
 | --- | --- | --- |
 | Aender | Lava placement ban is planned but no implementation was found. | Search found Aender water flow/weather hooks, but no lava bucket/fluid placement blocker. |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
-| Progression | `nether_star` dragon egg hatching shortcut is development-only. | Remove when real element paths exist. |
 | Elements | Only water has a real element item/challenge path. | Fire, earth, and air exist in `RetoldElementType` but need real acquisition paths. |
 | Aender | 8:1 Overworld travel scaling is planned but not implemented. | Current portal destination is fixed near Aender spawn. |
 | Aender | Aender teleportation and late-game rewards are planned but not implemented. | Needs design before code. |

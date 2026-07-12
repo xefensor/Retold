@@ -23,15 +23,14 @@ Retold is still built around:
 These are the strongest next design-aligned areas:
 
 1. Finish the four-element progression model.
-2. Replace the `nether_star` dragon egg shortcut with real element completion.
-3. Add missing fire, earth, and air element item/challenge paths.
-4. Decide whether Stage 1 needs Wither/Nether star End portal activation.
-5. Implement Aender 8:1 Overworld travel scaling.
-6. Implement the Aender lava placement ban.
-7. Add Aender teleportation and late-game travel/building rewards.
-8. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, fossils, sniffers, and endermites.
-9. Add village reputation for stealing, crop breaking, and animal killing.
-10. Continue AI validation and performance profiling against real loaded-mob tests.
+2. Add missing fire, earth, and air element item/challenge paths.
+3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
+4. Implement Aender 8:1 Overworld travel scaling.
+5. Implement the Aender lava placement ban.
+6. Add Aender teleportation and late-game travel/building rewards.
+7. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, fossils, sniffers, and endermites.
+8. Add village reputation for stealing, crop breaking, and animal killing.
+9. Continue AI validation and performance profiling against real loaded-mob tests.
 
 ## Planned Systems
 

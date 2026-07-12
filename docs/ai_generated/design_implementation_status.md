@@ -71,7 +71,6 @@ Largest missing or partial design areas:
 
 - full four-element progression
 - non-water element bosses/temples
-- removing the temporary nether star egg shortcut
 - deciding Stage 1 Nether star / Wither End portal activation
 - Aender late-game rewards and teleportation system
 - Aender 8:1 travel scaling
@@ -115,10 +114,10 @@ Largest missing or partial design areas:
 | Three world stages | Implemented | `RetoldWorldStage`, `RetoldWorldData`, `RetoldStageManager`, `/retold stage`. |
 | Stage 1 mostly vanilla | Partial | Stage 1 is default. Some Retold systems still run globally, such as recipe knowledge and AI. |
 | Stage 1 requires diamond pickaxe/Nether portal | Not implemented | No explicit Retold gating found. Vanilla rules apply unless affected elsewhere. |
-| Stage 1 wither/Nether star required before End | Deferred/TBD | Maintainer is undecided. Current code has End progression and a nether star dragon egg shortcut, not End portal activation gating. |
+| Stage 1 wither/Nether star required before End | Deferred/TBD | Maintainer is undecided. Current code has End progression, not End portal activation gating. |
 | Stage 1 Ender Dragon kill advances to Stage 2 | Implemented | `RetoldEndProgressionEvents.onServerTickPost` checks dragon kill and calls `RetoldStageManager.setStage(...STAGE_2)`. |
 | Stage 2 requires four classical elements | Partial | Still planned. `RetoldElementType` has water, fire, earth, and air. Only the water item/path is implemented. Elements should be doable in any order. |
-| Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts element items and hatches when all four enum elements are offered. Only water can currently be acquired through a real path, with nether star shortcut still present. |
+| Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts element items and hatches when all four enum elements are offered. Only water can currently be acquired through a real path, and the temporary Nether Star shortcut has been removed. |
 | Stage 3 starts after hatching egg | Implemented | `RetoldStageManager.setStage(...STAGE_3)` in egg hatch flow. |
 | Stage 3 Aender replaces End | Partial | Overworld End portal redirects to Aender and players are ejected from vanilla End. Vanilla End intentionally still exists for command access to old builds. |
 | Stage 3 Overworld easier / undead gone | Partial | Current design only requires undead/zombified piglin removal for now. Undead natural/spawner spawn is blocked and existing undead are cleansed. |

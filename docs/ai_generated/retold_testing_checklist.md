@@ -4,13 +4,35 @@
 
 AI agents: when a feature changes, add or update the relevant checks here. Do not mark a design item complete only because code exists; verify the in-game behavior when the row depends on gameplay feel, worldgen, rendering, or AI timing. If a test fails, add or update the bug in [`retold_known_issues.md`](retold_known_issues.md). If a test exposes a missing planned feature or ambiguous design, update [`retold_design_risks.md`](retold_design_risks.md).
 
+## Verified Release Smoke Tests
+
+### 2026-07-12 Alpha Spine Smoke Test
+
+Maintainer-reported status: passed before the Nether Star dragon egg shortcut was removed.
+
+Verified path:
+
+- Fresh world starts in Stage 1.
+- Dragon kill advances to Stage 2.
+- Stage 2 syncs after relog / multiplayer join.
+- Water element can be obtained.
+- Dragon egg accepts water element and persists that state.
+- Temporary Nether Star shortcut hatched the egg at the time of testing.
+- Stage 3 starts.
+- Players in vanilla End are ejected.
+- Overworld End portal sends player to Aender.
+- Aender loads, saves, and survives restart.
+
+Follow-up: rerun this smoke test after fire, earth, and air element paths are implemented, because Stage 3 no longer has a temporary survival shortcut.
+
 ## Stage Progression
 
 - Start a fresh world and confirm default stage is Stage 1 with `/retold stage get`.
 - Kill the Ender Dragon and confirm the world advances to Stage 2.
 - Confirm Stage 2 sync reaches clients without reconnecting.
 - Use the dragon egg ritual with `water_element` and confirm the offered element state is saved.
-- Confirm `nether_star` still hatches the egg only as development shortcut behavior.
+- Confirm `nether_star` does not hatch the egg.
+- After fire, earth, and air element paths exist, offer all four elements and confirm the egg hatches.
 - Confirm Stage 3 starts after the egg hatch path.
 - Confirm players in vanilla End are ejected when Stage 3 begins.
 - Confirm Overworld End portal travel goes to Aender in Stage 3.

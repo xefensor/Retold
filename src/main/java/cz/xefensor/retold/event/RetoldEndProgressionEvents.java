@@ -83,32 +83,6 @@ public final class RetoldEndProgressionEvents {
             handleElementUse(event, serverLevel, data, stack, element);
             return;
         }
-
-        // Temporary dev shortcut until all four element paths exist.
-        if (!stack.is(Items.NETHER_STAR)) {
-            return;
-        }
-
-        if (data.getStage() != RetoldWorldStage.STAGE_2) {
-            Player player = event.getEntity();
-
-            player.sendOverlayMessage(
-                    Component.literal("The egg does not respond.")
-            );
-
-            return;
-        }
-
-        Player player = event.getEntity();
-
-        if (!player.isCreative()) {
-            stack.shrink(1);
-        }
-
-        hatchDragonEgg(serverLevel, event.getPos());
-
-        event.setCancellationResult(InteractionResult.SUCCESS);
-        event.setCanceled(true);
     }
 
     private static void handleElementUse(

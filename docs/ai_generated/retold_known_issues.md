@@ -8,6 +8,8 @@ AI agents: before fixing a bug here, read [`README.md`](README.md), check the ow
 
 No confirmed bugs are currently documented here.
 
+Latest release-blocker smoke test: the 2026-07-12 alpha spine check passed per maintainer report before the Nether Star dragon egg shortcut was removed, so no bug entries were added. Rerun the Stage 2 to Stage 3 path after the missing element paths are implemented.
+
 When adding a bug, include:
 
 - affected area
