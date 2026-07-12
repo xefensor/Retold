@@ -13,6 +13,7 @@ import cz.xefensor.retold.territory.RetoldTerritoryReputationDebugEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
+import cz.xefensor.retold.worldgen.air.AirTempleWindEvents;
 import cz.xefensor.retold.worldgen.delayed.*;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.registry.RetoldEntityEvents;
@@ -73,6 +74,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldPlayerSyncEvents.class);
         NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
         NeoForge.EVENT_BUS.register(RetoldWorldSpawnCache.class);
+        NeoForge.EVENT_BUS.register(AirTempleWindEvents.class);
 
         NeoForge.EVENT_BUS.register(RetoldChunkEditEvents.class);
         NeoForge.EVENT_BUS.register(RetoldDelayedStructureRetrogen.class);

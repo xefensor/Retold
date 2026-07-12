@@ -128,6 +128,8 @@ Wind should push, redirect, or destabilize entities. It should not feel like ran
 
 Wind stops when the boss dies.
 
+Current implementation note: the placeholder Air Temple uses many deterministic horizontal gust cells spread across the temple area instead of fixed lanes. Each gust slot rerolls to a new random-looking position and direction on a slow rhythm, and some slots become inactive for a window so wind appears and disappears without becoming chaotic. Gust volumes are biased around the temple floor height so they can knock players off the islands. The zones emit directional cloud particles along their current push vector. Horizontal wind traces upwind for solid blocks, so a placed block protects the whole row behind it in that wind direction. Particles use the same cover check, so protected rows show no particles. Runtime wind sources are cached from nearby structure starts and from newly generated temple pieces. Players receive an explicit velocity packet when wind pushes them so the effect is visible to the client.
+
 ## Enemies
 
 Breezes are normal temple enemies.

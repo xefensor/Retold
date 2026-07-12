@@ -75,6 +75,8 @@ public class AirTemplePiece extends StructurePiece {
             ChunkPos chunkPos,
             BlockPos referencePos
     ) {
+        AirTempleWindEvents.rememberGeneratedTemple(centerX, centerZ, islandY);
+
         generateCrater(level, chunkBB);
         generateMainIsland(level, chunkBB);
         generateSatellite(level, chunkBB, centerX + 28, centerZ + 6, islandY - 2, 7);
