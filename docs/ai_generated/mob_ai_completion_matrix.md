@@ -7,6 +7,9 @@ profiles in `RetoldMobProfiles`, factions in `RetoldFactionMembers` and territor
 
 Full design and technical architecture: [`retold_mob_ai_system.md`](retold_mob_ai_system.md).
 Whole-mod architecture reference: [`retold_mod_system.md`](retold_mod_system.md).
+General testing checklist: [`retold_testing_checklist.md`](retold_testing_checklist.md).
+Design risks: [`retold_design_risks.md`](retold_design_risks.md).
+Known bugs: [`retold_known_issues.md`](retold_known_issues.md).
 
 ## Global Rules
 

@@ -8,6 +8,10 @@ This document describes the current Retold mob AI design and the technical struc
 It is meant to be the main reference before adding behavior, debugging behavior, or doing more performance work.
 
 Whole-mod architecture reference: [`retold_mod_system.md`](retold_mod_system.md).
+Mob AI completion checklist: [`mob_ai_completion_matrix.md`](mob_ai_completion_matrix.md).
+General in-game verification checklist: [`retold_testing_checklist.md`](retold_testing_checklist.md).
+Design risks: [`retold_design_risks.md`](retold_design_risks.md).
+Known bugs: [`retold_known_issues.md`](retold_known_issues.md).
 
 ## Goals
 

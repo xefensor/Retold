@@ -10,6 +10,10 @@ For the dedicated mob AI design and technical reference, see [`retold_mob_ai_sys
 
 For the original-design versus current-implementation tracker, see [`design_implementation_status.md`](design_implementation_status.md).
 
+For active priorities and maintainer direction, see [`retold_roadmap.md`](retold_roadmap.md).
+
+For design risks, confirmed bugs, and in-game verification, see [`retold_design_risks.md`](retold_design_risks.md), [`retold_known_issues.md`](retold_known_issues.md), and [`retold_testing_checklist.md`](retold_testing_checklist.md).
+
 ## Mod Shape
 
 Minecraft Retold is not one isolated feature. It is a progression, world, AI, and recipe overhaul built around staged world changes.
@@ -31,6 +35,10 @@ The core ideas are:
 - mobs use Retold faction/territory/behavior systems
 - torch weather and extinguished torch blocks add environmental pressure
 - client visuals are synchronized for stage, sky, teaching UI, and chronolith beams
+
+## Design Direction Source
+
+Active design direction lives in [`retold_roadmap.md`](retold_roadmap.md). This architecture doc focuses on how the current code is organized and which subsystem owns each behavior.
 
 ## Entry Point
 
@@ -148,6 +156,7 @@ Current ritual model:
 - Dragon kill advances the world to Stage 2.
 - In Stage 2, the dragon egg accepts element items.
 - `water_element` is the currently implemented element item.
+- Element acquisition order should be free; no element path should require being completed first unless the maintainer changes the design.
 - Offered elements are saved in `RetoldWorldData`.
 - The dragon egg crack overlay reflects offered element count.
 - When all four `RetoldElementType` values are offered, the egg is removed and Stage 3 starts.
@@ -193,6 +202,7 @@ Access behavior:
 - Stage 3 redirects Overworld End portal use into `retold:aender`.
 - Players in vanilla End are ejected when Stage 3 begins.
 - Aender entry position is fixed near `0.5, 8.0, 0.5`.
+- Vanilla End remains technically available through commands by design, so old player builds are not permanently inaccessible.
 
 Generation behavior:
 
