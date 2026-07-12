@@ -7,7 +7,6 @@ import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -16,6 +15,8 @@ import java.util.List;
 
 public final class RetoldCommanderSupportEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int SUPPORT_SCAN_CACHE_TICKS = 6;
+    private static final int SUPPORT_PATH_INTERVAL_TICKS = 8;
     private static final int SUPPORT_CONTROL_TICKS = 20 * 3;
     private static final int SUPPORT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.SUPPORT, 3);
 
@@ -116,21 +117,23 @@ public final class RetoldCommanderSupportEvents {
             ServerLevel level,
             PathfinderMob support
     ) {
-        AABB area = support.getBoundingBox().inflate(ALLY_SEARCH_RADIUS_BLOCKS);
-
-        List<PathfinderMob> allies = level.getEntitiesOfClass(
+        List<PathfinderMob> allies = RetoldAiScanCache.nearby(
+                level,
+                support,
                 PathfinderMob.class,
-                area,
-                ally -> isValidSupportAlly(
-                        support,
-                        ally
-                )
+                ALLY_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SUPPORT_SCAN_CACHE_TICKS
         );
 
         SupportContext best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob ally : allies) {
+            if (!isValidSupportAlly(support, ally)) {
+                continue;
+            }
+
             LivingEntity target = ally.getTarget();
 
             if (!isValidSupportTarget(support, target)) {
@@ -149,7 +152,7 @@ public final class RetoldCommanderSupportEvents {
                 score -= 28.0D;
             }
 
-            if (ally.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(ally, target, level.getGameTime())) {
                 score -= 12.0D;
             }
 
@@ -262,14 +265,16 @@ public final class RetoldCommanderSupportEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            support.getNavigation().moveTo(
-                    desired.x,
-                    desired.y,
-                    desired.z,
-                    SUPPORT_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                support,
+                desired.x,
+                desired.y,
+                desired.z,
+                SUPPORT_SPEED,
+                gameTime,
+                SUPPORT_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static Vec3 desiredSupportPosition(

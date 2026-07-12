@@ -1,13 +1,21 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.faction.RetoldFaction;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PathfinderMob;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 public final class RetoldTerritoryMobState {
     public RetoldTerritoryContext territoryContext;
+    public long nextTerritoryContextRecheckAt;
+
+    public List<PathfinderMob> nearbyFactionMobs = List.of();
+    public RetoldFaction nearbyFactionMobsFaction;
+    public long nextNearbyFactionMobsRecheckAt;
 
     public LivingEntity warningTarget;
     public LivingEntity attackTarget;

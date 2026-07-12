@@ -3,13 +3,14 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 final class RetoldWolfDenCreation {
+    private static final int WOLF_DEN_CREATION_SCAN_CACHE_TICKS = 10;
+
     private static final double WOLF_PASSIVE_DEN_RADIUS_BLOCKS = 18.0D;
     private static final double WOLF_PASSIVE_DEN_RADIUS_SQUARED =
             WOLF_PASSIVE_DEN_RADIUS_BLOCKS * WOLF_PASSIVE_DEN_RADIUS_BLOCKS;
@@ -26,18 +27,15 @@ final class RetoldWolfDenCreation {
             return null;
         }
 
-        AABB area = wolf.getBoundingBox().inflate(WOLF_PASSIVE_DEN_RADIUS_BLOCKS);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = new ArrayList<>(RetoldAiScanCache.nearby(
+                level,
+                wolf,
                 PathfinderMob.class,
-                area,
-                candidate -> isPassiveDenCandidate(
-                        level,
-                        wolf,
-                        candidate,
-                        gameTime
-                )
-        );
+                WOLF_PASSIVE_DEN_RADIUS_BLOCKS,
+                gameTime,
+                WOLF_DEN_CREATION_SCAN_CACHE_TICKS
+        ));
+        candidates.removeIf(candidate -> !isPassiveDenCandidate(level, wolf, candidate, gameTime));
 
         if (candidates.isEmpty()) {
             return null;

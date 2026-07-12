@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -18,6 +17,8 @@ public final class RetoldControlledFleeEvents {
     private static final Map<PathfinderMob, FleeMemory> FLEE_MEMORIES = new WeakHashMap<>();
 
     private static final int FLEE_THINK_INTERVAL_TICKS = 8;
+    private static final int FLEE_SCAN_CACHE_TICKS = 4;
+    private static final int FLEE_PATH_INTERVAL_TICKS = 6;
     private static final int FLEE_CONTROL_TICKS = 20 * 3;
 
     /*
@@ -229,22 +230,23 @@ public final class RetoldControlledFleeEvents {
             PathfinderMob prey,
             long gameTime
     ) {
-        AABB area = prey.getBoundingBox().inflate(ACTIVE_THREAT_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                prey,
                 LivingEntity.class,
-                area,
-                candidate -> isValidThreat(
-                        prey,
-                        candidate,
-                        gameTime
-                )
+                ACTIVE_THREAT_RADIUS_BLOCKS,
+                gameTime,
+                FLEE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestThreat = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidThreat(prey, candidate, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = prey.distanceToSqr(candidate);
 
             if (distanceSquared > ACTIVE_THREAT_RADIUS_SQUARED) {
@@ -271,7 +273,7 @@ public final class RetoldControlledFleeEvents {
                 }
             }
 
-            if (prey.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(prey, candidate, gameTime)) {
                 score -= 16.0D;
             }
 
@@ -322,15 +324,15 @@ public final class RetoldControlledFleeEvents {
         }
 
         if (threatMob.getTarget() == prey) {
-            return canSenseThreat(prey, threatMob);
+            return canSenseThreat(prey, threatMob, gameTime);
         }
 
         if (RetoldAiControl.isControlledAs(threatMob, RetoldAiControlMode.HUNT)) {
-            return canSenseThreat(prey, threatMob);
+            return canSenseThreat(prey, threatMob, gameTime);
         }
 
         if (RetoldAiControl.isControlledAs(threatMob, RetoldAiControlMode.ATTACK)) {
-            return canSenseThreat(prey, threatMob);
+            return canSenseThreat(prey, threatMob, gameTime);
         }
 
         /*
@@ -351,18 +353,19 @@ public final class RetoldControlledFleeEvents {
             return false;
         }
 
-        return canSenseThreat(prey, threatMob);
+        return canSenseThreat(prey, threatMob, gameTime);
     }
 
     private static boolean canSenseThreat(
             PathfinderMob prey,
-            LivingEntity threat
+            LivingEntity threat,
+            long gameTime
     ) {
         double distanceSquared = prey.distanceToSqr(threat);
 
         if (
                 distanceSquared <= SIGHT_RADIUS_SQUARED
-                        && prey.hasLineOfSight(threat)
+                        && RetoldAiSightCache.canSee(prey, threat, gameTime)
         ) {
             return true;
         }
@@ -382,22 +385,23 @@ public final class RetoldControlledFleeEvents {
             PathfinderMob prey,
             long gameTime
     ) {
-        AABB area = prey.getBoundingBox().inflate(HERD_PANIC_RADIUS_BLOCKS);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = RetoldAiScanCache.nearby(
+                level,
+                prey,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidHerdPanicSource(
-                        prey,
-                        candidate,
-                        gameTime
-                )
+                HERD_PANIC_RADIUS_BLOCKS,
+                gameTime,
+                FLEE_SCAN_CACHE_TICKS
         );
 
         PathfinderMob bestSource = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob candidate : candidates) {
+            if (!isValidHerdPanicSource(prey, candidate, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = prey.distanceToSqr(candidate);
 
             if (distanceSquared > HERD_PANIC_RADIUS_SQUARED) {
@@ -410,7 +414,7 @@ public final class RetoldControlledFleeEvents {
                 score -= 18.0D;
             }
 
-            if (prey.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(prey, candidate, gameTime)) {
                 score -= 10.0D;
             }
 
@@ -472,19 +476,21 @@ public final class RetoldControlledFleeEvents {
 
         return canSensePanicSource(
                 prey,
-                candidate
+                candidate,
+                gameTime
         );
     }
 
     private static boolean canSensePanicSource(
             PathfinderMob prey,
-            PathfinderMob panicSource
+            PathfinderMob panicSource,
+            long gameTime
     ) {
         double distanceSquared = prey.distanceToSqr(panicSource);
 
         if (
                 distanceSquared <= HERD_PANIC_SIGHT_RADIUS_SQUARED
-                        && prey.hasLineOfSight(panicSource)
+                        && RetoldAiSightCache.canSee(prey, panicSource, gameTime)
         ) {
             return true;
         }
@@ -831,14 +837,14 @@ public final class RetoldControlledFleeEvents {
         BlockPos finalTargetPos = targetPos;
         double finalSpeed = speed;
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            prey.getNavigation().moveTo(
-                    finalTargetPos.getX() + 0.5D,
-                    finalTargetPos.getY(),
-                    finalTargetPos.getZ() + 0.5D,
-                    finalSpeed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                prey,
+                finalTargetPos,
+                finalSpeed,
+                gameTime,
+                FLEE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static boolean hideAtWarrenIfReached(

@@ -12,6 +12,8 @@ import java.util.List;
 
 public final class RetoldPandaBambooEvents {
     private static final int THINK_INTERVAL_TICKS = 20;
+    private static final int PANDA_SCAN_CACHE_TICKS = 10;
+    private static final int BAMBOO_BLOCK_SEARCH_CACHE_TICKS = 35;
     private static final int FEED_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 6;
 
@@ -209,15 +211,21 @@ public final class RetoldPandaBambooEvents {
             ServerLevel level,
             PathfinderMob panda
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                panda,
                 PathfinderMob.class,
-                panda.getBoundingBox().inflate(GROVE_MEMBER_SEARCH_RADIUS_BLOCKS),
+                GROVE_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                PANDA_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != panda
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         panda,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static LivingEntity findThreat(PathfinderMob panda) {
@@ -411,35 +419,14 @@ public final class RetoldPandaBambooEvents {
             ServerLevel level,
             PathfinderMob panda
     ) {
-        BlockPos center = panda.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -BAMBOO_SEARCH_HORIZONTAL_RADIUS; dx <= BAMBOO_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -BAMBOO_SEARCH_VERTICAL_RADIUS; dy <= BAMBOO_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -BAMBOO_SEARCH_HORIZONTAL_RADIUS; dz <= BAMBOO_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isBamboo(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.4D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findBamboo(
+                level,
+                panda,
+                BAMBOO_SEARCH_HORIZONTAL_RADIUS,
+                BAMBOO_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                BAMBOO_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isBambooGrove(

@@ -5,7 +5,6 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -13,6 +12,8 @@ import java.util.List;
 
 public final class RetoldNeutralWildlifeEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
+    private static final int NEUTRAL_SCAN_CACHE_TICKS = 6;
+    private static final int NEUTRAL_PATH_INTERVAL_TICKS = 6;
     private static final int DEFENSE_CONTROL_TICKS = 20 * 4;
     private static final int DEFENSE_PRIORITY = RetoldAiPriorities.DEFENSE;
 
@@ -108,15 +109,13 @@ public final class RetoldNeutralWildlifeEvents {
             ServerLevel level,
             PathfinderMob protector
     ) {
-        AABB cubArea = protector.getBoundingBox().inflate(CUB_SCAN_RADIUS_BLOCKS);
-
-        List<PathfinderMob> cubs = level.getEntitiesOfClass(
+        List<PathfinderMob> cubs = RetoldAiScanCache.nearby(
+                level,
+                protector,
                 PathfinderMob.class,
-                cubArea,
-                candidate -> isNearbyPolarBearCub(
-                        protector,
-                        candidate
-                )
+                CUB_SCAN_RADIUS_BLOCKS,
+                level.getGameTime(),
+                NEUTRAL_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestThreat = null;
@@ -125,6 +124,10 @@ public final class RetoldNeutralWildlifeEvents {
         LivingEntity protectorAttacker = protector.getLastHurtByMob();
 
         for (PathfinderMob cub : cubs) {
+            if (!isNearbyPolarBearCub(protector, cub)) {
+                continue;
+            }
+
             LivingEntity cubAttacker = cub.getLastHurtByMob();
 
             bestThreat = chooseBetterThreat(
@@ -151,15 +154,18 @@ public final class RetoldNeutralWildlifeEvents {
                 bestScore = threatScore(protector, cub, protectorAttacker);
             }
 
-            for (LivingEntity candidate : level.getEntitiesOfClass(
+            for (LivingEntity candidate : RetoldAiScanCache.nearby(
+                    level,
+                    cub,
                     LivingEntity.class,
-                    cub.getBoundingBox().inflate(CUB_THREAT_RADIUS_BLOCKS),
-                    candidate -> isValidCubProximityThreat(
-                            protector,
-                            cub,
-                            candidate
-                    )
+                    CUB_THREAT_RADIUS_BLOCKS,
+                    level.getGameTime(),
+                    NEUTRAL_SCAN_CACHE_TICKS
             )) {
+                if (!isValidCubProximityThreat(protector, cub, candidate)) {
+                    continue;
+                }
+
                 double score = threatScore(
                         protector,
                         cub,
@@ -218,8 +224,8 @@ public final class RetoldNeutralWildlifeEvents {
         }
 
         if (candidate instanceof Player) {
-            return protector.hasLineOfSight(candidate)
-                    || cub.hasLineOfSight(candidate)
+            return RetoldAiSightCache.canSee(protector, candidate, protector.level().getGameTime())
+                    || RetoldAiSightCache.canSee(cub, candidate, cub.level().getGameTime())
                     || cub.distanceToSqr(candidate) <= 16.0D;
         }
 
@@ -235,16 +241,20 @@ public final class RetoldNeutralWildlifeEvents {
             ServerLevel level,
             PathfinderMob protector
     ) {
-        AABB area = protector.getBoundingBox().inflate(CUB_SCAN_RADIUS_BLOCKS);
-
-        return !level.getEntitiesOfClass(
+        for (PathfinderMob candidate : RetoldAiScanCache.nearby(
+                level,
+                protector,
                 PathfinderMob.class,
-                area,
-                candidate -> isNearbyPolarBearCub(
-                        protector,
-                        candidate
-                )
-        ).isEmpty();
+                CUB_SCAN_RADIUS_BLOCKS,
+                level.getGameTime(),
+                NEUTRAL_SCAN_CACHE_TICKS
+        )) {
+            if (isNearbyPolarBearCub(protector, candidate)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static boolean isNearbyPolarBearCub(
@@ -289,7 +299,8 @@ public final class RetoldNeutralWildlifeEvents {
 
         moveToDefenseTarget(
                 protector,
-                target
+                target,
+                gameTime
         );
     }
 
@@ -310,13 +321,15 @@ public final class RetoldNeutralWildlifeEvents {
 
         moveToDefenseTarget(
                 protector,
-                target
+                target,
+                gameTime
         );
     }
 
     private static void moveToDefenseTarget(
             PathfinderMob protector,
-            LivingEntity target
+            LivingEntity target,
+            long gameTime
     ) {
         if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
                 protector,
@@ -332,12 +345,14 @@ public final class RetoldNeutralWildlifeEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            protector.getNavigation().moveTo(
-                    target,
-                    POLAR_BEAR_DEFENSE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                protector,
+                target,
+                POLAR_BEAR_DEFENSE_SPEED,
+                gameTime,
+                NEUTRAL_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void stopDefense(PathfinderMob protector) {
@@ -392,7 +407,7 @@ public final class RetoldNeutralWildlifeEvents {
             score -= 60.0D;
         }
 
-        if (protector.hasLineOfSight(candidate)) {
+        if (RetoldAiSightCache.canSee(protector, candidate, protector.level().getGameTime())) {
             score -= 10.0D;
         }
 

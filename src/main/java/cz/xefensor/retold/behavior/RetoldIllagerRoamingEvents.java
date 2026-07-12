@@ -10,7 +10,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -23,6 +22,7 @@ public final class RetoldIllagerRoamingEvents {
     private static final Map<PathfinderMob, RoamMemory> ROAM_MEMORIES = new WeakHashMap<>();
 
     private static final int THINK_INTERVAL_TICKS = 30;
+    private static final int ROAM_SCAN_CACHE_TICKS = 10;
     private static final int ROAM_CONTROL_TICKS = 20 * 8;
     private static final int ROAM_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
 
@@ -161,16 +161,19 @@ public final class RetoldIllagerRoamingEvents {
             ServerLevel level,
             PathfinderMob raider
     ) {
-        AABB area = raider.getBoundingBox().inflate(VILLAGE_ENTITY_SIGNAL_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                raider,
                 LivingEntity.class,
-                area,
-                candidate -> isVillageSignalEntity(raider, candidate)
+                VILLAGE_ENTITY_SIGNAL_RADIUS_BLOCKS,
+                level.getGameTime(),
+                ROAM_SCAN_CACHE_TICKS
         );
 
-        if (!candidates.isEmpty()) {
-            return true;
+        for (LivingEntity candidate : candidates) {
+            if (isVillageSignalEntity(raider, candidate)) {
+                return true;
+            }
         }
 
         return hasBellNearby(

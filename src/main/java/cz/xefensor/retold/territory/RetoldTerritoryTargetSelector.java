@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.behavior.RetoldAiScanCache;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -21,26 +22,38 @@ public final class RetoldTerritoryTargetSelector {
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryConfig config,
+            RetoldTerritoryMobState state,
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 LivingEntity.class,
-                mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
-                target -> isPossibleIntruder(level, mob, target, config, gameTime)
-                        && canSeeTarget(mob, target)
+                RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_NEARBY_INTRUDER_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (
+                    !isPossibleIntruder(level, mob, candidate, config, gameTime)
+                            || !canSeeTarget(mob, candidate)
+            ) {
+                continue;
+            }
+
             int focusCount = RetoldWarningMovement.countNearbyFactionMobsFocusedOn(
                     level,
                     mob,
                     config,
+                    state,
                     candidate,
-                    mobStates
+                    mobStates,
+                    gameTime
             );
 
             double distanceScore = mob.distanceToSqr(candidate) * 0.01D;
@@ -65,22 +78,31 @@ public final class RetoldTerritoryTargetSelector {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 LivingEntity.class,
-                mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
-                target -> isSelectableTerritoryAttackTarget(level, mob, state, config, target, gameTime)
+                RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_NEARBY_INTRUDER_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isSelectableTerritoryAttackTarget(level, mob, state, config, candidate, gameTime)) {
+                continue;
+            }
+
             int focusCount = RetoldWarningMovement.countNearbyFactionMobsFocusedOn(
                     level,
                     mob,
                     config,
+                    state,
                     candidate,
-                    mobStates
+                    mobStates,
+                    gameTime
             );
 
             double distanceScore = mob.distanceToSqr(candidate) * 0.01D;
@@ -112,7 +134,8 @@ public final class RetoldTerritoryTargetSelector {
             RetoldTerritoryConfig config,
             LivingEntity currentTarget,
             LivingEntity betterTarget,
-            Map<PathfinderMob, RetoldTerritoryMobState> mobStates
+            Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
+            long gameTime
     ) {
         if (betterTarget == mob.getLastHurtByMob()) {
             return true;
@@ -126,16 +149,20 @@ public final class RetoldTerritoryTargetSelector {
                 level,
                 mob,
                 config,
+                state,
                 currentTarget,
-                mobStates
+                mobStates,
+                gameTime
         );
 
         int betterFocus = RetoldWarningMovement.countNearbyFactionMobsFocusedOn(
                 level,
                 mob,
                 config,
+                state,
                 betterTarget,
-                mobStates
+                mobStates,
+                gameTime
         );
 
         if (currentFocus > betterFocus + 1) {

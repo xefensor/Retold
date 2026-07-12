@@ -14,6 +14,8 @@ import java.util.List;
 
 public final class RetoldTurtleBeachEvents {
     private static final int THINK_INTERVAL_TICKS = 20;
+    private static final int TURTLE_SCAN_CACHE_TICKS = 10;
+    private static final int TURTLE_BLOCK_SEARCH_CACHE_TICKS = 35;
     private static final int CONTROL_TICKS = 20 * 5;
 
     private static final int FLEE_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 1);
@@ -200,15 +202,21 @@ public final class RetoldTurtleBeachEvents {
             ServerLevel level,
             PathfinderMob turtle
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                turtle,
                 PathfinderMob.class,
-                turtle.getBoundingBox().inflate(BEACH_MEMBER_SEARCH_RADIUS_BLOCKS),
+                BEACH_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                TURTLE_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != turtle
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         turtle,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static LivingEntity findThreat(
@@ -221,19 +229,23 @@ public final class RetoldTurtleBeachEvents {
             return recentAttacker;
         }
 
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                turtle,
                 LivingEntity.class,
-                turtle.getBoundingBox().inflate(THREAT_SCAN_RADIUS_BLOCKS),
-                candidate -> isValidThreat(
-                        turtle,
-                        candidate
-                )
+                THREAT_SCAN_RADIUS_BLOCKS,
+                level.getGameTime(),
+                TURTLE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestThreat = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidThreat(turtle, candidate)) {
+                continue;
+            }
+
             double score = turtle.distanceToSqr(candidate);
 
             if (candidate instanceof PathfinderMob mob && mob.getTarget() == turtle) {
@@ -271,7 +283,7 @@ public final class RetoldTurtleBeachEvents {
 
         if (candidate instanceof Player player) {
             return turtle.distanceToSqr(player) <= CLOSE_PLAYER_THREAT_SQUARED
-                    && turtle.hasLineOfSight(player);
+                    && RetoldAiSightCache.canSee(turtle, player, turtle.level().getGameTime());
         }
 
         if (candidate == turtle.getLastHurtByMob()) {
@@ -382,39 +394,14 @@ public final class RetoldTurtleBeachEvents {
             ServerLevel level,
             PathfinderMob turtle
     ) {
-        BlockPos center = turtle.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -BEACH_SEARCH_HORIZONTAL_RADIUS; dx <= BEACH_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -BEACH_SEARCH_VERTICAL_RADIUS; dy <= BEACH_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -BEACH_SEARCH_HORIZONTAL_RADIUS; dz <= BEACH_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isBeachSand(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 2.0D + dz * dz;
-
-                    if (level.canSeeSky(mutable)) {
-                        score -= 6.0D;
-                    }
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findBeachSand(
+                level,
+                turtle,
+                BEACH_SEARCH_HORIZONTAL_RADIUS,
+                BEACH_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                TURTLE_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isBeachSand(
@@ -468,35 +455,14 @@ public final class RetoldTurtleBeachEvents {
             ServerLevel level,
             PathfinderMob turtle
     ) {
-        BlockPos center = turtle.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -WATER_SEARCH_HORIZONTAL_RADIUS; dx <= WATER_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -WATER_SEARCH_VERTICAL_RADIUS; dy <= WATER_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -WATER_SEARCH_HORIZONTAL_RADIUS; dz <= WATER_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isWater(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.5D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findWater(
+                level,
+                turtle,
+                WATER_SEARCH_HORIZONTAL_RADIUS,
+                WATER_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                TURTLE_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isInWater(PathfinderMob turtle) {

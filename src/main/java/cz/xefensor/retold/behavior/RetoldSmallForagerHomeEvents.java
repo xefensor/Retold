@@ -3,7 +3,6 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -21,6 +20,9 @@ public final class RetoldSmallForagerHomeEvents {
     private static final String REASON_MIGRATE_RANGE = "migrate_foraging_range";
 
     private static final int THINK_INTERVAL_TICKS = 40;
+    private static final int SMALL_HOME_SCAN_CACHE_TICKS = 15;
+    private static final int SMALL_HOME_POSITION_SCAN_CACHE_TICKS = 15;
+    private static final int SMALL_HOME_PATH_INTERVAL_TICKS = 12;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
     private static final int HOME_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 2);
     private static final int ROOST_CONTROL_TICKS = 20 * 5;
@@ -86,13 +88,13 @@ public final class RetoldSmallForagerHomeEvents {
             return;
         }
 
-        long gameTime = level.getGameTime();
-
-        if (!shouldThink(animal, gameTime)) {
+        if (!isSmallForager(animal)) {
             return;
         }
 
-        if (!isSmallForager(animal)) {
+        long gameTime = level.getGameTime();
+
+        if (!shouldThink(animal, gameTime)) {
             return;
         }
 
@@ -138,17 +140,15 @@ public final class RetoldSmallForagerHomeEvents {
             return null;
         }
 
-        AABB area = animal.getBoundingBox().inflate(HOME_CREATION_RADIUS_BLOCKS);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = new ArrayList<>(RetoldAiScanCache.nearby(
+                level,
+                animal,
                 PathfinderMob.class,
-                area,
-                candidate -> isHomeCandidate(
-                        level,
-                        animal,
-                        candidate
-                )
-        );
+                HOME_CREATION_RADIUS_BLOCKS,
+                gameTime,
+                SMALL_HOME_SCAN_CACHE_TICKS
+        ));
+        candidates.removeIf(candidate -> !isHomeCandidate(level, animal, candidate));
 
         candidates.sort(
                 Comparator.comparingDouble(candidate -> animal.distanceToSqr(candidate))
@@ -434,14 +434,14 @@ public final class RetoldSmallForagerHomeEvents {
                 gameTime
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            animal.getNavigation().moveTo(
-                    home.pos().getX() + 0.5D,
-                    home.pos().getY(),
-                    home.pos().getZ() + 0.5D,
-                    HOME_RETURN_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                animal,
+                home.pos(),
+                HOME_RETURN_SPEED,
+                gameTime,
+                SMALL_HOME_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static double getReturnStartDistanceSquared(boolean recoveringFromPanic) {
@@ -543,14 +543,14 @@ public final class RetoldSmallForagerHomeEvents {
         RetoldHomeRestAnimations.stopResting(animal);
         animal.setSprinting(false);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            animal.getNavigation().moveTo(
-                    newRangeCenter.getX() + 0.5D,
-                    newRangeCenter.getY(),
-                    newRangeCenter.getZ() + 0.5D,
-                    RANGE_MIGRATION_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                animal,
+                newRangeCenter,
+                RANGE_MIGRATION_SPEED,
+                gameTime,
+                SMALL_HOME_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
 
         return true;
     }
@@ -562,9 +562,15 @@ public final class RetoldSmallForagerHomeEvents {
     ) {
         double radius = RetoldAnimalSocialGroups.homeSeparationBlocks(animal);
 
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearbyAt(
+                level,
+                home.pos(),
                 PathfinderMob.class,
-                new AABB(home.pos()).inflate(radius),
+                radius,
+                level.getGameTime(),
+                SMALL_HOME_POSITION_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != animal
                         && isSmallForager(candidate)
                         && RetoldMobRules.isPig(candidate)
@@ -573,7 +579,7 @@ public final class RetoldSmallForagerHomeEvents {
                         candidate,
                         home
                 )
-        );
+        ).toList();
     }
 
     private static void holdAtHome(

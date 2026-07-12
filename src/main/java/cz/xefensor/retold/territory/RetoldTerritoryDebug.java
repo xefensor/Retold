@@ -139,6 +139,8 @@ public final class RetoldTerritoryDebug {
                 + nextTicksText(state == null ? 0L : state.nextWarningPulseAt, gameTime)
                 + "\nNext target recheck: "
                 + nextTicksText(state == null ? 0L : state.nextTargetRecheckAt, gameTime)
+                + "\nNext context recheck: "
+                + nextTicksText(state == null ? 0L : state.nextTerritoryContextRecheckAt, gameTime)
                 + "\nFinal warning age: "
                 + ageTicksText(state == null ? -1L : state.finalWarningStartedAt, gameTime);
     }
@@ -179,6 +181,7 @@ public final class RetoldTerritoryDebug {
                 level,
                 mob,
                 config,
+                RetoldTerritoryMobStates.states().get(mob),
                 RetoldTerritoryMobStates.states(),
                 gameTime
         );

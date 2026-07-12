@@ -3,12 +3,14 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 final class RetoldPackRecruitment {
+    private static final int PACK_RECRUIT_SCAN_CACHE_TICKS = 6;
+
     private RetoldPackRecruitment() {
     }
 
@@ -40,20 +42,22 @@ final class RetoldPackRecruitment {
                 ? leader.getTarget()
                 : null;
 
-        AABB area = leader.getBoundingBox().inflate(radius);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = new ArrayList<>(RetoldAiScanCache.nearby(
+                level,
+                leader,
                 PathfinderMob.class,
-                area,
-                candidate -> isLateJoinCandidate(
-                        leader,
-                        candidate,
-                        party,
-                        currentPrey,
-                        gameTime,
-                        radiusSquared
-                )
-        );
+                radius,
+                gameTime,
+                PACK_RECRUIT_SCAN_CACHE_TICKS
+        ));
+        candidates.removeIf(candidate -> !isLateJoinCandidate(
+                leader,
+                candidate,
+                party,
+                currentPrey,
+                gameTime,
+                radiusSquared
+        ));
 
         candidates.sort(
                 Comparator.comparingDouble(candidate -> leader.distanceToSqr(candidate))

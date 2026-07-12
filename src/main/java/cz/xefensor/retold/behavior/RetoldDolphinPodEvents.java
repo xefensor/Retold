@@ -3,7 +3,6 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -11,6 +10,8 @@ import java.util.List;
 
 public final class RetoldDolphinPodEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
+    private static final int POD_SCAN_CACHE_TICKS = 5;
+    private static final int POD_PATH_INTERVAL_TICKS = 6;
     private static final int POD_HUNT_CONTROL_TICKS = 20 * 4;
     private static final int POD_HUNT_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.HUNT, 1);
 
@@ -92,22 +93,23 @@ public final class RetoldDolphinPodEvents {
             PathfinderMob dolphin,
             long gameTime
     ) {
-        AABB area = dolphin.getBoundingBox().inflate(POD_SHARE_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                dolphin,
                 PathfinderMob.class,
-                area,
-                source -> isValidPodSource(
-                        dolphin,
-                        source,
-                        gameTime
-                )
+                POD_SHARE_RADIUS_BLOCKS,
+                gameTime,
+                POD_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidPodSource(dolphin, source, gameTime)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidPodPrey(dolphin, target, gameTime)) {
@@ -116,11 +118,11 @@ public final class RetoldDolphinPodEvents {
 
             double score = dolphin.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, gameTime)) {
                 score -= 20.0D;
             }
 
-            if (dolphin.hasLineOfSight(source)) {
+            if (RetoldAiSightCache.canSee(dolphin, source, gameTime)) {
                 score -= 8.0D;
             }
 
@@ -139,17 +141,18 @@ public final class RetoldDolphinPodEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(POD_SHARE_RADIUS_BLOCKS);
-
-        for (PathfinderMob recruit : level.getEntitiesOfClass(
+        for (PathfinderMob recruit : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidPodRecruit(
-                        source,
-                        candidate,
-                        gameTime
-                )
+                POD_SHARE_RADIUS_BLOCKS,
+                gameTime,
+                POD_SCAN_CACHE_TICKS
         )) {
+            if (!isValidPodRecruit(source, recruit, gameTime)) {
+                continue;
+            }
+
             joinPodHunt(
                     recruit,
                     target,
@@ -282,11 +285,13 @@ public final class RetoldDolphinPodEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            dolphin.getNavigation().moveTo(
-                    target,
-                    POD_HUNT_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                dolphin,
+                target,
+                POD_HUNT_SPEED,
+                gameTime,
+                POD_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 }

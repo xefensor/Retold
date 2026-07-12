@@ -28,6 +28,9 @@ public final class RetoldTerritoryConstants {
             WARNING_TOO_CLOSE_DISTANCE_BLOCKS * WARNING_TOO_CLOSE_DISTANCE_BLOCKS;
 
     public static final int WARNING_FORMATION_RECHECK_INTERVAL_TICKS = 45;
+    public static final int WARNING_NEARBY_FACTION_MOB_CACHE_TICKS = 10;
+    public static final int WARNING_NEARBY_INTRUDER_SCAN_CACHE_TICKS = 4;
+    public static final int WARNING_ILLEGAL_WITNESS_SCAN_CACHE_TICKS = 4;
 
     public static final double WARNING_POSITION_REPATH_DISTANCE_BLOCKS = 2.5D;
     public static final double WARNING_POSITION_REPATH_DISTANCE_SQUARED =

@@ -4,7 +4,6 @@ import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -281,7 +280,8 @@ public final class RetoldTerritoryCombat {
                             config,
                             attackTarget,
                             betterTarget,
-                            mobStates
+                            mobStates,
+                            gameTime
                     )
             ) {
                 attackTarget = betterTarget;
@@ -306,12 +306,13 @@ public final class RetoldTerritoryCombat {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        List<PathfinderMob> nearbyGuards = level.getEntitiesOfClass(
-                PathfinderMob.class,
-                caller.getBoundingBox().inflate(RetoldTerritoryConstants.ATTACK_CHAIN_RADIUS_BLOCKS),
-                other -> other != caller
-                        && other.isAlive()
-                        && RetoldFactionMembers.isMemberOf(other, config.faction)
+        RetoldTerritoryMobState callerState = mobStates.get(caller);
+        List<PathfinderMob> nearbyGuards = RetoldWarningMovement.getNearbyFactionMobs(
+                level,
+                caller,
+                config,
+                callerState,
+                gameTime
         );
 
         for (PathfinderMob guard : nearbyGuards) {
@@ -320,10 +321,12 @@ public final class RetoldTerritoryCombat {
                     ignored -> new RetoldTerritoryMobState()
             );
 
-            guardState.territoryContext = RetoldTerritoryRules.getMatchingContext(
+            guardState.territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
+                    guardState,
                     level,
                     guard,
-                    config
+                    config,
+                    gameTime
             );
 
             if (guardState.territoryContext == null) {

@@ -4,12 +4,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
 final class RetoldPackSenses {
+    private static final int PACK_SCAN_CACHE_TICKS = 6;
+
     private static final double PARTY_PREY_SENSE_RADIUS_BLOCKS = 24.0D;
     private static final double PARTY_PREY_SENSE_RADIUS_SQUARED =
             PARTY_PREY_SENSE_RADIUS_BLOCKS * PARTY_PREY_SENSE_RADIUS_BLOCKS;
@@ -94,22 +95,23 @@ final class RetoldPackSenses {
             return null;
         }
 
-        AABB area = sensor.getBoundingBox().inflate(PARTY_PREY_SENSE_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                sensor,
                 LivingEntity.class,
-                area,
-                candidate -> isValidSensedPartyPrey(
-                        sensor,
-                        candidate,
-                        gameTime
-                )
+                PARTY_PREY_SENSE_RADIUS_BLOCKS,
+                gameTime,
+                PACK_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestPrey = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidSensedPartyPrey(sensor, candidate, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = sensor.distanceToSqr(candidate);
 
             if (distanceSquared > PARTY_PREY_SENSE_RADIUS_SQUARED) {
@@ -118,7 +120,7 @@ final class RetoldPackSenses {
 
             double score = distanceSquared;
 
-            if (sensor.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(sensor, candidate, gameTime)) {
                 score -= 24.0D;
             }
 
@@ -190,21 +192,23 @@ final class RetoldPackSenses {
             return null;
         }
 
-        AABB area = sensor.getBoundingBox().inflate(PARTY_FOOD_RADIUS_BLOCKS);
-
-        List<ItemEntity> foods = level.getEntitiesOfClass(
+        List<ItemEntity> foods = RetoldAiScanCache.nearby(
+                level,
+                sensor,
                 ItemEntity.class,
-                area,
-                item -> isObservablePartyFood(
-                        sensor,
-                        item
-                )
+                PARTY_FOOD_RADIUS_BLOCKS,
+                level.getGameTime(),
+                PACK_SCAN_CACHE_TICKS
         );
 
         ItemEntity bestFood = null;
         double bestDistance = Double.MAX_VALUE;
 
         for (ItemEntity food : foods) {
+            if (!isObservablePartyFood(sensor, food)) {
+                continue;
+            }
+
             double distanceSquared = sensor.distanceToSqr(food);
 
             if (distanceSquared > PARTY_FOOD_RADIUS_SQUARED) {
@@ -235,19 +239,21 @@ final class RetoldPackSenses {
 
         return canPartySensorSensePrey(
                 sensor,
-                prey
+                prey,
+                gameTime
         );
     }
 
     private static boolean canPartySensorSensePrey(
             PathfinderMob sensor,
-            LivingEntity prey
+            LivingEntity prey,
+            long gameTime
     ) {
         double distanceSquared = sensor.distanceToSqr(prey);
 
         if (
                 distanceSquared <= PARTY_SIGHT_RADIUS_SQUARED
-                        && sensor.hasLineOfSight(prey)
+                        && RetoldAiSightCache.canSee(sensor, prey, gameTime)
         ) {
             return true;
         }
@@ -282,7 +288,10 @@ final class RetoldPackSenses {
             return false;
         }
 
-        if (!sensor.hasLineOfSight(item) && sensor.distanceToSqr(item) > 25.0D) {
+        if (
+                !RetoldAiSightCache.canSee(sensor, item, sensor.level().getGameTime())
+                        && sensor.distanceToSqr(item) > 25.0D
+        ) {
             return false;
         }
 

@@ -6,7 +6,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -19,6 +18,8 @@ public final class RetoldPredatorSearchEvents {
     private static final Map<PathfinderMob, SearchMemory> SEARCH_MEMORIES = new WeakHashMap<>();
 
     private static final int SEARCH_THINK_INTERVAL_TICKS = 20;
+    private static final int SEARCH_SCAN_CACHE_TICKS = 8;
+    private static final int SEARCH_PATH_INTERVAL_TICKS = 10;
     private static final int SEARCH_CONTROL_TICKS = 20 * 5;
 
     /*
@@ -184,22 +185,23 @@ public final class RetoldPredatorSearchEvents {
             PathfinderMob predator,
             long gameTime
     ) {
-        AABB area = predator.getBoundingBox().inflate(DIRECT_PREY_SEARCH_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                predator,
                 LivingEntity.class,
-                area,
-                prey -> isValidSensedPrey(
-                        predator,
-                        prey,
-                        gameTime
-                )
+                DIRECT_PREY_SEARCH_RADIUS_BLOCKS,
+                gameTime,
+                SEARCH_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestPrey = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity prey : candidates) {
+            if (!isValidSensedPrey(predator, prey, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = predator.distanceToSqr(prey);
 
             if (distanceSquared > DIRECT_PREY_SEARCH_RADIUS_SQUARED) {
@@ -208,7 +210,7 @@ public final class RetoldPredatorSearchEvents {
 
             double score = distanceSquared;
 
-            if (predator.hasLineOfSight(prey)) {
+            if (RetoldAiSightCache.canSee(predator, prey, gameTime)) {
                 score -= 24.0D;
             }
 
@@ -240,19 +242,21 @@ public final class RetoldPredatorSearchEvents {
 
         return canSensePrey(
                 predator,
-                prey
+                prey,
+                gameTime
         );
     }
 
     private static boolean canSensePrey(
             PathfinderMob predator,
-            LivingEntity prey
+            LivingEntity prey,
+            long gameTime
     ) {
         double distanceSquared = predator.distanceToSqr(prey);
 
         if (
                 distanceSquared <= SIGHT_RADIUS_SQUARED
-                        && predator.hasLineOfSight(prey)
+                        && RetoldAiSightCache.canSee(predator, prey, gameTime)
         ) {
             return true;
         }
@@ -298,12 +302,14 @@ public final class RetoldPredatorSearchEvents {
                 35.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            predator.getNavigation().moveTo(
-                    prey,
-                    OPENING_HUNT_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                predator,
+                prey,
+                OPENING_HUNT_SPEED,
+                gameTime,
+                SEARCH_PATH_INTERVAL_TICKS,
+                2.5D * 2.5D
+        );
     }
 
     private static void continueSearch(
@@ -359,14 +365,14 @@ public final class RetoldPredatorSearchEvents {
                 25.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            predator.getNavigation().moveTo(
-                    searchPos.getX() + 0.5D,
-                    searchPos.getY(),
-                    searchPos.getZ() + 0.5D,
-                    getSearchSpeed(predator)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                predator,
+                searchPos,
+                getSearchSpeed(predator),
+                gameTime,
+                SEARCH_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static SearchMemory createNewHeadingMemory(
@@ -475,22 +481,23 @@ public final class RetoldPredatorSearchEvents {
             PathfinderMob predator,
             long gameTime
     ) {
-        AABB area = predator.getBoundingBox().inflate(SCENT_CLUE_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                predator,
                 LivingEntity.class,
-                area,
-                prey -> isValidSearchPrey(
-                        predator,
-                        prey,
-                        gameTime
-                )
+                SCENT_CLUE_RADIUS_BLOCKS,
+                gameTime,
+                SEARCH_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestPrey = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity prey : candidates) {
+            if (!isValidSearchPrey(predator, prey, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = predator.distanceToSqr(prey);
 
             if (distanceSquared > SCENT_CLUE_RADIUS_SQUARED) {
@@ -593,16 +600,22 @@ public final class RetoldPredatorSearchEvents {
             ServerLevel level,
             PathfinderMob predator
     ) {
-        List<ItemEntity> items = level.getEntitiesOfClass(
+        List<ItemEntity> items = RetoldAiScanCache.nearby(
+                level,
+                predator,
                 ItemEntity.class,
-                predator.getBoundingBox().inflate(EASY_FOOD_RADIUS_BLOCKS),
-                item -> isEasyFood(
-                        predator,
-                        item
-                )
+                EASY_FOOD_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SEARCH_SCAN_CACHE_TICKS
         );
 
-        return !items.isEmpty();
+        for (ItemEntity item : items) {
+            if (isEasyFood(predator, item)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static boolean isEasyFood(
@@ -625,7 +638,10 @@ public final class RetoldPredatorSearchEvents {
             return false;
         }
 
-        if (!predator.hasLineOfSight(item) && predator.distanceToSqr(item) > 16.0D) {
+        if (
+                !RetoldAiSightCache.canSee(predator, item, predator.level().getGameTime())
+                        && predator.distanceToSqr(item) > 16.0D
+        ) {
             return false;
         }
 

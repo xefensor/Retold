@@ -6,7 +6,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -18,6 +17,9 @@ public final class RetoldHiveColonyEvents {
     private static final Map<PathfinderMob, FlowerMemory> FLOWER_MEMORIES = new WeakHashMap<>();
 
     private static final int THINK_INTERVAL_TICKS = 18;
+    private static final int HIVE_SCAN_CACHE_TICKS = 8;
+    private static final int FLOWER_BLOCK_SEARCH_CACHE_TICKS = 30;
+    private static final int HIVE_PATH_INTERVAL_TICKS = 8;
     private static final int FLOWER_CONTROL_TICKS = 20 * 5;
     private static final int DEFENSE_CONTROL_TICKS = 20 * 4;
 
@@ -119,21 +121,23 @@ public final class RetoldHiveColonyEvents {
             ServerLevel level,
             PathfinderMob bee
     ) {
-        AABB area = bee.getBoundingBox().inflate(DEFENSE_SHARE_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                bee,
                 PathfinderMob.class,
-                area,
-                source -> isValidDefenseSource(
-                        bee,
-                        source
-                )
+                DEFENSE_SHARE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                HIVE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidDefenseSource(bee, source)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidDefenseTarget(bee, target)) {
@@ -142,7 +146,7 @@ public final class RetoldHiveColonyEvents {
 
             double score = bee.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, level.getGameTime())) {
                 score -= 18.0D;
             }
 
@@ -187,16 +191,18 @@ public final class RetoldHiveColonyEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(DEFENSE_SHARE_RADIUS_BLOCKS);
-
-        for (PathfinderMob recruit : level.getEntitiesOfClass(
+        for (PathfinderMob recruit : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidDefenseRecruit(
-                        source,
-                        candidate
-                )
+                DEFENSE_SHARE_RADIUS_BLOCKS,
+                gameTime,
+                HIVE_SCAN_CACHE_TICKS
         )) {
+            if (!isValidDefenseRecruit(source, recruit)) {
+                continue;
+            }
+
             defendAgainst(
                     recruit,
                     target,
@@ -279,12 +285,14 @@ public final class RetoldHiveColonyEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            bee.getNavigation().moveTo(
-                    target,
-                    DEFENSE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                bee,
+                target,
+                DEFENSE_SPEED,
+                gameTime,
+                HIVE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void handleFlowerForaging(
@@ -371,36 +379,15 @@ public final class RetoldHiveColonyEvents {
             ServerLevel level,
             PathfinderMob bee
     ) {
-        BlockPos center = bee.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-
-        for (int dx = -FLOWER_SEARCH_HORIZONTAL_RADIUS; dx <= FLOWER_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dz = -FLOWER_SEARCH_HORIZONTAL_RADIUS; dz <= FLOWER_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                for (int dy = -FLOWER_SEARCH_VERTICAL_RADIUS; dy <= FLOWER_SEARCH_VERTICAL_RADIUS; dy++) {
-                    BlockPos pos = center.offset(dx, dy, dz);
-
-                    if (!isValidFlower(level, pos)) {
-                        continue;
-                    }
-
-                    double distanceSquared = center.distSqr(pos);
-
-                    if (distanceSquared > FLOWER_SEARCH_RADIUS_SQUARED) {
-                        continue;
-                    }
-
-                    double score = distanceSquared;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = pos.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findFlower(
+                level,
+                bee,
+                FLOWER_SEARCH_HORIZONTAL_RADIUS,
+                FLOWER_SEARCH_VERTICAL_RADIUS,
+                FLOWER_SEARCH_RADIUS_SQUARED,
+                level.getGameTime(),
+                FLOWER_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isValidFlower(
@@ -464,14 +451,16 @@ public final class RetoldHiveColonyEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            bee.getNavigation().moveTo(
-                    flowerPos.getX() + 0.5D,
-                    flowerPos.getY() + 0.5D,
-                    flowerPos.getZ() + 0.5D,
-                    FLOWER_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                bee,
+                flowerPos.getX() + 0.5D,
+                flowerPos.getY() + 0.5D,
+                flowerPos.getZ() + 0.5D,
+                FLOWER_SPEED,
+                gameTime,
+                HIVE_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private record FlowerMemory(

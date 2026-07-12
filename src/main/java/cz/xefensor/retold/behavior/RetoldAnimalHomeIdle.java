@@ -3,12 +3,11 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
-
-import java.util.List;
 
 final class RetoldAnimalHomeIdle {
     private static final int CROWD_MOVE_INTERVAL_TICKS = 20 * 7;
+    private static final int CROWD_SCAN_CACHE_TICKS = 8;
+    private static final int HOME_IDLE_PATH_INTERVAL_TICKS = 12;
     private static final double DEFAULT_CROWD_RADIUS_BLOCKS = 1.45D;
 
     private RetoldAnimalHomeIdle() {
@@ -94,7 +93,8 @@ final class RetoldAnimalHomeIdle {
             moveToHome(
                     mob,
                     home.pos(),
-                    returnSpeed
+                    returnSpeed,
+                    gameTime
             );
             return;
         }
@@ -114,7 +114,8 @@ final class RetoldAnimalHomeIdle {
                     home.pos(),
                     strollSpeed,
                     minStrollBlocks,
-                    extraStrollBlocks
+                    extraStrollBlocks,
+                    gameTime
             );
             return;
         }
@@ -150,18 +151,19 @@ final class RetoldAnimalHomeIdle {
     private static void moveToHome(
             PathfinderMob mob,
             BlockPos homePos,
-            double speed
+            double speed,
+            long gameTime
     ) {
         mob.setSprinting(false);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    homePos.getX() + 0.5D,
-                    homePos.getY(),
-                    homePos.getZ() + 0.5D,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                homePos,
+                speed,
+                gameTime,
+                HOME_IDLE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void moveToRandomHomePoint(
@@ -169,7 +171,8 @@ final class RetoldAnimalHomeIdle {
             BlockPos homePos,
             double speed,
             double minStrollBlocks,
-            double extraStrollBlocks
+            double extraStrollBlocks,
+            long gameTime
     ) {
         double angle = mob.getRandom().nextDouble() * Math.PI * 2.0D;
         double distance = minStrollBlocks
@@ -179,14 +182,16 @@ final class RetoldAnimalHomeIdle {
 
         mob.setSprinting(false);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    x,
-                    homePos.getY(),
-                    z,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                x,
+                homePos.getY(),
+                z,
+                speed,
+                gameTime,
+                HOME_IDLE_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static boolean isCrowdedAtHome(
@@ -196,18 +201,26 @@ final class RetoldAnimalHomeIdle {
     ) {
         double radius = crowdRadiusBlocks(mob);
         double radiusSquared = radius * radius;
-        AABB area = mob.getBoundingBox().inflate(radius);
 
-        List<PathfinderMob> nearby = level.getEntitiesOfClass(
+        for (PathfinderMob candidate : RetoldAiScanCache.nearby(
+                level,
+                mob,
                 PathfinderMob.class,
-                area,
-                candidate -> candidate != mob
-                        && RetoldAnimalHomes.hasSameValidHomeAs(level, candidate, home)
-                        && RetoldAnimalSocialGroups.canShareHomeOrRange(mob, candidate)
-                        && mob.distanceToSqr(candidate) <= radiusSquared
-        );
+                radius,
+                level.getGameTime(),
+                CROWD_SCAN_CACHE_TICKS
+        )) {
+            if (
+                    candidate != mob
+                            && RetoldAnimalHomes.hasSameValidHomeAs(level, candidate, home)
+                            && RetoldAnimalSocialGroups.canShareHomeOrRange(mob, candidate)
+                            && mob.distanceToSqr(candidate) <= radiusSquared
+            ) {
+                return true;
+            }
+        }
 
-        return !nearby.isEmpty();
+        return false;
     }
 
     private static double crowdRadiusBlocks(PathfinderMob mob) {

@@ -3,13 +3,14 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 final class RetoldPackFormation {
+    private static final int PACK_FORMATION_SCAN_CACHE_TICKS = 6;
+
     private RetoldPackFormation() {
     }
 
@@ -24,17 +25,15 @@ final class RetoldPackFormation {
         double radiusSquared = radius * radius;
         int maxPartySize = RetoldPackTuning.maxPartySize(path);
 
-        AABB area = leader.getBoundingBox().inflate(radius);
-
-        List<PathfinderMob> nearbyPack = level.getEntitiesOfClass(
+        List<PathfinderMob> nearbyPack = new ArrayList<>(RetoldAiScanCache.nearby(
+                level,
+                leader,
                 PathfinderMob.class,
-                area,
-                candidate -> isNormalPackCandidate(
-                        leader,
-                        candidate,
-                        radiusSquared
-                )
-        );
+                radius,
+                gameTime,
+                PACK_FORMATION_SCAN_CACHE_TICKS
+        ));
+        nearbyPack.removeIf(candidate -> !isNormalPackCandidate(leader, candidate, radiusSquared));
 
         nearbyPack.sort(
                 Comparator.comparingDouble(candidate -> leader.distanceToSqr(candidate))

@@ -10,6 +10,7 @@ import java.util.WeakHashMap;
 
 public final class RetoldMobStates {
     private static final String PERSISTENT_KEY = "RetoldMobState";
+    private static final long INACTIVE_STATE_CLEANUP_TICKS = 20L * 20L;
 
     private static final Map<PathfinderMob, RetoldMobState> STATES = new WeakHashMap<>();
 
@@ -79,7 +80,7 @@ public final class RetoldMobStates {
                             || !mob.isAlive()
                             || mob.isRemoved()
                             || state == null
-                            || gameTime - state.lastSeenAt() > 20L * 60L
+                            || gameTime - state.lastSeenAt() > INACTIVE_STATE_CLEANUP_TICKS
             ) {
                 iterator.remove();
             }

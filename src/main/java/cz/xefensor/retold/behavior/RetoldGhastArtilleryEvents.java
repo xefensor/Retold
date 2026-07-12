@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -15,6 +14,7 @@ import java.util.List;
 
 public final class RetoldGhastArtilleryEvents {
     private static final int THINK_INTERVAL_TICKS = 16;
+    private static final int ARTILLERY_SCAN_CACHE_TICKS = 8;
     private static final int ARTILLERY_CONTROL_TICKS = 20 * 5;
     private static final int ARTILLERY_PRIORITY = RetoldAiPriorities.SPECIAL_RANGED;
 
@@ -93,21 +93,23 @@ public final class RetoldGhastArtilleryEvents {
             ServerLevel level,
             Mob ghast
     ) {
-        AABB area = ghast.getBoundingBox().inflate(TARGET_SEARCH_RADIUS_BLOCKS);
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                ghast,
                 LivingEntity.class,
-                area,
-                candidate -> isValidArtilleryTarget(
-                        ghast,
-                        candidate,
-                        TARGET_SEARCH_RADIUS_SQUARED
-                )
+                TARGET_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                ARTILLERY_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidArtilleryTarget(ghast, candidate, TARGET_SEARCH_RADIUS_SQUARED)) {
+                continue;
+            }
+
             double distanceSquared = ghast.distanceToSqr(candidate);
 
             if (distanceSquared > TARGET_SEARCH_RADIUS_SQUARED) {
@@ -116,7 +118,7 @@ public final class RetoldGhastArtilleryEvents {
 
             double score = distanceSquared;
 
-            if (ghast.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(ghast, candidate, level.getGameTime())) {
                 score -= 500.0D;
             }
 

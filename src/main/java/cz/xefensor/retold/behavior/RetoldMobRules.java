@@ -29,7 +29,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        return RetoldMobProfiles.get(entity).managed();
+        return RetoldAiTickContext.profile(entity).managed();
     }
 
     public static boolean isManagedPredator(Entity entity) {
@@ -37,27 +37,33 @@ public final class RetoldMobRules {
             return false;
         }
 
-        return RetoldMobProfiles.get(entity).predator();
+        return RetoldAiTickContext.profile(entity).predator();
     }
 
     public static RetoldMobProfile profile(Entity entity) {
-        return RetoldMobProfiles.get(entity);
+        return RetoldAiTickContext.profile(entity);
     }
 
     public static RetoldMobProfileType profileType(Entity entity) {
-        return RetoldMobProfiles.get(entity).type();
+        return RetoldAiTickContext.profileType(entity);
     }
 
     public static boolean hasProfile(
             Entity entity,
             RetoldMobProfileType type
     ) {
-        return entity != null
-                && type != null
-                && RetoldMobIdentity.of(
-                        entity,
-                        entity instanceof PathfinderMob mob ? RetoldMobStates.get(mob) : null
-                ).isProfile(type);
+        if (entity == null || type == null) {
+            return false;
+        }
+
+        if (RetoldAiTickContext.profile(entity).is(type)) {
+            return true;
+        }
+
+        return RetoldMobIdentity.of(
+                entity,
+                entity instanceof PathfinderMob mob ? RetoldMobStates.get(mob) : null
+        ).isProfile(type);
     }
 
     public static boolean isEntityPath(
@@ -66,7 +72,7 @@ public final class RetoldMobRules {
     ) {
         return entity != null
                 && path != null
-                && getEntityTypePath(entity.getType()).equals(path);
+                && RetoldAiTickContext.entityPath(entity).equals(path);
     }
 
     public static boolean isPig(Entity entity) {
@@ -162,7 +168,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        RetoldMobProfile profile = RetoldMobProfiles.get(entity);
+        RetoldMobProfile profile = RetoldAiTickContext.profile(entity);
 
         return profile.predator() && profile.packSocial();
     }
@@ -172,7 +178,7 @@ public final class RetoldMobRules {
             return false;
         }
 
-        return RetoldMobProfiles.get(entity).territoryGuard();
+        return RetoldAiTickContext.profile(entity).territoryGuard();
     }
 
     public static boolean isCommanderSupport(Entity entity) {
@@ -260,33 +266,69 @@ public final class RetoldMobRules {
     }
 
     public static boolean isSpecialUndead(Entity entity) {
-        return isPhantomStalker(entity)
-                || isGhastArtillery(entity)
-                || isZoglinRampager(entity);
+        RetoldMobProfileType type = profileType(entity);
+
+        return type == RetoldMobProfileType.PHANTOM_STALKER
+                || type == RetoldMobProfileType.GHAST_ARTILLERY
+                || type == RetoldMobProfileType.ZOGLIN_RAMPAGER;
     }
 
     public static boolean isSpecialProfile(Entity entity) {
-        return isSpecialVanilla(entity)
-                || isApexOrBoss(entity)
-                || isSpecialUndead(entity);
+        RetoldMobProfileType type = profileType(entity);
+
+        return type == RetoldMobProfileType.SPECIAL_VANILLA
+                || type == RetoldMobProfileType.APEX_OR_BOSS
+                || type == RetoldMobProfileType.PHANTOM_STALKER
+                || type == RetoldMobProfileType.GHAST_ARTILLERY
+                || type == RetoldMobProfileType.ZOGLIN_RAMPAGER;
     }
 
     public static boolean shouldSkipOrdinaryLifeSystems(Entity entity) {
-        return entity == null
-                || isSpecialProfile(entity)
-                || isTerritoryGuard(entity)
-                || isCommanderSupport(entity)
-                || isIllagerRaider(entity);
+        if (entity == null) {
+            return true;
+        }
+
+        RetoldMobProfile profile = profile(entity);
+        RetoldMobProfileType type = profile.type();
+
+        return shouldSkipOrdinaryLifeSystems(profile, type);
     }
 
     public static boolean canUseOrdinaryLifeSystems(Entity entity) {
-        return isManagedMob(entity)
-                && !shouldSkipOrdinaryLifeSystems(entity);
+        if (entity == null) {
+            return false;
+        }
+
+        RetoldMobProfile profile = profile(entity);
+
+        return profile.managed()
+                && !shouldSkipOrdinaryLifeSystems(profile, profile.type());
     }
 
     public static boolean canUseOrdinaryPredatorSystems(Entity entity) {
-        return canUseOrdinaryLifeSystems(entity)
-                && isManagedPredator(entity);
+        if (entity == null) {
+            return false;
+        }
+
+        RetoldMobProfile profile = profile(entity);
+
+        return profile.predator()
+                && profile.managed()
+                && !shouldSkipOrdinaryLifeSystems(profile, profile.type());
+    }
+
+    private static boolean shouldSkipOrdinaryLifeSystems(
+            RetoldMobProfile profile,
+            RetoldMobProfileType type
+    ) {
+        return type == RetoldMobProfileType.SPECIAL_VANILLA
+                || type == RetoldMobProfileType.APEX_OR_BOSS
+                || type == RetoldMobProfileType.PHANTOM_STALKER
+                || type == RetoldMobProfileType.GHAST_ARTILLERY
+                || type == RetoldMobProfileType.ZOGLIN_RAMPAGER
+                || profile.territoryGuard()
+                || type == RetoldMobProfileType.COMMANDER_SUPPORT
+                || type == RetoldMobProfileType.ILLAGER_RAIDER;
     }
 
     public static boolean isPhantomStalker(Entity entity) {
@@ -329,11 +371,11 @@ public final class RetoldMobRules {
     }
 
     public static int hungerInterval(PathfinderMob mob) {
-        return RetoldMobProfiles.get(mob).hungerIntervalTicks();
+        return profile(mob).hungerIntervalTicks();
     }
 
     public static int eatThreshold(PathfinderMob mob) {
-        return RetoldMobProfiles.get(mob).eatThreshold();
+        return profile(mob).eatThreshold();
     }
 
     public static boolean hasEatDrive(

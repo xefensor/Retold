@@ -2,15 +2,16 @@ package cz.xefensor.retold.behavior;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 public final class RetoldAnimalHomeRepairEvents {
     private static final int THINK_INTERVAL_TICKS = 80;
+    private static final int HOME_REPAIR_POSITION_SCAN_CACHE_TICKS = 20;
 
     private RetoldAnimalHomeRepairEvents() {
     }
@@ -25,11 +26,11 @@ public final class RetoldAnimalHomeRepairEvents {
             return;
         }
 
-        if (!shouldThink(mob, level.getGameTime())) {
+        if (!RetoldAnimalSocialGroups.isSocialRecoveryMob(mob)) {
             return;
         }
 
-        if (!RetoldAnimalSocialGroups.isSocialRecoveryMob(mob)) {
+        if (!shouldThink(mob, level.getGameTime())) {
             return;
         }
 
@@ -87,18 +88,16 @@ public final class RetoldAnimalHomeRepairEvents {
             int maxGroupSize
     ) {
         double separation = RetoldAnimalSocialGroups.homeSeparationBlocks(mob);
-        AABB area = new AABB(home.pos()).inflate(separation);
 
-        List<PathfinderMob> members = level.getEntitiesOfClass(
+        List<PathfinderMob> members = new ArrayList<>(RetoldAiScanCache.nearbyAt(
+                level,
+                home.pos(),
                 PathfinderMob.class,
-                area,
-                candidate -> isRepairCandidate(
-                        level,
-                        mob,
-                        candidate,
-                        home
-                )
-        );
+                separation,
+                level.getGameTime(),
+                HOME_REPAIR_POSITION_SCAN_CACHE_TICKS
+        ));
+        members.removeIf(candidate -> !isRepairCandidate(level, mob, candidate, home));
 
         members.sort(
                 Comparator

@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -15,6 +14,7 @@ import java.util.List;
 
 public final class RetoldPhantomStalkerEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int STALK_SCAN_CACHE_TICKS = 6;
     private static final int STALK_CONTROL_TICKS = 20 * 5;
     private static final int STALK_PRIORITY = RetoldAiPriorities.SPECIAL_STALK;
 
@@ -93,22 +93,23 @@ public final class RetoldPhantomStalkerEvents {
             ServerLevel level,
             Mob phantom
     ) {
-        AABB area = phantom.getBoundingBox().inflate(TARGET_SEARCH_RADIUS_BLOCKS);
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                phantom,
                 LivingEntity.class,
-                area,
-                candidate -> isValidStalkTarget(
-                        level,
-                        phantom,
-                        candidate,
-                        TARGET_SEARCH_RADIUS_SQUARED
-                )
+                TARGET_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                STALK_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidStalkTarget(level, phantom, candidate, TARGET_SEARCH_RADIUS_SQUARED)) {
+                continue;
+            }
+
             double distanceSquared = phantom.distanceToSqr(candidate);
 
             if (distanceSquared > TARGET_SEARCH_RADIUS_SQUARED) {
@@ -121,7 +122,7 @@ public final class RetoldPhantomStalkerEvents {
                 score -= 180.0D;
             }
 
-            if (phantom.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(phantom, candidate, level.getGameTime())) {
                 score -= 80.0D;
             }
 
@@ -209,7 +210,7 @@ public final class RetoldPhantomStalkerEvents {
             return false;
         }
 
-        if (!isExposedToSky(level, target) && !phantom.hasLineOfSight(target)) {
+        if (!isExposedToSky(level, target) && !RetoldAiSightCache.canSee(phantom, target, phantom.level().getGameTime())) {
             return false;
         }
 

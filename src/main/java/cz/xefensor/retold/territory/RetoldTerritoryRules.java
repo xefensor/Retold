@@ -1,11 +1,14 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.behavior.RetoldBehaviorPerf;
 import cz.xefensor.retold.faction.RetoldFaction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.raid.Raid;
 
 public final class RetoldTerritoryRules {
+    private static final int CONTEXT_RECHECK_TICKS = 20;
+
     private RetoldTerritoryRules() {
     }
 
@@ -35,7 +38,7 @@ public final class RetoldTerritoryRules {
             RetoldTerritoryConfig config,
             long gameTime
     ) {
-        return canUseTerritoryBehavior(
+        boolean passed = canUseTerritoryBehavior(
                 level,
                 entity,
                 config
@@ -45,6 +48,9 @@ public final class RetoldTerritoryRules {
                 config,
                 gameTime
         );
+
+        RetoldBehaviorPerf.recordTerritoryNearby(passed);
+        return passed;
     }
 
     public static RetoldTerritoryContext getMatchingContext(
@@ -62,27 +68,46 @@ public final class RetoldTerritoryRules {
         );
 
         if (context == null || context.faction() != config.faction) {
+            RetoldBehaviorPerf.recordTerritoryContext(false);
             return null;
         }
 
+        RetoldBehaviorPerf.recordTerritoryContext(true);
         return context;
     }
 
-    public static RetoldTerritoryContext refreshMatchingContext(
-            RetoldTerritoryContext current,
+    public static RetoldTerritoryContext refreshCachedMatchingContext(
+            RetoldTerritoryMobState state,
             ServerLevel level,
             Entity entity,
-            RetoldTerritoryConfig config
+            RetoldTerritoryConfig config,
+            long gameTime
     ) {
-        if (current != null && config != null && current.faction() == config.faction) {
-            return current;
+        if (state == null) {
+            return getMatchingContext(
+                    level,
+                    entity,
+                    config
+            );
         }
 
-        return getMatchingContext(
+        if (
+                state.territoryContext != null
+                        && config != null
+                        && state.territoryContext.faction() == config.faction
+                        && gameTime < state.nextTerritoryContextRecheckAt
+        ) {
+            return state.territoryContext;
+        }
+
+        state.territoryContext = getMatchingContext(
                 level,
                 entity,
                 config
         );
+        state.nextTerritoryContextRecheckAt = gameTime + CONTEXT_RECHECK_TICKS;
+
+        return state.territoryContext;
     }
 
     public static boolean isInActiveRaid(

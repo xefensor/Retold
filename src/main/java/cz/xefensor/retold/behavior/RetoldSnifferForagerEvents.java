@@ -17,6 +17,8 @@ public final class RetoldSnifferForagerEvents {
     private static final Map<PathfinderMob, SnifferMemory> MEMORIES = new WeakHashMap<>();
 
     private static final int THINK_INTERVAL_TICKS = 20;
+    private static final int SNIFFER_SCAN_CACHE_TICKS = 10;
+    private static final int SNIFFER_BLOCK_SEARCH_CACHE_TICKS = 45;
     private static final int SEARCH_CONTROL_TICKS = 20 * 7;
     private static final int RETURN_CONTROL_TICKS = 20 * 7;
 
@@ -200,15 +202,21 @@ public final class RetoldSnifferForagerEvents {
             ServerLevel level,
             PathfinderMob sniffer
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                sniffer,
                 PathfinderMob.class,
-                sniffer.getBoundingBox().inflate(RANGE_MEMBER_SEARCH_RADIUS_BLOCKS),
+                RANGE_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SNIFFER_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != sniffer
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         sniffer,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static LivingEntity findThreat(PathfinderMob sniffer) {
@@ -421,35 +429,14 @@ public final class RetoldSnifferForagerEvents {
             ServerLevel level,
             PathfinderMob sniffer
     ) {
-        BlockPos center = sniffer.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -RANGE_SEARCH_HORIZONTAL_RADIUS; dx <= RANGE_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -RANGE_SEARCH_VERTICAL_RADIUS; dy <= RANGE_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -RANGE_SEARCH_HORIZONTAL_RADIUS; dz <= RANGE_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isForagingRange(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.5D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findSnifferRangeAnchor(
+                level,
+                sniffer,
+                RANGE_SEARCH_HORIZONTAL_RADIUS,
+                RANGE_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                SNIFFER_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static BlockPos findForagePoint(
@@ -458,34 +445,16 @@ public final class RetoldSnifferForagerEvents {
             BlockPos rangeCenter
     ) {
         BlockPos center = rangeCenter == null ? sniffer.blockPosition() : rangeCenter;
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
 
-        for (int dx = -DIGGABLE_SEARCH_HORIZONTAL_RADIUS; dx <= DIGGABLE_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -DIGGABLE_SEARCH_VERTICAL_RADIUS; dy <= DIGGABLE_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -DIGGABLE_SEARCH_HORIZONTAL_RADIUS; dz <= DIGGABLE_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isDiggable(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = sniffer.blockPosition().distSqr(mutable);
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findSnifferDiggable(
+                level,
+                sniffer,
+                center,
+                DIGGABLE_SEARCH_HORIZONTAL_RADIUS,
+                DIGGABLE_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                SNIFFER_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isForagingRange(

@@ -5,7 +5,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -13,6 +12,8 @@ import java.util.List;
 
 public final class RetoldSwarmScavengerEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int SWARM_SCAN_CACHE_TICKS = 6;
+    private static final int SWARM_PATH_INTERVAL_TICKS = 6;
 
     private static final int SPIDER_SWARM_CONTROL_TICKS = 20 * 4;
     private static final int SLIME_SWARM_CONTROL_TICKS = 20 * 4;
@@ -55,6 +56,10 @@ public final class RetoldSwarmScavengerEvents {
         }
 
         if (!(mob.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        if (!isSwarmHandledHere(mob)) {
             return;
         }
 
@@ -116,6 +121,12 @@ public final class RetoldSwarmScavengerEvents {
         return RetoldMobRules.isSmallArthropodSwarm(mob);
     }
 
+    private static boolean isSwarmHandledHere(PathfinderMob mob) {
+        return isSpiderSwarmPredator(mob)
+                || isSlimeScavenger(mob)
+                || isSmallArthropodSwarm(mob);
+    }
+
     private static void handleSpiderSwarm(
             ServerLevel level,
             PathfinderMob spider,
@@ -155,22 +166,23 @@ public final class RetoldSwarmScavengerEvents {
             PathfinderMob spider,
             long gameTime
     ) {
-        AABB area = spider.getBoundingBox().inflate(SPIDER_SWARM_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                spider,
                 PathfinderMob.class,
-                area,
-                source -> isValidSpiderSwarmSource(
-                        spider,
-                        source,
-                        gameTime
-                )
+                SPIDER_SWARM_RADIUS_BLOCKS,
+                gameTime,
+                SWARM_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidSpiderSwarmSource(spider, source, gameTime)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidSpiderFoodTarget(spider, target, gameTime)) {
@@ -179,11 +191,11 @@ public final class RetoldSwarmScavengerEvents {
 
             double score = spider.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, gameTime)) {
                 score -= 20.0D;
             }
 
-            if (spider.hasLineOfSight(source)) {
+            if (RetoldAiSightCache.canSee(spider, source, gameTime)) {
                 score -= 8.0D;
             }
 
@@ -202,17 +214,18 @@ public final class RetoldSwarmScavengerEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(SPIDER_SWARM_RADIUS_BLOCKS);
-
-        for (PathfinderMob recruit : level.getEntitiesOfClass(
+        for (PathfinderMob recruit : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidSpiderRecruit(
-                        source,
-                        candidate,
-                        gameTime
-                )
+                SPIDER_SWARM_RADIUS_BLOCKS,
+                gameTime,
+                SWARM_SCAN_CACHE_TICKS
         )) {
+            if (!isValidSpiderRecruit(source, recruit, gameTime)) {
+                continue;
+            }
+
             joinSpiderHunt(
                     recruit,
                     target,
@@ -351,12 +364,14 @@ public final class RetoldSwarmScavengerEvents {
 
         spider.setSprinting(true);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            spider.getNavigation().moveTo(
-                    target,
-                    SPIDER_SWARM_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                spider,
+                target,
+                SPIDER_SWARM_SPEED,
+                gameTime,
+                SWARM_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void handleSlimeScavenger(
@@ -408,21 +423,23 @@ public final class RetoldSwarmScavengerEvents {
             ServerLevel level,
             PathfinderMob slime
     ) {
-        AABB area = slime.getBoundingBox().inflate(SLIME_SWARM_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                slime,
                 PathfinderMob.class,
-                area,
-                source -> isValidSlimeSource(
-                        slime,
-                        source
-                )
+                SLIME_SWARM_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SWARM_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidSlimeSource(slime, source)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidSlimeTarget(slime, target)) {
@@ -431,7 +448,7 @@ public final class RetoldSwarmScavengerEvents {
 
             double score = slime.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, level.getGameTime())) {
                 score -= 14.0D;
             }
 
@@ -450,16 +467,18 @@ public final class RetoldSwarmScavengerEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(SLIME_SWARM_RADIUS_BLOCKS);
-
-        for (PathfinderMob recruit : level.getEntitiesOfClass(
+        for (PathfinderMob recruit : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidSlimeRecruit(
-                        source,
-                        candidate
-                )
+                SLIME_SWARM_RADIUS_BLOCKS,
+                gameTime,
+                SWARM_SCAN_CACHE_TICKS
         )) {
+            if (!isValidSlimeRecruit(source, recruit)) {
+                continue;
+            }
+
             joinSlimeAttack(
                     recruit,
                     target,
@@ -565,33 +584,37 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            slime.getNavigation().moveTo(
-                    target,
-                    SLIME_SWARM_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                slime,
+                target,
+                SLIME_SWARM_SPEED,
+                gameTime,
+                SWARM_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static ItemEntity findBestOrganicScrap(
             ServerLevel level,
             PathfinderMob slime
     ) {
-        AABB area = slime.getBoundingBox().inflate(SCAVENGE_RADIUS_BLOCKS);
-
-        List<ItemEntity> items = level.getEntitiesOfClass(
+        List<ItemEntity> items = RetoldAiScanCache.nearby(
+                level,
+                slime,
                 ItemEntity.class,
-                area,
-                item -> isValidOrganicScrap(
-                        slime,
-                        item
-                )
+                SCAVENGE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SWARM_SCAN_CACHE_TICKS
         );
 
         ItemEntity best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (ItemEntity item : items) {
+            if (!isValidOrganicScrap(slime, item)) {
+                continue;
+            }
+
             double distanceSquared = slime.distanceToSqr(item);
 
             if (distanceSquared > SCAVENGE_RADIUS_SQUARED) {
@@ -600,7 +623,7 @@ public final class RetoldSwarmScavengerEvents {
 
             double score = distanceSquared;
 
-            if (slime.hasLineOfSight(item)) {
+            if (RetoldAiSightCache.canSee(slime, item, level.getGameTime())) {
                 score -= 10.0D;
             }
 
@@ -625,7 +648,10 @@ public final class RetoldSwarmScavengerEvents {
             return false;
         }
 
-        if (!slime.hasLineOfSight(item) && slime.distanceToSqr(item) > 49.0D) {
+        if (
+                !RetoldAiSightCache.canSee(slime, item, slime.level().getGameTime())
+                        && slime.distanceToSqr(item) > 49.0D
+        ) {
             return false;
         }
 
@@ -684,12 +710,14 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            slime.getNavigation().moveTo(
-                    food,
-                    SCAVENGE_SPEED
-            );
-                });
+        RetoldBehaviorMovement.throttledMoveTo(
+                slime,
+                food,
+                SCAVENGE_SPEED,
+                gameTime,
+                SWARM_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static void handleSmallArthropodSwarm(
@@ -727,21 +755,23 @@ public final class RetoldSwarmScavengerEvents {
             ServerLevel level,
             PathfinderMob arthropod
     ) {
-        AABB area = arthropod.getBoundingBox().inflate(SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                arthropod,
                 PathfinderMob.class,
-                area,
-                source -> isValidSmallArthropodSource(
-                        arthropod,
-                        source
-                )
+                SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SWARM_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidSmallArthropodSource(arthropod, source)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidSmallArthropodTarget(arthropod, target)) {
@@ -750,7 +780,7 @@ public final class RetoldSwarmScavengerEvents {
 
             double score = arthropod.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, level.getGameTime())) {
                 score -= 12.0D;
             }
 
@@ -769,16 +799,18 @@ public final class RetoldSwarmScavengerEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS);
-
-        for (PathfinderMob recruit : level.getEntitiesOfClass(
+        for (PathfinderMob recruit : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidSmallArthropodRecruit(
-                        source,
-                        candidate
-                )
+                SMALL_ARTHROPOD_SWARM_RADIUS_BLOCKS,
+                gameTime,
+                SWARM_SCAN_CACHE_TICKS
         )) {
+            if (!isValidSmallArthropodRecruit(source, recruit)) {
+                continue;
+            }
+
             joinSmallArthropodAttack(
                     recruit,
                     target,
@@ -884,11 +916,13 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            arthropod.getNavigation().moveTo(
-                    target,
-                    SMALL_ARTHROPOD_SWARM_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                arthropod,
+                target,
+                SMALL_ARTHROPOD_SWARM_SPEED,
+                gameTime,
+                SWARM_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 }

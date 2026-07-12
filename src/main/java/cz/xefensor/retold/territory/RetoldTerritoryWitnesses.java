@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.behavior.RetoldAiScanCache;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFaction;
@@ -31,20 +32,29 @@ public final class RetoldTerritoryWitnesses {
             return false;
         }
 
-        List<PathfinderMob> possibleWitnesses = level.getEntitiesOfClass(
+        long gameTime = level.getGameTime();
+        double witnessRadiusSquared = witnessRadiusBlocks * witnessRadiusBlocks;
+
+        List<PathfinderMob> possibleWitnesses = RetoldAiScanCache.nearby(
+                level,
+                player,
                 PathfinderMob.class,
-                player.getBoundingBox().inflate(witnessRadiusBlocks),
-                mob -> mob.isAlive()
-                        && RetoldFactionMembers.isMemberOf(mob, faction)
-                        && mob.distanceToSqr(
-                        actionPos.getX() + 0.5D,
-                        actionPos.getY() + 0.5D,
-                        actionPos.getZ() + 0.5D
-                ) <= witnessRadiusBlocks * witnessRadiusBlocks
+                witnessRadiusBlocks,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_ILLEGAL_WITNESS_SCAN_CACHE_TICKS
         );
 
         for (PathfinderMob witness : possibleWitnesses) {
-            if (RetoldAiTargets.isVisibleTo(witness, player)) {
+            if (
+                    witness.isAlive()
+                            && RetoldFactionMembers.isMemberOf(witness, faction)
+                            && witness.distanceToSqr(
+                            actionPos.getX() + 0.5D,
+                            actionPos.getY() + 0.5D,
+                            actionPos.getZ() + 0.5D
+                    ) <= witnessRadiusSquared
+                            && RetoldAiTargets.isVisibleTo(witness, player)
+            ) {
                 return true;
             }
         }
@@ -78,22 +88,32 @@ public final class RetoldTerritoryWitnesses {
             return;
         }
 
-        List<PathfinderMob> witnesses = level.getEntitiesOfClass(
+        long gameTime = level.getGameTime();
+        double witnessRadiusSquared = witnessRadiusBlocks * witnessRadiusBlocks;
+
+        List<PathfinderMob> witnesses = RetoldAiScanCache.nearby(
+                level,
+                player,
                 PathfinderMob.class,
-                player.getBoundingBox().inflate(witnessRadiusBlocks),
-                mob -> mob.isAlive()
-                        && RetoldFactionMembers.isMemberOf(mob, faction)
-                        && mob.distanceToSqr(
-                        actionPos.getX() + 0.5D,
-                        actionPos.getY() + 0.5D,
-                        actionPos.getZ() + 0.5D
-                ) <= witnessRadiusBlocks * witnessRadiusBlocks
-                        && RetoldAiTargets.isVisibleTo(mob, player)
+                witnessRadiusBlocks,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_ILLEGAL_WITNESS_SCAN_CACHE_TICKS
         );
 
-        long gameTime = level.getGameTime();
-
         for (PathfinderMob witness : witnesses) {
+            if (
+                    !witness.isAlive()
+                            || !RetoldFactionMembers.isMemberOf(witness, faction)
+                            || witness.distanceToSqr(
+                            actionPos.getX() + 0.5D,
+                            actionPos.getY() + 0.5D,
+                            actionPos.getZ() + 0.5D
+                    ) > witnessRadiusSquared
+                            || !RetoldAiTargets.isVisibleTo(witness, player)
+            ) {
+                continue;
+            }
+
             if (!RetoldTerritoryRules.canUseNearbyTerritoryBehavior(
                     level,
                     witness,
@@ -108,10 +128,12 @@ public final class RetoldTerritoryWitnesses {
                     ignored -> new RetoldTerritoryMobState()
             );
 
-            state.territoryContext = RetoldTerritoryRules.getMatchingContext(
+            state.territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
+                    state,
                     level,
                     witness,
-                    config
+                    config,
+                    gameTime
             );
 
             if (state.territoryContext == null) {

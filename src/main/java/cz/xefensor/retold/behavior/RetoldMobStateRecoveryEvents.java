@@ -2,14 +2,12 @@ package cz.xefensor.retold.behavior;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-import java.util.List;
-
 public final class RetoldMobStateRecoveryEvents {
     private static final int THINK_INTERVAL_TICKS = 20 * 5;
+    private static final int RECOVERY_SCAN_CACHE_TICKS = 20;
     private static final int RECENT_DANGER_TICKS = 20 * 10;
 
     private static final int BASE_CONFIDENCE_TARGET = 50;
@@ -166,18 +164,20 @@ public final class RetoldMobStateRecoveryEvents {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        AABB area = mob.getBoundingBox().inflate(GROUP_COMFORT_RADIUS_BLOCKS);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        for (PathfinderMob candidate : RetoldAiScanCache.nearby(
+                level,
+                mob,
                 PathfinderMob.class,
-                area,
-                candidate -> isCompatibleGroupMember(
-                        mob,
-                        candidate
-                )
-        );
+                GROUP_COMFORT_RADIUS_BLOCKS,
+                level.getGameTime(),
+                RECOVERY_SCAN_CACHE_TICKS
+        )) {
+            if (isCompatibleGroupMember(mob, candidate)) {
+                return true;
+            }
+        }
 
-        return !candidates.isEmpty();
+        return false;
     }
 
     private static boolean isCompatibleGroupMember(

@@ -5,9 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
-
-import java.util.List;
 
 final class RetoldWolfDenDefense {
     private static final String REASON_RETURN_HOME = "return_home";
@@ -15,6 +12,8 @@ final class RetoldWolfDenDefense {
     private static final String REASON_DEN_DEFENSE = "den_defense";
 
     private static final int DEN_DEFENSE_CONTROL_TICKS = 20 * 4;
+    private static final int DEN_DEFENSE_SCAN_CACHE_TICKS = 8;
+    private static final int DEN_DEFENSE_PATH_INTERVAL_TICKS = 6;
     private static final int DEN_DEFENSE_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.ATTACK, 1);
 
     private static final double WOLF_DEN_DEFENSE_RADIUS_BLOCKS = 20.0D;
@@ -86,12 +85,14 @@ final class RetoldWolfDenDefense {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    enemy,
-                    WOLF_DEN_DEFENSE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                enemy,
+                WOLF_DEN_DEFENSE_SPEED,
+                gameTime,
+                DEN_DEFENSE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
 
         return true;
     }
@@ -131,24 +132,23 @@ final class RetoldWolfDenDefense {
             PathfinderMob wolf,
             BlockPos homePos
     ) {
-        AABB area = new AABB(
-                homePos
-        ).inflate(WOLF_DEN_DEFENSE_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        Iterable<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                wolf,
                 LivingEntity.class,
-                area,
-                candidate -> isValidDenEnemy(
-                        wolf,
-                        homePos,
-                        candidate
-                )
+                WOLF_DEN_DEFENSE_JOIN_RADIUS_BLOCKS,
+                level.getGameTime(),
+                DEN_DEFENSE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestEnemy = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidDenEnemy(wolf, homePos, candidate)) {
+                continue;
+            }
+
             double distanceFromHome = candidate.blockPosition().distSqr(homePos);
 
             if (distanceFromHome > WOLF_DEN_DEFENSE_RADIUS_SQUARED) {
@@ -157,7 +157,7 @@ final class RetoldWolfDenDefense {
 
             double score = distanceFromHome;
 
-            if (wolf.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(wolf, candidate, level.getGameTime())) {
                 score -= 12.0D;
             }
 
@@ -199,7 +199,7 @@ final class RetoldWolfDenDefense {
             return false;
         }
 
-        return wolf.hasLineOfSight(candidate)
+        return RetoldAiSightCache.canSee(wolf, candidate, wolf.level().getGameTime())
                 || wolf.distanceToSqr(candidate) <= 36.0D
                 || candidate.blockPosition().distSqr(homePos) <= 64.0D;
     }

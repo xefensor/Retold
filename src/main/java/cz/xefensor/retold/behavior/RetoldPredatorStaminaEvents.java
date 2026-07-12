@@ -16,6 +16,7 @@ public final class RetoldPredatorStaminaEvents {
     private static final Map<PathfinderMob, StaminaState> STATES = new WeakHashMap<>();
 
     private static final int THINK_INTERVAL_TICKS = 10;
+    private static final int STAMINA_PATH_INTERVAL_TICKS = 8;
     private static final int CLEANUP_INTERVAL_TICKS = 20 * 10;
 
     private static final int GIVE_UP_CONTROL_TICKS = 20 * 4;
@@ -200,7 +201,7 @@ public final class RetoldPredatorStaminaEvents {
             state.fatigue += FATIGUE_FAR_GAIN;
         }
 
-        if (!predator.hasLineOfSight(prey)) {
+        if (!RetoldAiSightCache.canSee(predator, prey, predator.level().getGameTime())) {
             state.fatigue += FATIGUE_NO_LINE_OF_SIGHT_GAIN;
         }
 
@@ -223,7 +224,7 @@ public final class RetoldPredatorStaminaEvents {
                 state.fatigue >= FATIGUE_GIVE_UP_THRESHOLD
                         && (
                         distanceSquared >= GIVE_UP_DISTANCE_SQUARED
-                                || !predator.hasLineOfSight(prey)
+                                || !RetoldAiSightCache.canSee(predator, prey, gameTime)
                 )
         ) {
             return true;
@@ -266,12 +267,14 @@ public final class RetoldPredatorStaminaEvents {
                 PARTY_SAFE_HUNT_REFRESH_TICKS()
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            predator.getNavigation().moveTo(
-                    prey,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                predator,
+                prey,
+                speed,
+                gameTime,
+                STAMINA_PATH_INTERVAL_TICKS,
+                2.5D * 2.5D
+        );
     }
 
     private static int PARTY_SAFE_HUNT_REFRESH_TICKS() {

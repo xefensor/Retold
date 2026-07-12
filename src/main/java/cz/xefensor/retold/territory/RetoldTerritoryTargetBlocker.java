@@ -55,11 +55,12 @@ public final class RetoldTerritoryTargetBlocker {
 
         RetoldTerritoryMobState state = RetoldTerritoryMobStates.get(mob);
 
-        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.refreshMatchingContext(
-                state == null ? null : state.territoryContext,
+        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
+                state,
                 level,
                 mob,
-                config
+                config,
+                gameTime
         );
 
         if (territoryContext == null) {

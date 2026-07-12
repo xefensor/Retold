@@ -1,7 +1,12 @@
 # Retold Mob AI Completion Matrix
 
+> AI-generated working checklist. This file is meant for human maintainers and future AI coding agents tracking whether the mob AI system matches the intended design.
+
 This is the working checklist for calling the mob AI system done. It reflects the current code structure:
 profiles in `RetoldMobProfiles`, factions in `RetoldFactionMembers` and territory warning in `territory/`.
+
+Full design and technical architecture: [`retold_mob_ai_system.md`](retold_mob_ai_system.md).
+Whole-mod architecture reference: [`retold_mod_system.md`](retold_mod_system.md).
 
 ## Global Rules
 

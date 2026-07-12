@@ -5,7 +5,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -14,6 +13,8 @@ import java.util.List;
 
 public final class RetoldControlledCombatEvents {
     private static final int COMBAT_THINK_INTERVAL_TICKS = 10;
+    private static final int COMBAT_SCAN_CACHE_TICKS = 5;
+    private static final int COMBAT_PATH_INTERVAL_TICKS = 6;
     private static final int ATTACK_CONTROL_TICKS = 20 * 4;
 
     private static final double OWNER_THREAT_RADIUS_BLOCKS = 28.0D;
@@ -225,21 +226,23 @@ public final class RetoldControlledCombatEvents {
             return null;
         }
 
-        AABB area = mob.getBoundingBox().inflate(WOLF_ENEMY_SEARCH_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 LivingEntity.class,
-                area,
-                candidate -> isValidWolfEnemy(
-                        mob,
-                        candidate
-                )
+                WOLF_ENEMY_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                COMBAT_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestEnemy = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidWolfEnemy(mob, candidate)) {
+                continue;
+            }
+
             double distanceSquared = mob.distanceToSqr(candidate);
 
             if (distanceSquared > WOLF_ENEMY_SEARCH_RADIUS_SQUARED) {
@@ -248,7 +251,7 @@ public final class RetoldControlledCombatEvents {
 
             double score = distanceSquared;
 
-            if (mob.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(mob, candidate, level.getGameTime())) {
                 score -= 16.0D;
             }
 
@@ -292,7 +295,7 @@ public final class RetoldControlledCombatEvents {
         /*
          * Sight or close smell/hearing range.
          */
-        return wolf.hasLineOfSight(candidate)
+        return RetoldAiSightCache.canSee(wolf, candidate, wolf.level().getGameTime())
                 || wolf.distanceToSqr(candidate) <= 16.0D;
     }
 
@@ -327,12 +330,14 @@ public final class RetoldControlledCombatEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            attacker.getNavigation().moveTo(
-                    target,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                attacker,
+                target,
+                speed,
+                gameTime,
+                COMBAT_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void continueAttack(
@@ -361,12 +366,14 @@ public final class RetoldControlledCombatEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            attacker.getNavigation().moveTo(
-                    target,
-                    getEnemyAttackSpeed(attacker, target)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                attacker,
+                target,
+                getEnemyAttackSpeed(attacker, target),
+                gameTime,
+                COMBAT_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static boolean isStillValidAttackTarget(

@@ -21,11 +21,11 @@ public final class RetoldPackHomeEvents {
             return;
         }
 
-        if (!shouldThink(mob, level.getGameTime())) {
+        if (!isHomeReturningMob(mob)) {
             return;
         }
 
-        if (!isHomeReturningMob(mob)) {
+        if (!shouldThink(mob, level.getGameTime())) {
             return;
         }
 

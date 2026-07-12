@@ -12,6 +12,9 @@ import java.util.List;
 
 public final class RetoldAxolotlHelperEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
+    private static final int AXOLOTL_SCAN_CACHE_TICKS = 6;
+    private static final int WATER_RANGE_BLOCK_SEARCH_CACHE_TICKS = 24;
+    private static final int AXOLOTL_PATH_INTERVAL_TICKS = 6;
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
 
@@ -192,15 +195,21 @@ public final class RetoldAxolotlHelperEvents {
             ServerLevel level,
             PathfinderMob axolotl
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                axolotl,
                 PathfinderMob.class,
-                axolotl.getBoundingBox().inflate(WATER_RANGE_MEMBER_SEARCH_RADIUS_BLOCKS),
+                WATER_RANGE_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                AXOLOTL_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != axolotl
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         axolotl,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static boolean canStartHunt(
@@ -239,20 +248,23 @@ public final class RetoldAxolotlHelperEvents {
             PathfinderMob axolotl,
             long gameTime
     ) {
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                axolotl,
                 LivingEntity.class,
-                axolotl.getBoundingBox().inflate(PREY_SEARCH_RADIUS_BLOCKS),
-                candidate -> isValidPrey(
-                        axolotl,
-                        candidate,
-                        gameTime
-                )
+                PREY_SEARCH_RADIUS_BLOCKS,
+                gameTime,
+                AXOLOTL_SCAN_CACHE_TICKS
         );
 
         LivingEntity best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidPrey(axolotl, candidate, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = axolotl.distanceToSqr(candidate);
 
             if (distanceSquared > PREY_SEARCH_RADIUS_SQUARED) {
@@ -261,7 +273,7 @@ public final class RetoldAxolotlHelperEvents {
 
             double score = distanceSquared;
 
-            if (axolotl.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(axolotl, candidate, gameTime)) {
                 score -= 10.0D;
             }
 
@@ -301,7 +313,8 @@ public final class RetoldAxolotlHelperEvents {
 
         chasePrey(
                 axolotl,
-                prey
+                prey,
+                gameTime
         );
     }
 
@@ -340,13 +353,15 @@ public final class RetoldAxolotlHelperEvents {
 
         chasePrey(
                 axolotl,
-                prey
+                prey,
+                gameTime
         );
     }
 
     private static void chasePrey(
             PathfinderMob axolotl,
-            LivingEntity prey
+            LivingEntity prey,
+            long gameTime
     ) {
         if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
                 axolotl,
@@ -362,12 +377,14 @@ public final class RetoldAxolotlHelperEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            axolotl.getNavigation().moveTo(
-                    prey,
-                    AXOLOTL_HUNT_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                axolotl,
+                prey,
+                AXOLOTL_HUNT_SPEED,
+                gameTime,
+                AXOLOTL_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void bitePrey(
@@ -483,7 +500,10 @@ public final class RetoldAxolotlHelperEvents {
             return false;
         }
 
-        if (!axolotl.hasLineOfSight(prey) && axolotl.distanceToSqr(prey) > 20.0D) {
+        if (
+                !RetoldAiSightCache.canSee(axolotl, prey, axolotl.level().getGameTime())
+                        && axolotl.distanceToSqr(prey) > 20.0D
+        ) {
             return false;
         }
 
@@ -517,35 +537,14 @@ public final class RetoldAxolotlHelperEvents {
             ServerLevel level,
             PathfinderMob axolotl
     ) {
-        BlockPos center = axolotl.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -WATER_RANGE_SEARCH_HORIZONTAL_RADIUS; dx <= WATER_RANGE_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -WATER_RANGE_SEARCH_VERTICAL_RADIUS; dy <= WATER_RANGE_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -WATER_RANGE_SEARCH_HORIZONTAL_RADIUS; dz <= WATER_RANGE_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isWaterRange(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.4D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findWaterRange(
+                level,
+                axolotl,
+                WATER_RANGE_SEARCH_HORIZONTAL_RADIUS,
+                WATER_RANGE_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                WATER_RANGE_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isWaterRange(

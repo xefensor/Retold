@@ -22,6 +22,10 @@ public final class RetoldVanillaAiBlockerEvents {
             return;
         }
 
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(mob)) {
+            return;
+        }
+
         long gameTime = level.getGameTime();
 
         if (!shouldRun(mob, gameTime)) {

@@ -226,6 +226,14 @@ public final class RetoldBehaviorDebugEvents {
                                 Commands.literal("count")
                                         .executes(RetoldBehaviorDebugEvents::printCounts)
                         )
+                        .then(
+                                Commands.literal("perf")
+                                        .executes(RetoldBehaviorDebugEvents::printPerf)
+                                        .then(
+                                                Commands.literal("reset")
+                                                        .executes(RetoldBehaviorDebugEvents::resetPerf)
+                                        )
+                        )
         );
     }
 
@@ -326,6 +334,26 @@ public final class RetoldBehaviorDebugEvents {
                                 gameTime
                         )
                 ),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int printPerf(CommandContext<CommandSourceStack> context) {
+        context.getSource().sendSuccess(
+                () -> Component.literal(RetoldBehaviorPerf.debugText()),
+                false
+        );
+
+        return 1;
+    }
+
+    private static int resetPerf(CommandContext<CommandSourceStack> context) {
+        RetoldBehaviorPerf.reset();
+
+        context.getSource().sendSuccess(
+                () -> Component.literal("Retold behavior perf counters reset."),
                 false
         );
 

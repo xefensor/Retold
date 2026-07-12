@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -15,6 +14,8 @@ import java.util.List;
 
 public final class RetoldUndeadHordeEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int HORDE_SCAN_CACHE_TICKS = 6;
+    private static final int HORDE_PATH_INTERVAL_TICKS = 6;
     private static final int HORDE_CONTROL_TICKS = 20 * 4;
     private static final int HORDE_PRIORITY = RetoldAiPriorities.FACTION_PRESSURE;
 
@@ -137,21 +138,23 @@ public final class RetoldUndeadHordeEvents {
             ServerLevel level,
             PathfinderMob undead
     ) {
-        AABB area = undead.getBoundingBox().inflate(TARGET_SHARE_RADIUS_BLOCKS);
-
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                undead,
                 PathfinderMob.class,
-                area,
-                source -> isValidHordeSource(
-                        undead,
-                        source
-                )
+                TARGET_SHARE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                HORDE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidHordeSource(undead, source)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidHordeTarget(undead, target)) {
@@ -160,11 +163,11 @@ public final class RetoldUndeadHordeEvents {
 
             double score = undead.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, level.getGameTime())) {
                 score -= 18.0D;
             }
 
-            if (undead.hasLineOfSight(source)) {
+            if (RetoldAiSightCache.canSee(undead, source, level.getGameTime())) {
                 score -= 8.0D;
             }
 
@@ -181,21 +184,23 @@ public final class RetoldUndeadHordeEvents {
             ServerLevel level,
             PathfinderMob undead
     ) {
-        AABB area = undead.getBoundingBox().inflate(HUNGRY_NOTICE_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                undead,
                 LivingEntity.class,
-                area,
-                candidate -> isValidHungrySearchTarget(
-                        undead,
-                        candidate
-                )
+                HUNGRY_NOTICE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                HORDE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidHungrySearchTarget(undead, candidate)) {
+                continue;
+            }
+
             double distanceSquared = undead.distanceToSqr(candidate);
 
             if (distanceSquared > HUNGRY_NOTICE_RADIUS_SQUARED) {
@@ -204,7 +209,7 @@ public final class RetoldUndeadHordeEvents {
 
             double score = distanceSquared;
 
-            if (undead.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(undead, candidate, level.getGameTime())) {
                 score -= 22.0D;
             }
 
@@ -261,7 +266,7 @@ public final class RetoldUndeadHordeEvents {
             return false;
         }
 
-        return undead.hasLineOfSight(candidate)
+        return RetoldAiSightCache.canSee(undead, candidate, undead.level().getGameTime())
                 || undead.distanceToSqr(candidate) <= 36.0D;
     }
 
@@ -291,16 +296,18 @@ public final class RetoldUndeadHordeEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(TARGET_SHARE_RADIUS_BLOCKS);
-
-        for (PathfinderMob ally : level.getEntitiesOfClass(
+        for (PathfinderMob ally : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidHordeRecruit(
-                        source,
-                        candidate
-                )
+                TARGET_SHARE_RADIUS_BLOCKS,
+                gameTime,
+                HORDE_SCAN_CACHE_TICKS
         )) {
+            if (!isValidHordeRecruit(source, ally)) {
+                continue;
+            }
+
             adoptAndConverge(
                     ally,
                     target,
@@ -365,12 +372,14 @@ public final class RetoldUndeadHordeEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            undead.getNavigation().moveTo(
-                    target,
-                    CONVERGE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                undead,
+                target,
+                CONVERGE_SPEED,
+                gameTime,
+                HORDE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void clearHordeControlIfOwned(PathfinderMob undead) {

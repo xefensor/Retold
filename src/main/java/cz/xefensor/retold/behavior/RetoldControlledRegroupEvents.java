@@ -4,7 +4,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -13,6 +12,8 @@ import java.util.List;
 
 public final class RetoldControlledRegroupEvents {
     private static final int REGROUP_THINK_INTERVAL_TICKS = 30;
+    private static final int REGROUP_SCAN_CACHE_TICKS = 10;
+    private static final int REGROUP_PATH_INTERVAL_TICKS = 10;
     private static final int REGROUP_CONTROL_TICKS = 20 * 5;
 
     private static final double HERD_SEARCH_RADIUS_BLOCKS = 18.0D;
@@ -163,21 +164,14 @@ public final class RetoldControlledRegroupEvents {
                 ? LOOSE_GROUP_SEARCH_RADIUS_SQUARED
                 : HERD_SEARCH_RADIUS_SQUARED;
 
-        AABB area = animal.getBoundingBox().inflate(searchRadius);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = RetoldAiScanCache.nearby(
+                level,
+                animal,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidGroupMember(
-                        animal,
-                        candidate,
-                        searchRadiusSquared
-                )
+                searchRadius,
+                animal.level().getGameTime(),
+                REGROUP_SCAN_CACHE_TICKS
         );
-
-        if (candidates.isEmpty()) {
-            return GroupInfo.empty();
-        }
 
         double x = 0.0D;
         double y = 0.0D;
@@ -185,6 +179,10 @@ public final class RetoldControlledRegroupEvents {
         int count = 0;
 
         for (PathfinderMob candidate : candidates) {
+            if (!isValidGroupMember(animal, candidate, searchRadiusSquared)) {
+                continue;
+            }
+
             x += candidate.getX();
             y += candidate.getY();
             z += candidate.getZ();
@@ -262,19 +260,22 @@ public final class RetoldControlledRegroupEvents {
             PathfinderMob animal,
             long gameTime
     ) {
-        AABB area = animal.getBoundingBox().inflate(PREDATOR_PRESSURE_RADIUS_BLOCKS);
-
-        List<PathfinderMob> predators = level.getEntitiesOfClass(
+        List<PathfinderMob> predators = RetoldAiScanCache.nearby(
+                level,
+                animal,
                 PathfinderMob.class,
-                area,
-                predator -> isPredatorPressure(
-                        animal,
-                        predator,
-                        gameTime
-                )
+                PREDATOR_PRESSURE_RADIUS_BLOCKS,
+                gameTime,
+                REGROUP_SCAN_CACHE_TICKS
         );
 
-        return !predators.isEmpty();
+        for (PathfinderMob predator : predators) {
+            if (isPredatorPressure(animal, predator, gameTime)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static boolean isPredatorPressure(
@@ -344,14 +345,16 @@ public final class RetoldControlledRegroupEvents {
                 : HERD_REGROUP_SPEED;
         double speed = baseSpeed + getSocialPressure(animal) * FEAR_REGROUP_SPEED_BONUS;
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            animal.getNavigation().moveTo(
-                    center.x,
-                    center.y,
-                    center.z,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                animal,
+                center.x,
+                center.y,
+                center.z,
+                speed,
+                gameTime,
+                REGROUP_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void stopRegroup(PathfinderMob animal) {

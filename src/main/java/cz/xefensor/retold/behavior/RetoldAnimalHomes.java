@@ -5,7 +5,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -24,6 +23,8 @@ public final class RetoldAnimalHomes {
     public static final String WRONG_TYPE_PREFIX = "wrong_type_expected_";
 
     private static final Map<PathfinderMob, RetoldAnimalHomeMemory> HOMES = new WeakHashMap<>();
+    private static final int HOME_OWNER_SCAN_CACHE_TICKS = 15;
+    private static final int HOME_MEMBER_POSITION_SCAN_CACHE_TICKS = 15;
     private static final long STALE_HOME_UNUSED_TICKS = 24000L * 7L;
     private static final double STALE_HOME_FORGET_DISTANCE_BLOCKS = 96.0D;
     private static final double STALE_HOME_FORGET_DISTANCE_SQUARED =
@@ -139,7 +140,6 @@ public final class RetoldAnimalHomes {
         }
 
         double radius = RetoldAnimalSocialGroups.homeSeparationBlocks(reference);
-        AABB area = new AABB(home.pos()).inflate(radius);
         Set<PathfinderMob> counted = Collections.newSetFromMap(new IdentityHashMap<>());
         int count = 0;
 
@@ -160,19 +160,25 @@ public final class RetoldAnimalHomes {
             }
         }
 
-        List<PathfinderMob> members = level.getEntitiesOfClass(
+        List<PathfinderMob> members = RetoldAiScanCache.nearbyAt(
+                level,
+                home.pos(),
                 PathfinderMob.class,
-                area,
-                candidate -> isCurrentHomeMember(
-                        level,
-                        reference,
-                        candidate,
-                        home
-                )
+                radius,
+                level.getGameTime(),
+                HOME_MEMBER_POSITION_SCAN_CACHE_TICKS
         );
 
         for (PathfinderMob member : members) {
-            if (counted.add(member)) {
+            if (
+                    isCurrentHomeMember(
+                            level,
+                            reference,
+                            member,
+                            home
+                    )
+                            && counted.add(member)
+            ) {
                 count++;
             }
         }
@@ -570,22 +576,27 @@ public final class RetoldAnimalHomes {
 
         double separation = RetoldAnimalSocialGroups.homeSeparationBlocks(leader);
         double separationSquared = separation * separation;
-        AABB area = new AABB(fallbackPos).inflate(separation);
-
-        List<PathfinderMob> nearby = level.getEntitiesOfClass(
+        for (PathfinderMob candidate : RetoldAiScanCache.nearby(
+                level,
+                leader,
                 PathfinderMob.class,
-                area,
-                candidate -> isNearbyCompatibleGroupHomeOwner(
-                        level,
-                        leader,
-                        members,
-                        candidate,
-                        fallbackPos,
-                        separationSquared
-                )
-        );
+                separation,
+                level.getGameTime(),
+                HOME_OWNER_SCAN_CACHE_TICKS
+        )) {
+            if (isNearbyCompatibleGroupHomeOwner(
+                    level,
+                    leader,
+                    members,
+                    candidate,
+                    fallbackPos,
+                    separationSquared
+            )) {
+                return true;
+            }
+        }
 
-        return !nearby.isEmpty();
+        return false;
     }
 
     private static boolean isNearbyCompatibleGroupHomeOwner(

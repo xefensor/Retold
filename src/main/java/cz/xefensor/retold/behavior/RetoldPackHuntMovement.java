@@ -5,6 +5,7 @@ import net.minecraft.world.entity.PathfinderMob;
 
 final class RetoldPackHuntMovement {
     private static final int PARTY_HUNT_CONTROL_TICKS = 20 * 5;
+    private static final int PARTY_HUNT_PATH_INTERVAL_TICKS = 8;
 
     private RetoldPackHuntMovement() {
     }
@@ -68,11 +69,13 @@ final class RetoldPackHuntMovement {
                 35.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            member.getNavigation().moveTo(
-                    prey,
-                    RetoldPackTuning.huntSpeed(leaderPath)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                member,
+                prey,
+                RetoldPackTuning.huntSpeed(leaderPath),
+                gameTime,
+                PARTY_HUNT_PATH_INTERVAL_TICKS,
+                2.5D * 2.5D
+        );
     }
 }

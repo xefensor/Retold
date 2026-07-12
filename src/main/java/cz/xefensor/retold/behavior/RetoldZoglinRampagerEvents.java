@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -15,6 +14,8 @@ import java.util.List;
 
 public final class RetoldZoglinRampagerEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
+    private static final int RAMPAGE_SCAN_CACHE_TICKS = 5;
+    private static final int RAMPAGE_PATH_INTERVAL_TICKS = 6;
     private static final int RAMPAGE_CONTROL_TICKS = 20 * 4;
     private static final int RAMPAGE_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 1);
 
@@ -95,21 +96,23 @@ public final class RetoldZoglinRampagerEvents {
             ServerLevel level,
             PathfinderMob zoglin
     ) {
-        AABB area = zoglin.getBoundingBox().inflate(TARGET_SEARCH_RADIUS_BLOCKS);
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                zoglin,
                 LivingEntity.class,
-                area,
-                candidate -> isValidRampageTarget(
-                        zoglin,
-                        candidate,
-                        TARGET_SEARCH_RADIUS_SQUARED
-                )
+                TARGET_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                RAMPAGE_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidRampageTarget(zoglin, candidate, TARGET_SEARCH_RADIUS_SQUARED)) {
+                continue;
+            }
+
             double distanceSquared = zoglin.distanceToSqr(candidate);
 
             if (distanceSquared > TARGET_SEARCH_RADIUS_SQUARED) {
@@ -118,7 +121,7 @@ public final class RetoldZoglinRampagerEvents {
 
             double score = distanceSquared;
 
-            if (zoglin.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(zoglin, candidate, level.getGameTime())) {
                 score -= 28.0D;
             }
 
@@ -168,12 +171,14 @@ public final class RetoldZoglinRampagerEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            zoglin.getNavigation().moveTo(
-                    target,
-                    RAMPAGE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                zoglin,
+                target,
+                RAMPAGE_SPEED,
+                gameTime,
+                RAMPAGE_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static boolean canStartRampage(PathfinderMob zoglin) {

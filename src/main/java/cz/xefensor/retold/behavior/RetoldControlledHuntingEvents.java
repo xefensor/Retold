@@ -7,7 +7,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -22,6 +21,8 @@ public final class RetoldControlledHuntingEvents {
     private static final Map<PathfinderMob, HuntMemory> HUNT_MEMORIES = new WeakHashMap<>();
 
     private static final int HUNT_THINK_INTERVAL_TICKS = 10;
+    private static final int HUNT_SCAN_CACHE_TICKS = 5;
+    private static final int HUNT_PATH_INTERVAL_TICKS = 8;
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int FEED_LOCK_AFTER_KILL_TICKS = 20 * 8;
     private static final int HUNT_TRAIL_MEMORY_TICKS = 20 * 10;
@@ -297,15 +298,17 @@ public final class RetoldControlledHuntingEvents {
                 35.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            hunter.getNavigation().moveTo(
-                    prey,
-                    getHuntSpeed(
-                            hunter,
-                            gameTime
-                    )
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                hunter,
+                prey,
+                getHuntSpeed(
+                        hunter,
+                        gameTime
+                ),
+                gameTime,
+                HUNT_PATH_INTERVAL_TICKS,
+                2.5D * 2.5D
+        );
     }
 
     private static void continueActiveHunt(
@@ -368,7 +371,8 @@ public final class RetoldControlledHuntingEvents {
 
         boolean canDirectlySense = canDirectlySensePrey(
                 hunter,
-                prey
+                prey,
+                gameTime
         );
 
         boolean canUseTrail = canUseTrailSense(
@@ -414,15 +418,17 @@ public final class RetoldControlledHuntingEvents {
                 return;
             }
 
-            RetoldAiControl.withNavigationBypass(() -> {
-                hunter.getNavigation().moveTo(
-                        prey,
-                        getHuntSpeed(
-                                hunter,
-                                gameTime
-                        )
-                );
-            });
+            RetoldBehaviorMovement.throttledMoveTo(
+                    hunter,
+                    prey,
+                    getHuntSpeed(
+                            hunter,
+                            gameTime
+                    ),
+                    gameTime,
+                    HUNT_PATH_INTERVAL_TICKS,
+                    2.5D * 2.5D
+            );
 
             return;
         }
@@ -489,35 +495,36 @@ public final class RetoldControlledHuntingEvents {
             PathfinderMob hunter,
             long gameTime
     ) {
-        AABB area = hunter.getBoundingBox().inflate(PREY_SEARCH_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                hunter,
                 LivingEntity.class,
-                area,
-                candidate -> isValidSearchPrey(
-                        hunter,
-                        candidate,
-                        gameTime
-                )
+                PREY_SEARCH_RADIUS_BLOCKS,
+                gameTime,
+                HUNT_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestPrey = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidSearchPrey(hunter, candidate, gameTime)) {
+                continue;
+            }
+
             double distanceSquared = hunter.distanceToSqr(candidate);
 
             if (distanceSquared > PREY_SEARCH_RADIUS_SQUARED) {
                 continue;
             }
 
-            if (!canDirectlySensePrey(hunter, candidate)) {
+            if (!canDirectlySensePrey(hunter, candidate, gameTime)) {
                 continue;
             }
 
             double score = distanceSquared;
 
-            if (hunter.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(hunter, candidate, gameTime)) {
                 score -= 24.0D;
             }
 
@@ -560,13 +567,14 @@ public final class RetoldControlledHuntingEvents {
 
     private static boolean canDirectlySensePrey(
             PathfinderMob hunter,
-            LivingEntity prey
+            LivingEntity prey,
+            long gameTime
     ) {
         double distanceSquared = hunter.distanceToSqr(prey);
 
         if (
                 distanceSquared <= SIGHT_RADIUS_SQUARED
-                        && hunter.hasLineOfSight(prey)
+                        && RetoldAiSightCache.canSee(hunter, prey, gameTime)
         ) {
             return true;
         }
@@ -751,17 +759,19 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(true);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            hunter.getNavigation().moveTo(
-                    target.x,
-                    target.y,
-                    target.z,
-                    getHuntSpeed(
-                            hunter,
-                            gameTime
-                    )
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                hunter,
+                target.x,
+                target.y,
+                target.z,
+                getHuntSpeed(
+                        hunter,
+                        gameTime
+                ),
+                gameTime,
+                HUNT_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static boolean hasEasyFoodNearby(
@@ -785,19 +795,20 @@ public final class RetoldControlledHuntingEvents {
             return false;
         }
 
-        AABB area = hunter.getBoundingBox().inflate(EASY_FOOD_RADIUS_BLOCKS);
-
-        List<ItemEntity> foods = level.getEntitiesOfClass(
+        List<ItemEntity> foods = RetoldAiScanCache.nearby(
+                level,
+                hunter,
                 ItemEntity.class,
-                area,
-                item -> isValidEasyFood(
-                        hunter,
-                        item
-                )
+                EASY_FOOD_RADIUS_BLOCKS,
+                gameTime,
+                HUNT_SCAN_CACHE_TICKS
         );
 
         for (ItemEntity food : foods) {
-            if (hunter.distanceToSqr(food) <= EASY_FOOD_RADIUS_SQUARED) {
+            if (
+                    isValidEasyFood(hunter, food)
+                            && hunter.distanceToSqr(food) <= EASY_FOOD_RADIUS_SQUARED
+            ) {
                 return true;
             }
         }
@@ -825,7 +836,10 @@ public final class RetoldControlledHuntingEvents {
             return false;
         }
 
-        if (!hunter.hasLineOfSight(item) && hunter.distanceToSqr(item) > CLOSE_CHASE_DISTANCE_SQUARED) {
+        if (
+                !RetoldAiSightCache.canSee(hunter, item, hunter.level().getGameTime())
+                        && hunter.distanceToSqr(item) > CLOSE_CHASE_DISTANCE_SQUARED
+        ) {
             return false;
         }
 

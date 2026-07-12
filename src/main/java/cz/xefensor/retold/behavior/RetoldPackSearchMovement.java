@@ -5,6 +5,7 @@ import net.minecraft.world.phys.Vec3;
 
 final class RetoldPackSearchMovement {
     private static final int PARTY_SEARCH_CONTROL_TICKS = 20 * 6;
+    private static final int PARTY_SEARCH_PATH_INTERVAL_TICKS = 10;
     private static final int PARTY_SEARCH_DIRECTION_LIFE_TICKS = 20 * 45;
 
     private static final double SEARCH_FORWARD_BLOCKS = 14.0D;
@@ -76,14 +77,16 @@ final class RetoldPackSearchMovement {
                 25.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            leader.getNavigation().moveTo(
-                    target.x,
-                    target.y,
-                    target.z,
-                    RetoldPackTuning.searchSpeed(RetoldPackMovementRules.getPath(leader))
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                leader,
+                target.x,
+                target.y,
+                target.z,
+                RetoldPackTuning.searchSpeed(RetoldPackMovementRules.getPath(leader)),
+                gameTime,
+                PARTY_SEARCH_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     static void moveMemberInSearchFormation(
@@ -147,14 +150,16 @@ final class RetoldPackSearchMovement {
                 25.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            member.getNavigation().moveTo(
-                    target.x,
-                    target.y,
-                    target.z,
-                    RetoldPackTuning.searchSpeed(RetoldPackMovementRules.getPath(leader))
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                member,
+                target.x,
+                target.y,
+                target.z,
+                RetoldPackTuning.searchSpeed(RetoldPackMovementRules.getPath(leader)),
+                gameTime,
+                PARTY_SEARCH_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static Vec3 getSearchFormationPoint(

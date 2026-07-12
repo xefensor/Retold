@@ -3,9 +3,6 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
-
-import java.util.List;
 
 final class RetoldWolfDenIdle {
     private static final String REASON_DEN_IDLE = "den_idle";
@@ -14,6 +11,8 @@ final class RetoldWolfDenIdle {
     private static final int HOME_IDLE_PRIORITY = RetoldAiPriorities.HOME_IDLE;
     private static final int HOME_IDLE_MOVE_INTERVAL_TICKS = 20 * 18;
     private static final int HOME_IDLE_CROWD_MOVE_INTERVAL_TICKS = 20 * 7;
+    private static final int DEN_CROWD_SCAN_CACHE_TICKS = 8;
+    private static final int DEN_IDLE_PATH_INTERVAL_TICKS = 12;
 
     private static final double HOME_CLOSE_DISTANCE_BLOCKS = 5.0D;
     private static final double HOME_CLOSE_DISTANCE_SQUARED =
@@ -103,14 +102,14 @@ final class RetoldWolfDenIdle {
         if (distanceSquared > HOME_CLOSE_DISTANCE_SQUARED) {
             RetoldHomeRestAnimations.stopResting(mob);
 
-            RetoldAiControl.withNavigationBypass(() -> {
-                mob.getNavigation().moveTo(
-                        homePos.getX() + 0.5D,
-                        homePos.getY(),
-                        homePos.getZ() + 0.5D,
-                        WOLF_HOME_RETURN_SPEED
-                );
-            });
+            RetoldBehaviorMovement.throttledMoveTo(
+                    mob,
+                    homePos,
+                    WOLF_HOME_RETURN_SPEED,
+                    gameTime,
+                    DEN_IDLE_PATH_INTERVAL_TICKS,
+                    2.0D * 2.0D
+            );
             return;
         }
 
@@ -125,7 +124,8 @@ final class RetoldWolfDenIdle {
 
             moveToRandomDenPoint(
                     mob,
-                    homePos
+                    homePos,
+                    gameTime
             );
             return;
         }
@@ -136,7 +136,8 @@ final class RetoldWolfDenIdle {
 
     private static void moveToRandomDenPoint(
             PathfinderMob mob,
-            BlockPos homePos
+            BlockPos homePos,
+            long gameTime
     ) {
         double angle = mob.getRandom().nextDouble() * Math.PI * 2.0D;
         double distance = WOLF_DEN_IDLE_MIN_STROLL_BLOCKS
@@ -144,14 +145,16 @@ final class RetoldWolfDenIdle {
         double x = homePos.getX() + 0.5D + Math.cos(angle) * distance;
         double z = homePos.getZ() + 0.5D + Math.sin(angle) * distance;
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    x,
-                    homePos.getY(),
-                    z,
-                    WOLF_DEN_IDLE_STROLL_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                x,
+                homePos.getY(),
+                z,
+                WOLF_DEN_IDLE_STROLL_SPEED,
+                gameTime,
+                DEN_IDLE_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static boolean isCrowdedAtDen(PathfinderMob mob) {
@@ -159,19 +162,26 @@ final class RetoldWolfDenIdle {
             return false;
         }
 
-        AABB area = mob.getBoundingBox().inflate(WOLF_DEN_CROWD_RADIUS_BLOCKS);
-
-        List<PathfinderMob> nearbyWolves = level.getEntitiesOfClass(
+        for (PathfinderMob candidate : RetoldAiScanCache.nearby(
+                level,
+                mob,
                 PathfinderMob.class,
-                area,
-                candidate -> candidate != mob
-                        && isWolf(candidate)
-                        && candidate.isAlive()
-                        && !candidate.isRemoved()
-                        && mob.distanceToSqr(candidate) <= WOLF_DEN_CROWD_RADIUS_SQUARED
-        );
+                WOLF_DEN_CROWD_RADIUS_BLOCKS,
+                level.getGameTime(),
+                DEN_CROWD_SCAN_CACHE_TICKS
+        )) {
+            if (
+                    candidate != mob
+                            && isWolf(candidate)
+                            && candidate.isAlive()
+                            && !candidate.isRemoved()
+                            && mob.distanceToSqr(candidate) <= WOLF_DEN_CROWD_RADIUS_SQUARED
+            ) {
+                return true;
+            }
+        }
 
-        return !nearbyWolves.isEmpty();
+        return false;
     }
 
     private static boolean isWolf(PathfinderMob mob) {

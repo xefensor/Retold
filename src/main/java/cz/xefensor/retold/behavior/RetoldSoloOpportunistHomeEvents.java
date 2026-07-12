@@ -18,6 +18,7 @@ public final class RetoldSoloOpportunistHomeEvents {
     private static final String REASON_SOLO_IDLE = "solo_home_idle";
 
     private static final int THINK_INTERVAL_TICKS = 40;
+    private static final int SOLO_HOME_PATH_INTERVAL_TICKS = 12;
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
     private static final int HOME_RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REST, 3);
     private static final int CACHE_RETURN_PRIORITY = RetoldAiPriorities.REGROUP;
@@ -67,13 +68,13 @@ public final class RetoldSoloOpportunistHomeEvents {
             return;
         }
 
-        long gameTime = level.getGameTime();
-
-        if (!RetoldBehaviorTiming.shouldThink(animal, gameTime, THINK_INTERVAL_TICKS)) {
+        if (!isSoloOpportunist(animal)) {
             return;
         }
 
-        if (!isSoloOpportunist(animal)) {
+        long gameTime = level.getGameTime();
+
+        if (!RetoldBehaviorTiming.shouldThink(animal, gameTime, THINK_INTERVAL_TICKS)) {
             return;
         }
 
@@ -261,14 +262,14 @@ public final class RetoldSoloOpportunistHomeEvents {
         animal.setSprinting(false);
         RetoldAnimalHomes.markUsed(animal, gameTime);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            animal.getNavigation().moveTo(
-                    home.pos().getX() + 0.5D,
-                    home.pos().getY(),
-                    home.pos().getZ() + 0.5D,
-                    HOME_RETURN_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                animal,
+                home.pos(),
+                HOME_RETURN_SPEED,
+                gameTime,
+                SOLO_HOME_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static int returnPriority(

@@ -1,5 +1,6 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.behavior.RetoldAiScanCache;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
@@ -21,10 +22,12 @@ public final class RetoldTerritoryController {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.getMatchingContext(
+        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
+                state,
                 level,
                 mob,
-                config
+                config,
+                gameTime
         );
 
         if (territoryContext == null) {
@@ -215,11 +218,12 @@ public final class RetoldTerritoryController {
             return;
         }
 
-        state.territoryContext = RetoldTerritoryRules.refreshMatchingContext(
-                state.territoryContext,
+        state.territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
+                state,
                 level,
                 mob,
-                config
+                config,
+                gameTime
         );
 
         if (state.territoryContext == null) {
@@ -349,6 +353,7 @@ public final class RetoldTerritoryController {
                     level,
                     mob,
                     config,
+                    state,
                     mobStates,
                     gameTime
             );
@@ -373,6 +378,7 @@ public final class RetoldTerritoryController {
                 level,
                 mob,
                 config,
+                state,
                 mobStates,
                 gameTime
         );
@@ -385,16 +391,20 @@ public final class RetoldTerritoryController {
                 level,
                 mob,
                 config,
+                state,
                 currentTarget,
-                mobStates
+                mobStates,
+                gameTime
         );
 
         int bestFocus = RetoldWarningMovement.countNearbyFactionMobsFocusedOn(
                 level,
                 mob,
                 config,
+                state,
                 bestTarget,
-                mobStates
+                mobStates,
+                gameTime
         );
 
         if (currentFocus > bestFocus + 1) {
@@ -504,15 +514,24 @@ public final class RetoldTerritoryController {
             state.warnedIntruders.add(warningTarget.getUUID());
         }
 
-        List<LivingEntity> nearbyIntruders = level.getEntitiesOfClass(
+        List<LivingEntity> nearbyIntruders = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 LivingEntity.class,
-                mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
-                target -> RetoldTerritoryTargetSelector.isPossibleIntruder(level, mob, target, config, gameTime)
-                        && canSeeTarget(mob, target)
-                        && canCountWarningPulse(level, mob, target, config, state.territoryContext, gameTime)
+                RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_NEARBY_INTRUDER_SCAN_CACHE_TICKS
         );
 
         for (LivingEntity intruder : nearbyIntruders) {
+            if (
+                    !RetoldTerritoryTargetSelector.isPossibleIntruder(level, mob, intruder, config, gameTime)
+                            || !canSeeTarget(mob, intruder)
+                            || !canCountWarningPulse(level, mob, intruder, config, state.territoryContext, gameTime)
+            ) {
+                continue;
+            }
+
             state.warnedIntruders.add(intruder.getUUID());
         }
     }

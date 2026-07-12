@@ -1,5 +1,7 @@
 package cz.xefensor.retold.territory;
 
+import cz.xefensor.retold.behavior.RetoldAiScanCache;
+import cz.xefensor.retold.behavior.RetoldBehaviorPerf;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
@@ -39,8 +41,10 @@ public final class RetoldWarningMovement {
                 level,
                 mob,
                 config,
+                state,
                 warningTarget,
-                mobStates
+                mobStates,
+                gameTime
         );
 
         if (gameTime >= state.nextFormationRecheckAt) {
@@ -69,15 +73,17 @@ public final class RetoldWarningMovement {
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryConfig config,
+            RetoldTerritoryMobState state,
             LivingEntity intruder,
-            Map<PathfinderMob, RetoldTerritoryMobState> mobStates
+            Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
+            long gameTime
     ) {
-        List<PathfinderMob> nearbyMobs = level.getEntitiesOfClass(
-                PathfinderMob.class,
-                mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
-                other -> other != mob
-                        && other.isAlive()
-                        && RetoldFactionMembers.isMemberOf(other, config.faction)
+        List<PathfinderMob> nearbyMobs = getNearbyFactionMobs(
+                level,
+                mob,
+                config,
+                state,
+                gameTime
         );
 
         int count = 0;
@@ -89,6 +95,52 @@ public final class RetoldWarningMovement {
         }
 
         return count;
+    }
+
+    public static List<PathfinderMob> getNearbyFactionMobs(
+            ServerLevel level,
+            PathfinderMob mob,
+            RetoldTerritoryConfig config,
+            RetoldTerritoryMobState state,
+            long gameTime
+    ) {
+        if (level == null || mob == null || config == null) {
+            return List.of();
+        }
+
+        if (
+                state != null
+                        && state.nearbyFactionMobsFaction == config.faction
+                        && gameTime < state.nextNearbyFactionMobsRecheckAt
+        ) {
+            RetoldBehaviorPerf.recordTerritoryFactionMobCache(true);
+            return state.nearbyFactionMobs;
+        }
+
+        RetoldBehaviorPerf.recordTerritoryFactionMobCache(false);
+
+        List<PathfinderMob> nearbyMobs = RetoldAiScanCache.nearby(
+                level,
+                mob,
+                PathfinderMob.class,
+                RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS,
+                gameTime,
+                RetoldTerritoryConstants.WARNING_NEARBY_FACTION_MOB_CACHE_TICKS
+        ).stream()
+                .filter(other -> other != mob)
+                .filter(PathfinderMob::isAlive)
+                .filter(other -> RetoldFactionMembers.isMemberOf(other, config.faction))
+                .toList();
+
+        if (state != null) {
+            state.nearbyFactionMobs = nearbyMobs;
+            state.nearbyFactionMobsFaction = config.faction;
+            state.nextNearbyFactionMobsRecheckAt = gameTime
+                    + RetoldTerritoryConstants.WARNING_NEARBY_FACTION_MOB_CACHE_TICKS
+                    + Math.floorMod(mob.getId(), 4);
+        }
+
+        return nearbyMobs;
     }
 
     public static double getAngleFromTargetToMob(PathfinderMob mob, LivingEntity target) {
@@ -107,18 +159,23 @@ public final class RetoldWarningMovement {
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryConfig config,
+            RetoldTerritoryMobState state,
             LivingEntity intruder,
-            Map<PathfinderMob, RetoldTerritoryMobState> mobStates
+            Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
+            long gameTime
     ) {
-        List<PathfinderMob> focusedGuards = level.getEntitiesOfClass(
-                PathfinderMob.class,
-                mob.getBoundingBox().inflate(RetoldTerritoryConstants.NOTICE_MOB_RADIUS_BLOCKS),
-                other -> other.isAlive()
-                        && RetoldFactionMembers.isMemberOf(other, config.faction)
-                        && isFocusedOnIntruder(other, intruder, mobStates)
-        );
+        List<PathfinderMob> focusedGuards = getNearbyFactionMobs(
+                level,
+                mob,
+                config,
+                state,
+                gameTime
+        ).stream()
+                .filter(other -> isFocusedOnIntruder(other, intruder, mobStates))
+                .toList();
 
         if (!focusedGuards.contains(mob)) {
+            focusedGuards = new java.util.ArrayList<>(focusedGuards);
             focusedGuards.add(mob);
         }
 

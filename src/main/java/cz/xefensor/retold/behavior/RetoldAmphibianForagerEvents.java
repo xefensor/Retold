@@ -12,6 +12,9 @@ import java.util.List;
 
 public final class RetoldAmphibianForagerEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int AMPHIBIAN_SCAN_CACHE_TICKS = 6;
+    private static final int WETLAND_BLOCK_SEARCH_CACHE_TICKS = 24;
+    private static final int AMPHIBIAN_PATH_INTERVAL_TICKS = 6;
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
 
@@ -187,15 +190,21 @@ public final class RetoldAmphibianForagerEvents {
             ServerLevel level,
             PathfinderMob frog
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                frog,
                 PathfinderMob.class,
-                frog.getBoundingBox().inflate(WETLAND_MEMBER_SEARCH_RADIUS_BLOCKS),
+                WETLAND_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                AMPHIBIAN_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != frog
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         frog,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static boolean canStartHunt(
@@ -225,19 +234,23 @@ public final class RetoldAmphibianForagerEvents {
             ServerLevel level,
             PathfinderMob frog
     ) {
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                frog,
                 LivingEntity.class,
-                frog.getBoundingBox().inflate(PREY_SEARCH_RADIUS_BLOCKS),
-                candidate -> isValidPrey(
-                        frog,
-                        candidate
-                )
+                PREY_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                AMPHIBIAN_SCAN_CACHE_TICKS
         );
 
         LivingEntity best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidPrey(frog, candidate)) {
+                continue;
+            }
+
             double distanceSquared = frog.distanceToSqr(candidate);
 
             if (distanceSquared > PREY_SEARCH_RADIUS_SQUARED) {
@@ -246,7 +259,7 @@ public final class RetoldAmphibianForagerEvents {
 
             double score = distanceSquared;
 
-            if (frog.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(frog, candidate, level.getGameTime())) {
                 score -= 10.0D;
             }
 
@@ -282,7 +295,8 @@ public final class RetoldAmphibianForagerEvents {
 
         chasePrey(
                 frog,
-                prey
+                prey,
+                gameTime
         );
     }
 
@@ -321,13 +335,15 @@ public final class RetoldAmphibianForagerEvents {
 
         chasePrey(
                 frog,
-                prey
+                prey,
+                gameTime
         );
     }
 
     private static void chasePrey(
             PathfinderMob frog,
-            LivingEntity prey
+            LivingEntity prey,
+            long gameTime
     ) {
         if (!RetoldBehaviorTargets.setAttackTargetOrClearOwner(
                 frog,
@@ -343,12 +359,14 @@ public final class RetoldAmphibianForagerEvents {
                 30.0F
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            frog.getNavigation().moveTo(
-                    prey,
-                    FROG_HUNT_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                frog,
+                prey,
+                FROG_HUNT_SPEED,
+                gameTime,
+                AMPHIBIAN_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void bitePrey(
@@ -466,42 +484,24 @@ public final class RetoldAmphibianForagerEvents {
         }
 
         return RetoldPreyTargeting.isTinyWetlandPrey(prey)
-                && (frog.hasLineOfSight(prey) || frog.distanceToSqr(prey) <= 16.0D);
+                && (
+                RetoldAiSightCache.canSee(frog, prey, frog.level().getGameTime())
+                        || frog.distanceToSqr(prey) <= 16.0D
+        );
     }
 
     private static BlockPos findNearestWetland(
             ServerLevel level,
             PathfinderMob frog
     ) {
-        BlockPos center = frog.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -WETLAND_SEARCH_HORIZONTAL_RADIUS; dx <= WETLAND_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -WETLAND_SEARCH_VERTICAL_RADIUS; dy <= WETLAND_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -WETLAND_SEARCH_HORIZONTAL_RADIUS; dz <= WETLAND_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isWetland(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.5D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findWetland(
+                level,
+                frog,
+                WETLAND_SEARCH_HORIZONTAL_RADIUS,
+                WETLAND_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                WETLAND_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isWetland(

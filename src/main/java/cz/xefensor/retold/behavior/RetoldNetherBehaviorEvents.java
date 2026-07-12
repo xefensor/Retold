@@ -9,9 +9,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -19,6 +16,9 @@ import java.util.List;
 
 public final class RetoldNetherBehaviorEvents {
     private static final int THINK_INTERVAL_TICKS = 14;
+    private static final int NETHER_SCAN_CACHE_TICKS = 7;
+    private static final int NETHER_BLOCK_SEARCH_CACHE_TICKS = 28;
+    private static final int NETHER_PATH_INTERVAL_TICKS = 7;
 
     private static final int REMNANT_ATTACK_CONTROL_TICKS = 20 * 4;
     private static final int REMNANT_ATTACK_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 3);
@@ -54,13 +54,20 @@ public final class RetoldNetherBehaviorEvents {
             return;
         }
 
+        boolean isNetherRemnant = RetoldFactionMembers.isNetherRemnant(mob);
+        boolean isNetherHungryLife = isNetherHungryLife(mob);
+
+        if (!isNetherRemnant && !isNetherHungryLife) {
+            return;
+        }
+
         long gameTime = level.getGameTime();
 
         if (!shouldThink(mob, gameTime)) {
             return;
         }
 
-        if (RetoldFactionMembers.isNetherRemnant(mob)) {
+        if (isNetherRemnant) {
             handleRemnantUndeadPressure(
                     level,
                     mob,
@@ -68,7 +75,7 @@ public final class RetoldNetherBehaviorEvents {
             );
         }
 
-        if (isNetherHungryLife(mob)) {
+        if (isNetherHungryLife) {
             handleNetherFoodSearch(
                     level,
                     mob,
@@ -126,12 +133,14 @@ public final class RetoldNetherBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            remnant.getNavigation().moveTo(
-                    target,
-                    REMNANT_ATTACK_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                remnant,
+                target,
+                REMNANT_ATTACK_SPEED,
+                gameTime,
+                NETHER_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static boolean canPressureUndead(PathfinderMob remnant) {
@@ -157,21 +166,23 @@ public final class RetoldNetherBehaviorEvents {
             ServerLevel level,
             PathfinderMob remnant
     ) {
-        AABB area = remnant.getBoundingBox().inflate(UNDEAD_PRESSURE_RADIUS_BLOCKS);
-
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                remnant,
                 LivingEntity.class,
-                area,
-                candidate -> isValidUndeadPressureTarget(
-                        remnant,
-                        candidate
-                )
+                UNDEAD_PRESSURE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                NETHER_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidUndeadPressureTarget(remnant, candidate)) {
+                continue;
+            }
+
             double distanceSquared = remnant.distanceToSqr(candidate);
 
             if (distanceSquared > UNDEAD_PRESSURE_RADIUS_SQUARED) {
@@ -189,7 +200,7 @@ public final class RetoldNetherBehaviorEvents {
                 score -= 60.0D;
             }
 
-            if (remnant.hasLineOfSight(candidate)) {
+            if (RetoldAiSightCache.canSee(remnant, candidate, level.getGameTime())) {
                 score -= 30.0D;
             }
 
@@ -230,7 +241,7 @@ public final class RetoldNetherBehaviorEvents {
             return false;
         }
 
-        return remnant.hasLineOfSight(candidate)
+        return RetoldAiSightCache.canSee(remnant, candidate, remnant.level().getGameTime())
                 || remnant.distanceToSqr(candidate) <= 64.0D;
     }
 
@@ -316,21 +327,23 @@ public final class RetoldNetherBehaviorEvents {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        AABB area = mob.getBoundingBox().inflate(FOOD_SEARCH_RADIUS_BLOCKS);
-
-        List<ItemEntity> items = level.getEntitiesOfClass(
+        List<ItemEntity> items = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 ItemEntity.class,
-                area,
-                item -> isValidDroppedFood(
-                        mob,
-                        item
-                )
+                FOOD_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                NETHER_SCAN_CACHE_TICKS
         );
 
         ItemEntity best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (ItemEntity item : items) {
+            if (!isValidDroppedFood(mob, item)) {
+                continue;
+            }
+
             double distanceSquared = mob.distanceToSqr(item);
 
             if (distanceSquared > FOOD_SEARCH_RADIUS_SQUARED) {
@@ -339,7 +352,7 @@ public final class RetoldNetherBehaviorEvents {
 
             double score = distanceSquared;
 
-            if (mob.hasLineOfSight(item)) {
+            if (RetoldAiSightCache.canSee(mob, item, level.getGameTime())) {
                 score -= 16.0D;
             }
 
@@ -364,7 +377,10 @@ public final class RetoldNetherBehaviorEvents {
             return false;
         }
 
-        if (!mob.hasLineOfSight(item) && mob.distanceToSqr(item) > 64.0D) {
+        if (
+                !RetoldAiSightCache.canSee(mob, item, mob.level().getGameTime())
+                        && mob.distanceToSqr(item) > 64.0D
+        ) {
             return false;
         }
 
@@ -378,54 +394,14 @@ public final class RetoldNetherBehaviorEvents {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        BlockPos center = mob.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-
-        for (int dx = -FORAGE_SEARCH_HORIZONTAL_RADIUS; dx <= FORAGE_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dz = -FORAGE_SEARCH_HORIZONTAL_RADIUS; dz <= FORAGE_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                for (int dy = -FORAGE_SEARCH_VERTICAL_RADIUS; dy <= FORAGE_SEARCH_VERTICAL_RADIUS; dy++) {
-                    BlockPos pos = center.offset(dx, dy, dz);
-                    BlockState state = level.getBlockState(pos);
-
-                    if (!isNetherForageBlock(mob, state)) {
-                        continue;
-                    }
-
-                    double distanceSquared = center.distSqr(pos);
-
-                    if (distanceSquared > FOOD_SEARCH_RADIUS_SQUARED) {
-                        continue;
-                    }
-
-                    double score = distanceSquared;
-
-                    if (state.is(Blocks.CRIMSON_FUNGUS)) {
-                        score -= 12.0D;
-                    }
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = pos.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
-    }
-
-    private static boolean isNetherForageBlock(
-            PathfinderMob mob,
-            BlockState state
-    ) {
-        if (state == null) {
-            return false;
-        }
-
-        return RetoldMobRules.canForageBlock(
+        return RetoldForageBlockSearch.findNetherForageBlock(
+                level,
                 mob,
-                state
+                FORAGE_SEARCH_HORIZONTAL_RADIUS,
+                FORAGE_SEARCH_VERTICAL_RADIUS,
+                FOOD_SEARCH_RADIUS_SQUARED,
+                level.getGameTime(),
+                NETHER_BLOCK_SEARCH_CACHE_TICKS
         );
     }
 
@@ -438,12 +414,14 @@ public final class RetoldNetherBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    food,
-                    foodSearchSpeed(mob)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                food,
+                foodSearchSpeed(mob),
+                gameTime,
+                NETHER_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static void moveTowardForage(
@@ -455,14 +433,14 @@ public final class RetoldNetherBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    pos.getX() + 0.5D,
-                    pos.getY(),
-                    pos.getZ() + 0.5D,
-                    foodSearchSpeed(mob)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                pos,
+                foodSearchSpeed(mob),
+                gameTime,
+                NETHER_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static boolean claimFoodSearch(

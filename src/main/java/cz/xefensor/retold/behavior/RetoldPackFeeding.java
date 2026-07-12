@@ -6,6 +6,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 
 final class RetoldPackFeeding {
     private static final int PARTY_FEED_CONTROL_TICKS = 20 * 8;
+    private static final int PARTY_FEED_PATH_INTERVAL_TICKS = 8;
     private static final double PARTY_FEED_SPEED = 0.95D;
 
     private RetoldPackFeeding() {
@@ -94,12 +95,14 @@ final class RetoldPackFeeding {
 
         member.getNavigation().stop();
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            member.getNavigation().moveTo(
-                    seenFood,
-                    PARTY_FEED_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                member,
+                seenFood,
+                PARTY_FEED_SPEED,
+                gameTime,
+                PARTY_FEED_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
 
         return true;
     }

@@ -1,5 +1,6 @@
 package cz.xefensor.retold.combat;
 
+import cz.xefensor.retold.behavior.RetoldAiSightCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -36,7 +37,11 @@ public final class RetoldAiTargets {
 
     public static boolean isVisibleTo(PathfinderMob mob, LivingEntity target) {
         return isAliveInSameLevel(mob, target)
-                && mob.getSensing().hasLineOfSight(target);
+                && RetoldAiSightCache.canSee(
+                mob,
+                target,
+                mob.level().getGameTime()
+        );
     }
 
     public static void setTargetAndAggression(

@@ -3,13 +3,14 @@ package cz.xefensor.retold.behavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 final class RetoldPackHomeCreation {
+    private static final int HOME_CREATION_SCAN_CACHE_TICKS = 10;
+
     private static final double PASSIVE_HOME_RADIUS_BLOCKS = 18.0D;
     private static final double PASSIVE_HOME_RADIUS_SQUARED =
             PASSIVE_HOME_RADIUS_BLOCKS * PASSIVE_HOME_RADIUS_BLOCKS;
@@ -26,18 +27,15 @@ final class RetoldPackHomeCreation {
             return null;
         }
 
-        AABB area = leader.getBoundingBox().inflate(PASSIVE_HOME_RADIUS_BLOCKS);
-
-        List<PathfinderMob> candidates = level.getEntitiesOfClass(
+        List<PathfinderMob> candidates = new ArrayList<>(RetoldAiScanCache.nearby(
+                level,
+                leader,
                 PathfinderMob.class,
-                area,
-                candidate -> isPassiveHomeCandidate(
-                        level,
-                        leader,
-                        candidate,
-                        gameTime
-                )
-        );
+                PASSIVE_HOME_RADIUS_BLOCKS,
+                gameTime,
+                HOME_CREATION_SCAN_CACHE_TICKS
+        ));
+        candidates.removeIf(candidate -> !isPassiveHomeCandidate(level, leader, candidate, gameTime));
 
         if (candidates.isEmpty()) {
             return null;

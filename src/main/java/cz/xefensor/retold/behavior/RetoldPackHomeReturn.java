@@ -9,6 +9,7 @@ final class RetoldPackHomeReturn {
     private static final String REASON_RETURN_HOME = "return_home";
 
     private static final int HOME_RETURN_CONTROL_TICKS = 20 * 5;
+    private static final int HOME_RETURN_PATH_INTERVAL_TICKS = 12;
 
     private static final double HOME_CLOSE_DISTANCE_BLOCKS = 5.0D;
     private static final double HOME_CLOSE_DISTANCE_SQUARED =
@@ -116,14 +117,14 @@ final class RetoldPackHomeReturn {
 
         double speed = getHomeReturnSpeed(mob);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    homePos.getX() + 0.5D,
-                    homePos.getY(),
-                    homePos.getZ() + 0.5D,
-                    speed
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                homePos,
+                speed,
+                gameTime,
+                HOME_RETURN_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     private static void stopHomeReturn(

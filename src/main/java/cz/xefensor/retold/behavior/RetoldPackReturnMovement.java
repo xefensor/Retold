@@ -6,6 +6,7 @@ import net.minecraft.world.phys.Vec3;
 
 final class RetoldPackReturnMovement {
     private static final int PARTY_RETURN_CONTROL_TICKS = 20 * 6;
+    private static final int PARTY_RETURN_PATH_INTERVAL_TICKS = 10;
 
     private static final double RETURN_TO_PACK_SPEED = 0.86D;
 
@@ -126,14 +127,16 @@ final class RetoldPackReturnMovement {
         Vec3 target = leader.position()
                 .add(side.scale(sideOffset));
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            member.getNavigation().moveTo(
-                    target.x,
-                    member.getY(),
-                    target.z,
-                    RETURN_TO_PACK_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                member,
+                target.x,
+                member.getY(),
+                target.z,
+                RETURN_TO_PACK_SPEED,
+                gameTime,
+                PARTY_RETURN_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
     }
 
     static boolean moveMemberBackToPack(
@@ -209,14 +212,14 @@ final class RetoldPackReturnMovement {
 
         mob.setSprinting(false);
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    packCenter.getX() + 0.5D,
-                    packCenter.getY(),
-                    packCenter.getZ() + 0.5D,
-                    RETURN_TO_PACK_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                packCenter,
+                RETURN_TO_PACK_SPEED,
+                gameTime,
+                PARTY_RETURN_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
 
         return false;
     }

@@ -14,6 +14,8 @@ import java.util.List;
 
 public final class RetoldArmadilloDefenseEvents {
     private static final int THINK_INTERVAL_TICKS = 8;
+    private static final int ARMADILLO_SCAN_CACHE_TICKS = 6;
+    private static final int SCRUB_BLOCK_SEARCH_CACHE_TICKS = 24;
     private static final int SHELTER_CONTROL_TICKS = 20 * 4;
     private static final int RETREAT_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
@@ -200,15 +202,21 @@ public final class RetoldArmadilloDefenseEvents {
             ServerLevel level,
             PathfinderMob armadillo
     ) {
-        return level.getEntitiesOfClass(
+        return RetoldAiScanCache.nearby(
+                level,
+                armadillo,
                 PathfinderMob.class,
-                armadillo.getBoundingBox().inflate(RANGE_MEMBER_SEARCH_RADIUS_BLOCKS),
+                RANGE_MEMBER_SEARCH_RADIUS_BLOCKS,
+                level.getGameTime(),
+                ARMADILLO_SCAN_CACHE_TICKS
+        ).stream()
+                .filter(
                 candidate -> candidate != armadillo
                         && RetoldAnimalSocialGroups.canShareHomeOrRange(
                         armadillo,
                         candidate
                 )
-        );
+        ).toList();
     }
 
     private static LivingEntity findThreat(
@@ -224,14 +232,18 @@ public final class RetoldArmadilloDefenseEvents {
         LivingEntity bestThreat = null;
         double bestScore = Double.MAX_VALUE;
 
-        for (LivingEntity candidate : level.getEntitiesOfClass(
+        for (LivingEntity candidate : RetoldAiScanCache.nearby(
+                level,
+                armadillo,
                 LivingEntity.class,
-                armadillo.getBoundingBox().inflate(THREAT_SCAN_RADIUS_BLOCKS),
-                candidate -> isValidThreat(
-                        armadillo,
-                        candidate
-                )
+                THREAT_SCAN_RADIUS_BLOCKS,
+                level.getGameTime(),
+                ARMADILLO_SCAN_CACHE_TICKS
         )) {
+            if (!isValidThreat(armadillo, candidate)) {
+                continue;
+            }
+
             double distanceSquared = armadillo.distanceToSqr(candidate);
 
             if (distanceSquared > THREAT_SCAN_RADIUS_SQUARED) {
@@ -280,7 +292,7 @@ public final class RetoldArmadilloDefenseEvents {
         if (candidate instanceof Player player) {
             return player.isSprinting()
                     && armadillo.distanceToSqr(player) <= THREAT_SCAN_RADIUS_SQUARED
-                    && armadillo.hasLineOfSight(player);
+                    && RetoldAiSightCache.canSee(armadillo, player, armadillo.level().getGameTime());
         }
 
         if (candidate == armadillo.getLastHurtByMob()) {
@@ -293,7 +305,10 @@ public final class RetoldArmadilloDefenseEvents {
 
         return isScaryMob(candidate)
                 && armadillo.distanceToSqr(candidate) <= THREAT_SCAN_RADIUS_SQUARED
-                && (armadillo.hasLineOfSight(candidate) || armadillo.distanceToSqr(candidate) <= CLOSE_THREAT_SQUARED);
+                && (
+                RetoldAiSightCache.canSee(armadillo, candidate, armadillo.level().getGameTime())
+                        || armadillo.distanceToSqr(candidate) <= CLOSE_THREAT_SQUARED
+        );
     }
 
     private static void rememberDanger(
@@ -411,35 +426,14 @@ public final class RetoldArmadilloDefenseEvents {
             ServerLevel level,
             PathfinderMob armadillo
     ) {
-        BlockPos center = armadillo.blockPosition();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-
-        for (int dx = -SCRUB_SEARCH_HORIZONTAL_RADIUS; dx <= SCRUB_SEARCH_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -SCRUB_SEARCH_VERTICAL_RADIUS; dy <= SCRUB_SEARCH_VERTICAL_RADIUS; dy++) {
-                for (int dz = -SCRUB_SEARCH_HORIZONTAL_RADIUS; dz <= SCRUB_SEARCH_HORIZONTAL_RADIUS; dz++) {
-                    mutable.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    if (!isScrubRange(level, mutable)) {
-                        continue;
-                    }
-
-                    double score = dx * dx + dy * dy * 1.4D + dz * dz;
-
-                    if (score < bestScore) {
-                        bestScore = score;
-                        best = mutable.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldBlockTargetSearch.findScrubRange(
+                level,
+                armadillo,
+                SCRUB_SEARCH_HORIZONTAL_RADIUS,
+                SCRUB_SEARCH_VERTICAL_RADIUS,
+                level.getGameTime(),
+                SCRUB_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static boolean isScrubRange(

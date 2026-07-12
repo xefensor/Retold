@@ -7,7 +7,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -16,6 +15,8 @@ import java.util.List;
 
 public final class RetoldSkeletonRangedEvents {
     private static final int THINK_INTERVAL_TICKS = 12;
+    private static final int RANGED_SCAN_CACHE_TICKS = 6;
+    private static final int RANGED_PATH_INTERVAL_TICKS = 6;
     private static final int RANGED_CONTROL_TICKS = 20 * 4;
     private static final int RANGED_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 1);
 
@@ -119,20 +120,23 @@ public final class RetoldSkeletonRangedEvents {
             ServerLevel level,
             PathfinderMob skeleton
     ) {
-        AABB area = skeleton.getBoundingBox().inflate(SHARE_RADIUS_BLOCKS);
-        List<PathfinderMob> sources = level.getEntitiesOfClass(
+        List<PathfinderMob> sources = RetoldAiScanCache.nearby(
+                level,
+                skeleton,
                 PathfinderMob.class,
-                area,
-                source -> isValidRangedSource(
-                        skeleton,
-                        source
-                )
+                SHARE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                RANGED_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
+            if (!isValidRangedSource(skeleton, source)) {
+                continue;
+            }
+
             LivingEntity target = source.getTarget();
 
             if (!isValidRangedTarget(skeleton, target)) {
@@ -141,11 +145,11 @@ public final class RetoldSkeletonRangedEvents {
 
             double score = skeleton.distanceToSqr(source);
 
-            if (source.hasLineOfSight(target)) {
+            if (RetoldAiSightCache.canSee(source, target, level.getGameTime())) {
                 score -= 20.0D;
             }
 
-            if (skeleton.hasLineOfSight(source)) {
+            if (RetoldAiSightCache.canSee(skeleton, source, level.getGameTime())) {
                 score -= 8.0D;
             }
 
@@ -162,20 +166,23 @@ public final class RetoldSkeletonRangedEvents {
             ServerLevel level,
             PathfinderMob skeleton
     ) {
-        AABB area = skeleton.getBoundingBox().inflate(NOTICE_RADIUS_BLOCKS);
-        List<LivingEntity> candidates = level.getEntitiesOfClass(
+        List<LivingEntity> candidates = RetoldAiScanCache.nearby(
+                level,
+                skeleton,
                 LivingEntity.class,
-                area,
-                candidate -> isValidVisibleEnemy(
-                        skeleton,
-                        candidate
-                )
+                NOTICE_RADIUS_BLOCKS,
+                level.getGameTime(),
+                RANGED_SCAN_CACHE_TICKS
         );
 
         LivingEntity bestTarget = null;
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
+            if (!isValidVisibleEnemy(skeleton, candidate)) {
+                continue;
+            }
+
             double distanceSquared = skeleton.distanceToSqr(candidate);
 
             if (distanceSquared > NOTICE_RADIUS_SQUARED) {
@@ -203,16 +210,18 @@ public final class RetoldSkeletonRangedEvents {
             LivingEntity target,
             long gameTime
     ) {
-        AABB area = source.getBoundingBox().inflate(SHARE_RADIUS_BLOCKS);
-
-        for (PathfinderMob ally : level.getEntitiesOfClass(
+        for (PathfinderMob ally : RetoldAiScanCache.nearby(
+                level,
+                source,
                 PathfinderMob.class,
-                area,
-                candidate -> isValidRangedRecruit(
-                        source,
-                        candidate
-                )
+                SHARE_RADIUS_BLOCKS,
+                gameTime,
+                RANGED_SCAN_CACHE_TICKS
         )) {
+            if (!isValidRangedRecruit(source, ally)) {
+                continue;
+            }
+
             adoptTarget(
                     ally,
                     target,
@@ -272,29 +281,33 @@ public final class RetoldSkeletonRangedEvents {
         if (distanceSquared <= TOO_CLOSE_SQUARED) {
             moveAwayFromTarget(
                     skeleton,
-                    target
+                    target,
+                    gameTime
             );
             return;
         }
 
-        if (distanceSquared >= TOO_FAR_SQUARED || !skeleton.hasLineOfSight(target)) {
-            RetoldAiControl.withNavigationBypass(() -> {
-                skeleton.getNavigation().moveTo(
-                        target,
-                        RANGED_MOVE_SPEED
-                );
-            });
+        if (distanceSquared >= TOO_FAR_SQUARED || !RetoldAiSightCache.canSee(skeleton, target, gameTime)) {
+            RetoldBehaviorMovement.throttledMoveTo(
+                    skeleton,
+                    target,
+                    RANGED_MOVE_SPEED,
+                    gameTime,
+                    RANGED_PATH_INTERVAL_TICKS,
+                    2.0D * 2.0D
+            );
             return;
         }
 
-        if (distanceSquared <= IDEAL_RANGE_SQUARED && skeleton.hasLineOfSight(target)) {
+        if (distanceSquared <= IDEAL_RANGE_SQUARED && RetoldAiSightCache.canSee(skeleton, target, gameTime)) {
             skeleton.getNavigation().stop();
         }
     }
 
     private static void moveAwayFromTarget(
             PathfinderMob skeleton,
-            LivingEntity target
+            LivingEntity target,
+            long gameTime
     ) {
         Vec3 away = skeleton.position().subtract(target.position());
 
@@ -310,14 +323,16 @@ public final class RetoldSkeletonRangedEvents {
                 away.normalize().scale(BACKPEDAL_BLOCKS)
         );
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            skeleton.getNavigation().moveTo(
-                    destination.x,
-                    skeleton.getY(),
-                    destination.z,
-                    RANGED_MOVE_SPEED
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                skeleton,
+                destination.x,
+                skeleton.getY(),
+                destination.z,
+                RANGED_MOVE_SPEED,
+                gameTime,
+                RANGED_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static boolean isValidRangedSource(
@@ -385,7 +400,7 @@ public final class RetoldSkeletonRangedEvents {
             return false;
         }
 
-        return skeleton.hasLineOfSight(candidate);
+        return RetoldAiSightCache.canSee(skeleton, candidate, skeleton.level().getGameTime());
     }
 
     private static boolean isValidRangedTarget(

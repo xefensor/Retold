@@ -62,7 +62,7 @@ public final class RetoldBehaviorCombat {
             return false;
         }
 
-        if (requireLineOfSight && !attacker.hasLineOfSight(target)) {
+        if (requireLineOfSight && !RetoldAiSightCache.canSee(attacker, target, attacker.level().getGameTime())) {
             return false;
         }
 

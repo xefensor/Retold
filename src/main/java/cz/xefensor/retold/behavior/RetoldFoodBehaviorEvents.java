@@ -17,6 +17,9 @@ public final class RetoldFoodBehaviorEvents {
     private static final RetoldAiControlOwner CONTROL_OWNER = RetoldAiControlOwner.FOOD;
 
     private static final int THINK_INTERVAL_TICKS = 20;
+    private static final int FOOD_SCAN_CACHE_TICKS = 8;
+    private static final int FOOD_BLOCK_SEARCH_CACHE_TICKS = 30;
+    private static final int FOOD_PATH_INTERVAL_TICKS = 8;
     private static final int CLEANUP_INTERVAL_TICKS = 20 * 10;
     private static final int FEED_CONTROL_TICKS = 20 * 4;
     private static final int FEED_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.FEED, 1);
@@ -182,16 +185,23 @@ public final class RetoldFoodBehaviorEvents {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        List<ItemEntity> items = level.getEntitiesOfClass(
+        List<ItemEntity> items = RetoldAiScanCache.nearby(
+                level,
+                mob,
                 ItemEntity.class,
-                mob.getBoundingBox().inflate(DROPPED_FOOD_RADIUS),
-                item -> isValidDroppedFood(mob, item)
+                DROPPED_FOOD_RADIUS,
+                level.getGameTime(),
+                FOOD_SCAN_CACHE_TICKS
         );
 
         ItemEntity best = null;
         double bestScore = Double.MAX_VALUE;
 
         for (ItemEntity item : items) {
+            if (!isValidDroppedFood(mob, item)) {
+                continue;
+            }
+
             double distanceSquared = mob.distanceToSqr(item);
 
             if (distanceSquared > DROPPED_FOOD_RADIUS_SQUARED) {
@@ -200,7 +210,7 @@ public final class RetoldFoodBehaviorEvents {
 
             double score = distanceSquared;
 
-            if (mob.hasLineOfSight(item)) {
+            if (RetoldAiSightCache.canSee(mob, item, level.getGameTime())) {
                 score -= 8.0D;
             }
 
@@ -235,7 +245,10 @@ public final class RetoldFoodBehaviorEvents {
             return false;
         }
 
-        if (!mob.hasLineOfSight(item) && mob.distanceToSqr(item) > 16.0D) {
+        if (
+                !RetoldAiSightCache.canSee(mob, item, mob.level().getGameTime())
+                        && mob.distanceToSqr(item) > 16.0D
+        ) {
             return false;
         }
 
@@ -265,12 +278,14 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    food,
-                    getFoodSpeed(mob)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                food,
+                getFoodSpeed(mob),
+                gameTime,
+                FOOD_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static void consumeDroppedFood(
@@ -318,46 +333,15 @@ public final class RetoldFoodBehaviorEvents {
             ServerLevel level,
             PathfinderMob mob
     ) {
-        BlockPos center = mob.blockPosition();
-
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-
-        for (int dx = -FORAGE_HORIZONTAL_RADIUS; dx <= FORAGE_HORIZONTAL_RADIUS; dx++) {
-            for (int dy = -FORAGE_VERTICAL_RADIUS; dy <= FORAGE_VERTICAL_RADIUS; dy++) {
-                for (int dz = -FORAGE_HORIZONTAL_RADIUS; dz <= FORAGE_HORIZONTAL_RADIUS; dz++) {
-                    mutablePos.set(
-                            center.getX() + dx,
-                            center.getY() + dy,
-                            center.getZ() + dz
-                    );
-
-                    double distanceSquared = dx * dx + dy * dy + dz * dz;
-
-                    if (distanceSquared > FORAGE_HORIZONTAL_RADIUS * FORAGE_HORIZONTAL_RADIUS) {
-                        continue;
-                    }
-
-                    BlockState blockState = level.getBlockState(mutablePos);
-
-                    if (!RetoldMobRules.canForageBlock(mob, blockState)) {
-                        continue;
-                    }
-
-                    if (distanceSquared > 16.0D) {
-                        continue;
-                    }
-
-                    if (distanceSquared < bestScore) {
-                        bestScore = distanceSquared;
-                        best = mutablePos.immutable();
-                    }
-                }
-            }
-        }
-
-        return best;
+        return RetoldForageBlockSearch.findOrdinaryForageBlock(
+                level,
+                mob,
+                FORAGE_HORIZONTAL_RADIUS,
+                FORAGE_VERTICAL_RADIUS,
+                16.0D,
+                level.getGameTime(),
+                FOOD_BLOCK_SEARCH_CACHE_TICKS
+        );
     }
 
     private static void handleForageBlock(
@@ -382,14 +366,14 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        RetoldAiControl.withNavigationBypass(() -> {
-            mob.getNavigation().moveTo(
-                    foragePos.getX() + 0.5D,
-                    foragePos.getY(),
-                    foragePos.getZ() + 0.5D,
-                    getFoodSpeed(mob)
-            );
-        });
+        RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                foragePos,
+                getFoodSpeed(mob),
+                gameTime,
+                FOOD_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
     }
 
     private static void consumeForageBlock(
