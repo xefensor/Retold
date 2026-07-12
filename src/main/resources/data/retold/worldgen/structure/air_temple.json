@@ -1,0 +1,6 @@
+{
+  "type": "retold:air_temple",
+  "biomes": "#retold:has_structure/air_temple",
+  "spawn_overrides": {},
+  "step": "surface_structures"
+}

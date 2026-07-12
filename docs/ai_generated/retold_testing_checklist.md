@@ -38,6 +38,7 @@ Follow-up: rerun this smoke test after fire, earth, and air element paths are im
 - Confirm players in vanilla End are ejected when Stage 3 begins.
 - Confirm Overworld End portal travel goes to Aender in Stage 3.
 - Confirm vanilla End remains reachable with commands for old builds.
+- Use `/locate structure retold:air_temple` and confirm the Air Temple placeholder can be located.
 
 ## Aender
 

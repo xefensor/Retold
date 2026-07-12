@@ -7,9 +7,11 @@ import java.util.List;
 public final class RetoldDelayedStructureIds {
     public static final String WOODLAND_MANSION = "minecraft:mansion";
     public static final String PILLAGER_OUTPOST = "minecraft:pillager_outpost";
+    public static final String AIR_TEMPLE = "retold:air_temple";
     public static final List<String> ALL = List.of(
             WOODLAND_MANSION,
-            PILLAGER_OUTPOST
+            PILLAGER_OUTPOST,
+            AIR_TEMPLE
     );
 
     private RetoldDelayedStructureIds() {

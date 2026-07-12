@@ -164,7 +164,7 @@ Current ritual model:
 
 Current limitation:
 
-- Only `water_element` has a real challenge path right now. `air_element` exists and can be offered to the dragon egg, but the Air Temple/boss acquisition path is not implemented yet. Fire and earth still need items and acquisition paths.
+- Only `water_element` has a real challenge path right now. `air_element` exists and can be offered to the dragon egg. `retold:air_temple` exists as a locatable placeholder structure, but the Air Temple wind/boss acquisition path is not implemented yet. Fire and earth still need items and acquisition paths.
 - Because the temporary Nether Star shortcut has been removed, normal survival cannot reach Stage 3 until the remaining element paths are implemented.
 
 End crystal behavior:

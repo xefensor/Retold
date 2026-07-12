@@ -44,6 +44,8 @@ The Air Temple should be a real structure so it can be located like a woodland m
 
 Future discovery can add in-world clues, but that is out of scope for the first version.
 
+Current implementation note: `retold:air_temple` is registered as a locatable placeholder structure. Its current generated form is only a small sky-island/temple prototype used to prove placement, locating, and delayed-generation wiring before the final structure, wind, boss, and collapse systems are built.
+
 ## Placement
 
 Air Temples generate in the Overworld during Stage 2.
@@ -51,13 +53,15 @@ Air Temples generate in the Overworld during Stage 2.
 Placement rules:
 
 - Prefer mountain and highland regions.
-- Generate at or above cloud height so clouds partially hide the island.
+- Generate above cloud height so clouds hide the lower island and crater view more than the temple itself.
 - Rare like old Minecraft strongholds.
 - Use one main island plus several satellite fragments.
 - Avoid modified chunks when retrogening into existing worlds.
 - Use the same safety philosophy as delayed mansions and outposts.
 
 Recommended rarity for the first implementation: about three temples per world, seed-based.
+
+Current implementation note: placement uses a three-count concentric-rings structure set biased toward mountain/highland biomes.
 
 ## Retrogen
 

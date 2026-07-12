@@ -116,7 +116,7 @@ Largest missing or partial design areas:
 | Stage 1 requires diamond pickaxe/Nether portal | Not implemented | No explicit Retold gating found. Vanilla rules apply unless affected elsewhere. |
 | Stage 1 wither/Nether star required before End | Deferred/TBD | Maintainer is undecided. Current code has End progression, not End portal activation gating. |
 | Stage 1 Ender Dragon kill advances to Stage 2 | Implemented | `RetoldEndProgressionEvents.onServerTickPost` checks dragon kill and calls `RetoldStageManager.setStage(...STAGE_2)`. |
-| Stage 2 requires four classical elements | Partial | Still planned. `RetoldElementType` has water, fire, earth, and air. Water has a real acquisition path; Air has an item and dragon egg ritual support but no temple/boss acquisition path yet. Fire and earth still need items and paths. Elements should be doable in any order. |
+| Stage 2 requires four classical elements | Partial | Still planned. `RetoldElementType` has water, fire, earth, and air. Water has a real acquisition path; Air has an item, dragon egg ritual support, and locatable placeholder temple structure, but no wind/boss acquisition path yet. Fire and earth still need items and paths. Elements should be doable in any order. |
 | Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts implemented element items and hatches when all four enum elements are offered. Water can currently be acquired through a real path. Air can be offered if obtained through commands or future boss drops. The temporary Nether Star shortcut has been removed. |
 | Stage 3 starts after hatching egg | Implemented | `RetoldStageManager.setStage(...STAGE_3)` in egg hatch flow. |
 | Stage 3 Aender replaces End | Partial | Overworld End portal redirects to Aender and players are ejected from vanilla End. Vanilla End intentionally still exists for command access to old builds. |
@@ -209,7 +209,7 @@ Largest missing or partial design areas:
 | Strongholds kept to 3 | Not implemented / unclear | Still planned. |
 | Villages spawn farther/scarcer | Not implemented / unclear | `NoVillageNearWorldSpawnMixin` exists, but full village scarcity design not confirmed here. |
 | Jungle/desert pyramids as boss tombs | Deferred/TBD | Maybe still planned, but design is not final. |
-| Four element temples/challenges | Partial concept only | Still planned. Water/ocean path exists; other element temples are missing. Element order should be free. |
+| Four element temples/challenges | Partial | Water/ocean path exists. Air has a design spec and placeholder locatable temple structure, but no wind/boss/collapse challenge yet. Fire and earth temples are missing. Element order should be free. |
 | Sunflowers point to significant structure | Not implemented |
 
 ## Ocean Monument And Water Element
