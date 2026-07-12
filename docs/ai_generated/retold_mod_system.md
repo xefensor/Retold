@@ -150,12 +150,13 @@ Technical owner:
 - `RetoldRitualEffects`
 - `RetoldElementType`
 - `WaterElementItem`
+- `AirElementItem`
 
 Current ritual model:
 
 - Dragon kill advances the world to Stage 2.
 - In Stage 2, the dragon egg accepts element items.
-- `water_element` is the currently implemented element item.
+- `water_element` and `air_element` are currently implemented element items.
 - Element acquisition order should be free; no element path should require being completed first unless the maintainer changes the design.
 - Offered elements are saved in `RetoldWorldData`.
 - The dragon egg crack overlay reflects offered element count.
@@ -163,7 +164,7 @@ Current ritual model:
 
 Current limitation:
 
-- Only `water_element` has a real item/challenge path right now; fire, earth, and air exist in the enum but do not yet have completed acquisition paths.
+- Only `water_element` has a real challenge path right now. `air_element` exists and can be offered to the dragon egg, but the Air Temple/boss acquisition path is not implemented yet. Fire and earth still need items and acquisition paths.
 - Because the temporary Nether Star shortcut has been removed, normal survival cannot reach Stage 3 until the remaining element paths are implemented.
 
 End crystal behavior:

@@ -1,6 +1,7 @@
 package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.item.AirElementItem;
 import cz.xefensor.retold.item.WaterElementItem;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
@@ -27,6 +28,14 @@ public final class RetoldBlocks {
     public static final DeferredItem<WaterElementItem> WATER_ELEMENT = ITEMS.registerItem(
             "water_element",
             WaterElementItem::new,
+            properties -> properties
+                    .stacksTo(1)
+                    .rarity(Rarity.EPIC)
+    );
+
+    public static final DeferredItem<AirElementItem> AIR_ELEMENT = ITEMS.registerItem(
+            "air_element",
+            AirElementItem::new,
             properties -> properties
                     .stacksTo(1)
                     .rarity(Rarity.EPIC)

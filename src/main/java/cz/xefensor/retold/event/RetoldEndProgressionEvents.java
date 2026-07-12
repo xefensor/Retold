@@ -139,6 +139,10 @@ public final class RetoldEndProgressionEvents {
             return RetoldElementType.WATER;
         }
 
+        if (stack.is(RetoldBlocks.AIR_ELEMENT)) {
+            return RetoldElementType.AIR;
+        }
+
         return null;
     }
 

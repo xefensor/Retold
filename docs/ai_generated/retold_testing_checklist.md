@@ -31,6 +31,7 @@ Follow-up: rerun this smoke test after fire, earth, and air element paths are im
 - Kill the Ender Dragon and confirm the world advances to Stage 2.
 - Confirm Stage 2 sync reaches clients without reconnecting.
 - Use the dragon egg ritual with `water_element` and confirm the offered element state is saved.
+- Use the dragon egg ritual with `air_element` and confirm the offered element state is saved.
 - Confirm `nether_star` does not hatch the egg.
 - After fire, earth, and air element paths exist, offer all four elements and confirm the egg hatches.
 - Confirm Stage 3 starts after the egg hatch path.
