@@ -84,22 +84,37 @@ public final class AenderStabilizerEvents {
             return;
         }
 
-        if (!level.getBlockState(event.getPos()).is(RetoldBlocks.AENDER_STABILIZER)) {
+        if (!event.getState().is(RetoldBlocks.AENDER_STABILIZER)) {
             return;
         }
 
         ChunkPos center = chunkOf(event.getPos());
+        AenderStabilityData stabilityData = AenderStabilityData.get(level);
 
-        markLoadedHaloAsCurrent(level, center);
-
-        AenderStabilityData.get(level).removeStabilizer(center);
+        stabilityData.removeStabilizer(center);
+        invalidateReleasedHaloChunks(level, stabilityData, center);
     }
 
-    private static void markLoadedHaloAsCurrent(ServerLevel level, ChunkPos center) {
+    private static void invalidateReleasedHaloChunks(
+            ServerLevel level,
+            AenderStabilityData stabilityData,
+            ChunkPos center
+    ) {
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 int chunkX = center.x() + dx;
                 int chunkZ = center.z() + dz;
+                ChunkPos pos = new ChunkPos(chunkX, chunkZ);
+
+                if (stabilityData.isStable(pos)) {
+                    continue;
+                }
+
+                /*
+                 * Stable chunks are marked current while protected. When the last
+                 * stabilizer releases them, they need to rejoin volatile terrain.
+                 */
+                AenderVolatility.forgetGeneratedMark(pos);
 
                 ChunkAccess chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
 
@@ -107,8 +122,7 @@ public final class AenderStabilizerEvents {
                     continue;
                 }
 
-                AenderVolatility.retainForChunk(chunk);
-                AenderVolatility.markGenerated(chunk);
+                AenderRealityTickEvents.enqueueIfNeeded(level, chunk);
             }
         }
     }

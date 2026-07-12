@@ -4,7 +4,9 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
@@ -19,6 +21,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
@@ -82,6 +85,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         List<Entity> entities = entitiesInRegenerationBounds(level, chunkPos);
         generateChunk(chunk, true);
         reconcileEntitiesAfterRegeneration(level, chunkPos, entities);
+        resendRegeneratedChunk(level, chunk);
     }
 
     private static void generateChunk(ChunkAccess chunk, boolean clearFirst) {
@@ -94,12 +98,15 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         TerrainBlocks terrainBlocks = TerrainBlocks.create();
 
         if (clearFirst) {
+            int clearMinY = chunk.getMinY();
+            int clearMaxY = clearMinY + chunk.getHeight();
+
             for (int localX = 0; localX < 16; localX++) {
                 for (int localZ = 0; localZ < 16; localZ++) {
                     int x = chunkMinX + localX;
                     int z = chunkMinZ + localZ;
 
-                    for (int y = AenderIslandSampler.MIN_Y; y < AenderIslandSampler.MAX_Y; y++) {
+                    for (int y = clearMinY; y < clearMaxY; y++) {
                         pos.set(x, y, z);
 
                         if (!chunk.getBlockState(pos).isAir()) {
@@ -135,6 +142,21 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         );
 
         AenderVolatility.markGenerated(chunk);
+    }
+
+    private static void resendRegeneratedChunk(ServerLevel level, ChunkAccess chunk) {
+        if (!(chunk instanceof LevelChunk levelChunk)) {
+            return;
+        }
+
+        levelChunk.markUnsaved();
+
+        ClientboundLevelChunkWithLightPacket packet =
+                new ClientboundLevelChunkWithLightPacket(levelChunk, level.getLightEngine(), null, null);
+
+        for (ServerPlayer player : level.getChunkSource().chunkMap.getPlayers(chunk.getPos(), false)) {
+            player.connection.send(packet);
+        }
     }
 
     private static void generateIslandTerrain(

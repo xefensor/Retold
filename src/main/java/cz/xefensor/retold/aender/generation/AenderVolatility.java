@@ -1,6 +1,7 @@
 package cz.xefensor.retold.aender.generation;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import java.util.ArrayList;
@@ -91,6 +92,10 @@ public final class AenderVolatility {
 
     public static synchronized void forgetGeneratedMark(ChunkAccess chunk) {
         CHUNK_GENERATION_SIGNATURES.remove(chunkKey(chunk));
+    }
+
+    public static synchronized void forgetGeneratedMark(ChunkPos pos) {
+        CHUNK_GENERATION_SIGNATURES.remove(chunkKey(pos));
     }
 
     public static synchronized void clearForgottenWorld() {
@@ -288,8 +293,12 @@ public final class AenderVolatility {
     }
 
     private static long chunkKey(ChunkAccess chunk) {
-        int x = chunk.getPos().x();
-        int z = chunk.getPos().z();
+        return chunkKey(chunk.getPos());
+    }
+
+    private static long chunkKey(ChunkPos pos) {
+        int x = pos.x();
+        int z = pos.z();
 
         return ((long) x & 0xffffffffL) | (((long) z & 0xffffffffL) << 32);
     }
