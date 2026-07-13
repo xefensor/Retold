@@ -10,7 +10,7 @@ AI agents: before implementing anything here, read [`README.md`](README.md), [`r
 | --- | --- | --- |
 | Aender | Lava placement ban is planned but no implementation was found. | Search found Aender water flow/weather hooks, but no lava bucket/fluid placement blocker. |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
-| Elements | Only water has a real element challenge path. | Air has an item and egg ritual support but still needs the Air Temple/boss acquisition path. Fire and earth still need items and acquisition paths. |
+| Elements | Only water has a real element challenge path. | Air has an item and egg ritual support but still needs an acquisition path. Fire and earth still need items and acquisition paths. |
 | Aender | 8:1 Overworld travel scaling is planned but not implemented. | Current portal destination is fixed near Aender spawn. |
 | Aender | Aender teleportation and late-game rewards are planned but not implemented. | Needs design before code. |
 | End | End City/outer End removal needs fresh-world and existing-world verification. | Data/mixins exist, but generated-world behavior should be tested. |

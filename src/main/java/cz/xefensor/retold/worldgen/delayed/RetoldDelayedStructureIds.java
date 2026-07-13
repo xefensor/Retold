@@ -5,13 +5,13 @@ import cz.xefensor.retold.stage.RetoldWorldStage;
 import java.util.List;
 
 public final class RetoldDelayedStructureIds {
+    public static final String AIR_TEMPLE = "retold:air_temple";
     public static final String WOODLAND_MANSION = "minecraft:mansion";
     public static final String PILLAGER_OUTPOST = "minecraft:pillager_outpost";
-    public static final String AIR_TEMPLE = "retold:air_temple";
     public static final List<String> ALL = List.of(
+            AIR_TEMPLE,
             WOODLAND_MANSION,
-            PILLAGER_OUTPOST,
-            AIR_TEMPLE
+            PILLAGER_OUTPOST
     );
 
     private RetoldDelayedStructureIds() {

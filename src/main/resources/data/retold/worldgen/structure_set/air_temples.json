@@ -1,11 +1,9 @@
 {
   "placement": {
-    "type": "minecraft:concentric_rings",
-    "count": 3,
-    "distance": 32,
-    "preferred_biomes": "#retold:has_structure/air_temple",
+    "type": "minecraft:random_spread",
     "salt": 4711026,
-    "spread": 3
+    "separation": 24,
+    "spacing": 80
   },
   "structures": [
     {

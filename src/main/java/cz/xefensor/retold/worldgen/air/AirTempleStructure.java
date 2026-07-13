@@ -3,7 +3,10 @@ package cz.xefensor.retold.worldgen.air;
 import com.mojang.serialization.MapCodec;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.QuartPos;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
@@ -12,12 +15,7 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilde
 import java.util.Optional;
 
 public class AirTempleStructure extends Structure {
-    public static final MapCodec<AirTempleStructure> CODEC =
-            simpleCodec(AirTempleStructure::new);
-
-    private static final int MIN_ISLAND_Y = 224;
-    private static final int SURFACE_CLEARANCE = 96;
-    private static final int TOP_CLEARANCE = 32;
+    public static final MapCodec<AirTempleStructure> CODEC = simpleCodec(AirTempleStructure::new);
 
     public AirTempleStructure(StructureSettings settings) {
         super(settings);
@@ -35,21 +33,36 @@ public class AirTempleStructure extends Structure {
                 context.heightAccessor(),
                 context.randomState()
         );
-        int maxIslandY = context.heightAccessor().getMaxY() - TOP_CLEARANCE;
+        Holder<Biome> centerBiome = context.biomeSource().getNoiseBiome(
+                QuartPos.fromBlock(centerX),
+                QuartPos.fromBlock(groundY),
+                QuartPos.fromBlock(centerZ),
+                context.randomState().sampler()
+        );
+
+        if (!context.validBiome().test(centerBiome)) {
+            return Optional.empty();
+        }
+
+        int maxIslandY = context.heightAccessor().getMaxY()
+                - AirTempleDimensions.TOWER_HEIGHT
+                - AirTempleDimensions.WIND_ABOVE_TOWER
+                - AirTempleDimensions.TOP_CLEARANCE;
         int islandY = Math.min(
                 maxIslandY,
-                Math.max(MIN_ISLAND_Y, groundY + SURFACE_CLEARANCE)
+                Math.max(AirTempleDimensions.MIN_ISLAND_Y, groundY + AirTempleDimensions.SURFACE_CLEARANCE)
         );
 
         if (islandY <= groundY + 32) {
             return Optional.empty();
         }
 
+        AirTemplePaletteKind paletteKind = AirTemplePaletteKind.fromCenterBiome(centerBiome);
         BlockPos startPos = new BlockPos(centerX, islandY, centerZ);
 
         return Optional.of(new GenerationStub(
                 startPos,
-                builder -> generatePieces(builder, centerX, centerZ, groundY, islandY)
+                builder -> generatePieces(builder, centerX, centerZ, groundY, islandY, paletteKind)
         ));
     }
 
@@ -58,9 +71,10 @@ public class AirTempleStructure extends Structure {
             int centerX,
             int centerZ,
             int groundY,
-            int islandY
+            int islandY,
+            AirTemplePaletteKind paletteKind
     ) {
-        builder.addPiece(new AirTemplePiece(centerX, centerZ, groundY, islandY));
+        builder.addPiece(new AirTemplePiece(centerX, centerZ, groundY, islandY, paletteKind));
     }
 
     @Override

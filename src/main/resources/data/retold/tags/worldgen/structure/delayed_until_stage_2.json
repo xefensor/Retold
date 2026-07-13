@@ -1,8 +1,8 @@
 {
   "replace": false,
   "values": [
+    "retold:air_temple",
     "minecraft:mansion",
-    "minecraft:pillager_outpost",
-    "retold:air_temple"
+    "minecraft:pillager_outpost"
   ]
 }

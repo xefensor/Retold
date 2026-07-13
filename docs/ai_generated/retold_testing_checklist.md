@@ -38,8 +38,8 @@ Follow-up: rerun this smoke test after fire, earth, and air element paths are im
 - Confirm players in vanilla End are ejected when Stage 3 begins.
 - Confirm Overworld End portal travel goes to Aender in Stage 3.
 - Confirm vanilla End remains reachable with commands for old builds.
-- Use `/locate structure retold:air_temple` and confirm the Air Temple placeholder can be located.
-- At an Air Temple placeholder, confirm crosswind, updraft, and interior gust zones push entities and that solid windbreaks reduce horizontal wind.
+- In Stage 2, use `/locate structure retold:air_temple` and confirm it appears only in frozen, jagged, or stony peak biomes.
+- At the Air Temple, confirm the floating island, open tuff/copper tower, cloud particles, directional horizontal wind, and upwind block shielding work.
 
 ## Aender
 

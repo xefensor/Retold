@@ -13,7 +13,7 @@ import cz.xefensor.retold.territory.RetoldTerritoryReputationDebugEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTeachingReloadListener;
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
-import cz.xefensor.retold.worldgen.air.AirTempleWindEvents;
+import cz.xefensor.retold.worldgen.air.wind.AirTempleWindEvents;
 import cz.xefensor.retold.worldgen.delayed.*;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.registry.RetoldEntityEvents;
