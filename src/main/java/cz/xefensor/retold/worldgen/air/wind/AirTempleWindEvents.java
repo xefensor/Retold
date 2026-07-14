@@ -87,17 +87,9 @@ public final class AirTempleWindEvents {
             lastSourceRefreshTick = gameTime;
         }
 
-        if (!GENERATED_SOURCES.isEmpty()) {
-            windData.rememberAll(GENERATED_SOURCES.values());
-        }
-
-        if (!LOADED_SOURCES.isEmpty()) {
-            windData.rememberAll(LOADED_SOURCES.values());
-        }
-
-        activeSources.putAll(windData.sources());
-        activeSources.putAll(GENERATED_SOURCES);
-        activeSources.putAll(LOADED_SOURCES);
+        collectVerifiedSources(overworld, windData, activeSources, windData.sources(), false);
+        collectVerifiedSources(overworld, windData, activeSources, GENERATED_SOURCES, true);
+        collectVerifiedSources(overworld, windData, activeSources, LOADED_SOURCES, true);
 
         for (AirTempleWindSource source : activeSources.values()) {
             if (gameTime % BREEZE_SPAWN_INTERVAL_TICKS == 0
@@ -130,6 +122,29 @@ public final class AirTempleWindEvents {
                         zone.emitParticles(overworld, player, overworld.getRandom());
                     }
                 }
+            }
+        }
+    }
+
+    private static void collectVerifiedSources(
+            ServerLevel level,
+            AirTempleWindData windData,
+            Map<Long, AirTempleWindSource> activeSources,
+            Map<Long, AirTempleWindSource> candidates,
+            boolean rememberValid
+    ) {
+        for (Map.Entry<Long, AirTempleWindSource> entry : candidates.entrySet()) {
+            AirTempleWindSource source = entry.getValue();
+
+            if (!source.hasGeneratedTemple(level)) {
+                windData.forget(entry.getKey());
+                continue;
+            }
+
+            activeSources.put(entry.getKey(), source);
+
+            if (rememberValid) {
+                windData.remember(source);
             }
         }
     }

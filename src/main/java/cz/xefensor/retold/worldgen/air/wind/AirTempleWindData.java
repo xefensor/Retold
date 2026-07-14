@@ -66,6 +66,12 @@ public final class AirTempleWindData extends SavedData {
         }
     }
 
+    public void forget(long key) {
+        if (sources.remove(key) != null) {
+            setDirty();
+        }
+    }
+
     private Map<String, List<Integer>> encodeSources() {
         Map<String, List<Integer>> encoded = new HashMap<>();
 
