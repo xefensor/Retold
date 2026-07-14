@@ -12,6 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.ArrayList;
@@ -22,9 +23,13 @@ import java.util.Map;
 
 public final class GaleCoreAttackEvents {
     private static final double SPLASH_RADIUS = 2.65D;
-    private static final double SPLASH_RADIUS_SQ = SPLASH_RADIUS * SPLASH_RADIUS;
+    private static final double IN_FLIGHT_SPLASH_RADIUS = 1.35D;
     private static final int MAX_BLOCKS_PER_IMPACT = 12;
-    private static final int BREAK_PROGRESS_MAX = 10;
+    private static final int MAX_BLOCKS_PER_FLIGHT_TICK = 3;
+    private static final int IN_FLIGHT_CRACK_INTERVAL_TICKS = 2;
+    private static final int IMPACT_DAMAGE = 4;
+    private static final int IN_FLIGHT_DAMAGE = 1;
+    private static final int CLOSE_IMPACT_DAMAGE_BONUS = 1;
     private static final int CRACK_REFRESH_INTERVAL_TICKS = 40;
     private static final int CRACK_DECAY_TICKS = 220;
     private static final int CRACK_BREAKER_SALT = 0x5A17C0DE;
@@ -48,7 +53,42 @@ public final class GaleCoreAttackEvents {
             return;
         }
 
-        crackSplash(level, event.getRayTraceResult().getLocation(), charge);
+        crackSplash(
+                level,
+                event.getRayTraceResult().getLocation(),
+                charge,
+                SPLASH_RADIUS,
+                MAX_BLOCKS_PER_IMPACT,
+                IMPACT_DAMAGE
+        );
+    }
+
+    @SubscribeEvent
+    public static void onEntityTickPost(EntityTickEvent.Post event) {
+        if (!(event.getEntity() instanceof BreezeWindCharge charge)) {
+            return;
+        }
+
+        if (!(charge.getOwner() instanceof GaleCore)) {
+            return;
+        }
+
+        if (!(charge.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        if (charge.tickCount % IN_FLIGHT_CRACK_INTERVAL_TICKS != 0) {
+            return;
+        }
+
+        crackSplash(
+                level,
+                charge.position(),
+                charge,
+                IN_FLIGHT_SPLASH_RADIUS,
+                MAX_BLOCKS_PER_FLIGHT_TICK,
+                IN_FLIGHT_DAMAGE
+        );
     }
 
     @SubscribeEvent
@@ -94,16 +134,24 @@ public final class GaleCoreAttackEvents {
         }
     }
 
-    private static void crackSplash(ServerLevel level, Vec3 center, Entity breaker) {
+    private static void crackSplash(
+            ServerLevel level,
+            Vec3 center,
+            Entity breaker,
+            double radius,
+            int maxBlocks,
+            int progressBonus
+    ) {
         BlockPos origin = BlockPos.containing(center);
         List<BlockImpact> impacts = new ArrayList<>();
-        int radius = (int) Math.ceil(SPLASH_RADIUS);
+        int blockRadius = (int) Math.ceil(radius);
+        double radiusSq = radius * radius;
 
-        for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
+        for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-blockRadius, -blockRadius, -blockRadius), origin.offset(blockRadius, blockRadius, blockRadius))) {
             BlockPos immutablePos = pos.immutable();
             double distanceSq = Vec3.atCenterOf(immutablePos).distanceToSqr(center);
 
-            if (distanceSq > SPLASH_RADIUS_SQ || !canCrackBlock(level, immutablePos)) {
+            if (distanceSq > radiusSq || !canCrackBlock(level, immutablePos)) {
                 continue;
             }
 
@@ -115,20 +163,21 @@ public final class GaleCoreAttackEvents {
         int affected = 0;
 
         for (BlockImpact impact : impacts) {
-            crackBlock(level, impact.pos(), impact.distanceSq(), breaker);
+            crackBlock(level, impact.pos(), impact.distanceSq(), breaker, progressBonus);
 
-            if (++affected >= MAX_BLOCKS_PER_IMPACT) {
+            if (++affected >= maxBlocks) {
                 return;
             }
         }
     }
 
-    private static void crackBlock(ServerLevel level, BlockPos pos, double distanceSq, Entity breaker) {
+    private static void crackBlock(ServerLevel level, BlockPos pos, double distanceSq, Entity breaker, int progressBonus) {
         CrackKey key = new CrackKey(level.dimension(), pos);
         CrackState current = CRACKS.getOrDefault(key, new CrackState(0, level.getGameTime()));
-        int progress = current.progress() + progressGain(level, pos, distanceSq);
+        int progress = current.progress() + progressGain(level, pos, distanceSq) + progressBonus;
+        int durability = blockDurability(level, pos);
 
-        if (progress >= BREAK_PROGRESS_MAX) {
+        if (progress >= durability) {
             level.destroyBlockProgress(breakerId(key), pos, -1);
             CRACKS.remove(key);
             level.destroyBlock(pos, false, breaker);
@@ -136,18 +185,37 @@ public final class GaleCoreAttackEvents {
         }
 
         CRACKS.put(key, new CrackState(progress, level.getGameTime()));
-        level.destroyBlockProgress(breakerId(key), pos, Math.max(0, Math.min(9, progress)));
+        level.destroyBlockProgress(breakerId(key), pos, crackStage(progress, durability));
     }
 
     private static int progressGain(ServerLevel level, BlockPos pos, double distanceSq) {
-        float hardness = level.getBlockState(pos).getDestroySpeed(level, pos);
-        int gain = hardness <= 1.5F ? 4 : hardness <= 3.0F ? 3 : 2;
+        return distanceSq <= 1.25D ? CLOSE_IMPACT_DAMAGE_BONUS : 0;
+    }
 
-        if (distanceSq <= 1.25D) {
-            gain++;
+    private static int blockDurability(ServerLevel level, BlockPos pos) {
+        float hardness = level.getBlockState(pos).getDestroySpeed(level, pos);
+
+        if (hardness <= 0.5F) {
+            return 4;
         }
 
-        return gain;
+        if (hardness <= 1.0F) {
+            return 8;
+        }
+
+        if (hardness <= 2.0F) {
+            return 12;
+        }
+
+        if (hardness <= 4.0F) {
+            return 16;
+        }
+
+        return 24;
+    }
+
+    private static int crackStage(int progress, int durability) {
+        return Math.max(0, Math.min(9, (int) Math.floor(progress * 9.0D / durability)));
     }
 
     private static boolean canCrackBlock(ServerLevel level, BlockPos pos) {

@@ -7,8 +7,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.util.Unit;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
@@ -18,11 +20,15 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.breeze.Breeze;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.BreezeWindCharge;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
@@ -49,6 +55,8 @@ public class GaleCore extends Breeze {
     private static final double FLIGHT_FOLLOW = 0.12D;
     private static final double SAFE_FLIGHT_ANGLE_STEP = Math.PI / 10.0D;
     private static final double COMBAT_EDGE_BUFFER = 4.0D;
+    private static final int HIDDEN_TARGET_WALL_SHOT_TICKS = 45;
+    private static final int WALL_BREAKER_SHOT_COOLDOWN_TICKS = 55;
     private static final int FLIGHT_PATTERN_MIN_TICKS = 55;
     private static final int FLIGHT_PATTERN_RANDOM_TICKS = 80;
 
@@ -67,6 +75,8 @@ public class GaleCore extends Breeze {
     private double heightBias;
     private int orbitDirection = 1;
     private int nextFlightShiftTick;
+    private int hiddenTargetTicks;
+    private int nextWallBreakerShotTick;
     private Vec3 homePosition;
     private AABB combatBounds;
 
@@ -113,7 +123,9 @@ public class GaleCore extends Breeze {
             return;
         }
 
+        manageTargetVisibility(level);
         super.customServerAiStep(level);
+        manageTargetVisibility(level);
     }
 
     @Override
@@ -307,6 +319,7 @@ public class GaleCore extends Breeze {
     private void disengageAndReturnHome() {
         active = false;
         targetPlayerId = null;
+        hiddenTargetTicks = 0;
         this.setTarget(null);
         this.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
         this.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -429,7 +442,71 @@ public class GaleCore extends Breeze {
         orbitAngle = Math.atan2(this.getZ() - target.getZ(), this.getX() - target.getX());
         flightPhase = this.random.nextDouble() * Math.PI * 2.0D;
         orbitDirection = this.random.nextBoolean() ? 1 : -1;
+        hiddenTargetTicks = 0;
         randomizeFlightBias();
+    }
+
+    private void manageTargetVisibility(ServerLevel level) {
+        ServerPlayer target = getTargetPlayer(level);
+
+        if (target == null) {
+            hiddenTargetTicks = 0;
+            return;
+        }
+
+        HitResult sightTrace = traceToTarget(target);
+
+        if (sightTrace.getType() == HitResult.Type.MISS) {
+            hiddenTargetTicks = 0;
+            return;
+        }
+
+        hiddenTargetTicks++;
+        suppressNormalShot();
+
+        if (hiddenTargetTicks >= HIDDEN_TARGET_WALL_SHOT_TICKS && this.tickCount >= nextWallBreakerShotTick) {
+            shootBlockingWall(level, sightTrace.getLocation());
+            nextWallBreakerShotTick = this.tickCount + WALL_BREAKER_SHOT_COOLDOWN_TICKS;
+        }
+    }
+
+    private void suppressNormalShot() {
+        this.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT);
+        this.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT_CHARGING);
+        this.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT_RECOVERING);
+        this.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_COOLDOWN, Unit.INSTANCE, 8L);
+    }
+
+    private HitResult traceToTarget(ServerPlayer target) {
+        Vec3 from = firingPosition();
+        Vec3 to = target.getEyePosition();
+        return this.level().clip(new ClipContext(from, to, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+    }
+
+    private void shootBlockingWall(ServerLevel level, Vec3 hitLocation) {
+        Vec3 from = firingPosition();
+        Vec3 shot = hitLocation.subtract(from);
+
+        if (shot.lengthSqr() < 0.25D) {
+            return;
+        }
+
+        Projectile.spawnProjectileUsingShoot(
+                new BreezeWindCharge(this, level),
+                level,
+                ItemStack.EMPTY,
+                shot.x,
+                shot.y,
+                shot.z,
+                0.8F,
+                1.0F
+        );
+        this.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_RECOVERING, Unit.INSTANCE, 8L);
+        this.playSound(SoundEvents.BREEZE_SHOOT, 1.5F, 0.85F);
+    }
+
+    private Vec3 firingPosition() {
+        return new Vec3(this.getX(), this.getFiringYPosition(), this.getZ());
     }
 
     private void flyAround(ServerPlayer player) {
