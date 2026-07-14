@@ -2,8 +2,6 @@
 
 > AI-generated roadmap. This file is meant for human maintainers and future AI coding agents. It summarizes active design direction, not every historical idea from the original design document.
 
-AI agents: read [`README.md`](README.md), [`design_implementation_status.md`](design_implementation_status.md), [`retold_design_risks.md`](retold_design_risks.md), [`retold_known_issues.md`](retold_known_issues.md), and the relevant system docs before implementing. Ask the maintainer design or implementation questions before coding if a roadmap item can be interpreted in more than one reasonable way.
-
 ## Current Direction
 
 Retold is still built around:
@@ -23,7 +21,7 @@ Retold is still built around:
 These are the strongest next design-aligned areas:
 
 1. Finish the four-element progression model.
-2. Add missing fire, earth, and air element item/challenge paths.
+2. Add missing Fire and Earth element item/challenge paths, and continue tuning the Air Temple/Gale Core path.
 3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 4. Implement Aender 8:1 Overworld travel scaling.
 5. Implement the Aender lava placement ban.
@@ -89,4 +87,8 @@ Update this file when:
 - an undecided item becomes planned or dropped
 - a planned item becomes explicitly not planned
 
-Also update [`design_implementation_status.md`](design_implementation_status.md), [`retold_design_risks.md`](retold_design_risks.md), and [`retold_testing_checklist.md`](retold_testing_checklist.md) when a roadmap change affects implementation status, design risks, or verification steps. Update [`retold_known_issues.md`](retold_known_issues.md) only for confirmed bugs or failed tests.
+Also update [`design_implementation_status.md`](design_implementation_status.md) and [`retold_design_risks.md`](retold_design_risks.md) when a roadmap change affects implementation status, design risks, or verification steps. Update [`retold_issues.md`](retold_issues.md) only for confirmed issues or failed tests.
+
+## AI Agent Instructions
+
+See the shared [AI Agent Instructions](README.md#ai-agent-instructions).

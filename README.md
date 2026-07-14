@@ -15,6 +15,7 @@ Current target:
 - Minecraft `26.2`
 - NeoForge `26.2.0.7-beta`
 - Java `25`
+- Mod version: `0.1.0`
 - Mod id: `retold`
 - License: All Rights Reserved
 
@@ -74,6 +75,7 @@ Implemented or strongly represented systems include:
 - Ender Dragon kill progression into Stage 2
 - dragon egg element ritual framework
 - water element path through the ocean monument / elder guardian
+- air element path through the Air Temple / Gale Core encounter
 - Aender dimension access after Stage 3
 - custom Aender terrain, blocks, stability, lighting, and water behavior
 - End portal redirection to Aender after Stage 3
@@ -152,7 +154,7 @@ The project generates mod metadata from [src/main/templates](src/main/templates)
 - [src/main/java/cz/xefensor/retold](src/main/java/cz/xefensor/retold) - mod source code
 - [src/main/resources](src/main/resources) - assets, data, mixins, dimensions, tags, and overrides
 - [src/main/templates](src/main/templates) - generated NeoForge mod metadata template
-- [docs](docs) - design and technical notes
+- [docs/internal](docs/internal) - internal design, status, and technical notes
 
 ## Notes
 

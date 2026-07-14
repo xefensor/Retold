@@ -2,21 +2,17 @@
 
 > AI-generated status tracker. This file compares the original `Minecraft_ Retold - Design Document.docx` against the current codebase. It is meant for human maintainers and future AI coding agents. Treat this as a working map, not as a final product spec.
 
-AI agents: before implementing from this tracker, read [`README.md`](README.md), ask design/implementation questions when the intended behavior is unclear, and update this tracker when a feature changes status.
-
 Source design document:
 
 - `Minecraft_ Retold - Design Document.docx`
 
-Related generated docs:
+Related internal docs:
 
 - [`retold_roadmap.md`](retold_roadmap.md)
 - [`retold_mod_system.md`](retold_mod_system.md)
 - [`retold_mob_ai_system.md`](retold_mob_ai_system.md)
-- [`mob_ai_completion_matrix.md`](mob_ai_completion_matrix.md)
-- [`retold_testing_checklist.md`](retold_testing_checklist.md)
 - [`retold_design_risks.md`](retold_design_risks.md)
-- [`retold_known_issues.md`](retold_known_issues.md)
+- [`retold_issues.md`](retold_issues.md)
 
 ## Notes On This Review
 
@@ -37,6 +33,7 @@ Status labels:
 ## Current Maintainer Direction Source
 
 Last design clarification: 2026-07-12.
+Last documentation consolidation pass: 2026-07-15.
 
 Active maintainer direction lives in [`retold_roadmap.md`](retold_roadmap.md). This status tracker applies that direction to individual original-design rows so implementation status stays visible without duplicating the roadmap.
 
@@ -49,6 +46,7 @@ Implemented or strongly represented:
 - dragon kill -> Stage 2
 - dragon egg element ritual framework
 - water and air element items
+- Air Temple / Gale Core Air Element path
 - Stage 3 End portal redirect to Aender
 - Aender dimension, generator, block palette, and stabilizer chunks
 - Aender water flow changes
@@ -70,7 +68,7 @@ Implemented or strongly represented:
 Largest missing or partial design areas:
 
 - full four-element progression
-- non-water element bosses/temples
+- Fire/Earth element bosses/temples and Air encounter tuning
 - deciding Stage 1 Nether star / Wither End portal activation
 - Aender late-game rewards and teleportation system
 - Aender 8:1 travel scaling
@@ -348,3 +346,7 @@ Use [`retold_roadmap.md`](retold_roadmap.md) for the active priority list. Use t
 ## Maintenance Rule
 
 Update this file whenever a major design item moves from `Not implemented` to `Partial` or `Implemented`, or when the original design changes.
+
+## AI Agent Instructions
+
+See the shared [AI Agent Instructions](README.md#ai-agent-instructions).

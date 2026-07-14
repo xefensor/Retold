@@ -2,6 +2,7 @@ package cz.xefensor.retold.aender.generation;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import cz.xefensor.retold.aender.RetoldAenderEntryPlatform;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
@@ -131,6 +132,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         for (CachedIsland island : cachedIslands) {
             decorateIsland(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, pos);
         }
+
+        RetoldAenderEntryPlatform.generateInChunk(chunk);
 
         Heightmap.primeHeightmaps(
                 chunk,

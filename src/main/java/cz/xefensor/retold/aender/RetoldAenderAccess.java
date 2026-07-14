@@ -16,7 +16,7 @@ import java.util.List;
 
 public final class RetoldAenderAccess {
     private static final Vec3 AENDER_ENTRY_POSITION =
-            new Vec3(0.5D, 8.0D, 0.5D);
+            RetoldAenderEntryPlatform.ENTRY_POSITION;
 
     private RetoldAenderAccess() {
     }
@@ -62,6 +62,8 @@ public final class RetoldAenderAccess {
 
             return null;
         }
+
+        RetoldAenderEntryPlatform.createInLevel(aenderLevel);
 
         return new TeleportTransition(
                 aenderLevel,

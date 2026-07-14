@@ -1,8 +1,6 @@
 # Retold Design Risks And Open Decisions
 
-> AI-generated design-risk tracker. This file is for planned gaps, undecided design items, implementation watchpoints, and risky future work. Confirmed bugs belong in [`retold_known_issues.md`](retold_known_issues.md).
-
-AI agents: before implementing anything here, read [`README.md`](README.md), [`retold_roadmap.md`](retold_roadmap.md), [`design_implementation_status.md`](design_implementation_status.md), and the owning subsystem docs. Ask the maintainer before implementing undecided or high-scope items.
+> AI-generated design-risk tracker. This file is for planned gaps, undecided design items, implementation watchpoints, and risky future work. Confirmed issues belong in [`retold_issues.md`](retold_issues.md).
 
 ## Open Design Risks
 
@@ -10,7 +8,7 @@ AI agents: before implementing anything here, read [`README.md`](README.md), [`r
 | --- | --- | --- |
 | Aender | Lava placement ban is planned but no implementation was found. | Search found Aender water flow/weather hooks, but no lava bucket/fluid placement blocker. |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
-| Elements | Only water has a real element challenge path. | Air has an item and egg ritual support but still needs an acquisition path. Fire and earth still need items and acquisition paths. |
+| Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path that still needs tuning. |
 | Aender | 8:1 Overworld travel scaling is planned but not implemented. | Current portal destination is fixed near Aender spawn. |
 | Aender | Aender teleportation and late-game rewards are planned but not implemented. | Needs design before code. |
 | End | End City/outer End removal needs fresh-world and existing-world verification. | Data/mixins exist, but generated-world behavior should be tested. |
@@ -44,4 +42,8 @@ Update this file when:
 - a planned gap is implemented
 - an undecided item becomes planned or not planned
 - an implementation risk is discovered during code review
-- a design-risk item becomes a confirmed bug after testing
+- a design-risk item becomes a confirmed issue after testing
+
+## AI Agent Instructions
+
+See the shared [AI Agent Instructions](README.md#ai-agent-instructions).

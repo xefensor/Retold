@@ -1,8 +1,6 @@
 # Minecraft Retold Mod System
 
-> AI-generated documentation. This file is meant for human maintainers and future AI coding agents. Sections named "Design rule", "Performance rules", "Adding New Features", and "Open Technical Watchpoints" are also implementation guidance for AI-assisted work.
-
-AI agents: read [`README.md`](README.md) before implementing. Ask design/implementation questions before coding when behavior is ambiguous, and update the generated docs when a feature is completed.
+> Internal documentation. This file is meant for human maintainers and future AI coding agents. Sections named "Design rule", "Performance rules", "Adding New Features", and "Open Technical Watchpoints" are also implementation guidance for AI-assisted work.
 
 This document describes the current Minecraft Retold mod as a whole: what the mod is trying to do, how the major systems fit together, and which code/data files own each system.
 
@@ -12,7 +10,7 @@ For the original-design versus current-implementation tracker, see [`design_impl
 
 For active priorities and maintainer direction, see [`retold_roadmap.md`](retold_roadmap.md).
 
-For design risks, confirmed bugs, and in-game verification, see [`retold_design_risks.md`](retold_design_risks.md), [`retold_known_issues.md`](retold_known_issues.md), and [`retold_testing_checklist.md`](retold_testing_checklist.md).
+For design risks and confirmed issues, see [`retold_design_risks.md`](retold_design_risks.md) and [`retold_issues.md`](retold_issues.md).
 
 ## Mod Shape
 
@@ -94,6 +92,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `undead` | undead helper behavior |
 | `villager` | villager teaching system |
 | `worldgen` | worldgen registry and structure tags |
+| `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
 
 ## World Stage System
@@ -177,6 +176,52 @@ End crystal behavior:
 Design rule:
 
 The dragon egg is the progression lock between the vanilla End phase and the Aender phase.
+
+## Air Temple And Air Element
+
+The Air Element is one of the four Stage 2 dragon egg elements. Its challenge is meant to test freedom, height, movement, and control without becoming only a combat gate.
+
+Technical owners:
+
+- `AirTempleStructure`
+- `AirTemplePiece`
+- `AirTempleIslandGenerator`
+- `AirTempleTowerGenerator`
+- `AirTempleWindEvents`
+- `AirTempleWindData`
+- `AirTempleBreezeSpawner`
+- `GaleCore`
+- `GaleCoreSpawner`
+- `GaleCoreAttackEvents`
+- `AirElementItem`
+
+Current behavior:
+
+- `/locate structure retold:air_temple` finds the structure.
+- It generates in `frozen_peaks`, `jagged_peaks`, and `stony_peaks`.
+- It builds a floating island, satellite islands, carved crater, and open tuff/copper tower.
+- It creates a large horizontal wind zone around the island and tower.
+- Wind direction cycles east, south, west, north every 400 ticks.
+- Wind affects eligible entities across body height and syncs pushed player velocity.
+- Creative players, spectators, no-physics entities, Breezes, and the Gale Core are immune to temple wind.
+- Upwind blocks can shield entities, but only close enough behind the blocker to avoid infinite wall protection.
+- Breezes spawn on the island/tower at runtime and are immune to the temple wind.
+- The Gale Core spawns near the tower top and drops `air_element` on death.
+
+Gale Core state:
+
+- Custom large Breeze-like entity with a boss bar.
+- Activates when a survival/adventure player reaches the top-floor area near it.
+- Phase 1 uses mostly grounded Breeze-style behavior.
+- At half health, Phase 2 switches to custom aerial movement.
+- Phase 2 keeps distance, prefers higher positions, avoids arena edges, and avoids clipping into blocks.
+- If the boss or target leaves the combat area, the boss clears aggro and returns to its stored tower-top home.
+- Gale Core-owned wind-charge impacts do not deal health damage, but they crack and eventually break nearby breakable blocks.
+- The block-breaking splash skips air, fluids, block entities, unbreakable blocks, and very hard blocks, and breaks blocks without drops.
+
+Current limitation:
+
+The Air challenge has a playable boss/reward spine, but it is still WIP. Tune attacks, movement, pacing, phase readability, block-breaking rules, telegraphs, tower layout, Breeze spawns, and traversal readability before treating the encounter as final.
 
 ## Aender Dimension
 
@@ -291,6 +336,7 @@ Technical owner:
 Registered items/blocks include:
 
 - `water_element`
+- `air_element`
 - `aender_grass_block`
 - `aender_soil`
 - `aender_stone`
@@ -804,7 +850,7 @@ General performance rules:
 - keep client visuals separate from server truth
 - prefer chunk-local metadata for worldgen recovery
 
-## Debug And Validation
+## Debug Commands
 
 General commands:
 
@@ -816,23 +862,6 @@ General commands:
 /retoldbehavior perf
 /retoldbehavior warning
 ```
-
-Suggested validation passes:
-
-- start a new world and confirm Stage 1
-- kill dragon and confirm Stage 2
-- offer `water_element` to dragon egg and confirm ritual state
-- confirm `nether_star` does not hatch the dragon egg
-- after all element paths exist, complete the egg ritual and confirm Stage 3
-- verify End portal redirects to Aender at Stage 3
-- place and break Aender stabilizers and confirm forcefield/stability behavior
-- test chronolith start/stop/logout/block break
-- test villager teaching preview and recipe unlock
-- craft/smelt recipes and verify recipe knowledge behavior
-- load delayed-structure chunks before and after Stage 2
-- test torch extinguishing in rain and relighting
-- test mob AI using `/retoldbehavior perf` and warning commands
-- test guardian monument mining pressure and elder guardian water invulnerability
 
 Build validation:
 
@@ -874,3 +903,7 @@ These are areas to keep an eye on during future work:
 - Mixins touch several sensitive vanilla systems; version updates need focused regression tests.
 - AI performance is improved but should continue to be checked with `/retoldbehavior perf`.
 - Aender generation/regeneration and stability effects should be tested with loaded chunks and multiplayer clients.
+
+## AI Agent Instructions
+
+See the shared [AI Agent Instructions](README.md#ai-agent-instructions).

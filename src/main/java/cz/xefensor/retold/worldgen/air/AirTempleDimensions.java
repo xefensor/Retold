@@ -11,8 +11,8 @@ public final class AirTempleDimensions {
     public static final int TOWER_HEIGHT = 34;
     private static final int[] TOWER_FLOOR_OFFSETS = {2, 9, 16, 23, 30};
     public static final int TOP_CLEARANCE = 12;
-    public static final int WIND_BELOW_UNDERSIDE = 5;
-    public static final int WIND_ABOVE_TOWER = 10;
+    public static final int WIND_BELOW_UNDERSIDE = 10;
+    public static final int WIND_ABOVE_TOWER = 30;
 
     private AirTempleDimensions() {
     }
