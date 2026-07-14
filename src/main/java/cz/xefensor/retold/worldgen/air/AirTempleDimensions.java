@@ -9,6 +9,7 @@ public final class AirTempleDimensions {
     public static final int MIN_ISLAND_Y = 224;
     public static final int SURFACE_CLEARANCE = 92;
     public static final int TOWER_HEIGHT = 34;
+    private static final int[] TOWER_FLOOR_OFFSETS = {2, 9, 16, 23, 30};
     public static final int TOP_CLEARANCE = 12;
     public static final int WIND_BELOW_UNDERSIDE = 5;
     public static final int WIND_ABOVE_TOWER = 10;
@@ -22,6 +23,10 @@ public final class AirTempleDimensions {
 
     public static int towerTopY(int islandY) {
         return islandY + TOWER_HEIGHT;
+    }
+
+    public static int[] towerFloorOffsets() {
+        return TOWER_FLOOR_OFFSETS.clone();
     }
 
     public static int windMinY(int islandY) {

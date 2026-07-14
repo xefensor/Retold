@@ -10,17 +10,28 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.monster.breeze.Breeze;
 
 public final class AirTempleBreezeSpawner {
-    private static final int TARGET_BREEZE_COUNT = 7;
     private static final int[][] MAIN_ISLAND_SPAWNS = {
-            {10, 0, 2},
-            {-10, 0, 2},
-            {0, 10, 2},
-            {0, -10, 2}
+            {13, 0, 2},
+            {-13, 0, 2},
+            {0, 13, 2},
+            {0, -13, 2},
+            {9, 9, 1},
+            {-9, -9, 1}
     };
     private static final int[][] SATELLITE_SPAWNS = {
             {30, 7, -3},
+            {33, 10, -2},
             {-27, 24, 1},
-            {12, -33, 4}
+            {-30, 21, 1},
+            {12, -33, 4},
+            {16, -30, 3}
+    };
+    private static final int[][][] TOWER_FLOOR_SPAWNS = {
+            {{-4, -2}, {4, 2}},
+            {{-2, 4}, {2, -4}},
+            {{-5, 1}, {5, -1}},
+            {{1, 5}, {-1, -5}},
+            {{-4, 3}, {4, -3}}
     };
 
     private AirTempleBreezeSpawner() {
@@ -33,7 +44,7 @@ public final class AirTempleBreezeSpawner {
                 entity -> entity.getType() == EntityTypes.BREEZE
         ).size();
 
-        if (existing >= TARGET_BREEZE_COUNT) {
+        if (existing >= targetBreezeCount()) {
             return true;
         }
 
@@ -61,7 +72,30 @@ public final class AirTempleBreezeSpawner {
             }
         }
 
-        return existing + spawned >= TARGET_BREEZE_COUNT;
+        int[] floorOffsets = AirTempleDimensions.towerFloorOffsets();
+
+        for (int i = 0; i < floorOffsets.length; i++) {
+            int[][] floorSpawns = TOWER_FLOOR_SPAWNS[i % TOWER_FLOOR_SPAWNS.length];
+
+            for (int[] offset : floorSpawns) {
+                if (spawnOnTowerFloor(
+                        level,
+                        source.centerX() + offset[0],
+                        source.centerZ() + offset[1],
+                        source.islandY() + floorOffsets[i] + 1
+                )) {
+                    spawned++;
+                }
+            }
+        }
+
+        return existing + spawned >= targetBreezeCount();
+    }
+
+    private static int targetBreezeCount() {
+        return MAIN_ISLAND_SPAWNS.length
+                + SATELLITE_SPAWNS.length
+                + AirTempleDimensions.towerFloorOffsets().length * TOWER_FLOOR_SPAWNS[0].length;
     }
 
     private static boolean spawnAtSurface(
@@ -76,10 +110,31 @@ public final class AirTempleBreezeSpawner {
 
         BlockPos spawnPos = findSpawnPos(level, x, z, roughY);
 
-        if (spawnPos == null) {
+        return spawnPos != null && spawnBreeze(level, spawnPos);
+    }
+
+    private static boolean spawnOnTowerFloor(
+            ServerLevel level,
+            int x,
+            int z,
+            int y
+    ) {
+        if (!level.hasChunk(x >> 4, z >> 4)) {
             return false;
         }
 
+        BlockPos spawnPos = new BlockPos(x, y, z);
+
+        if (level.getBlockState(spawnPos.below()).isAir()
+                || !level.getBlockState(spawnPos).isAir()
+                || !level.getBlockState(spawnPos.above()).isAir()) {
+            return false;
+        }
+
+        return spawnBreeze(level, spawnPos);
+    }
+
+    private static boolean spawnBreeze(ServerLevel level, BlockPos spawnPos) {
         Breeze breeze = EntityTypes.BREEZE.create(level, EntitySpawnReason.STRUCTURE);
 
         if (breeze == null) {

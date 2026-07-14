@@ -9,7 +9,6 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 final class AirTempleTowerGenerator {
     private static final int FLOOR_RADIUS = 8;
-    private static final int[] FLOOR_OFFSETS = {2, 9, 16, 23, 30};
     private static final int[][] CORNER_PILLARS = {
             {-7, -7}, {-7, 7}, {7, -7}, {7, 7}
     };
@@ -32,7 +31,9 @@ final class AirTempleTowerGenerator {
 
         generateBase(level, chunkBB, centerX, centerZ, islandY, floor, pillar, accent);
 
-        for (int floorOffset : FLOOR_OFFSETS) {
+        int[] floorOffsets = AirTempleDimensions.towerFloorOffsets();
+
+        for (int floorOffset : floorOffsets) {
             int y = islandY + floorOffset;
             generateFloor(level, chunkBB, centerX, centerZ, y, floor, underside, grate, accent);
             generateFloorDetails(level, chunkBB, centerX, centerZ, y, chiseledBricks, bulb);
@@ -40,7 +41,7 @@ final class AirTempleTowerGenerator {
 
         generatePillars(level, chunkBB, centerX, centerZ, islandY + 2, AirTempleDimensions.towerTopY(islandY), pillar, chiseled);
         generateBraces(level, chunkBB, centerX, centerZ, islandY, pillar);
-        generateTopCrown(level, chunkBB, centerX, centerZ, AirTempleDimensions.towerTopY(islandY), pillar, accent, bulb);
+        //generateTopCrown(level, chunkBB, centerX, centerZ, AirTempleDimensions.towerTopY(islandY), pillar, accent, bulb);
     }
 
     private static void generateBase(
@@ -168,9 +169,11 @@ final class AirTempleTowerGenerator {
             int islandY,
             BlockState pillar
     ) {
-        for (int i = 0; i < FLOOR_OFFSETS.length - 1; i++) {
-            int lowerY = islandY + FLOOR_OFFSETS[i] + 2;
-            int upperY = islandY + FLOOR_OFFSETS[i + 1] - 1;
+        int[] floorOffsets = AirTempleDimensions.towerFloorOffsets();
+
+        for (int i = 0; i < floorOffsets.length - 1; i++) {
+            int lowerY = islandY + floorOffsets[i] + 2;
+            int upperY = islandY + floorOffsets[i + 1] - 1;
             int height = Math.max(1, upperY - lowerY);
 
             for (int step = 0; step <= height; step++) {
