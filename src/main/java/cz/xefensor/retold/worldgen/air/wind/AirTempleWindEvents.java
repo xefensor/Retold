@@ -15,6 +15,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.HashMap;
@@ -44,6 +45,15 @@ public final class AirTempleWindEvents {
     }
 
     @SubscribeEvent
+    public static void onServerStarting(ServerStartingEvent event) {
+        GENERATED_SOURCES.clear();
+        LOADED_SOURCES.clear();
+        BREEZE_SPAWNED_SOURCES.clear();
+        BOSS_SPAWNED_SOURCES.clear();
+        lastSourceRefreshTick = -SOURCE_REFRESH_INTERVAL_TICKS;
+    }
+
+    @SubscribeEvent
     public static void onServerTickPost(ServerTickEvent.Post event) {
         ServerLevel overworld = event.getServer().getLevel(Level.OVERWORLD);
 
@@ -62,6 +72,7 @@ public final class AirTempleWindEvents {
 
         long gameTime = overworld.getGameTime();
         boolean emitParticles = gameTime % PARTICLE_INTERVAL_TICKS == 0;
+        AirTempleWindData windData = AirTempleWindData.get(overworld);
         Map<Long, AirTempleWindSource> activeSources = new HashMap<>();
 
         if (gameTime - lastSourceRefreshTick >= SOURCE_REFRESH_INTERVAL_TICKS) {
@@ -69,6 +80,15 @@ public final class AirTempleWindEvents {
             lastSourceRefreshTick = gameTime;
         }
 
+        if (!GENERATED_SOURCES.isEmpty()) {
+            windData.rememberAll(GENERATED_SOURCES.values());
+        }
+
+        if (!LOADED_SOURCES.isEmpty()) {
+            windData.rememberAll(LOADED_SOURCES.values());
+        }
+
+        activeSources.putAll(windData.sources());
         activeSources.putAll(GENERATED_SOURCES);
         activeSources.putAll(LOADED_SOURCES);
 
