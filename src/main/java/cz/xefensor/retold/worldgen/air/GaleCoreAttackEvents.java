@@ -196,22 +196,22 @@ public final class GaleCoreAttackEvents {
         float hardness = level.getBlockState(pos).getDestroySpeed(level, pos);
 
         if (hardness <= 0.5F) {
-            return 4;
-        }
-
-        if (hardness <= 1.0F) {
             return 8;
         }
 
-        if (hardness <= 2.0F) {
-            return 12;
-        }
-
-        if (hardness <= 4.0F) {
+        if (hardness <= 1.0F) {
             return 16;
         }
 
-        return 24;
+        if (hardness <= 2.0F) {
+            return 24;
+        }
+
+        if (hardness <= 4.0F) {
+            return 32;
+        }
+
+        return 48;
     }
 
     private static int crackStage(int progress, int durability) {

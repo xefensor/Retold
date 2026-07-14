@@ -30,12 +30,14 @@ public final class AirTempleWindEvents {
     private static final int SOURCE_REFRESH_INTERVAL_TICKS = 40;
     private static final int BREEZE_SPAWN_INTERVAL_TICKS = 100;
     private static final int BOSS_SPAWN_INTERVAL_TICKS = 100;
+    private static final int BOSS_SPAWN_RELOAD_GRACE_TICKS = 200;
     private static final int SOURCE_SCAN_CHUNK_RADIUS = 8;
     private static final Map<Long, AirTempleWindSource> GENERATED_SOURCES = new ConcurrentHashMap<>();
     private static final Map<Long, AirTempleWindSource> LOADED_SOURCES = new ConcurrentHashMap<>();
     private static final Set<Long> BREEZE_SPAWNED_SOURCES = ConcurrentHashMap.newKeySet();
     private static final Set<Long> BOSS_SPAWNED_SOURCES = ConcurrentHashMap.newKeySet();
     private static long lastSourceRefreshTick = -SOURCE_REFRESH_INTERVAL_TICKS;
+    private static long bossSpawnAllowedAfterGameTime = Long.MIN_VALUE;
 
     private AirTempleWindEvents() {
     }
@@ -51,6 +53,7 @@ public final class AirTempleWindEvents {
         BREEZE_SPAWNED_SOURCES.clear();
         BOSS_SPAWNED_SOURCES.clear();
         lastSourceRefreshTick = -SOURCE_REFRESH_INTERVAL_TICKS;
+        bossSpawnAllowedAfterGameTime = Long.MIN_VALUE;
     }
 
     @SubscribeEvent
@@ -74,6 +77,10 @@ public final class AirTempleWindEvents {
         boolean emitParticles = gameTime % PARTICLE_INTERVAL_TICKS == 0;
         AirTempleWindData windData = AirTempleWindData.get(overworld);
         Map<Long, AirTempleWindSource> activeSources = new HashMap<>();
+
+        if (bossSpawnAllowedAfterGameTime == Long.MIN_VALUE) {
+            bossSpawnAllowedAfterGameTime = gameTime + BOSS_SPAWN_RELOAD_GRACE_TICKS;
+        }
 
         if (gameTime - lastSourceRefreshTick >= SOURCE_REFRESH_INTERVAL_TICKS) {
             refreshLoadedSources(overworld, airTemple);
@@ -100,6 +107,7 @@ public final class AirTempleWindEvents {
             }
 
             if (gameTime % BOSS_SPAWN_INTERVAL_TICKS == 0
+                    && gameTime >= bossSpawnAllowedAfterGameTime
                     && !BOSS_SPAWNED_SOURCES.contains(source.key())
                     && GaleCoreSpawner.spawnIfNeeded(overworld, source)) {
                 BOSS_SPAWNED_SOURCES.add(source.key());

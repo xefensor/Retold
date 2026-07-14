@@ -1,5 +1,6 @@
 package cz.xefensor.retold.worldgen.air.wind;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -17,8 +18,10 @@ public final class AirTempleWindZone {
     private static final double MAX_SPEED_ALONG_WIND = 1.15D;
     private static final double MAX_WIND_SHIELD_DISTANCE = 8.0D;
     private static final int PARTICLE_COUNT = 18;
+    private static final int PARTICLE_ATTEMPT_MULTIPLIER = 3;
     private static final double PARTICLE_RADIUS = 14.0D;
     private static final double PARTICLE_SPEED = 0.85D;
+    private static final double PARTICLE_VISIBLE_TRAVEL_DISTANCE = 10.0D;
 
     private final AirTempleWindSource source;
 
@@ -52,8 +55,10 @@ public final class AirTempleWindZone {
 
     public void emitParticles(ServerLevel level, ServerPlayer player, RandomSource random) {
         Vec3 direction = direction(level.getGameTime());
+        int emitted = 0;
+        int attempts = 0;
 
-        for (int i = 0; i < PARTICLE_COUNT; i++) {
+        while (emitted < PARTICLE_COUNT && attempts++ < PARTICLE_COUNT * PARTICLE_ATTEMPT_MULTIPLIER) {
             double x = clamp(
                     player.getX() + randomBetween(random, -PARTICLE_RADIUS, PARTICLE_RADIUS),
                     source.bounds().minX,
@@ -69,6 +74,11 @@ public final class AirTempleWindZone {
                     source.bounds().minZ,
                     source.bounds().maxZ
             );
+            Vec3 particlePos = new Vec3(x, y, z);
+
+            if (isBlockedParticle(level, player, particlePos, direction)) {
+                continue;
+            }
 
             level.sendParticles(
                     ParticleTypes.CLOUD,
@@ -81,15 +91,13 @@ public final class AirTempleWindZone {
                     direction.z,
                     PARTICLE_SPEED
             );
+            emitted++;
         }
     }
 
     private boolean isProtectedByUpwindBlock(ServerLevel level, Entity entity, Vec3 windDirection) {
         Vec3 upwind = windDirection.scale(-1.0D);
-        double traceDistance = Math.min(
-                distanceToSourceEdge(entity.position(), upwind) + 1.0D,
-                MAX_WIND_SHIELD_DISTANCE
-        );
+        double traceDistance = shieldTraceDistance(entity, upwind);
         double minY = entity.getBoundingBox().minY + 0.15D;
         double midY = (entity.getBoundingBox().minY + entity.getBoundingBox().maxY) * 0.5D;
         double maxY = entity.getBoundingBox().maxY - 0.1D;
@@ -97,6 +105,13 @@ public final class AirTempleWindZone {
         return trace(level, entity, new Vec3(entity.getX(), minY, entity.getZ()), upwind, traceDistance)
                 && trace(level, entity, new Vec3(entity.getX(), midY, entity.getZ()), upwind, traceDistance)
                 && trace(level, entity, new Vec3(entity.getX(), maxY, entity.getZ()), upwind, traceDistance);
+    }
+
+    private double shieldTraceDistance(Entity entity, Vec3 upwind) {
+        return Math.min(
+                distanceToSourceEdge(entity.position(), upwind) + 1.0D,
+                MAX_WIND_SHIELD_DISTANCE
+        );
     }
 
     private boolean trace(
@@ -110,6 +125,54 @@ public final class AirTempleWindZone {
         BlockHitResult hit = level.clip(new ClipContext(
                 from,
                 to,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                entity
+        ));
+
+        return hit.getType() == HitResult.Type.BLOCK;
+    }
+
+    private boolean isBlockedParticle(
+            ServerLevel level,
+            Entity entity,
+            Vec3 particlePos,
+            Vec3 windDirection
+    ) {
+        BlockPos blockPos = BlockPos.containing(particlePos);
+
+        if (!level.getBlockState(blockPos).isAir() || !level.getFluidState(blockPos).isEmpty()) {
+            return true;
+        }
+
+        Vec3 upwind = windDirection.scale(-1.0D);
+        double upwindTraceDistance = Math.min(
+                distanceToSourceEdge(particlePos, upwind) + 1.0D,
+                MAX_WIND_SHIELD_DISTANCE
+        );
+        double downwindTraceDistance = Math.min(
+                distanceToSourceEdge(particlePos, windDirection) + 1.0D,
+                PARTICLE_VISIBLE_TRAVEL_DISTANCE
+        );
+
+        return particleTraceHitsBlock(level, entity, particlePos, upwind, upwindTraceDistance)
+                || particleTraceHitsBlock(level, entity, particlePos, windDirection, downwindTraceDistance);
+    }
+
+    private boolean particleTraceHitsBlock(
+            ServerLevel level,
+            Entity entity,
+            Vec3 particlePos,
+            Vec3 direction,
+            double distance
+    ) {
+        if (distance <= 0.0D) {
+            return false;
+        }
+
+        BlockHitResult hit = level.clip(new ClipContext(
+                particlePos,
+                particlePos.add(direction.scale(distance)),
                 ClipContext.Block.COLLIDER,
                 ClipContext.Fluid.NONE,
                 entity
