@@ -117,6 +117,8 @@ Follow-up: rerun this smoke test after fire, earth, and air element paths are im
 - Confirm rain extinguishes normal torches and creates extinguished torch blocks.
 - Confirm Aender torch rain behavior matches current design and implementation.
 - Confirm beds do not skip night.
+- During daytime with `retold:do_bed_night_skipping=false`, confirm a valid bed lets the player lie down without advancing time.
+- Confirm daytime bed rest still fails for obstructed, too-far, occupied, unsafe, or invalid-dimension beds.
 - After bed healing is added, confirm healing consumes hunger.
 - After long death-drop despawn is added, compare despawn time against vanilla 5 minutes.
 - After Nether portal spread is added, confirm spread is bounded and communicates energy drain clearly.

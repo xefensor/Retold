@@ -23,7 +23,7 @@ AI agents: before implementing anything here, read [`README.md`](README.md), [`r
 | Piglins | Stage 3 piglin/pigman hiring or follower behavior is planned but not implemented. | Needs feature design. |
 | Items | Tools/armor/ores, enchanting, mending removal, and combat reworks are still planned. | Large scope; ask before implementing. |
 | Environment | Death drops should despawn much later than vanilla, not never. | No implementation confirmed. |
-| Beds | Beds should not skip night; future healing can consume hunger. | Healing behavior not confirmed implemented. |
+| Beds | Beds should not skip night; valid daytime bed rest is allowed when night skipping is disabled. | Healing behavior not confirmed implemented. |
 | Nether | Nether portal spread is planned as energy drain. | Needs bounded implementation design. |
 
 ## Watchpoints

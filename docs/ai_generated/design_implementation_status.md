@@ -298,7 +298,7 @@ Largest missing or partial design areas:
 | Explosive block that drops all blocks | Not implemented |
 | Items dropped on death despawn much later than vanilla | Not implemented | Updated design: drops should despawn after a long time, much longer than vanilla 5 minutes, not never. |
 | Jump sprint not faster than sprint | Not implemented |
-| Beds do not skip night / heal instead | Partial | Bed night skipping gamerule exists and is intentional. Future healing can consume hunger. |
+| Beds do not skip night / heal instead | Partial | Bed night skipping gamerule exists and is intentional. With skipping disabled, valid beds allow daytime rest without advancing time. Future healing can consume hunger. |
 | Beds explode in Nether/End with custom death message | Not implemented / unclear |
 
 ## Modern Update Review Decisions

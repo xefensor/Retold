@@ -356,6 +356,7 @@ Performance rules:
 Technical owner:
 
 - `RetoldGameRules`
+- `RetoldSleepEvents`
 - `BedBlockMixin`
 - `ServerLevelSleepMixin`
 
@@ -367,6 +368,10 @@ Behavior:
 
 - The rule controls whether normal bed night skipping is allowed.
 - Default is `false`.
+- When night skipping is disabled, players can still lie down in valid Overworld-style beds during daytime.
+- Daytime bed rest still respects normal bed validity checks such as obstruction, distance, and nearby rest-preventing monsters.
+- `ServerLevelSleepMixin` prevents bed sleepers from advancing world time while the rule is disabled.
+- `BedBlockMixin` only keeps Retold's Aender bed explosion behavior.
 
 Design rule:
 

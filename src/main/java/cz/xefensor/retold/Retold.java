@@ -73,6 +73,7 @@ public final class Retold {
         NeoForge.EVENT_BUS.register(RetoldEndermanEvents.class);
         NeoForge.EVENT_BUS.register(RetoldElderGuardianEvents.class);
         NeoForge.EVENT_BUS.register(RetoldPlayerSyncEvents.class);
+        NeoForge.EVENT_BUS.register(RetoldSleepEvents.class);
         NeoForge.EVENT_BUS.register(RetoldRecipeBookEvents.class);
         NeoForge.EVENT_BUS.register(RetoldWorldSpawnCache.class);
         NeoForge.EVENT_BUS.register(AirTempleWindEvents.class);
