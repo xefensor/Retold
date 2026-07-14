@@ -33,13 +33,24 @@ Follow-up: rerun this smoke test after fire, earth, and air element paths are im
 - Use the dragon egg ritual with `water_element` and confirm the offered element state is saved.
 - Use the dragon egg ritual with `air_element` and confirm the offered element state is saved.
 - Confirm `nether_star` does not hatch the egg.
-- After fire, earth, and air element paths exist, offer all four elements and confirm the egg hatches.
+- Offer the currently required elements, `water_element` and `air_element`, and confirm the egg hatches.
 - Confirm Stage 3 starts after the egg hatch path.
 - Confirm players in vanilla End are ejected when Stage 3 begins.
 - Confirm Overworld End portal travel goes to Aender in Stage 3.
 - Confirm vanilla End remains reachable with commands for old builds.
 - In Stage 2, use `/locate structure retold:air_temple` and confirm it appears only in frozen, jagged, or stony peak biomes.
-- At the Air Temple, confirm the floating island, open tuff/copper tower, cloud particles, directional horizontal wind, and upwind block shielding work.
+- At the Air Temple, confirm the floating island, satellite islands, carved crater, open tuff/copper tower, cloud particles, directional horizontal wind, and upwind block shielding work.
+- Confirm Air Temple wind affects eligible entities across their body volume, not only their feet, and does not push creative players, spectators, Breezes, or the Gale Core.
+- Confirm wind particles are visible for players inside the wind zone regardless of survival/creative/spectator state.
+- Confirm wind shielding only works behind a nearby upwind wall and does not protect forever far behind the wall.
+- Confirm Breezes spawn on the Air Temple islands at runtime and do not freeze chunk/terrain loading.
+- Confirm the Gale Core spawns near the tower top, shows a boss bar, and drops `air_element` on death.
+- Confirm the Gale Core activates only when the player reaches the top-floor area close enough to it.
+- Confirm Gale Core phase 1 behaves like a grounded Breeze-style fight.
+- At half health, confirm Gale Core phase 2 flies, keeps meaningful distance, avoids clipping into tower/island blocks, and stays within the wind-zone-plus-margin combat area.
+- Pull the Gale Core or player outside the combat area and confirm the boss clears aggro and flies back to its tower-top home using the staged return path.
+- Confirm Gale Core wind-charge impacts do not deal health damage but do progressively crack nearby breakable blocks, then break them after repeated impacts.
+- Confirm the Gale Core block-breaking splash skips block entities, fluids, unbreakable blocks, and very hard blocks, and that crack overlays clear after inactivity.
 
 ## Aender
 

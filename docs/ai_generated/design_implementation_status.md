@@ -116,8 +116,8 @@ Largest missing or partial design areas:
 | Stage 1 requires diamond pickaxe/Nether portal | Not implemented | No explicit Retold gating found. Vanilla rules apply unless affected elsewhere. |
 | Stage 1 wither/Nether star required before End | Deferred/TBD | Maintainer is undecided. Current code has End progression, not End portal activation gating. |
 | Stage 1 Ender Dragon kill advances to Stage 2 | Implemented | `RetoldEndProgressionEvents.onServerTickPost` checks dragon kill and calls `RetoldStageManager.setStage(...STAGE_2)`. |
-| Stage 2 requires four classical elements | Partial | Still planned. `RetoldElementType` has water, fire, earth, and air. Water has a real acquisition path; Air has an item, dragon egg ritual support, and a locatable Stage 2 Air Temple with wind hazards, but no final boss/reward acquisition path yet. Fire and earth still need items and paths. Elements should be doable in any order. |
-| Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts implemented element items and hatches when all four enum elements are offered. Water can currently be acquired through a real path. Air can be offered if obtained through commands or future boss drops. The temporary Nether Star shortcut has been removed. |
+| Stage 2 requires classical elements | Partial | Current survival requirement is Water and Air. `RetoldElementType` still has water, fire, earth, and air so Fire/Earth can be added later. Water has a real acquisition path; Air has the Air Temple/Gale Core path. |
+| Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts implemented element items and currently hatches when Water and Air are offered. The temporary Nether Star shortcut has been removed. |
 | Stage 3 starts after hatching egg | Implemented | `RetoldStageManager.setStage(...STAGE_3)` in egg hatch flow. |
 | Stage 3 Aender replaces End | Partial | Overworld End portal redirects to Aender and players are ejected from vanilla End. Vanilla End intentionally still exists for command access to old builds. |
 | Stage 3 Overworld easier / undead gone | Partial | Current design only requires undead/zombified piglin removal for now. Undead natural/spawner spawn is blocked and existing undead are cleansed. |
@@ -209,7 +209,7 @@ Largest missing or partial design areas:
 | Strongholds kept to 3 | Not implemented / unclear | Still planned. |
 | Villages spawn farther/scarcer | Not implemented / unclear | `NoVillageNearWorldSpawnMixin` exists, but full village scarcity design not confirmed here. |
 | Jungle/desert pyramids as boss tombs | Deferred/TBD | Maybe still planned, but design is not final. |
-| Four element temples/challenges | Partial | Water/ocean path exists. Air has a design spec and placeholder locatable temple structure, but no wind/boss/collapse challenge yet. Fire and earth temples are missing. Element order should be free. |
+| Four element temples/challenges | Partial | Water/ocean path exists. Air has a locatable Stage 2 temple with floating islands, wind hazard, Breezes, and a WIP Gale Core boss that drops the Air Element. The Air encounter is playable but not finished/tuned. Fire and earth temples are missing. Element order should be free. |
 | Sunflowers point to significant structure | Not implemented |
 
 ## Ocean Monument And Water Element
@@ -247,7 +247,7 @@ Largest missing or partial design areas:
 | Vex damage nerfed | Not implemented / unclear | Still planned. |
 | Sniffer removed from survival spawning | Not implemented | Sniffer does not need complete code/entity removal, but should not be naturally/survival-spawnable if removed from progression. Current Retold AI still supports sniffers. |
 | Endermites removed from survival spawning | Not implemented | Endermites do not need complete code/entity removal, but should not be naturally/survival-spawnable if removed from progression. Current Retold AI still supports endermites. |
-| Breeze repurposed | Not implemented / unclear |
+| Breeze repurposed | Partial | Air Temple uses vanilla Breezes as island enemies and a custom Breeze-like Gale Core boss. The Gale Core fight is WIP and still needs tuning. |
 | Green axolotl | Not implemented / unclear | Still planned. |
 
 ## Nether

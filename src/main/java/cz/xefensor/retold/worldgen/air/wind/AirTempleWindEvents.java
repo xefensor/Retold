@@ -2,6 +2,8 @@ package cz.xefensor.retold.worldgen.air.wind;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.worldgen.air.AirTempleBreezeSpawner;
+import cz.xefensor.retold.worldgen.air.GaleCore;
+import cz.xefensor.retold.worldgen.air.GaleCoreSpawner;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -26,10 +28,12 @@ public final class AirTempleWindEvents {
     private static final int PARTICLE_INTERVAL_TICKS = 2;
     private static final int SOURCE_REFRESH_INTERVAL_TICKS = 40;
     private static final int BREEZE_SPAWN_INTERVAL_TICKS = 100;
+    private static final int BOSS_SPAWN_INTERVAL_TICKS = 100;
     private static final int SOURCE_SCAN_CHUNK_RADIUS = 8;
     private static final Map<Long, AirTempleWindSource> GENERATED_SOURCES = new ConcurrentHashMap<>();
     private static final Map<Long, AirTempleWindSource> LOADED_SOURCES = new ConcurrentHashMap<>();
     private static final Set<Long> BREEZE_SPAWNED_SOURCES = ConcurrentHashMap.newKeySet();
+    private static final Set<Long> BOSS_SPAWNED_SOURCES = ConcurrentHashMap.newKeySet();
     private static long lastSourceRefreshTick = -SOURCE_REFRESH_INTERVAL_TICKS;
 
     private AirTempleWindEvents() {
@@ -73,6 +77,12 @@ public final class AirTempleWindEvents {
                     && !BREEZE_SPAWNED_SOURCES.contains(source.key())
                     && AirTempleBreezeSpawner.spawnIfNeeded(overworld, source)) {
                 BREEZE_SPAWNED_SOURCES.add(source.key());
+            }
+
+            if (gameTime % BOSS_SPAWN_INTERVAL_TICKS == 0
+                    && !BOSS_SPAWNED_SOURCES.contains(source.key())
+                    && GaleCoreSpawner.spawnIfNeeded(overworld, source)) {
+                BOSS_SPAWNED_SOURCES.add(source.key());
             }
 
             AirTempleWindZone zone = new AirTempleWindZone(source);
@@ -140,6 +150,7 @@ public final class AirTempleWindEvents {
                 && !entity.isSpectator()
                 && !entity.noPhysics
                 && !(entity instanceof Breeze)
+                && !(entity instanceof GaleCore)
                 && (!(entity instanceof ServerPlayer player) || !player.isCreative());
     }
 }

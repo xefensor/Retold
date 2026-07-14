@@ -59,9 +59,19 @@ public final class RetoldEndProgressionEvents {
 
     @SubscribeEvent
     public static void onDragonEggRightClick(PlayerInteractEvent.RightClickBlock event) {
-        if (event.getHand() != InteractionHand.MAIN_HAND) {
+        if (!event.getLevel().getBlockState(event.getPos()).is(Blocks.DRAGON_EGG)) {
             return;
         }
+
+        ItemStack stack = event.getItemStack();
+        RetoldElementType element = getElementForStack(stack);
+
+        if (element == null) {
+            return;
+        }
+
+        event.setCancellationResult(InteractionResult.SUCCESS);
+        event.setCanceled(true);
 
         if (event.getLevel().isClientSide()) {
             return;
@@ -71,18 +81,8 @@ public final class RetoldEndProgressionEvents {
             return;
         }
 
-        if (!event.getLevel().getBlockState(event.getPos()).is(Blocks.DRAGON_EGG)) {
-            return;
-        }
-
-        ItemStack stack = event.getItemStack();
         RetoldWorldData data = RetoldWorldData.get(serverLevel);
-        RetoldElementType element = getElementForStack(stack);
-
-        if (element != null) {
-            handleElementUse(event, serverLevel, data, stack, element);
-            return;
-        }
+        handleElementUse(event, serverLevel, data, stack, element);
     }
 
     private static void handleElementUse(
@@ -121,7 +121,12 @@ public final class RetoldEndProgressionEvents {
         data.offerElement(element);
         data.setDragonEggPos(event.getPos());
         RetoldRitualEffects.playDragonEggElementAccepted(serverLevel, event.getPos());
-        showDragonEggElementCrack(serverLevel, event.getPos(), data.offeredElementCount());
+        showDragonEggElementCrack(
+                serverLevel,
+                event.getPos(),
+                data.offeredRequiredElementCount(),
+                data.requiredElementCount()
+        );
         player.sendOverlayMessage(
                 Component.literal("The egg absorbs the " + element.displayName() + ".")
         );
@@ -160,7 +165,7 @@ public final class RetoldEndProgressionEvents {
             return;
         }
 
-        int offeredElementCount = data.offeredElementCount();
+        int offeredElementCount = data.offeredRequiredElementCount();
 
         if (offeredElementCount <= 0) {
             return;
@@ -182,11 +187,19 @@ public final class RetoldEndProgressionEvents {
             return;
         }
 
-        showDragonEggElementCrack(level, dragonEggPos, offeredElementCount);
+        showDragonEggElementCrack(level, dragonEggPos, offeredElementCount, data.requiredElementCount());
     }
 
-    private static void showDragonEggElementCrack(ServerLevel level, BlockPos pos, int offeredElementCount) {
-        int crackProgress = Math.min(9, Math.max(1, offeredElementCount * 2));
+    private static void showDragonEggElementCrack(
+            ServerLevel level,
+            BlockPos pos,
+            int offeredElementCount,
+            int requiredElementCount
+    ) {
+        int crackProgress = Math.min(
+                9,
+                Math.max(1, (int) Math.ceil(offeredElementCount * 9.0D / requiredElementCount))
+        );
 
         level.destroyBlockProgress(DRAGON_EGG_CRACK_BREAKER_ID, pos, crackProgress);
     }

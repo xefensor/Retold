@@ -1,6 +1,7 @@
 package cz.xefensor.retold.client;
 
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
+import cz.xefensor.retold.client.render.GaleCoreRenderer;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
@@ -41,6 +42,10 @@ public final class RetoldClientEvents {
         event.registerEntityRenderer(
                 RetoldEntityTypes.AENDER_EYE.get(),
                 RetoldAenderEyeRenderer::new
+        );
+        event.registerEntityRenderer(
+                RetoldEntityTypes.GALE_CORE.get(),
+                GaleCoreRenderer::new
         );
     }
 

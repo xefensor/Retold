@@ -10,8 +10,18 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
 import java.util.Optional;
+import java.util.Set;
 
 public class RetoldWorldData extends SavedData {
+    private static final Set<RetoldElementType> REQUIRED_EGG_ELEMENTS = Set.of(
+            RetoldElementType.WATER,
+            RetoldElementType.AIR
+    );
+    private static final int REQUIRED_EGG_ELEMENT_MASK = REQUIRED_EGG_ELEMENTS
+            .stream()
+            .mapToInt(RetoldElementType::mask)
+            .reduce(0, (left, right) -> left | right);
+
     public static final SavedDataType<RetoldWorldData> TYPE =
             new SavedDataType<>(
                     Identifier.fromNamespaceAndPath(Retold.MODID, "world_data"),
@@ -87,6 +97,14 @@ public class RetoldWorldData extends SavedData {
         return Integer.bitCount(offeredElementsMask);
     }
 
+    public int offeredRequiredElementCount() {
+        return Integer.bitCount(offeredElementsMask & REQUIRED_EGG_ELEMENT_MASK);
+    }
+
+    public int requiredElementCount() {
+        return REQUIRED_EGG_ELEMENTS.size();
+    }
+
     public BlockPos getDragonEggPos() {
         return dragonEggPos;
     }
@@ -106,13 +124,7 @@ public class RetoldWorldData extends SavedData {
     }
 
     public boolean hasAllElements() {
-        for (RetoldElementType element : RetoldElementType.values()) {
-            if (!hasElementOffered(element)) {
-                return false;
-            }
-        }
-
-        return true;
+        return (offeredElementsMask & REQUIRED_EGG_ELEMENT_MASK) == REQUIRED_EGG_ELEMENT_MASK;
     }
 
     public void clearOfferedElements() {

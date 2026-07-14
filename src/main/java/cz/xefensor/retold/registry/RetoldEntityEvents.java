@@ -1,6 +1,7 @@
 package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.aender.entity.AenderEye;
+import cz.xefensor.retold.worldgen.air.GaleCore;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -12,6 +13,7 @@ public final class RetoldEntityEvents {
 
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(RetoldEntityTypes.AENDER_EYE.get(), AenderEye.createAttributes().build());
+        event.put(RetoldEntityTypes.GALE_CORE.get(), GaleCore.createAttributes().build());
     }
 
     public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {

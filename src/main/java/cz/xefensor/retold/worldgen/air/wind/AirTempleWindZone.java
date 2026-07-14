@@ -15,7 +15,7 @@ public final class AirTempleWindZone {
     private static final int DIRECTION_INTERVAL_TICKS = 400;
     private static final double PUSH_STRENGTH = 0.075D;
     private static final double MAX_SPEED_ALONG_WIND = 1.15D;
-    private static final double MAX_WIND_SHIELD_DISTANCE = 10.0D;
+    private static final double MAX_WIND_SHIELD_DISTANCE = 8.0D;
     private static final int PARTICLE_COUNT = 18;
     private static final double PARTICLE_RADIUS = 14.0D;
     private static final double PARTICLE_SPEED = 0.85D;

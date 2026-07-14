@@ -2,6 +2,7 @@ package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.entity.AenderEye;
+import cz.xefensor.retold.worldgen.air.GaleCore;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.bus.api.IEventBus;
@@ -20,6 +21,17 @@ public final class RetoldEntityTypes {
                     builder -> builder
                             .sized(0.7F, 0.7F)
                             .clientTrackingRange(8)
+                            .updateInterval(3)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<GaleCore>> GALE_CORE =
+            ENTITY_TYPES.registerEntityType(
+                    "gale_core",
+                    GaleCore::new,
+                    MobCategory.MONSTER,
+                    builder -> builder
+                            .sized(1.35F, 3.98F)
+                            .clientTrackingRange(10)
                             .updateInterval(3)
             );
 

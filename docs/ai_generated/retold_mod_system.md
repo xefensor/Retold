@@ -160,12 +160,14 @@ Current ritual model:
 - Element acquisition order should be free; no element path should require being completed first unless the maintainer changes the design.
 - Offered elements are saved in `RetoldWorldData`.
 - The dragon egg crack overlay reflects offered element count.
-- When all four `RetoldElementType` values are offered, the egg is removed and Stage 3 starts.
+- When all currently required element values are offered, currently Water and Air, the egg is removed and Stage 3 starts. Fire and Earth can be added to the requirement when their paths exist.
 
 Current limitation:
 
-- Only `water_element` has a complete challenge-to-reward path right now. `air_element` exists, can be offered to the dragon egg, and has a locatable Stage 2 Air Temple with wind hazards, but its final acquisition reward path is not implemented. Fire and earth still need items and acquisition paths.
-- Because the temporary Nether Star shortcut has been removed, normal survival cannot reach Stage 3 until the remaining element paths are implemented.
+- `water_element` has the most complete challenge-to-reward path.
+- `air_element` now has a WIP Air Temple/Gale Core acquisition path: locate the Air Temple in peak biomes, fight through the wind/tower encounter, defeat the Gale Core, and obtain the Air Element drop. The encounter is not final and still needs tuning/testing.
+- Fire and earth still need items and acquisition paths.
+- Because the temporary Nether Star shortcut has been removed, normal survival reaches Stage 3 through the currently implemented Water and Air element paths.
 
 End crystal behavior:
 

@@ -2,6 +2,7 @@ package cz.xefensor.retold.worldgen.air;
 
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindSource;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -29,7 +30,7 @@ public final class AirTempleBreezeSpawner {
         int existing = level.getEntities(
                 (Entity) null,
                 source.bounds(),
-                entity -> entity instanceof Breeze
+                entity -> entity.getType() == EntityTypes.BREEZE
         ).size();
 
         if (existing >= TARGET_BREEZE_COUNT) {
