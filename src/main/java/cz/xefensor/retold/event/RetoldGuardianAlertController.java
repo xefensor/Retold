@@ -26,10 +26,12 @@ final class RetoldGuardianAlertController {
     private static final double MONUMENT_BLOCK_ALERT_RADIUS = 48.0D;
     private static final double MONUMENT_BLOCK_ALERT_RADIUS_SQR =
             MONUMENT_BLOCK_ALERT_RADIUS * MONUMENT_BLOCK_ALERT_RADIUS;
-    private static final int GUARDIAN_MINING_ALERT_DURATION_TICKS = 30 * 20;
-    private static final int GUARDIAN_ALERT_DURATION_INCREASE_PER_PRESSURE_LEVEL_TICKS = 10 * 20;
+    private static final int GUARDIAN_ALERT_REFRESH_COOLDOWN_TICKS = 20 * 4;
+    private static final int GUARDIAN_MINING_ALERT_DURATION_TICKS = 16 * 20;
+    private static final int GUARDIAN_ALERT_DURATION_INCREASE_PER_PRESSURE_LEVEL_TICKS = 6 * 20;
     private static final int GUARDIAN_ALERT_PATH_REFRESH_TICKS = 10;
-    private static final int MAX_FORCED_PATHING_GUARDIANS = 3;
+    private static final int BASE_FORCED_PATHING_GUARDIANS = 1;
+    private static final int MAX_FORCED_PATHING_GUARDIANS = 2;
     private static final double GUARDIAN_ALERT_PATH_SPEED = 1.25D;
     private static final double GUARDIAN_ALERT_PATH_SPEED_INCREASE_PER_PRESSURE_LEVEL = 0.08D;
 
@@ -53,11 +55,17 @@ final class RetoldGuardianAlertController {
 
     private static final Map<UUID, GuardianAlert> GUARDIAN_ALERTS = new HashMap<>();
     private static final Map<UUID, GuardianApproach> GUARDIAN_APPROACHES = new HashMap<>();
+    private static final Map<UUID, Long> LAST_ALERT_REFRESH_AT_BY_PLAYER = new HashMap<>();
 
     private RetoldGuardianAlertController() {
     }
 
     static void alertNearby(ServerLevel level, BlockPos pos, Player player, int pressureLevel) {
+        if (!canRefreshAlert(level, player)) {
+            return;
+        }
+
+        int guardianLimit = forcedPathingGuardianLimit(pressureLevel);
         AABB alertBounds = AABB.ofSize(
                 Vec3.atCenterOf(pos),
                 MONUMENT_BLOCK_ALERT_RADIUS * 2.0D,
@@ -65,10 +73,10 @@ final class RetoldGuardianAlertController {
                 MONUMENT_BLOCK_ALERT_RADIUS * 2.0D
         );
         List<Guardian> guardians = level.getEntitiesOfClass(Guardian.class, alertBounds, Guardian::isAlive);
-        List<Guardian> nearestGuardians = new ArrayList<>(MAX_FORCED_PATHING_GUARDIANS);
+        List<Guardian> nearestGuardians = new ArrayList<>(guardianLimit);
 
         for (Guardian guardian : guardians) {
-            addNearestGuardian(nearestGuardians, guardian, player);
+            addNearestGuardian(nearestGuardians, guardian, player, guardianLimit);
         }
 
         for (Guardian guardian : nearestGuardians) {
@@ -152,7 +160,12 @@ final class RetoldGuardianAlertController {
         moveGuardianTowardAlertTarget(level, guardian, player, pathSpeed);
     }
 
-    private static void addNearestGuardian(List<Guardian> nearestGuardians, Guardian candidate, Player player) {
+    private static void addNearestGuardian(
+            List<Guardian> nearestGuardians,
+            Guardian candidate,
+            Player player,
+            int guardianLimit
+    ) {
         double candidateDistance = candidate.distanceToSqr(player);
         int insertAt = 0;
 
@@ -161,15 +174,36 @@ final class RetoldGuardianAlertController {
             insertAt++;
         }
 
-        if (insertAt >= MAX_FORCED_PATHING_GUARDIANS) {
+        if (insertAt >= guardianLimit) {
             return;
         }
 
         nearestGuardians.add(insertAt, candidate);
 
-        if (nearestGuardians.size() > MAX_FORCED_PATHING_GUARDIANS) {
+        if (nearestGuardians.size() > guardianLimit) {
             nearestGuardians.remove(nearestGuardians.size() - 1);
         }
+    }
+
+    private static boolean canRefreshAlert(ServerLevel level, Player player) {
+        long gameTime = level.getGameTime();
+        UUID playerId = player.getUUID();
+        Long lastAlertRefreshAt = LAST_ALERT_REFRESH_AT_BY_PLAYER.get(playerId);
+
+        if (lastAlertRefreshAt != null
+                && gameTime - lastAlertRefreshAt < GUARDIAN_ALERT_REFRESH_COOLDOWN_TICKS) {
+            return false;
+        }
+
+        LAST_ALERT_REFRESH_AT_BY_PLAYER.put(playerId, gameTime);
+        return true;
+    }
+
+    private static int forcedPathingGuardianLimit(int pressureLevel) {
+        return Math.min(
+                MAX_FORCED_PATHING_GUARDIANS,
+                BASE_FORCED_PATHING_GUARDIANS + Math.max(0, pressureLevel - 1)
+        );
     }
 
     private static int guardianAlertDurationTicks(int pressureLevel) {
