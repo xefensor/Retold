@@ -7,6 +7,16 @@ Each release should be readable in two passes:
 - **Player-facing:** what a player should notice.
 - **Technical:** what changed in systems, data, commands, docs, or implementation behavior.
 
+## Next - Unreleased
+
+### Player-Facing
+
+- Tuned the Air Temple Gale Core encounter: the boss now roams slightly while idle, aggroes when damaged by a valid player even outside its normal activation range, no longer deflects projectiles during phase two, and returns to the top tower area instead of a single exact block.
+
+### Technical
+
+- Updated Gale Core targeting, idle movement, phase-two projectile deflection, and return-home logic while preserving existing saved home-position data.
+
 ## 0.1.0  - 2026-07-15
 
 First internal build for the current Retold survival spine, focused on Stage 2 Water + Air progression.

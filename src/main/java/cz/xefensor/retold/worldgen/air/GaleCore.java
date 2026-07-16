@@ -21,6 +21,7 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.breeze.Breeze;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.BreezeWindCharge;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -40,9 +41,11 @@ public class GaleCore extends Breeze {
     private static final double FALLBACK_LEASH_BELOW_HOME = 60.0D;
     private static final double FALLBACK_LEASH_ABOVE_HOME = 35.0D;
     private static final double RETURN_FOLLOW = 0.16D;
-    private static final double RETURN_SNAP_DISTANCE = 0.45D;
     private static final double RETURN_CRUISE_HEIGHT = 7.0D;
     private static final double RETURN_MIN_CRUISE_LIFT = 2.0D;
+    private static final double RETURN_TOP_TOWER_CENTER_Z_OFFSET = 4.0D;
+    private static final double RETURN_TOP_TOWER_RADIUS = 6.5D;
+    private static final double RETURN_TOP_TOWER_VERTICAL_RANGE = 2.5D;
     private static final double MIN_FLIGHT_DISTANCE = 8.5D;
     private static final double PREFERRED_FLIGHT_DISTANCE = 11.5D;
     private static final double MAX_FLIGHT_DISTANCE = 16.0D;
@@ -59,6 +62,13 @@ public class GaleCore extends Breeze {
     private static final int WALL_BREAKER_SHOT_COOLDOWN_TICKS = 55;
     private static final int FLIGHT_PATTERN_MIN_TICKS = 55;
     private static final int FLIGHT_PATTERN_RANDOM_TICKS = 80;
+    private static final double IDLE_ROAM_RADIUS = 5.5D;
+    private static final double IDLE_ROAM_VERTICAL_RANGE = 2.0D;
+    private static final double IDLE_ROAM_FOLLOW = 0.045D;
+    private static final double IDLE_ROAM_RETURN_DISTANCE = 9.0D;
+    private static final double IDLE_ROAM_TARGET_REACHED_DISTANCE = 0.85D;
+    private static final int IDLE_ROAM_MIN_TICKS = 70;
+    private static final int IDLE_ROAM_RANDOM_TICKS = 110;
 
     private final ServerBossEvent bossEvent = new ServerBossEvent(
             this.getUUID(),
@@ -79,6 +89,9 @@ public class GaleCore extends Breeze {
     private int nextWallBreakerShotTick;
     private Vec3 homePosition;
     private AABB combatBounds;
+    private Vec3 idleRoamTarget;
+    private Vec3 returnAreaTarget;
+    private int nextIdleRoamTargetTick;
 
     public GaleCore(EntityType<? extends Monster> type, net.minecraft.world.level.Level level) {
         super(type, level);
@@ -214,6 +227,22 @@ public class GaleCore extends Breeze {
     }
 
     @Override
+    public ProjectileDeflection deflection(Projectile projectile) {
+        return phaseTwo ? ProjectileDeflection.NONE : super.deflection(projectile);
+    }
+
+    @Override
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage) {
+        boolean hurt = super.hurtServer(level, source, damage);
+
+        if (hurt && source.getEntity() instanceof ServerPlayer player && isValidTarget(player)) {
+            activateAgainstDamager(player);
+        }
+
+        return hurt;
+    }
+
+    @Override
     public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
         return source.is(DamageTypeTags.IS_FALL) || super.isInvulnerableTo(level, source);
     }
@@ -232,14 +261,11 @@ public class GaleCore extends Breeze {
             target = findActivationPlayer(level);
 
             if (target == null) {
-                returnToHome();
+                idleRoam();
                 return;
             }
 
-            active = true;
-            targetPlayerId = target.getUUID();
-            initializeFlightPattern(target);
-            this.setNoGravity(phaseTwo);
+            activateAgainst(target);
         }
 
         if (!phaseTwo && this.getHealth() <= this.getMaxHealth() * 0.5F) {
@@ -265,6 +291,29 @@ public class GaleCore extends Breeze {
         } else {
             this.setNoGravity(false);
         }
+    }
+
+    private void activateAgainstDamager(ServerPlayer player) {
+        ensureHomePosition();
+        ensureCombatBounds();
+
+        if (isOutsideCombatArea(player.position())) {
+            return;
+        }
+
+        activateAgainst(player);
+    }
+
+    private void activateAgainst(ServerPlayer player) {
+        active = true;
+        targetPlayerId = player.getUUID();
+        idleRoamTarget = null;
+        returnAreaTarget = null;
+        hiddenTargetTicks = 0;
+        initializeFlightPattern(player);
+        this.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, player);
+        this.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        this.setNoGravity(phaseTwo);
     }
 
     private ServerPlayer getTargetPlayer(ServerLevel level) {
@@ -319,6 +368,8 @@ public class GaleCore extends Breeze {
     private void disengageAndReturnHome() {
         active = false;
         targetPlayerId = null;
+        idleRoamTarget = null;
+        returnAreaTarget = null;
         hiddenTargetTicks = 0;
         this.setTarget(null);
         this.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
@@ -327,28 +378,126 @@ public class GaleCore extends Breeze {
         returnToHome();
     }
 
-    private void returnToHome() {
+    private void idleRoam() {
         Vec3 home = homePosition();
         Vec3 current = this.position();
 
-        if (current.distanceToSqr(home) <= RETURN_SNAP_DISTANCE * RETURN_SNAP_DISTANCE) {
-            this.setPos(home);
+        if (horizontalDistanceSq(current, home) > IDLE_ROAM_RETURN_DISTANCE * IDLE_ROAM_RETURN_DISTANCE
+                || Math.abs(current.y - home.y) > IDLE_ROAM_VERTICAL_RANGE * 2.0D) {
+            idleRoamTarget = null;
+            returnToHome();
+            return;
+        }
+
+        if (idleRoamTarget == null
+                || current.distanceToSqr(idleRoamTarget) <= IDLE_ROAM_TARGET_REACHED_DISTANCE * IDLE_ROAM_TARGET_REACHED_DISTANCE
+                || this.tickCount >= nextIdleRoamTargetTick) {
+            idleRoamTarget = findIdleRoamTarget(home);
+            nextIdleRoamTargetTick = this.tickCount + IDLE_ROAM_MIN_TICKS + this.random.nextInt(IDLE_ROAM_RANDOM_TICKS);
+        }
+
+        if (idleRoamTarget == null) {
             this.setDeltaMovement(Vec3.ZERO);
             return;
         }
 
-        Vec3 target = returnWaypoint(current, home);
-        Vec3 next = findSafeReturnStep(target);
+        Vec3 next = current.lerp(idleRoamTarget, IDLE_ROAM_FOLLOW);
 
-        if (next == null) {
+        if (!canMoveTo(next)) {
+            idleRoamTarget = null;
             this.setDeltaMovement(Vec3.ZERO);
-            this.lookAt(EntityAnchorArgument.Anchor.EYES, home);
             return;
         }
 
         this.setPos(next);
         this.setDeltaMovement(Vec3.ZERO);
-        this.lookAt(EntityAnchorArgument.Anchor.EYES, home);
+        this.lookAt(EntityAnchorArgument.Anchor.EYES, idleRoamTarget);
+    }
+
+    private Vec3 findIdleRoamTarget(Vec3 home) {
+        for (int i = 0; i < 12; i++) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double radius = IDLE_ROAM_RADIUS * (0.35D + this.random.nextDouble() * 0.65D);
+            double yOffset = (this.random.nextDouble() * 2.0D - 1.0D) * IDLE_ROAM_VERTICAL_RANGE;
+            Vec3 candidate = clampToCombatBounds(new Vec3(
+                    home.x + Math.cos(angle) * radius,
+                    home.y + yOffset,
+                    home.z + Math.sin(angle) * radius
+            ));
+
+            if (canMoveTo(candidate)) {
+                return candidate;
+            }
+        }
+
+        return canMoveTo(home) ? home : null;
+    }
+
+    private void returnToHome() {
+        Vec3 destination = returnAreaTarget();
+        Vec3 current = this.position();
+
+        if (isInReturnArea(current)) {
+            this.setDeltaMovement(Vec3.ZERO);
+            this.lookAt(EntityAnchorArgument.Anchor.EYES, topTowerReturnCenter());
+            return;
+        }
+
+        Vec3 target = returnWaypoint(current, destination);
+        Vec3 next = findSafeReturnStep(target);
+
+        if (next == null) {
+            this.setDeltaMovement(Vec3.ZERO);
+            this.lookAt(EntityAnchorArgument.Anchor.EYES, destination);
+            return;
+        }
+
+        this.setPos(next);
+        this.setDeltaMovement(Vec3.ZERO);
+        this.lookAt(EntityAnchorArgument.Anchor.EYES, destination);
+    }
+
+    private Vec3 returnAreaTarget() {
+        if (returnAreaTarget == null || !isInReturnArea(returnAreaTarget)) {
+            returnAreaTarget = randomReturnAreaTarget();
+        }
+
+        return returnAreaTarget;
+    }
+
+    private Vec3 randomReturnAreaTarget() {
+        Vec3 center = topTowerReturnCenter();
+
+        for (int i = 0; i < 12; i++) {
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double radius = RETURN_TOP_TOWER_RADIUS * this.random.nextDouble();
+            Vec3 candidate = new Vec3(
+                    center.x + Math.cos(angle) * radius,
+                    Mth.clamp(
+                            center.y + (this.random.nextDouble() * 2.0D - 1.0D) * RETURN_TOP_TOWER_VERTICAL_RANGE,
+                            combatBounds().minY + 1.5D,
+                            combatBounds().maxY - 1.5D
+                    ),
+                    center.z + Math.sin(angle) * radius
+            );
+
+            if (canMoveTo(candidate)) {
+                return candidate;
+            }
+        }
+
+        return center;
+    }
+
+    private Vec3 topTowerReturnCenter() {
+        Vec3 home = homePosition();
+        return new Vec3(home.x, home.y, home.z + RETURN_TOP_TOWER_CENTER_Z_OFFSET);
+    }
+
+    private boolean isInReturnArea(Vec3 position) {
+        Vec3 center = topTowerReturnCenter();
+        return horizontalDistanceSq(position, center) <= RETURN_TOP_TOWER_RADIUS * RETURN_TOP_TOWER_RADIUS
+                && Math.abs(position.y - center.y) <= RETURN_TOP_TOWER_VERTICAL_RANGE;
     }
 
     private Vec3 returnWaypoint(Vec3 current, Vec3 home) {
