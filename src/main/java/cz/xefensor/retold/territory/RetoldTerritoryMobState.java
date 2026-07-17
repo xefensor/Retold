@@ -10,6 +10,10 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class RetoldTerritoryMobState {
+    public RetoldTerritoryFlowState flowState = RetoldTerritoryFlowState.INACTIVE;
+    public long flowStateEnteredAt;
+    public long cooldownUntil;
+
     public RetoldTerritoryContext territoryContext;
     public long nextTerritoryContextRecheckAt;
 
@@ -20,7 +24,6 @@ public final class RetoldTerritoryMobState {
     public LivingEntity warningTarget;
     public LivingEntity attackTarget;
 
-    public boolean hasStartedAttack;
     public int warningPulses;
 
     public long nextWarningPulseAt;
@@ -48,4 +51,8 @@ public final class RetoldTerritoryMobState {
     public long nextWarningPathRefreshAt;
 
     public final Set<UUID> warnedIntruders = new HashSet<>();
+
+    public boolean isAttacking() {
+        return flowState == RetoldTerritoryFlowState.ATTACKING;
+    }
 }

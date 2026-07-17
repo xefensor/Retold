@@ -198,21 +198,24 @@ public final class RetoldTerritoryCombat {
             return;
         }
 
-        RetoldWarningPose.stopWarningPose(mob);
-
         if (!applyAttackTarget(mob, target, source)) {
             return;
         }
 
-        state.hasStartedAttack = true;
         state.attackTarget = target;
         state.warningTarget = target;
         state.warningPulses = 0;
         state.nextAttackRefreshAt = gameTime + 20L;
         state.warnedIntruders.add(target.getUUID());
+        RetoldTerritoryStateMachine.transition(
+                mob,
+                state,
+                RetoldTerritoryFlowState.ATTACKING,
+                gameTime
+        );
     }
 
-    public static void updateAttackState(
+    public static boolean updateAttackState(
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryMobState state,
@@ -243,8 +246,8 @@ public final class RetoldTerritoryCombat {
             );
 
             if (replacement == null) {
-                returnToWarningMode(mob, state, gameTime);
-                return;
+                releaseTerritoryAttack(mob, state);
+                return false;
             }
 
             startAttackOnTarget(
@@ -257,7 +260,7 @@ public final class RetoldTerritoryCombat {
                     RetoldTargetSource.TERRITORY_ATTACK
             );
 
-            return;
+            return true;
         }
 
         if (gameTime >= state.nextAttackRefreshAt) {
@@ -297,6 +300,8 @@ public final class RetoldTerritoryCombat {
             applyAttackTarget(mob, attackTarget, source);
             state.nextAttackRefreshAt = gameTime + ATTACK_REFRESH_INTERVAL_TICKS;
         }
+
+        return true;
     }
 
     public static void signalNearbyWarnedGuardsToAttack(
@@ -387,10 +392,9 @@ public final class RetoldTerritoryCombat {
         RetoldCombatTargets.clearTargetReferencesAndAggression(mob, target, true);
     }
 
-    private static void returnToWarningMode(
+    static void releaseTerritoryAttack(
             PathfinderMob mob,
-            RetoldTerritoryMobState state,
-            long gameTime
+            RetoldTerritoryMobState state
     ) {
         LivingEntity oldAttackTarget = state.attackTarget;
 
@@ -403,6 +407,6 @@ public final class RetoldTerritoryCombat {
             );
         }
 
-        RetoldTerritoryController.resetWarningState(state, gameTime);
+        state.attackTarget = null;
     }
 }

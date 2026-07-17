@@ -12,6 +12,7 @@ public final class RetoldTerritoryConstants {
     public static final int WARNING_TARGET_RECHECK_INTERVAL_TICKS = 35;
     public static final int WARNING_LOST_SIGHT_MEMORY_TICKS = 100;
     public static final int WARNING_MIN_FINAL_WARNING_TICKS_BEFORE_ATTACK = 40;
+    public static final int ATTACK_COOLDOWN_TICKS = 40;
 
     public static final int WARNING_NONE_PULSE_INTERVAL_TICKS = 140;
     public static final int WARNING_NOTICED_PULSE_INTERVAL_TICKS = 130;

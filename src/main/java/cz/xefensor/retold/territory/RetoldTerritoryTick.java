@@ -31,26 +31,42 @@ public final class RetoldTerritoryTick {
 
         RetoldFactionTargetMemory.cleanupTargetState(mob);
 
+        if (!RetoldTerritoryRules.canUseTerritoryBehavior(level, mob, config)) {
+            RetoldTerritoryMobStates.clearMobState(mob);
+            return;
+        }
+
+        RetoldTerritoryMobState state = RetoldTerritoryMobStates.get(mob);
+
         if (!RetoldTerritoryRules.canUseNearbyTerritoryBehavior(
                 level,
                 mob,
                 config,
                 gameTime
         )) {
+            if (state != null && state.flowState.continuesOutsideTerritory()) {
+                tickStateMachine(level, mob, state, config, gameTime);
+                return;
+            }
+
             RetoldTerritoryMobStates.clearMobState(mob);
             return;
         }
 
-        RetoldTerritoryMobState state = RetoldTerritoryMobStates.getOrCreate(mob);
+        if (state == null) {
+            state = RetoldTerritoryMobStates.getOrCreate(mob);
+        }
 
-        RetoldTerritoryCombat.suppressExistingTargetDuringWarning(
-                level,
-                mob,
-                config,
-                RetoldTerritoryMobStates.states(),
-                gameTime
-        );
+        tickStateMachine(level, mob, state, config, gameTime);
+    }
 
+    private static void tickStateMachine(
+            ServerLevel level,
+            PathfinderMob mob,
+            RetoldTerritoryMobState state,
+            RetoldTerritoryConfig config,
+            long gameTime
+    ) {
         if (gameTime % MOB_DECISION_INTERVAL_TICKS != Math.floorMod(mob.getId(), MOB_DECISION_INTERVAL_TICKS)) {
             RetoldTerritoryController.maintainContinuousBehavior(
                     level,

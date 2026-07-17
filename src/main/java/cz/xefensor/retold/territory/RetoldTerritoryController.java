@@ -23,188 +23,15 @@ public final class RetoldTerritoryController {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        RetoldTerritoryContext territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
-                state,
+        RetoldTerritoryStateMachine.tick(
                 level,
                 mob,
+                state,
                 config,
-                gameTime
+                mobStates,
+                gameTime,
+                true
         );
-
-        if (territoryContext == null) {
-            clearStateOnly(mob, state, gameTime);
-            return;
-        }
-
-        state.territoryContext = territoryContext;
-
-        if (state.hasStartedAttack) {
-            RetoldTerritoryCombat.updateAttackState(
-                    level,
-                    mob,
-                    state,
-                    config,
-                    mobStates,
-                    gameTime
-            );
-            return;
-        }
-
-        if (
-                RetoldTerritoryCombat.tryAdoptRetaliationTarget(
-                        level,
-                        mob,
-                        state,
-                        config,
-                        mobStates,
-                        gameTime
-                )
-        ) {
-            RetoldTerritoryCombat.updateAttackState(level, mob, state, config, mobStates, gameTime);
-            return;
-        }
-
-        if (
-                RetoldTerritoryCombat.tryAdoptOwnedCombatTarget(
-                        level,
-                        mob,
-                        state,
-                        config,
-                        mobStates,
-                        gameTime
-                )
-        ) {
-            RetoldTerritoryCombat.updateAttackState(level, mob, state, config, mobStates, gameTime);
-            return;
-        }
-
-        if (
-                RetoldTerritoryCombat.tryAdoptExistingAttackTarget(
-                        level,
-                        mob,
-                        state,
-                        config,
-                        mobStates,
-                        gameTime
-                )
-        ) {
-            RetoldTerritoryCombat.updateAttackState(level, mob, state, config, mobStates, gameTime);
-            return;
-        }
-
-        if (
-                RetoldTerritoryCombat.suppressExistingTargetDuringWarning(
-                        level,
-                        mob,
-                        config,
-                        mobStates,
-                        gameTime
-                )
-        ) {
-            RetoldWarningPose.stopWarningPose(mob);
-            return;
-        }
-
-        updateWarningTarget(level, mob, state, config, mobStates, gameTime);
-
-        LivingEntity warningTarget = state.warningTarget;
-
-        if (warningTarget == null) {
-            RetoldWarningPose.stopWarningPose(mob);
-            resetWarningState(state, gameTime);
-            return;
-        }
-
-        if (RetoldTerritoryReputation.getWarningLevel(state.territoryContext, warningTarget) == RetoldWarningLevel.ATTACK) {
-            RetoldTerritoryCombat.startAttackOnTarget(
-                    level,
-                    mob,
-                    state,
-                    config,
-                    warningTarget,
-                    gameTime,
-                    RetoldTargetSource.TERRITORY_ATTACK
-            );
-
-            RetoldTerritoryCombat.signalNearbyWarnedGuardsToAttack(
-                    level,
-                    mob,
-                    config,
-                    mobStates,
-                    gameTime
-            );
-            return;
-        }
-
-        maintainContinuousBehavior(level, mob, state, config, mobStates, gameTime);
-
-        if (!canCountWarningPulse(level, mob, warningTarget, config, state.territoryContext, gameTime)) {
-            state.nextWarningPulseAt = Math.max(state.nextWarningPulseAt, gameTime + 10L);
-            return;
-        }
-
-        if (gameTime < state.nextWarningPulseAt) {
-            return;
-        }
-
-        markVisibleWarnedIntruders(level, mob, state, config, mobStates, gameTime);
-
-        RetoldWarningLevel warningLevelBeforeGain = RetoldTerritoryReputation.getWarningLevel(
-                state.territoryContext,
-                warningTarget
-        );
-
-        updateFinalWarningTimer(state, warningLevelBeforeGain, gameTime);
-        RetoldWarningEffects.playWarningEffects(level, mob, config, warningLevelBeforeGain);
-
-        int suspicionGain = getWarningSuspicionGain(warningLevelBeforeGain);
-
-        if (suspicionGain > 0) {
-            RetoldTerritoryReputation.addVisibleWarningSuspicion(
-                    state.territoryContext,
-                    warningTarget,
-                    suspicionGain,
-                    gameTime
-            );
-        }
-
-        if (isTooCloseDuringWarning(mob, warningTarget)) {
-            RetoldTerritoryReputation.addTooCloseSuspicion(
-                    state.territoryContext,
-                    warningTarget,
-                    gameTime
-            );
-        }
-
-        RetoldWarningLevel warningLevelAfterGain = RetoldTerritoryReputation.getWarningLevel(
-                state.territoryContext,
-                warningTarget
-        );
-
-        updateFinalWarningTimer(state, warningLevelAfterGain, gameTime);
-
-        state.warningPulses++;
-        state.nextWarningPulseAt = gameTime + getWarningPulseInterval(mob, warningLevelAfterGain);
-
-        if (canStartTerritoryAttack(state, warningLevelAfterGain, gameTime)) {
-            RetoldTerritoryCombat.startAttackOnTarget(
-                    level,
-                    mob,
-                    state,
-                    config,
-                    warningTarget,
-                    gameTime,
-                    RetoldTargetSource.TERRITORY_ATTACK
-            );
-
-            RetoldTerritoryCombat.signalNearbyWarnedGuardsToAttack(
-                    level,
-                    mob,
-                    config,
-                    mobStates,
-                    gameTime
-            );
-        }
     }
 
     public static void maintainContinuousBehavior(
@@ -215,28 +42,40 @@ public final class RetoldTerritoryController {
             Map<PathfinderMob, RetoldTerritoryMobState> mobStates,
             long gameTime
     ) {
-        if (state.hasStartedAttack) {
-            return;
-        }
-
-        state.territoryContext = RetoldTerritoryRules.refreshCachedMatchingContext(
-                state,
+        RetoldTerritoryStateMachine.tick(
                 level,
                 mob,
+                state,
                 config,
-                gameTime
+                mobStates,
+                gameTime,
+                false
         );
+    }
 
-        if (state.territoryContext == null) {
-            RetoldWarningPose.stopWarningPose(mob);
-            return;
+    static void tickWarningState(RetoldTerritoryStateContext context) {
+        maintainWarningBehavior(context);
+
+        if (context.decisionTick()) {
+            tickWarningPulse(context);
         }
+    }
 
+    private static void maintainWarningBehavior(RetoldTerritoryStateContext context) {
+        RetoldTerritoryMobState state = context.state();
+        PathfinderMob mob = context.mob();
         LivingEntity warningTarget = state.warningTarget;
 
         if (
                 warningTarget == null
-                        || !canMaintainWarningAwareness(level, mob, state, config, warningTarget, gameTime)
+                        || !canMaintainWarningAwareness(
+                        context.level(),
+                        mob,
+                        state,
+                        context.config(),
+                        warningTarget,
+                        context.gameTime()
+                )
         ) {
             RetoldWarningPose.stopWarningPose(mob);
             return;
@@ -246,16 +85,10 @@ public final class RetoldTerritoryController {
                 state.territoryContext,
                 warningTarget
         );
-
         RetoldWarningPose.updateWarningPose(mob, warningTarget, warningLevel);
 
         if (canSeeTarget(mob, warningTarget)) {
-            RetoldTerritoryReputation.markSeen(
-                    state.territoryContext,
-                    warningTarget,
-                    gameTime
-            );
-
+            RetoldTerritoryReputation.markSeen(state.territoryContext, warningTarget, context.gameTime());
             faceTargetSmoothly(mob, warningTarget);
         } else {
             faceLastKnownWarningPosition(mob, state);
@@ -267,14 +100,104 @@ public final class RetoldTerritoryController {
         }
 
         RetoldWarningMovement.tickWarningMovement(
-                level,
+                context.level(),
                 mob,
-                config,
+                context.config(),
                 state,
                 warningTarget,
                 warningLevel,
-                mobStates,
-                gameTime
+                context.mobStates(),
+                context.gameTime()
+        );
+    }
+
+    private static void tickWarningPulse(RetoldTerritoryStateContext context) {
+        RetoldTerritoryMobState state = context.state();
+        PathfinderMob mob = context.mob();
+        LivingEntity warningTarget = state.warningTarget;
+
+        if (warningTarget == null) {
+            RetoldTerritoryStateMachine.deactivate(mob, state, context.gameTime());
+            return;
+        }
+
+        if (!canCountWarningPulse(
+                context.level(),
+                mob,
+                warningTarget,
+                context.config(),
+                state.territoryContext,
+                context.gameTime()
+        )) {
+            state.nextWarningPulseAt = Math.max(state.nextWarningPulseAt, context.gameTime() + 10L);
+            return;
+        }
+
+        if (context.gameTime() < state.nextWarningPulseAt) {
+            return;
+        }
+
+        markVisibleWarnedIntruders(
+                context.level(),
+                mob,
+                state,
+                context.config(),
+                context.mobStates(),
+                context.gameTime()
+        );
+
+        RetoldWarningLevel beforeGain = RetoldTerritoryReputation.getWarningLevel(
+                state.territoryContext,
+                warningTarget
+        );
+        RetoldWarningEffects.playWarningEffects(context.level(), mob, context.config(), beforeGain);
+
+        int suspicionGain = getWarningSuspicionGain(beforeGain);
+
+        if (suspicionGain > 0) {
+            RetoldTerritoryReputation.addVisibleWarningSuspicion(
+                    state.territoryContext,
+                    warningTarget,
+                    suspicionGain,
+                    context.gameTime()
+            );
+        }
+
+        if (isTooCloseDuringWarning(mob, warningTarget)) {
+            RetoldTerritoryReputation.addTooCloseSuspicion(
+                    state.territoryContext,
+                    warningTarget,
+                    context.gameTime()
+            );
+        }
+
+        RetoldWarningLevel afterGain = RetoldTerritoryReputation.getWarningLevel(
+                state.territoryContext,
+                warningTarget
+        );
+        state.warningPulses++;
+        state.nextWarningPulseAt = context.gameTime() + getWarningPulseInterval(mob, afterGain);
+        RetoldTerritoryStateMachine.reconcileWarningState(mob, state, context.gameTime());
+
+        if (!canStartTerritoryAttack(state, afterGain, context.gameTime())) {
+            return;
+        }
+
+        RetoldTerritoryCombat.startAttackOnTarget(
+                context.level(),
+                mob,
+                state,
+                context.config(),
+                warningTarget,
+                context.gameTime(),
+                RetoldTargetSource.TERRITORY_ATTACK
+        );
+        RetoldTerritoryCombat.signalNearbyWarnedGuardsToAttack(
+                context.level(),
+                mob,
+                context.config(),
+                context.mobStates(),
+                context.gameTime()
         );
     }
 
@@ -284,13 +207,20 @@ public final class RetoldTerritoryController {
             LivingEntity target,
             long gameTime
     ) {
+        if (state.flowState == RetoldTerritoryFlowState.ATTACKING
+                || state.flowState == RetoldTerritoryFlowState.COOLDOWN) {
+            return;
+        }
+
         if (state.warningTarget == target) {
+            if (target != null) {
+                RetoldTerritoryStateMachine.reconcileWarningState(mob, state, gameTime);
+            }
             return;
         }
 
         state.warningTarget = target;
         state.attackTarget = null;
-        state.hasStartedAttack = false;
         state.finalWarningStartedAt = -1L;
         state.warningPulses = 0;
         state.nextWarningPulseAt = gameTime;
@@ -315,14 +245,28 @@ public final class RetoldTerritoryController {
                         gameTime
                 );
             }
+
+            RetoldTerritoryStateMachine.reconcileWarningState(mob, state, gameTime);
+            return;
         }
+
+        RetoldTerritoryStateMachine.deactivate(mob, state, gameTime);
     }
 
     public static void resetWarningState(
+            PathfinderMob mob,
             RetoldTerritoryMobState state,
             long gameTime
     ) {
-        state.hasStartedAttack = false;
+        RetoldTerritoryStateMachine.deactivate(mob, state, gameTime);
+    }
+
+    static void clearWarningData(
+            PathfinderMob mob,
+            RetoldTerritoryMobState state,
+            long gameTime
+    ) {
+        RetoldWarningPose.stopWarningPose(mob);
         state.finalWarningStartedAt = -1L;
         state.attackTarget = null;
         state.warningTarget = null;
@@ -336,7 +280,7 @@ public final class RetoldTerritoryController {
         state.warnedIntruders.clear();
     }
 
-    private static void updateWarningTarget(
+    static void updateWarningTarget(
             ServerLevel level,
             PathfinderMob mob,
             RetoldTerritoryMobState state,
@@ -465,22 +409,6 @@ public final class RetoldTerritoryController {
         return mob.distanceToSqr(target) <= RetoldTerritoryConstants.WARNING_TOO_CLOSE_DISTANCE_SQUARED;
     }
 
-    private static void updateFinalWarningTimer(
-            RetoldTerritoryMobState state,
-            RetoldWarningLevel warningLevel,
-            long gameTime
-    ) {
-        if (warningLevel == RetoldWarningLevel.FINAL_WARNING || warningLevel == RetoldWarningLevel.ATTACK) {
-            if (state.finalWarningStartedAt < 0L) {
-                state.finalWarningStartedAt = gameTime;
-            }
-
-            return;
-        }
-
-        state.finalWarningStartedAt = -1L;
-    }
-
     private static boolean canStartTerritoryAttack(
             RetoldTerritoryMobState state,
             RetoldWarningLevel warningLevel,
@@ -567,15 +495,6 @@ public final class RetoldTerritoryController {
         state.lastKnownWarningTargetX = target.getX();
         state.lastKnownWarningTargetY = target.getY();
         state.lastKnownWarningTargetZ = target.getZ();
-    }
-
-    private static void clearStateOnly(
-            PathfinderMob mob,
-            RetoldTerritoryMobState state,
-            long gameTime
-    ) {
-        RetoldWarningPose.stopWarningPose(mob);
-        resetWarningState(state, gameTime);
     }
 
     private static void faceTargetSmoothly(PathfinderMob mob, LivingEntity target) {

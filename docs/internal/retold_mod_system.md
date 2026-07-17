@@ -89,7 +89,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `registry` | blocks, items, entities, tags, game rules |
 | `sky` | saved End sky seed data |
 | `stage` | world stage saved data and runtime sync |
-| `territory` | territory warning/reputation system |
+| `territory` | territory warning/reputation system with an explicit `INACTIVE → OBSERVING → WARNING → FINAL_WARNING → ATTACKING → COOLDOWN` state machine |
 | `undead` | undead helper behavior |
 | `villager` | villager teaching system |
 | `worldgen` | worldgen registry and structure tags |
@@ -602,6 +602,21 @@ High-level systems:
 - target ownership
 - invalid player target cleanup
 - AI performance scheduling, caches, LOD, and budgets
+
+Territory escalation is an explicit state machine owned by `RetoldTerritoryStateMachine`:
+
+```text
+INACTIVE -> OBSERVING -> WARNING -> FINAL_WARNING -> ATTACKING -> COOLDOWN
+    ^            |           |              |              |          |
+    +------------+-----------+--------------+--------------+----------+
+```
+
+Warning reputation chooses the non-combat state. Retaliation may transition directly to
+`ATTACKING`. A completed or abandoned attack must pass through `COOLDOWN` before warning
+target acquisition resumes. An existing `ATTACKING` state may continue outside the territory
+scan radius until its target becomes invalid or exceeds the attack leash; crossing the scan
+boundary alone must not clear aggression. State lifecycle side effects belong in state
+`enter`, `tick`, and `exit` handlers rather than in callers.
 
 Important design rule:
 

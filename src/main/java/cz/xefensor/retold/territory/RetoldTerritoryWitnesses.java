@@ -145,7 +145,7 @@ public final class RetoldTerritoryWitnesses {
                 continue;
             }
 
-            if (state.hasStartedAttack) {
+            if (state.isAttacking() || state.flowState == RetoldTerritoryFlowState.COOLDOWN) {
                 continue;
             }
 

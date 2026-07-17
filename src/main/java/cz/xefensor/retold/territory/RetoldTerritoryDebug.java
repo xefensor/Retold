@@ -62,8 +62,8 @@ public final class RetoldTerritoryDebug {
                 + suspicion
                 + "/"
                 + RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD
-                + " attack="
-                + yesNo(state != null && state.hasStartedAttack)
+                + " flow="
+                + (state == null ? RetoldTerritoryFlowState.INACTIVE : state.flowState)
                 + " pulses="
                 + (state == null ? 0 : state.warningPulses)
                 + " next="
@@ -132,7 +132,11 @@ public final class RetoldTerritoryDebug {
                 + "\nBrain angry at: " + entityText(angryAtTarget)
                 + "\nWarning level: " + levelName
                 + "\nSuspicion: " + suspicion + "/" + RetoldTerritoryConstants.REPUTATION_ATTACK_THRESHOLD
-                + "\nStarted attack: " + yesNo(state != null && state.hasStartedAttack)
+                + "\nFlow state: " + (state == null ? RetoldTerritoryFlowState.INACTIVE : state.flowState)
+                + "\nFlow state age: "
+                + ageTicksText(state == null ? -1L : state.flowStateEnteredAt, gameTime)
+                + "\nCooldown remaining: "
+                + nextTicksText(state == null ? 0L : state.cooldownUntil, gameTime)
                 + "\nWarning pulses: " + (state == null ? 0 : state.warningPulses)
                 + "\nWarned intruders: " + (state == null ? 0 : state.warnedIntruders.size())
                 + "\nNext warning pulse: "
@@ -302,7 +306,7 @@ public final class RetoldTerritoryDebug {
             return "territory context missing";
         }
 
-        if (state != null && state.hasStartedAttack) {
+        if (state != null && state.isAttacking()) {
             return "territory attack active";
         }
 

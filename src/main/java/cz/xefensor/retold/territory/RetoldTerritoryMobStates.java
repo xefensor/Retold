@@ -29,11 +29,14 @@ public final class RetoldTerritoryMobStates {
     }
 
     public static void remove(PathfinderMob mob) {
-        MOB_STATES.remove(mob);
+        RetoldTerritoryMobState state = MOB_STATES.remove(mob);
+
+        if (state != null) {
+            RetoldTerritoryStateMachine.deactivate(mob, state, mob.level().getGameTime());
+        }
     }
 
     public static void clearMobState(PathfinderMob mob) {
-        RetoldWarningPose.stopWarningPose(mob);
-        MOB_STATES.remove(mob);
+        remove(mob);
     }
 }
