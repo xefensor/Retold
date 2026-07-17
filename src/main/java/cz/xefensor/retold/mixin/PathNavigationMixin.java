@@ -1,6 +1,7 @@
 package cz.xefensor.retold.mixin;
 
-import cz.xefensor.retold.behavior.RetoldAiControl;
+import cz.xefensor.retold.behavior.control.RetoldAiControl;
+
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;

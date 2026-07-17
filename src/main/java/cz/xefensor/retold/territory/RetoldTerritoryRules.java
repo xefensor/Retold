@@ -1,6 +1,7 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.behavior.RetoldBehaviorPerf;
+import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
+
 import cz.xefensor.retold.faction.RetoldFaction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;

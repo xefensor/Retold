@@ -1,6 +1,7 @@
 package cz.xefensor.retold.event;
 
-import cz.xefensor.retold.behavior.RetoldAiControl;
+import cz.xefensor.retold.behavior.control.RetoldAiControl;
+
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;

@@ -1,6 +1,7 @@
 package cz.xefensor.retold.mixin;
 
-import cz.xefensor.retold.behavior.RetoldPredatorAttackGuards;
+import cz.xefensor.retold.behavior.hunting.RetoldPredatorAttackGuards;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

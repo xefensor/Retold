@@ -1,6 +1,7 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.behavior.RetoldAiScanCache;
+import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
+
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;

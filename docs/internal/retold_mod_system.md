@@ -96,6 +96,22 @@ The main event registration is intentionally explicit. When adding a new system,
 | `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
 
+The mob AI package is split by behavior ownership:
+
+| Behavior package | Purpose |
+| --- | --- |
+| `behavior/control` | AI ownership, priorities, and vanilla control suppression |
+| `behavior/core` | dispatcher and shared movement, combat, targeting, and timing primitives |
+| `behavior/debug` | behavior diagnostics and debug commands |
+| `behavior/flee` | controlled flee lifecycle |
+| `behavior/food` | food discovery, foraging, consumption, and feedback |
+| `behavior/home` | homes, social ranges, daily rhythms, and idle/rest behavior |
+| `behavior/hunting` | predator search, pursuit, regrouping, stamina, and strikes |
+| `behavior/pack` | pack membership, formation, movement, combat, feeding, and dens |
+| `behavior/performance` | LOD, work budgets, scan/sight caches, and counters |
+| `behavior/profiles` | mob profiles, rules, hunger stages, and runtime state |
+| `behavior/species` | species- and faction-specific behavior adapters |
+
 ## World Stage System
 
 World stages are the backbone of Retold progression.

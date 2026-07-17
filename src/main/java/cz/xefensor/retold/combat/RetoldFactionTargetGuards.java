@@ -1,8 +1,9 @@
 package cz.xefensor.retold.combat;
 
-import cz.xefensor.retold.behavior.RetoldAiControl;
-import cz.xefensor.retold.behavior.RetoldAiControlMode;
-import cz.xefensor.retold.behavior.RetoldMobRules;
+import cz.xefensor.retold.behavior.control.RetoldAiControl;
+import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;

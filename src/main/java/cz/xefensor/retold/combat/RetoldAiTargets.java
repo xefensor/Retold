@@ -1,6 +1,7 @@
 package cz.xefensor.retold.combat;
 
-import cz.xefensor.retold.behavior.RetoldAiSightCache;
+import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;

@@ -1,7 +1,8 @@
 package cz.xefensor.retold.worldgen.delayed;
 
+import cz.xefensor.retold.behavior.home.RetoldAnimalHomeData;
+
 import cz.xefensor.retold.Retold;
-import cz.xefensor.retold.behavior.RetoldAnimalHomeData;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredRegister;

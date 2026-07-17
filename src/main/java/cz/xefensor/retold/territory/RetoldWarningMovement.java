@@ -1,7 +1,8 @@
 package cz.xefensor.retold.territory;
 
-import cz.xefensor.retold.behavior.RetoldAiScanCache;
-import cz.xefensor.retold.behavior.RetoldBehaviorPerf;
+import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
+import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
+
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
