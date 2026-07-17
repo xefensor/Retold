@@ -7,12 +7,17 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.monster.spider.Spider;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -32,6 +37,10 @@ public final class RetoldControlledCombatEvents {
     private static final double WOLF_ENEMY_SEARCH_RADIUS_BLOCKS = 16.0D;
     private static final double WOLF_ENEMY_SEARCH_RADIUS_SQUARED =
             WOLF_ENEMY_SEARCH_RADIUS_BLOCKS * WOLF_ENEMY_SEARCH_RADIUS_BLOCKS;
+
+    private static final double SPIDER_PLAYER_SEARCH_RADIUS_BLOCKS = 16.0D;
+    private static final double SPIDER_PLAYER_SEARCH_RADIUS_SQUARED =
+            SPIDER_PLAYER_SEARCH_RADIUS_BLOCKS * SPIDER_PLAYER_SEARCH_RADIUS_BLOCKS;
 
     private static final double ATTACK_KEEP_RADIUS_BLOCKS = 36.0D;
     private static final double ATTACK_KEEP_RADIUS_SQUARED =
@@ -63,6 +72,46 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
+        tickControlledCombat(
+                level,
+                mob,
+                gameTime
+        );
+    }
+
+    public static void tickControlledCombat(
+            ServerLevel level,
+            PathfinderMob mob,
+            long gameTime
+    ) {
+        if (
+                level == null
+                        || mob == null
+                        || mob.level() != level
+                        || !RetoldMobRules.canUseOrdinaryPredatorSystems(mob)
+        ) {
+            return;
+        }
+
+        LivingEntity retaliationThreat = findRetaliationThreat(mob);
+
+        if (
+                retaliationThreat != null
+                        && (
+                        !RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)
+                                || mob.getTarget() != retaliationThreat
+                )
+        ) {
+            beginAttack(
+                    mob,
+                    retaliationThreat,
+                    getEnemyAttackSpeed(mob, retaliationThreat),
+                    gameTime,
+                    RetoldTargetSource.RETALIATION
+            );
+            return;
+        }
+
         if (RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)) {
             continueAttack(
                     mob,
@@ -78,14 +127,35 @@ public final class RetoldControlledCombatEvents {
                     mob,
                     ownerThreat,
                     OWNER_DEFENSE_SPEED,
-                    gameTime
+                    gameTime,
+                    RetoldTargetSource.BEHAVIOR_COMBAT
             );
             return;
+        }
+
+        if (isSpider(mob)) {
+            LivingEntity playerThreat = findSpiderPlayerTarget(
+                    level,
+                    mob
+            );
+
+            if (playerThreat != null) {
+                beginAttack(
+                        mob,
+                        playerThreat,
+                        getEnemyAttackSpeed(mob, playerThreat),
+                        gameTime,
+                        RetoldTargetSource.BEHAVIOR_COMBAT
+                );
+                return;
+            }
         }
 
         /*
          * Do not let autonomous enemy combat interrupt eating or hunting.
          * Owner defense above is allowed to override because it is higher priority.
+         * Hostile spider player aggression above is also ATTACK work and must be
+         * able to replace a lower-priority food hunt.
          */
         if (RetoldAiControl.isControlled(mob)) {
             return;
@@ -104,7 +174,8 @@ public final class RetoldControlledCombatEvents {
                 mob,
                 enemy,
                 getEnemyAttackSpeed(mob, enemy),
-                gameTime
+                gameTime,
+                RetoldTargetSource.BEHAVIOR_COMBAT
         );
     }
 
@@ -272,6 +343,71 @@ public final class RetoldControlledCombatEvents {
         return bestEnemy;
     }
 
+    private static LivingEntity findRetaliationThreat(PathfinderMob mob) {
+        if (!isSpider(mob)) {
+            return null;
+        }
+
+        LivingEntity attacker = mob.getLastHurtByMob();
+
+        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(mob, attacker)) {
+            return null;
+        }
+
+        return attacker;
+    }
+
+    private static LivingEntity findSpiderPlayerTarget(
+            ServerLevel level,
+            PathfinderMob spider
+    ) {
+        if (spider.getLightLevelDependentMagicValue() >= 0.5F) {
+            return null;
+        }
+
+        List<Player> candidates = level.getEntitiesOfClass(
+                Player.class,
+                spider.getBoundingBox().inflate(SPIDER_PLAYER_SEARCH_RADIUS_BLOCKS)
+        );
+
+        Player nearestPlayer = null;
+        double nearestDistanceSquared = Double.MAX_VALUE;
+
+        for (Player candidate : candidates) {
+            if (!isValidSpiderPlayerTarget(spider, candidate)) {
+                continue;
+            }
+
+            double distanceSquared = spider.distanceToSqr(candidate);
+
+            if (distanceSquared < nearestDistanceSquared) {
+                nearestDistanceSquared = distanceSquared;
+                nearestPlayer = candidate;
+            }
+        }
+
+        return nearestPlayer;
+    }
+
+    private static boolean isValidSpiderPlayerTarget(
+            PathfinderMob spider,
+            Player player
+    ) {
+        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(spider, player)) {
+            return false;
+        }
+
+        if (spider.distanceToSqr(player) > SPIDER_PLAYER_SEARCH_RADIUS_SQUARED) {
+            return false;
+        }
+
+        return RetoldAiSightCache.canSee(
+                spider,
+                player,
+                spider.level().getGameTime()
+        );
+    }
+
     private static boolean isValidWolfEnemy(
             PathfinderMob wolf,
             LivingEntity candidate
@@ -311,7 +447,8 @@ public final class RetoldControlledCombatEvents {
             PathfinderMob attacker,
             LivingEntity target,
             double speed,
-            long gameTime
+            long gameTime,
+            RetoldTargetSource source
     ) {
         if (attacker == null || target == null) {
             return;
@@ -324,11 +461,15 @@ public final class RetoldControlledCombatEvents {
                 ATTACK_CONTROL_TICKS
         );
 
-        if (!RetoldBehaviorTargets.setAttackTargetOrClearMode(
+        if (!RetoldCombatTargets.applyAttackTarget(
                 attacker,
                 target,
-                RetoldAiControlMode.ATTACK
+                source
         )) {
+            RetoldAiControl.clearIfControlledAs(
+                    attacker,
+                    RetoldAiControlMode.ATTACK
+            );
             return;
         }
 
@@ -404,6 +545,29 @@ public final class RetoldControlledCombatEvents {
             return false;
         }
 
+        if (isSpider(attacker)) {
+            if (
+                    RetoldFactionTargetMemory.isOwnedByAny(
+                            attacker,
+                            target,
+                            RetoldTargetSource.RETALIATION
+                    )
+            ) {
+                return true;
+            }
+
+            if (
+                    target instanceof Player
+                            && RetoldFactionTargetMemory.isOwnedByAny(
+                            attacker,
+                            target,
+                            RetoldTargetSource.BEHAVIOR_COMBAT
+                    )
+            ) {
+                return true;
+            }
+        }
+
         if (isWolf(attacker) && RetoldMobRules.isWolfEnemyButNotFood(target)) {
             return true;
         }
@@ -444,5 +608,9 @@ public final class RetoldControlledCombatEvents {
 
     private static boolean isWolf(PathfinderMob mob) {
         return RetoldMobRules.isWolf(mob);
+    }
+
+    private static boolean isSpider(PathfinderMob mob) {
+        return mob instanceof Spider;
     }
 }

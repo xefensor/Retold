@@ -1,9 +1,14 @@
 package cz.xefensor.retold.gametest;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.behavior.control.RetoldAiControl;
+import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfile;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
@@ -18,6 +23,14 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.monster.spider.Spider;
+import net.minecraft.world.entity.monster.zombie.Zombie;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.EnumSet;
@@ -54,6 +67,18 @@ public final class RetoldGameTests {
                 environment,
                 "mob_profiles_load_from_datapack",
                 RetoldGameTests::mobProfilesLoadFromDatapack
+        );
+        registerTest(
+                event,
+                environment,
+                "spider_retaliates_against_attacker",
+                RetoldGameTests::spiderRetaliatesAgainstAttacker
+        );
+        registerTest(
+                event,
+                environment,
+                "spider_targets_player_in_darkness",
+                RetoldGameTests::spiderTargetsPlayerInDarkness
         );
     }
 
@@ -224,6 +249,126 @@ public final class RetoldGameTests {
                 "Unknown entities must retain the safe fallback profile"
         );
         helper.succeed();
+    }
+
+    private static void spiderRetaliatesAgainstAttacker(GameTestHelper helper) {
+        Spider spider = helper.spawn(EntityTypes.SPIDER, 1, 2, 1);
+        Zombie attacker = helper.spawn(EntityTypes.ZOMBIE, 3, 2, 1);
+
+        spider.setLastHurtByMob(attacker);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(
+                    spider.getTarget() == attacker,
+                    "A managed spider must target the entity that attacked it"
+            );
+            helper.assertTrue(
+                    RetoldAiControl.isControlledAs(
+                            spider,
+                            RetoldAiControlMode.ATTACK
+                    ),
+                    "Spider retaliation must own ATTACK control"
+            );
+            helper.assertTrue(
+                    RetoldFactionTargetMemory.isOwnedByAny(
+                            spider,
+                            attacker,
+                            RetoldTargetSource.RETALIATION
+                    ),
+                    "Spider retaliation must use the RETALIATION target source"
+            );
+        });
+    }
+
+    private static void spiderTargetsPlayerInDarkness(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        buildDarkSpiderRoom(helper);
+
+        Spider spider = spawnSightedTestSpider(helper);
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        Vec3 playerPosition = helper.absoluteVec(new Vec3(3.5D, 1.0D, 1.5D));
+
+        player.snapTo(
+                playerPosition.x(),
+                playerPosition.y(),
+                playerPosition.z(),
+                0.0F,
+                0.0F
+        );
+        level.addFreshEntity(player);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(
+                    spider.getLightLevelDependentMagicValue() < 0.5F,
+                    "The spider player-target test must run in vanilla attack darkness"
+            );
+
+            RetoldControlledCombatEvents.tickControlledCombat(
+                    level,
+                    spider,
+                    level.getGameTime()
+            );
+
+            helper.assertTrue(
+                    spider.getTarget() == player,
+                    "A managed spider must acquire a survival player in darkness"
+            );
+            helper.assertTrue(
+                    RetoldAiControl.isControlledAs(
+                            spider,
+                            RetoldAiControlMode.ATTACK
+                    ),
+                    "Darkness-based player aggression must own ATTACK control"
+            );
+            helper.assertTrue(
+                    RetoldFactionTargetMemory.isOwnedByAny(
+                            spider,
+                            player,
+                            RetoldTargetSource.BEHAVIOR_COMBAT
+                    ),
+                    "Darkness-based player aggression must use behavior combat ownership"
+            );
+            player.discard();
+        });
+    }
+
+    private static Spider spawnSightedTestSpider(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Spider spider = new Spider(EntityTypes.SPIDER, level) {
+            @Override
+            public boolean hasLineOfSight(Entity target) {
+                return true;
+            }
+        };
+        Vec3 spiderPosition = helper.absoluteVec(new Vec3(1.5D, 1.0D, 1.5D));
+
+        spider.snapTo(
+                spiderPosition.x(),
+                spiderPosition.y(),
+                spiderPosition.z(),
+                0.0F,
+                0.0F
+        );
+        level.addFreshEntity(spider);
+        return spider;
+    }
+
+    private static void buildDarkSpiderRoom(GameTestHelper helper) {
+        for (int x = 0; x <= 4; x++) {
+            for (int z = 0; z <= 2; z++) {
+                helper.setBlock(new BlockPos(x, 3, z), Blocks.STONE);
+            }
+        }
+
+        for (int y = 0; y <= 3; y++) {
+            for (int x = 0; x <= 4; x++) {
+                helper.setBlock(new BlockPos(x, y, 0), Blocks.STONE);
+                helper.setBlock(new BlockPos(x, y, 2), Blocks.STONE);
+            }
+
+            helper.setBlock(new BlockPos(0, y, 1), Blocks.STONE);
+            helper.setBlock(new BlockPos(4, y, 1), Blocks.STONE);
+        }
     }
 
     private static Identifier id(String path) {
