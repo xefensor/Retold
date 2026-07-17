@@ -8,8 +8,8 @@
 | --- | --- | --- |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
 | Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path that still needs tuning. |
-| Aender | 8:1 Overworld travel scaling is planned but not implemented. | Current portal destination is fixed near Aender spawn. |
-| Aender | Aender teleportation and late-game rewards are planned but not implemented. | Needs design before code. |
+| Aender | The new horizontal portal, 8:1 scaling, counterpart creation, and volatile arrival preparation need fresh-world, existing-world, rapid re-entry, high-view-distance, and multiplayer verification. | Implementation exists; `dev_aender_portal_frame` is explicitly a provisional block name/design. |
+| Aender | A separate in-dimension teleportation network and late-game rewards are still planned. | Cross-dimension travel is implemented; remaining travel/reward design needs clarification before code. |
 | End | End City/outer End removal needs fresh-world and existing-world verification. | Data/mixins exist, but generated-world behavior should be tested. |
 | Elytra | Elytra should remain an item but not be survival-obtainable. | Depends on End Cities not generating and no alternate survival source being added unintentionally. |
 | Worldgen | Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, and fossils are intended for survival removal. | Current status doc does not confirm all removals are implemented. |
@@ -28,6 +28,7 @@
 - Do not let vanilla AI target assignment bypass territory warning.
 - Do not let creative or spectator players remain valid aggro targets.
 - Do not make Aender inaccessible through commands; vanilla End command access is intentional for old builds.
+- Keep Aender portal warm-up bounded and ensure an empty Aender does not repeatedly reset while destination chunks are being prepared.
 - Do not add a recipe-book restoration gamerule.
 - Do not delete elytra as an item just because survival acquisition should be removed.
 - Do not fully remove sniffer/endermite code only to satisfy survival-spawn removal.

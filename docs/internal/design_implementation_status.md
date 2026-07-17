@@ -33,7 +33,7 @@ Status labels:
 ## Current Maintainer Direction Source
 
 Last design clarification: 2026-07-12.
-Last documentation consolidation pass: 2026-07-15.
+Last documentation consolidation pass: 2026-07-17.
 
 Active maintainer direction lives in [`retold_roadmap.md`](retold_roadmap.md). This status tracker applies that direction to individual original-design rows so implementation status stays visible without duplicating the roadmap.
 
@@ -52,6 +52,7 @@ Implemented or strongly represented:
 - Aender water flow changes
 - Aender weather blocking
 - Aender chunk volatility/stability foundation
+- horizontal Aender portal, automatic counterparts, and 8:1 Overworld travel scaling
 - Endermen stop eye-contact aggression in Stage 2/3
 - undead stop burning/fearing sun in Stage 2
 - undead and zombified piglins are cleansed/blocked in Stage 3
@@ -70,8 +71,7 @@ Largest missing or partial design areas:
 - full four-element progression
 - Fire/Earth element bosses/temples and Air encounter tuning
 - deciding Stage 1 Nether star / Wither End portal activation
-- Aender late-game rewards and teleportation system
-- Aender 8:1 travel scaling
+- remaining Aender late-game rewards and in-dimension teleportation system
 - complete tools/armor/ores progression rework
 - enchanting rework
 - sword blocking/combat rework
@@ -126,13 +126,15 @@ Largest missing or partial design areas:
 | Aender dimension exists | Implemented | `RetoldAenderDimensions`, `data/retold/dimension/aender.json`, custom generator registry. |
 | Aender replaces End after egg hatch | Partial | End portal redirect is implemented for Stage 3. Vanilla End is intentionally not deleted and remains command-accessible. |
 | Aender is sky-like/floating islands | Implemented | `AenderChunkGenerator`, `AenderIslandSampler`, Aender biome/data/assets. |
-| Dimension of change / chunks regenerate differently | Partial | `AenderVolatility`, chunk events, reality/world tick systems, stabilizer behavior. Needs in-game verification for final feel. |
+| Dimension of change / chunks regenerate differently | Implemented / needs verification | `AenderVolatility`, chunk load/world tick systems, generation signatures, synchronous arrival regeneration, stabilizer behavior, and section-level stale-chunk replacement. Rapid re-entry and multiplayer still need in-game verification. |
 | Stabilizer block makes chunks permanent | Implemented / needs verification | `AenderStabilityData`, `AenderStabilizerEvents`, `aender_stabilizer`. |
 | Water flows faster/farther | Implemented | `AenderWaterFluidMixin`, `AenderFlowingFluidMixin`. |
 | Lava cannot be placed there | Implemented / needs in-game verification | `AenderBucketItemMixin` makes lava bucket emptying in the Aender vaporize like water in the Nether, consuming the bucket action while leaving no lava block behind. |
-| One Aender block equals eight Overworld blocks | Not implemented | Still planned. Portal destination is fixed; no coordinate scaling/travel ratio found. |
+| Horizontal Aender portal | Implemented / needs verification | `AenderPortalBlock`, `AenderPortalFrameBlock`, `AenderPortalShape`, `AenderPortalData`, and `AenderPortalLogic`. The provisional frame is `retold:dev_aender_portal_frame`, generates in Aender islands, and supports 3x3 to 21x21 horizontal interiors. |
+| One Aender block equals eight Overworld blocks | Implemented / needs verification | Custom portal travel multiplies Overworld X/Z by 8 on entry and divides Aender X/Z by 8 on return, with world-border clamping and automatic safe counterparts. |
+| Portal charge prepares destination terrain | Implemented / needs performance verification | Survival/adventure charge for at least 80 ticks. `AenderPortalWarmup` uses a portal ticket for asynchronous loading plus an 8 ms/16-chunk incremental refresh budget; final transition completes the remaining arrival view. |
 | Only day/light | Implemented / needs visual verification | `data/retold/dimension_type/aender.json` sets `fixed_time: 6000`, skylight, and high ambient light; Aender weather is disabled. Client visuals still need in-game review. |
-| Aender in-dimension teleportation setup | Not implemented | Still planned. No teleport network/system found beyond portal redirect. |
+| Aender in-dimension teleportation setup | Not implemented | Cross-dimension Aender portals now exist, but a separate transport network within the Aender is still planned. |
 | Late-game OP building/travel rewards | Not implemented | Still planned. No Aender reward item set found beyond current blocks/entity/chronolith/dev tools. |
 | Inverted Overworld colors / liminal feel | Partial | Aender textures/palette and lighting exist. Needs visual/design pass. |
 

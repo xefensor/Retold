@@ -67,6 +67,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `aender` | Aender dimension access, keys, generator registration |
 | `aender/entity` | Aender-specific entity classes |
 | `aender/generation` | Aender floating island terrain and volatility |
+| `aender/portal` | horizontal Aender portal shapes, indexing, destination logic, and countdown warm-up |
 | `aender/stability` | Aender stabilizer chunks, regeneration, forcefield visuals |
 | `behavior` | Retold mob AI system |
 | `block` | custom blocks and block interaction behavior |
@@ -238,6 +239,12 @@ Technical owners:
 - `AenderWorldTickEvents`
 - `AenderRealityTickEvents`
 - `AenderChunkEvents`
+- `AenderPortalShape`
+- `AenderPortalData`
+- `AenderPortalLogic`
+- `AenderPortalWarmup`
+- `AenderPortalBlock`
+- `AenderPortalFrameBlock`
 
 Data files:
 
@@ -249,7 +256,14 @@ Access behavior:
 
 - Stage 3 redirects Overworld End portal use into `retold:aender`.
 - Players in vanilla End are ejected when Stage 3 begins.
-- Aender entry position is fixed near `0.5, 8.0, 0.5`.
+- Redirected End portal entry remains fixed near `0.5, 8.0, 0.5`.
+- A separate horizontal Aender portal works between the Overworld and Aender after Stage 3.
+- The provisional frame block is `retold:dev_aender_portal_frame`; deposits generate inside Aender islands.
+- A valid portal is a horizontal rectangular frame with a 3x3 to 21x21 empty interior. Placing the final frame block activates it automatically; breaking the frame invalidates it.
+- Overworld-to-Aender travel multiplies X/Z by 8, and Aender-to-Overworld travel divides X/Z by 8. Destinations are clamped to the world border.
+- Nearby indexed/unindexed counterpart portals are reused; otherwise a safe 3x3 counterpart and support are created near the scaled destination.
+- Survival/adventure players charge for at least 80 ticks using the Nether portal delay gamerule as a configurable higher value. Creative/spectator delay follows the creative Nether portal gamerule.
+- During survival charge, `AenderPortalWarmup` refreshes a vanilla portal ticket and incrementally prepares loaded stale chunks with an 8 ms/16-chunk per-tick cap. Final transition synchronously completes the destination view.
 - Vanilla End remains technically available through commands by design, so old player builds are not permanently inaccessible.
 - Lava bucket emptying vaporizes in the Aender like water in the Nether, leaving no lava block behind.
 
@@ -258,8 +272,9 @@ Generation behavior:
 - Aender uses a custom chunk generator.
 - Terrain is floating-island based.
 - Chunks are generated from sampled island data.
-- Decoration includes grass, plants, lakes, underside spurs/growth, and Aender block palette.
+- Decoration includes grass, plants, lakes, underside spurs/growth, Aender block palette, and provisional portal-frame deposits.
 - `AenderVolatility` tracks generated/current chunk state for regeneration and stability behavior.
+- Procedural island bounds include coast warp/lobes so islands are not clipped at chunk boundaries.
 
 Design rule:
 
@@ -288,6 +303,8 @@ Behavior:
 - Breaking a stabilizer removes that halo count.
 - Stable chunk counts are saved in `AenderStabilityData`.
 - Loaded chunks around a removed stabilizer are marked current before removing stability.
+- When the last player leaves, the volatile reality resets once; empty-dimension ticks do not repeatedly reset it while a portal warm-up is active.
+- Arrival preparation force-loads the destination view, synchronously replaces stale unstable sections, rebuilds heightmaps/light section state, reconciles entities, and resends changed chunks.
 - Server tick renders a merged outer forcefield around stable regions for players.
 
 Design rule:
@@ -343,6 +360,8 @@ Registered items/blocks include:
 - `aender_stone`
 - `aender_log`
 - `aender_leaves`
+- `dev_aender_portal_frame` (provisional name)
+- `aender_portal` (non-item portal field block)
 - `aender_stabilizer`
 - `aender_chronolith`
 - extinguished torch variants
@@ -821,7 +840,9 @@ Persistence and state owners:
 | `RetoldWorldData` | world stage, offered elements, dragon egg position |
 | `RetoldKnownRecipeData` | per-player known recipes |
 | `RetoldEndSkyData` | End sky seed |
+| `AenderPortalData` | saved, dimension-keyed horizontal Aender portal locations |
 | `AenderStabilityData` | stable Aender chunk counts |
+| `AenderPortalWarmup` | transient per-player destination preparation queues, cleared on completed travel, reality reset, or server stop |
 | `RetoldMobState` / `RetoldMobStates` | mob hunger/stress/confidence and home memory, cached in a weak map and saved to entity persistent NBT |
 | `RetoldTerritoryMobState` / `RetoldTerritoryMobStates` | runtime territory warning posture/debug state, cached in a weak map |
 | `RetoldTerritoryReputation` | runtime per-player territory suspicion/reputation entries |
@@ -839,6 +860,8 @@ Main performance-sensitive systems:
 - delayed structure retrogen queue
 - torch chunk indexing cap
 - Aender forcefield rendering interval
+- Aender portal-ticket warm-up with an 8 ms/16-chunk per-player tick budget
+- section-level Aender regeneration instead of full-height per-block clearing
 - chronolith active channel map
 - recipe/villager preview server checks
 
@@ -903,7 +926,7 @@ These are areas to keep an eye on during future work:
 - Recipe/advancement overrides under `data/minecraft` are broad and should be reviewed carefully when Minecraft updates.
 - Mixins touch several sensitive vanilla systems; version updates need focused regression tests.
 - AI performance is improved but should continue to be checked with `/retoldbehavior perf`.
-- Aender generation/regeneration and stability effects should be tested with loaded chunks and multiplayer clients.
+- Aender portal scaling/counterpart creation, rapid re-entry regeneration, countdown warm-up, high view distances, stability effects, and multiplayer clients need focused in-game tests.
 
 ## AI Agent Instructions
 

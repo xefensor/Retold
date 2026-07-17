@@ -13,11 +13,25 @@ Each release should be readable in two passes:
 
 - Tuned the Air Temple Gale Core encounter: the boss now roams slightly while idle, aggroes when damaged by a valid player even outside its normal activation range, no longer deflects projectiles during phase two, and returns to the top tower area instead of a single exact block.
 - Lava poured into the Aender now vaporizes like water in the Nether.
+- Added bidirectional horizontal Aender portals. Their provisional frame block generates in Aender islands, supports rectangular interiors from 3x3 through 21x21 blocks, and activates when the final frame block completes the ring.
+- Added 8:1 Aender travel scaling: Overworld horizontal coordinates are multiplied by eight when entering the Aender and divided by eight when returning.
+- Added safe automatic 3x3 counterpart portals when no nearby destination portal exists.
+- Survival and adventure players now charge an Aender portal for at least four seconds with portal distortion and ambient sound; creative and spectator travel remains immediate by default.
+- Aender terrain now prepares during the survival portal charge and finishes before arrival, reducing visible chunk-by-chunk regeneration.
+- Improved volatile Aender reality changes so unstabilized terrain consistently rerolls after the dimension becomes empty while stabilized chunks remain persistent.
 
 ### Technical
 
 - Updated Gale Core targeting, idle movement, phase-two projectile deflection, and return-home logic while preserving existing saved home-position data.
 - Added Aender lava vaporization to shared bucket emptying behavior.
+- Added `AenderPortalBlock`, `AenderPortalFrameBlock`, `AenderPortalShape`, `AenderPortalData`, `AenderPortalLogic`, and the provisional `retold:dev_aender_portal_frame` block/assets/loot data.
+- Added destination portal indexing, nearby portal validation, safe portal creation, world-border clamping, and Overworld/Aender coordinate conversion.
+- Added synchronous arrival-view preparation plus asynchronous portal-ticket warm-up during the survival charge, capped at 16 refreshed chunks or 8 ms of main-thread work per tick.
+- Changed empty-dimension volatility resets to occur once when the last player leaves, preventing repeated reality changes from invalidating portal warm-up work.
+- Added generation signatures and synchronous stale-chunk regeneration on load/arrival to prevent mixed-reality chunk seams during rapid dimension travel.
+- Expanded procedural island bounds to cover the full coast-warp reach, fixing terrain clipped into large flat walls at chunk boundaries.
+- Replaced full-height per-block stale-chunk clearing with section-level replacement and fresh heightmap/light-state updates.
+- Updated the README and internal architecture, implementation-status, roadmap, and design-risk docs for the completed portal/scaling work and remaining verification needs.
 
 ## 0.1.0  - 2026-07-15
 

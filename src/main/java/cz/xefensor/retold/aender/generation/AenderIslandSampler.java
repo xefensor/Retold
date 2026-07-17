@@ -18,8 +18,6 @@ public final class AenderIslandSampler {
     private static final double MIN_ISLAND_HEIGHT = 22.0D;
     private static final double MAX_ISLAND_HEIGHT = 42.0D;
 
-    private static final int BOUND_MARGIN = 64;
-
     private AenderIslandSampler() {
     }
 
@@ -257,31 +255,51 @@ public final class AenderIslandSampler {
             double height,
             long seed
     ) {
-        private static final double BOUND_SCALE = 1.48D;
+        /*
+         * columnAt() first displaces a column by up to 0.375 of the island
+         * radius, then applies a coast scale of up to 1.48 and lobes of up to
+         * 1.066. That gives a maximum horizontal reach of:
+         *
+         *   0.375 + 1.48 * 1.066 = 1.95268 radii
+         *
+         * These bounds are used both to decide which chunks contain an island
+         * and to limit terrain generation. They therefore have to be
+         * conservative; an underestimated bound clips the island into the huge
+         * flat walls seen at chunk boundaries.
+         */
+        private static final double HORIZONTAL_BOUND_SCALE = 2.0D;
+        private static final double LOWER_VERTICAL_BOUND_SCALE = 2.50D;
+        private static final double UPPER_VERTICAL_BOUND_SCALE = 0.35D;
         private static final double BOUND_MARGIN = 32.0D;
 
         public int minX() {
-            return (int) Math.floor(centerX - radiusX * BOUND_SCALE - BOUND_MARGIN);
+            return (int) Math.floor(centerX - radiusX * HORIZONTAL_BOUND_SCALE - BOUND_MARGIN);
         }
 
         public int maxX() {
-            return (int) Math.ceil(centerX + radiusX * BOUND_SCALE + BOUND_MARGIN);
+            return (int) Math.ceil(centerX + radiusX * HORIZONTAL_BOUND_SCALE + BOUND_MARGIN);
         }
 
         public int minY() {
-            return Math.max(MIN_Y, (int) Math.floor(centerY - height * 1.20D - BOUND_MARGIN));
+            return Math.max(
+                    MIN_Y,
+                    (int) Math.floor(centerY - height * LOWER_VERTICAL_BOUND_SCALE - BOUND_MARGIN)
+            );
         }
 
         public int maxY() {
-            return Math.min(MAX_Y - 1, (int) Math.ceil(centerY + height * 0.35D + BOUND_MARGIN));
+            return Math.min(
+                    MAX_Y - 1,
+                    (int) Math.ceil(centerY + height * UPPER_VERTICAL_BOUND_SCALE + BOUND_MARGIN)
+            );
         }
 
         public int minZ() {
-            return (int) Math.floor(centerZ - radiusZ * BOUND_SCALE - BOUND_MARGIN);
+            return (int) Math.floor(centerZ - radiusZ * HORIZONTAL_BOUND_SCALE - BOUND_MARGIN);
         }
 
         public int maxZ() {
-            return (int) Math.ceil(centerZ + radiusZ * BOUND_SCALE + BOUND_MARGIN);
+            return (int) Math.ceil(centerZ + radiusZ * HORIZONTAL_BOUND_SCALE + BOUND_MARGIN);
         }
 
         public Column columnAt(int x, int z) {

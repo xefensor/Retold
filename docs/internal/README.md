@@ -11,9 +11,9 @@ Some sections are written as implementation guidance or refactor rules. Treat th
 
 ## Accuracy Notes
 
-Last targeted audit: 2026-07-12.
+Last targeted audit: 2026-07-17.
 Last maintainer design clarification pass: 2026-07-12.
-Last documentation consolidation pass: 2026-07-15.
+Last documentation consolidation pass: 2026-07-17.
 
 These docs are checked against code and resource files, but they are still working documentation. When a row says `needs verification`, it means code/data exists but the final in-game behavior should still be tested before treating it as complete.
 

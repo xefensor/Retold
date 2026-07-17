@@ -6,6 +6,8 @@ import cz.xefensor.retold.item.WaterElementItem;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
 import cz.xefensor.retold.block.AenderChronolithBlock;
+import cz.xefensor.retold.block.AenderPortalBlock;
+import cz.xefensor.retold.block.AenderPortalFrameBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
@@ -144,6 +146,39 @@ public final class RetoldBlocks {
                     Registries.ITEM,
                     AENDER_LEAVES.getId()
             ))
+    );
+
+    public static final DeferredBlock<AenderPortalFrameBlock> DEV_AENDER_PORTAL_FRAME = BLOCKS.register(
+            "dev_aender_portal_frame",
+            registryName -> new AenderPortalFrameBlock(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.AMETHYST_BLOCK)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .strength(3.0F, 9.0F)
+                            .sound(SoundType.AMETHYST)
+                            .lightLevel(state -> 8)
+            )
+    );
+
+    public static final DeferredItem<BlockItem> DEV_AENDER_PORTAL_FRAME_ITEM = ITEMS.registerSimpleBlockItem(
+            DEV_AENDER_PORTAL_FRAME,
+            properties -> properties.setId(ResourceKey.create(
+                    Registries.ITEM,
+                    DEV_AENDER_PORTAL_FRAME.getId()
+            ))
+    );
+
+    public static final DeferredBlock<AenderPortalBlock> AENDER_PORTAL = BLOCKS.register(
+            "aender_portal",
+            registryName -> new AenderPortalBlock(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.END_PORTAL)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .noCollision()
+                            .noOcclusion()
+                            .noLootTable()
+                            .lightLevel(state -> 11)
+            )
     );
 
     public static final DeferredBlock<Block> AENDER_STABILIZER = BLOCKS.register(

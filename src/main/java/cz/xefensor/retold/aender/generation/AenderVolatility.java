@@ -114,9 +114,17 @@ public final class AenderVolatility {
         );
     }
 
+    public static synchronized long currentRealityEpoch() {
+        return realityEpoch;
+    }
+
     public static synchronized void forgetFarRegionColumns(List<ServerPlayer> players, int forgetDistanceBlocks) {
         if (players.isEmpty()) {
-            clearForgottenWorld();
+            /*
+             * AenderWorldTickEvents already changes reality once when the last
+             * player leaves. Repeating that reset every 16 empty-dimension ticks
+             * would invalidate chunks being prepared by an Overworld portal.
+             */
             return;
         }
 

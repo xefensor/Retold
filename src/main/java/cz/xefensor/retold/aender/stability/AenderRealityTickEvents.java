@@ -1,5 +1,6 @@
 package cz.xefensor.retold.aender.stability;
 
+import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.aender.generation.AenderChunkGenerator;
 import cz.xefensor.retold.aender.generation.AenderIslandSampler;
@@ -21,10 +22,10 @@ public final class AenderRealityTickEvents {
     private static final int EXTRA_FORGET_MARGIN_BLOCKS = 128;
     private static final int MAX_ISLAND_RADIUS_BLOCKS = 224;
 
-    private static final int REGEN_RADIUS_CHUNKS = 5;
+    private static final int EXTRA_REGEN_RADIUS_CHUNKS = 2;
     private static final int MAX_REGEN_CHUNKS_PER_TICK = 1;
     private static final int MIN_REGEN_INTERVAL_TICKS = 2;
-    private static final int MAX_QUEUE_SIZE = 512;
+    private static final int MAX_QUEUE_SIZE = 8192;
     private static final long MAX_REGEN_NANOS_PER_TICK = 2_000_000L;
 
     private static final Queue<Long> REGEN_QUEUE = new ArrayDeque<>();
@@ -69,8 +70,148 @@ public final class AenderRealityTickEvents {
         }
     }
 
+    public static void clearPendingRegeneration() {
+        REGEN_QUEUE.clear();
+        QUEUED.clear();
+        nextRegenGameTime = 0L;
+    }
+
+    public static void regenerateLoadedArea(ServerLevel level, BlockPos center) {
+        if (level.dimension() != RetoldAenderDimensions.AENDER) {
+            return;
+        }
+
+        int centerChunkX = center.getX() >> 4;
+        int centerChunkZ = center.getZ() >> 4;
+        int radius = regenerationRadius(level);
+        int regenerated = 0;
+
+        // Ensure the arrival chunk exists. Newly generated chunks already carry the current signature.
+        level.getChunk(centerChunkX, centerChunkZ);
+
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                ChunkAccess chunk = getLoadedChunk(level, centerChunkX + dx, centerChunkZ + dz);
+
+                if (chunk == null || AenderStabilityData.get(level).isStable(chunk.getPos())) {
+                    continue;
+                }
+
+                AenderVolatility.retainForChunk(chunk);
+
+                if (AenderVolatility.needsRegeneration(chunk)) {
+                    AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+                    regenerated++;
+                }
+            }
+        }
+
+        if (regenerated > 0) {
+            Retold.LOGGER.debug(
+                    "Regenerated {} stale loaded Aender chunks in the arrival view around {}, {}",
+                    regenerated,
+                    centerChunkX,
+                    centerChunkZ
+            );
+        }
+    }
+
+    /**
+     * Loads and prepares the complete client view before a player arrives in the Aender.
+     *
+     * Unlike {@link #regenerateLoadedArea(ServerLevel, BlockPos)}, this deliberately
+     * forces missing chunks to load. Doing that while the portal transition is still
+     * being resolved keeps the player on the source side until the new reality is
+     * complete, instead of exposing the one-chunk-at-a-time fallback queue.
+     */
+    public static void prepareArrivalView(ServerLevel level, BlockPos center) {
+        if (level.dimension() != RetoldAenderDimensions.AENDER) {
+            return;
+        }
+
+        int centerChunkX = center.getX() >> 4;
+        int centerChunkZ = center.getZ() >> 4;
+        int radius = arrivalPreparationRadius(level);
+        int loaded = 0;
+        int regenerated = 0;
+        long startedAtNanos = System.nanoTime();
+        AenderStabilityData stability = AenderStabilityData.get(level);
+
+        // Work from the center out so the essential arrival chunks are prepared first.
+        for (int ring = 0; ring <= radius; ring++) {
+            for (int dx = -ring; dx <= ring; dx++) {
+                for (int dz = -ring; dz <= ring; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
+                        continue;
+                    }
+
+                    int chunkX = centerChunkX + dx;
+                    int chunkZ = centerChunkZ + dz;
+                    ChunkAccess chunk = getLoadedChunk(level, chunkX, chunkZ);
+
+                    if (chunk == null) {
+                        chunk = level.getChunk(chunkX, chunkZ);
+                        loaded++;
+                    }
+
+                    if (stability.isStable(chunk.getPos())) {
+                        continue;
+                    }
+
+                    AenderVolatility.retainForChunk(chunk);
+
+                    if (AenderVolatility.needsRegeneration(chunk)) {
+                        AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+                        regenerated++;
+                    }
+                }
+            }
+        }
+
+        if (loaded > 0 || regenerated > 0) {
+            Retold.LOGGER.debug(
+                    "Prepared Aender arrival view around {}, {} in {} ms: loaded {} chunks and regenerated {} chunks",
+                    centerChunkX,
+                    centerChunkZ,
+                    (System.nanoTime() - startedAtNanos) / 1_000_000L,
+                    loaded,
+                    regenerated
+            );
+        }
+    }
+
+    /**
+     * Refreshes one chunk only if Minecraft's asynchronous ticket pipeline has
+     * already made it available. This never blocks waiting for generation and is
+     * therefore safe to call in small batches during a portal charge.
+     */
+    public static boolean prepareLoadedArrivalChunk(ServerLevel level, int chunkX, int chunkZ) {
+        if (level.dimension() != RetoldAenderDimensions.AENDER) {
+            return false;
+        }
+
+        ChunkAccess chunk = getLoadedChunk(level, chunkX, chunkZ);
+
+        if (chunk == null) {
+            return false;
+        }
+
+        if (AenderStabilityData.get(level).isStable(chunk.getPos())) {
+            return true;
+        }
+
+        AenderVolatility.retainForChunk(chunk);
+
+        if (AenderVolatility.needsRegeneration(chunk)) {
+            AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+        }
+
+        return true;
+    }
+
     private static void queueNearbyStaleChunks(ServerLevel level) {
         AenderStabilityData stability = AenderStabilityData.get(level);
+        int radius = regenerationRadius(level);
 
         for (ServerPlayer player : level.players()) {
             BlockPos playerPos = player.blockPosition();
@@ -78,8 +219,8 @@ public final class AenderRealityTickEvents {
             int centerChunkX = playerPos.getX() >> 4;
             int centerChunkZ = playerPos.getZ() >> 4;
 
-            for (int dx = -REGEN_RADIUS_CHUNKS; dx <= REGEN_RADIUS_CHUNKS; dx++) {
-                for (int dz = -REGEN_RADIUS_CHUNKS; dz <= REGEN_RADIUS_CHUNKS; dz++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
                     int chunkX = centerChunkX + dx;
                     int chunkZ = centerChunkZ + dz;
 
@@ -178,6 +319,14 @@ public final class AenderRealityTickEvents {
                 MIN_FORGET_DISTANCE_BLOCKS,
                 viewDistanceBlocks + islandSafetyMargin
         );
+    }
+
+    private static int regenerationRadius(ServerLevel level) {
+        return level.getServer().getPlayerList().getViewDistance() + EXTRA_REGEN_RADIUS_CHUNKS;
+    }
+
+    public static int arrivalPreparationRadius(ServerLevel level) {
+        return level.getServer().getPlayerList().getViewDistance();
     }
 
     private static long pack(int x, int z) {

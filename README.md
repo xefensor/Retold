@@ -77,6 +77,7 @@ Implemented or strongly represented systems include:
 - water element path through the ocean monument / elder guardian
 - air element path through the Air Temple / Gale Core encounter
 - Aender dimension access after Stage 3
+- horizontal Aender portals with 8:1 Overworld/Aender coordinate scaling
 - custom Aender terrain, blocks, stability, lighting, and water behavior
 - Aender lava vaporization
 - End portal redirection to Aender after Stage 3
@@ -91,7 +92,7 @@ Implemented or strongly represented systems include:
 - torch rain and extinguished torch behavior
 - Aender chronolith time-control block
 
-Some design goals are intentionally not finished yet, including the full four-element progression, Aender travel/rewards, tool and combat reworks, village reputation, and broader worldgen removals.
+Some design goals are intentionally not finished yet, including the full four-element progression, remaining Aender travel rewards and in-dimension transport, tool and combat reworks, village reputation, and broader worldgen removals.
 
 ## Aender
 
@@ -99,10 +100,16 @@ The Aender is the mod's planned replacement for late End progression. It is a sk
 
 - water behaves differently there
 - lava vaporizes there like water in the Nether
-- one Aender block is planned to equal eight Overworld blocks for travel
+- horizontal Aender portals travel at an 8:1 ratio: one Overworld block maps to eight Aender blocks
 - unstable chunks can regenerate differently
 - stabilizer blocks can make regions permanent
 - it is intended to become a difficult late-game dimension with powerful travel/building rewards
+
+The current Aender portal uses the provisional frame block id `retold:dev_aender_portal_frame`. Frame deposits generate naturally inside Aender islands. A portal is a horizontal rectangular ring with an empty interior from 3x3 through 21x21 blocks; placing the final frame block activates it automatically. Portals work in both directions after Stage 3 and create a safe 3x3 counterpart when no nearby matching portal exists.
+
+Travel from the Overworld to the Aender multiplies horizontal coordinates by eight; returning divides them by eight. Survival and adventure players must remain in the portal for at least 80 ticks (four seconds), with vanilla-style portal distortion and sound. During that charge, the server asynchronously prepares the destination view and incrementally refreshes stale chunks, then completes any remaining work before teleporting. Creative and spectator travel remains immediate by default.
+
+When the last player leaves the Aender, its unstabilized reality is forgotten once. Returning players receive a newly generated reality around their destination, while stabilizer-protected chunks remain persistent. Arrival regeneration uses section-level clearing, rebuilt heightmaps, and chunk resends so the new terrain appears as one coherent view instead of visible old/new chunk seams.
 
 Vanilla End access is still technically preserved for commands, so existing builds are not permanently lost when a world reaches Stage 3. In normal survival progression, however, the Aender is intended to take the End's place.
 

@@ -9,6 +9,7 @@ Retold is still built around:
 - three world stages
 - four-element progression in any order
 - Aender replacing normal late End access while vanilla End remains command-accessible
+- horizontal Aender portals using implemented 8:1 Overworld/Aender travel scaling
 - elytra remaining as an item but not being survival-obtainable through End Cities
 - recipe knowledge and villager teaching instead of a vanilla-style recipe-book restore
 - Retold mob AI driven by species, faction, profile, state, and nearby world situation
@@ -23,8 +24,8 @@ These are the strongest next design-aligned areas:
 1. Finish the four-element progression model.
 2. Add missing Fire and Earth element item/challenge paths, and continue tuning the Air Temple/Gale Core path.
 3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
-4. Implement Aender 8:1 Overworld travel scaling.
-5. Add Aender teleportation and late-game travel/building rewards.
+4. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
+5. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
 6. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, fossils, sniffers, and endermites.
 7. Add village reputation for stealing, crop breaking, and animal killing.
 8. Continue AI validation and performance profiling against real loaded-mob tests.
