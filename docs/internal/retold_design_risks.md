@@ -6,7 +6,6 @@
 
 | Area | Risk / open item | Current note |
 | --- | --- | --- |
-| Aender | Lava placement ban is planned but no implementation was found. | Search found Aender water flow/weather hooks, but no lava bucket/fluid placement blocker. |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
 | Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path that still needs tuning. |
 | Aender | 8:1 Overworld travel scaling is planned but not implemented. | Current portal destination is fixed near Aender spawn. |

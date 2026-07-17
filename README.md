@@ -78,6 +78,7 @@ Implemented or strongly represented systems include:
 - air element path through the Air Temple / Gale Core encounter
 - Aender dimension access after Stage 3
 - custom Aender terrain, blocks, stability, lighting, and water behavior
+- Aender lava vaporization
 - End portal redirection to Aender after Stage 3
 - delayed mansions and pillager outposts
 - recipe knowledge gating
@@ -97,7 +98,7 @@ Some design goals are intentionally not finished yet, including the full four-el
 The Aender is the mod's planned replacement for late End progression. It is a sky-like dimension based on instability, light, and change:
 
 - water behaves differently there
-- lava is planned to be impossible to place there
+- lava vaporizes there like water in the Nether
 - one Aender block is planned to equal eight Overworld blocks for travel
 - unstable chunks can regenerate differently
 - stabilizer blocks can make regions permanent

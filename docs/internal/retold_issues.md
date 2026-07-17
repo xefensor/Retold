@@ -32,7 +32,7 @@ Update this file when:
 - a player reports reproducible broken behavior
 - an issue is fixed and verified
 
-Do not put design gaps here. For example, "Aender lava ban is planned but not implemented" is a design/implementation gap, not a confirmed issue.
+Do not put design gaps here. For example, "Aender teleportation is planned but not implemented" is a design/implementation gap, not a confirmed issue.
 
 ## AI Agent Instructions
 

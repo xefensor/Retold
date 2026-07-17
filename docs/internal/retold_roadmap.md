@@ -24,11 +24,10 @@ These are the strongest next design-aligned areas:
 2. Add missing Fire and Earth element item/challenge paths, and continue tuning the Air Temple/Gale Core path.
 3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 4. Implement Aender 8:1 Overworld travel scaling.
-5. Implement the Aender lava placement ban.
-6. Add Aender teleportation and late-game travel/building rewards.
-7. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, fossils, sniffers, and endermites.
-8. Add village reputation for stealing, crop breaking, and animal killing.
-9. Continue AI validation and performance profiling against real loaded-mob tests.
+5. Add Aender teleportation and late-game travel/building rewards.
+6. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, fossils, sniffers, and endermites.
+7. Add village reputation for stealing, crop breaking, and animal killing.
+8. Continue AI validation and performance profiling against real loaded-mob tests.
 
 ## Planned Systems
 

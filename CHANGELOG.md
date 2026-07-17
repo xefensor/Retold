@@ -12,10 +12,12 @@ Each release should be readable in two passes:
 ### Player-Facing
 
 - Tuned the Air Temple Gale Core encounter: the boss now roams slightly while idle, aggroes when damaged by a valid player even outside its normal activation range, no longer deflects projectiles during phase two, and returns to the top tower area instead of a single exact block.
+- Lava poured into the Aender now vaporizes like water in the Nether.
 
 ### Technical
 
 - Updated Gale Core targeting, idle movement, phase-two projectile deflection, and return-home logic while preserving existing saved home-position data.
+- Added Aender lava vaporization to shared bucket emptying behavior.
 
 ## 0.1.0  - 2026-07-15
 

@@ -251,6 +251,7 @@ Access behavior:
 - Players in vanilla End are ejected when Stage 3 begins.
 - Aender entry position is fixed near `0.5, 8.0, 0.5`.
 - Vanilla End remains technically available through commands by design, so old player builds are not permanently inaccessible.
+- Lava bucket emptying vaporizes in the Aender like water in the Nether, leaving no lava block behind.
 
 Generation behavior:
 
@@ -779,7 +780,7 @@ Main mixin groups:
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
 | Villager teaching UI | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker` |
 | World/stage/worldgen | `DelayedStructurePlacementMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
-| Aender physics/rendering | `AenderChunkMapSaveMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
+| Aender physics/rendering | `AenderChunkMapSaveMixin`, `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
 | Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin` |
 | Guardian behavior | `ElderGuardianMixin`, `ElderGuardianInvulnerableHitMixin` |
 | Enderman/client visuals | `EndermanRendererMixin`, `EndermanParticleMixin`, `LivingEntityTeleportParticleMixin`, `PortalParticleMixin` |

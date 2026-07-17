@@ -72,7 +72,6 @@ Largest missing or partial design areas:
 - deciding Stage 1 Nether star / Wither End portal activation
 - Aender late-game rewards and teleportation system
 - Aender 8:1 travel scaling
-- lava placement ban in Aender
 - complete tools/armor/ores progression rework
 - enchanting rework
 - sword blocking/combat rework
@@ -130,7 +129,7 @@ Largest missing or partial design areas:
 | Dimension of change / chunks regenerate differently | Partial | `AenderVolatility`, chunk events, reality/world tick systems, stabilizer behavior. Needs in-game verification for final feel. |
 | Stabilizer block makes chunks permanent | Implemented / needs verification | `AenderStabilityData`, `AenderStabilizerEvents`, `aender_stabilizer`. |
 | Water flows faster/farther | Implemented | `AenderWaterFluidMixin`, `AenderFlowingFluidMixin`. |
-| Lava cannot be placed there | Not implemented | Still planned. Audit found Aender water flow/weather hooks but no lava bucket/fluid placement blocker. |
+| Lava cannot be placed there | Implemented / needs in-game verification | `AenderBucketItemMixin` makes lava bucket emptying in the Aender vaporize like water in the Nether, consuming the bucket action while leaving no lava block behind. |
 | One Aender block equals eight Overworld blocks | Not implemented | Still planned. Portal destination is fixed; no coordinate scaling/travel ratio found. |
 | Only day/light | Implemented / needs visual verification | `data/retold/dimension_type/aender.json` sets `fixed_time: 6000`, skylight, and high ambient light; Aender weather is disabled. Client visuals still need in-game review. |
 | Aender in-dimension teleportation setup | Not implemented | Still planned. No teleport network/system found beyond portal redirect. |

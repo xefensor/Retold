@@ -15,6 +15,7 @@
     "AbstractFurnaceBlockEntityMixin",
     "EndPortalBlockMixin",
     "AenderChunkMapSaveMixin",
+    "AenderBucketItemMixin",
     "AenderFlowingFluidMixin",
     "AenderWaterFluidMixin",
     "AenderWeatherMixin",
