@@ -1,5 +1,12 @@
 package cz.xefensor.retold.behavior.profiles;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Optional;
+
 public enum RetoldMobProfileType {
     NONE,
     HUNGRY_GRAZER,
@@ -29,5 +36,28 @@ public enum RetoldMobProfileType {
     COMMANDER_SUPPORT,
     ILLAGER_RAIDER,
     SPECIAL_VANILLA,
-    APEX_OR_BOSS
+    APEX_OR_BOSS;
+
+    public static final Codec<RetoldMobProfileType> CODEC = Codec.STRING.comapFlatMap(
+            serializedName -> fromSerializedName(serializedName)
+                    .map(DataResult::success)
+                    .orElseGet(() -> DataResult.error(
+                            () -> "Unknown mob profile type: " + serializedName
+                    )),
+            RetoldMobProfileType::serializedName
+    );
+
+    public String serializedName() {
+        return name().toLowerCase(Locale.ROOT);
+    }
+
+    public static Optional<RetoldMobProfileType> fromSerializedName(String serializedName) {
+        if (serializedName == null) {
+            return Optional.empty();
+        }
+
+        return Arrays.stream(values())
+                .filter(type -> type.serializedName().equals(serializedName))
+                .findFirst();
+    }
 }

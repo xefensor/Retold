@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:llama",
+  "profile": {
+    "type": "hungry_grazer",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 440,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}

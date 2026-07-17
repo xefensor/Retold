@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:zombified_piglin",
+  "profile": {
+    "type": "undead_hungry",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 360,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:fox",
+  "profile": {
+    "type": "solo_opportunist",
+    "managed": true,
+    "predator": true,
+    "pack_social": false,
+    "territory_guard": false,
+    "hunger_interval_ticks": 460,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}

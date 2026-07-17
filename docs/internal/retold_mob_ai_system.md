@@ -55,7 +55,35 @@ Technical owner:
 - `RetoldMobProfileType`
 - `RetoldMobProfile`
 - `RetoldMobProfiles`
+- `RetoldMobProfileReloadListener`
+- `data/retold/mob_profiles/*.json`
 - `RetoldMobRules`
+
+Profiles are server datapack data. Each file owns one entity and can be replaced independently
+by a higher-priority datapack using the same resource path. `/reload` validates all definitions
+and atomically publishes a new immutable profile snapshot. Invalid or duplicate entity entries
+do not replace the last valid snapshot.
+
+Example `data/retold/mob_profiles/wolf.json`:
+
+```json
+{
+  "entity": "minecraft:wolf",
+  "profile": {
+    "type": "pack_predator",
+    "managed": true,
+    "predator": true,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 460,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}
+```
+
+Boolean fields default to `false`, `hunger_interval_ticks` defaults to `0`, and both thresholds
+default to `101` (disabled). Profile type `none` is reserved for Java fallback behavior.
 
 Examples:
 
@@ -547,7 +575,7 @@ Expected result:
 Use this checklist:
 
 1. Decide the profile in `RetoldMobProfileType`.
-2. Register the species in `RetoldMobProfiles`.
+2. Add `data/retold/mob_profiles/<entity>.json`; do not add a Java registration.
 3. Add relationship/faction rules only if diplomacy changes.
 4. Add state fields only if existing `RetoldMobState` cannot represent it.
 5. Route the behavior in `RetoldBehaviorEntityTickDispatcher`.
@@ -685,7 +713,7 @@ Performance:
 
 When changing this system:
 
-- keep design rules in `RetoldMobProfiles`, `RetoldMobRules`, factions, and territory config
+- keep profile values in datapack JSON and derived design rules in `RetoldMobRules`, factions, and territory config
 - keep behavior handlers focused on one behavior family
 - keep expensive work behind caches and budgets
 - keep dispatcher routing profile-aware

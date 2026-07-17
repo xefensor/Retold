@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:bee",
+  "profile": {
+    "type": "hive_colony",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 460,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}

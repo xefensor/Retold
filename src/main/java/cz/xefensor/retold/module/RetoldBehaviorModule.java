@@ -6,7 +6,9 @@ import cz.xefensor.retold.behavior.debug.RetoldBehaviorDebugEvents;
 import cz.xefensor.retold.behavior.food.RetoldFoodBehaviorEvents;
 import cz.xefensor.retold.behavior.hunting.RetoldControlledHuntingEvents;
 import cz.xefensor.retold.behavior.hunting.RetoldPredatorStaminaEvents;
+import cz.xefensor.retold.behavior.profiles.RetoldMobProfileReloadListener;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 
 public final class RetoldBehaviorModule {
     private RetoldBehaviorModule() {
@@ -19,5 +21,13 @@ public final class RetoldBehaviorModule {
         gameEventBus.register(RetoldBehaviorDebugEvents.class);
         gameEventBus.register(RetoldControlledCombatEvents.class);
         gameEventBus.register(RetoldPredatorStaminaEvents.class);
+        gameEventBus.addListener(RetoldBehaviorModule::addServerReloadListeners);
+    }
+
+    private static void addServerReloadListeners(AddServerReloadListenersEvent event) {
+        event.addListener(
+                RetoldMobProfileReloadListener.ID,
+                new RetoldMobProfileReloadListener()
+        );
     }
 }

@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:blaze",
+  "profile": {
+    "type": "territory_guard",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": true,
+    "hunger_interval_ticks": 0,
+    "eat_threshold": 101,
+    "hunt_threshold": 101
+  }
+}

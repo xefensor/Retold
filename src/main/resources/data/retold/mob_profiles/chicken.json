@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:chicken",
+  "profile": {
+    "type": "small_forager",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 390,
+    "eat_threshold": 18,
+    "hunt_threshold": 36
+  }
+}

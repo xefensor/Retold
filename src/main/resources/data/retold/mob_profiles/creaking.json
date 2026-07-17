@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:creaking",
+  "profile": {
+    "type": "special_vanilla",
+    "managed": false,
+    "predator": false,
+    "pack_social": false,
+    "territory_guard": false,
+    "hunger_interval_ticks": 0,
+    "eat_threshold": 101,
+    "hunt_threshold": 101
+  }
+}

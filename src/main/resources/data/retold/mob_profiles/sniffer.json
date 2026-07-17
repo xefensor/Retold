@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:sniffer",
+  "profile": {
+    "type": "sniffer_forager",
+    "managed": true,
+    "predator": false,
+    "pack_social": false,
+    "territory_guard": false,
+    "hunger_interval_ticks": 520,
+    "eat_threshold": 30,
+    "hunt_threshold": 101
+  }
+}

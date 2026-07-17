@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:panda",
+  "profile": {
+    "type": "panda_bamboo",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 520,
+    "eat_threshold": 24,
+    "hunt_threshold": 101
+  }
+}

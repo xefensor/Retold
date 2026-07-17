@@ -331,7 +331,7 @@ Largest missing or partial design areas:
 | Recipe knowledge | `RetoldKnownRecipeData`, `RetoldRecipeBookEvents`, `ServerRecipeBookMixin`, `AbstractFurnaceBlockEntityMixin` |
 | Villager teaching | `RetoldVillagerTeaching`, `RetoldVillagerTeachingReloadListener`, `data/retold/villager_teaching` |
 | Delayed structures | `RetoldDelayedStructureRetrogen`, `RetoldChunkStructureData`, `RetoldDelayedStructureHelper`, delayed structure tags |
-| AI | `RetoldBehaviorEntityTickDispatcher`, `RetoldMobProfiles`, `RetoldAiControl`, `RetoldBehaviorPerf` |
+| AI | `RetoldBehaviorEntityTickDispatcher`, `RetoldMobProfiles`, `RetoldMobProfileReloadListener`, `data/retold/mob_profiles`, `RetoldAiControl`, `RetoldBehaviorPerf` |
 | Territory warning | `RetoldTerritoryController`, `RetoldTerritoryRules`, `RetoldTerritoryTargetBlocker`, territory structure tags |
 | Undead stage rules | `RetoldUndeadEvents`, `RetoldUndeadSunFear`, `RetoldUndeadCleansing` |
 | Piglin stage rules | `RetoldPiglinEvents` |

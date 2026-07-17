@@ -110,7 +110,7 @@ The mob AI package is split by behavior ownership:
 | `behavior/hunting` | predator search, pursuit, regrouping, stamina, and strikes |
 | `behavior/pack` | pack membership, formation, movement, combat, feeding, and dens |
 | `behavior/performance` | LOD, work budgets, scan/sight caches, and counters |
-| `behavior/profiles` | mob profiles, rules, hunger stages, and runtime state |
+| `behavior/profiles` | datapack profile loading/validation, derived rules, hunger stages, and runtime state |
 | `behavior/species` | species- and faction-specific behavior adapters |
 
 The mod entry point delegates composition to `RetoldSubsystems`. Registration ownership is

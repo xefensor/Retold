@@ -1,0 +1,13 @@
+{
+  "entity": "minecraft:frog",
+  "profile": {
+    "type": "amphibian_forager",
+    "managed": true,
+    "predator": false,
+    "pack_social": true,
+    "territory_guard": false,
+    "hunger_interval_ticks": 420,
+    "eat_threshold": 101,
+    "hunt_threshold": 34
+  }
+}

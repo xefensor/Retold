@@ -1,6 +1,9 @@
 package cz.xefensor.retold.gametest;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.behavior.profiles.RetoldMobProfile;
+import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
+import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
 import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
@@ -45,6 +48,12 @@ public final class RetoldGameTests {
                 environment,
                 "world_data_tracks_ritual_progress",
                 RetoldGameTests::worldDataTracksRitualProgress
+        );
+        registerTest(
+                event,
+                environment,
+                "mob_profiles_load_from_datapack",
+                RetoldGameTests::mobProfilesLoadFromDatapack
         );
     }
 
@@ -173,6 +182,48 @@ public final class RetoldGameTests {
                 data.setDragonEggPos(originalEggPos);
             }
         }
+    }
+
+    private static void mobProfilesLoadFromDatapack(GameTestHelper helper) {
+        helper.assertValueEqual(
+                RetoldMobProfiles.loadedProfileCount(),
+                67,
+                "Every bundled mob profile must load"
+        );
+
+        RetoldMobProfile wolf = RetoldMobProfiles.get("minecraft:wolf");
+        helper.assertValueEqual(
+                wolf.type(),
+                RetoldMobProfileType.PACK_PREDATOR,
+                "Wolf must use its datapack profile"
+        );
+        helper.assertTrue(wolf.managed(), "Wolf profile must remain managed");
+        helper.assertTrue(wolf.predator(), "Wolf profile must remain predatory");
+        helper.assertTrue(wolf.packSocial(), "Wolf profile must remain pack-social");
+        helper.assertValueEqual(
+                wolf.hungerIntervalTicks(),
+                460,
+                "Wolf hunger timing must preserve the previous balance"
+        );
+
+        RetoldMobProfile skeleton = RetoldMobProfiles.get("skeleton");
+        helper.assertValueEqual(
+                skeleton.type(),
+                RetoldMobProfileType.UNDEAD_TOLERANT,
+                "Unqualified lookups must default to the Minecraft namespace"
+        );
+        helper.assertValueEqual(
+                skeleton.eatThreshold(),
+                101,
+                "Disabled hunger thresholds must survive data loading"
+        );
+
+        helper.assertValueEqual(
+                RetoldMobProfiles.get("minecraft:not_a_real_mob").type(),
+                RetoldMobProfileType.NONE,
+                "Unknown entities must retain the safe fallback profile"
+        );
+        helper.succeed();
     }
 
     private static Identifier id(String path) {
