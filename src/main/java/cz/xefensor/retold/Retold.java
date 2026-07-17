@@ -5,6 +5,7 @@ import cz.xefensor.retold.aender.stability.AenderWorldTickEvents;
 import cz.xefensor.retold.behavior.*;
 import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.event.*;
+import cz.xefensor.retold.gametest.RetoldGameTests;
 import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.territory.RetoldTerritoryEvents;
@@ -59,6 +60,7 @@ public final class Retold {
         modEventBus.addListener(RetoldNetworking::registerPayloads);
         modEventBus.addListener(RetoldEntityEvents::registerAttributes);
         modEventBus.addListener(RetoldEntityEvents::registerSpawnPlacements);
+        modEventBus.addListener(RetoldGameTests::register);
 
         if (FMLEnvironment.getDist() == Dist.CLIENT) {
             RetoldClientEvents.register(modEventBus);

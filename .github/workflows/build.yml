@@ -26,5 +26,9 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x ./gradlew
 
-      - name: Build with Gradle
+      - name: Build and run unit tests
         run: ./gradlew build
+
+      - name: Run GameTests
+        run: ./gradlew runGameTestServer
+        timeout-minutes: 10
