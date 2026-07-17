@@ -84,6 +84,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `faction` | faction identities and relationships |
 | `item` | custom item behavior, currently including element item logic |
 | `mixin` | vanilla behavior hooks and accessors |
+| `module` | subsystem composition and NeoForge bus registration ownership |
 | `network` | custom payload registration and handlers |
 | `recipe` | known recipe storage and recipe unlock control |
 | `registry` | blocks, items, entities, tags, game rules |
@@ -111,6 +112,23 @@ The mob AI package is split by behavior ownership:
 | `behavior/performance` | LOD, work budgets, scan/sight caches, and counters |
 | `behavior/profiles` | mob profiles, rules, hunger stages, and runtime state |
 | `behavior/species` | species- and faction-specific behavior adapters |
+
+The mod entry point delegates composition to `RetoldSubsystems`. Registration ownership is
+split into these modules:
+
+| Module | Registration ownership |
+| --- | --- |
+| `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, reload listeners, and GameTests |
+| `RetoldStageModule` | stage runtime, End progression, recipe gating, and stage-gated patrols |
+| `RetoldMobModule` | undead, piglin, golem, enderman, and elder guardian events |
+| `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, and delayed structures |
+| `RetoldAenderModule` | Aender registries, stability events, world ticks, and Chronolith events |
+| `RetoldFactionModule` | invalid-target cleanup, faction combat, and faction assist |
+| `RetoldTerritoryModule` | territory runtime, illegal actions, and reputation diagnostics |
+| `RetoldBehaviorModule` | AI dispatcher, food, hunting, combat control, stamina, and behavior diagnostics |
+
+`RetoldSubsystems` registers every mod-bus contribution before game-bus handlers. The module
+order is dependency-aware: faction precedes territory, and territory precedes behavior.
 
 ## World Stage System
 
