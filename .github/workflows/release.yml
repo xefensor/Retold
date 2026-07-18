@@ -7,6 +7,7 @@ on:
       - gradle.properties
       - CHANGELOG.md
       - README.md
+      - .github/workflows/release.yml
 
 permissions:
   contents: write
@@ -69,6 +70,15 @@ jobs:
             exit 1
           fi
 
+      - name: Update existing release title
+        if: steps.existing.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: gh release edit "$TAG" --title "Retold $VERSION"
+
       - name: Make Gradle wrapper executable
         if: steps.existing.outputs.exists == 'false'
         run: chmod +x ./gradlew
@@ -115,5 +125,5 @@ jobs:
 
           gh release create "$TAG" "$artifact" \
             --target "$GITHUB_SHA" \
-            --title "Minecraft: Retold $VERSION" \
+            --title "Retold $VERSION" \
             --notes-file release-notes.md
