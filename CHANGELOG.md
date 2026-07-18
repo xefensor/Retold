@@ -9,7 +9,15 @@ Each release should be readable in two passes:
 
 ## Next - Unreleased
 
-No changes yet.
+### Player-Facing
+
+- Updated packaged mod metadata to use Retold branding, the current generated version, and working project and issue-tracker links.
+
+### Technical
+
+- Added separate MIT code and protected creative-asset licenses, including permission to redistribute the complete, unmodified Retold JAR in modpacks.
+- Added structured bug and suggestion forms, a pull-request template, and monthly Gradle and GitHub Actions dependency checks.
+- Added SHA-256 checksum assets to the release workflow.
 
 ## 0.2.0 - 2026-07-18
 
