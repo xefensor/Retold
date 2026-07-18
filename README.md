@@ -164,6 +164,11 @@ The project generates mod metadata from [src/main/templates](src/main/templates)
 - [src/main/templates](src/main/templates) - generated NeoForge mod metadata template
 - [docs/internal](docs/internal) - internal design, status, and technical notes
 
+## Contact
+
+- Main maintainer: **Xefensor** — [alex@alexejtusl.cz](mailto:alex@alexejtusl.cz)
+- Please report bugs and suggestions through [GitHub Issues](https://github.com/xefensor/Retold/issues).
+
 ## Credits
 
 - **Jesse Schramm** — created the extinguished-torch textures.
