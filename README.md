@@ -164,6 +164,10 @@ The project generates mod metadata from [src/main/templates](src/main/templates)
 - [src/main/templates](src/main/templates) - generated NeoForge mod metadata template
 - [docs/internal](docs/internal) - internal design, status, and technical notes
 
+## Credits
+
+- **Jesse Schramm** — created the extinguished-torch textures.
+
 ## License
 
 Retold uses separate licenses for code and creative assets:
