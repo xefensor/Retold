@@ -1,6 +1,6 @@
 # Retold Roadmap
 
-> AI-generated roadmap. This file is meant for human developers and future AI coding agents. It summarizes active design direction, not every historical idea from the original design document.
+> Developer-maintained, AI-assisted roadmap. This file is meant for human developers and future AI coding agents. It summarizes active design direction, not every historical idea from the original design document.
 
 ## Current Direction
 

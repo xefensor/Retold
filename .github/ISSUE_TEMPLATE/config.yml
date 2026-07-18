@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Retold releases
+  - name: Retold Discord support
+    url: https://discord.gg/S3g98zEY8a
+    about: Ask installation questions, get help, discuss development, and join public playtesting.
+  - name: Download on Modrinth
+    url: https://modrinth.com/mod/retold
+    about: Download the official Modrinth release and check supported versions.
+  - name: Download on CurseForge
+    url: https://www.curseforge.com/minecraft/mc-mods/retold
+    about: Download the official CurseForge release and check supported versions.
+  - name: GitHub releases
     url: https://github.com/xefensor/Retold/releases
-    about: Download the latest supported Retold build before reporting a problem.
+    about: Download GitHub release artifacts and checksums.
