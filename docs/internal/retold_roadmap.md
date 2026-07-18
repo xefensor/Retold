@@ -1,6 +1,6 @@
 # Retold Roadmap
 
-> AI-generated roadmap. This file is meant for human maintainers and future AI coding agents. It summarizes active design direction, not every historical idea from the original design document.
+> AI-generated roadmap. This file is meant for human developers and future AI coding agents. It summarizes active design direction, not every historical idea from the original design document.
 
 ## Current Direction
 
@@ -61,7 +61,7 @@ These areas are not finished forever, but the current direction is acceptable fo
 
 ## Undecided
 
-Do not implement these without asking the maintainer first:
+Do not implement these without asking the developer first:
 
 - Stage 1 Wither/Nether star requirement before End access
 - jungle/desert pyramids as boss tombs
@@ -72,7 +72,7 @@ Do not implement these without asking the maintainer first:
 
 ## Not Planned
 
-Do not add these unless the maintainer changes direction:
+Do not add these unless the developer changes direction:
 
 - gamerule to restore the normal recipe book
 - complete removal of elytra as an item
@@ -82,7 +82,7 @@ Do not add these unless the maintainer changes direction:
 
 Update this file when:
 
-- the maintainer clarifies a design decision
+- the developer clarifies a design decision
 - a high-priority item is implemented
 - an undecided item becomes planned or dropped
 - a planned item becomes explicitly not planned
