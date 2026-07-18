@@ -1,6 +1,6 @@
 # Minecraft Retold Mod System
 
-> Internal documentation. This file is meant for human maintainers and future AI coding agents. Sections named "Design rule", "Performance rules", "Adding New Features", and "Open Technical Watchpoints" are also implementation guidance for AI-assisted work.
+> Internal documentation. This file is meant for human developers and future AI coding agents. Sections named "Design rule", "Performance rules", "Adding New Features", and "Open Technical Watchpoints" are also implementation guidance for AI-assisted work.
 
 This document describes the current Minecraft Retold mod as a whole: what the mod is trying to do, how the major systems fit together, and which code/data files own each system.
 
@@ -8,7 +8,7 @@ For the dedicated mob AI design and technical reference, see [`retold_mob_ai_sys
 
 For the original-design versus current-implementation tracker, see [`design_implementation_status.md`](design_implementation_status.md).
 
-For active priorities and maintainer direction, see [`retold_roadmap.md`](retold_roadmap.md).
+For active priorities and developer direction, see [`retold_roadmap.md`](retold_roadmap.md).
 
 For design risks and confirmed issues, see [`retold_design_risks.md`](retold_design_risks.md) and [`retold_issues.md`](retold_issues.md).
 
@@ -191,7 +191,7 @@ Current ritual model:
 - Dragon kill advances the world to Stage 2.
 - In Stage 2, the dragon egg accepts element items.
 - `water_element` and `air_element` are currently implemented element items.
-- Element acquisition order should be free; no element path should require being completed first unless the maintainer changes the design.
+- Element acquisition order should be free; no element path should require being completed first unless the developer changes the design.
 - Offered elements are saved in `RetoldWorldData`.
 - The dragon egg crack overlay reflects offered element count.
 - When all currently required element values are offered, currently Water and Air, the egg is removed and Stage 3 starts. Fire and Earth can be added to the requirement when their paths exist.
