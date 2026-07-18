@@ -1,6 +1,6 @@
 # Design Implementation Status
 
-> AI-generated status tracker. This file compares the original `Minecraft_ Retold - Design Document.docx` against the current codebase. It is meant for human maintainers and future AI coding agents. Treat this as a working map, not as a final product spec.
+> AI-generated status tracker. This file compares the original `Minecraft_ Retold - Design Document.docx` against the current codebase. It is meant for human developers and future AI coding agents. Treat this as a working map, not as a final product spec.
 
 Source design document:
 
@@ -25,17 +25,17 @@ Status labels:
 | Implemented | The feature exists in code/data in recognizable form. |
 | Partial | Some meaningful part exists, but the full design is not done. |
 | Not implemented | No clear implementation was found. |
-| Not planned | Maintainer clarified this should not be implemented. |
+| Not planned | Developer clarified this should not be implemented. |
 | Design only | Lore/intent exists but does not directly require code yet. |
 | Deferred/TBD | The design document itself marks the idea as unfinished or speculative. |
 | Needs verification | Code appears related, but in-game behavior should be tested before calling it done. |
 
-## Current Maintainer Direction Source
+## Current Developer Direction Source
 
 Last design clarification: 2026-07-12.
 Last documentation consolidation pass: 2026-07-17.
 
-Active maintainer direction lives in [`retold_roadmap.md`](retold_roadmap.md). This status tracker applies that direction to individual original-design rows so implementation status stays visible without duplicating the roadmap.
+Active developer direction lives in [`retold_roadmap.md`](retold_roadmap.md). This status tracker applies that direction to individual original-design rows so implementation status stays visible without duplicating the roadmap.
 
 ## Current Summary
 
@@ -111,7 +111,7 @@ Largest missing or partial design areas:
 | Three world stages | Implemented | `RetoldWorldStage`, `RetoldWorldData`, `RetoldStageManager`, `/retold stage`. |
 | Stage 1 mostly vanilla | Partial | Stage 1 is default. Some Retold systems still run globally, such as recipe knowledge and AI. |
 | Stage 1 requires diamond pickaxe/Nether portal | Not implemented | No explicit Retold gating found. Vanilla rules apply unless affected elsewhere. |
-| Stage 1 wither/Nether star required before End | Deferred/TBD | Maintainer is undecided. Current code has End progression, not End portal activation gating. |
+| Stage 1 wither/Nether star required before End | Deferred/TBD | Developer is undecided. Current code has End progression, not End portal activation gating. |
 | Stage 1 Ender Dragon kill advances to Stage 2 | Implemented | `RetoldEndProgressionEvents.onServerTickPost` checks dragon kill and calls `RetoldStageManager.setStage(...STAGE_2)`. |
 | Stage 2 requires classical elements | Partial | Current survival requirement is Water and Air. `RetoldElementType` still has water, fire, earth, and air so Fire/Earth can be added later. Water has a real acquisition path; Air has the Air Temple/Gale Core path. |
 | Stage 2 dragon egg hatches with elements | Partial | Dragon egg accepts implemented element items and currently hatches when Water and Air are offered. The temporary Nether Star shortcut has been removed. |
@@ -184,7 +184,7 @@ Largest missing or partial design areas:
 | Remove or heavily restrict recipe book | Partial / implemented foundation | `ServerRecipeBookMixin`, `RetoldKnownRecipeData`, recipe unlock context. |
 | Hide advancements / reduce guide-like UI | Partial | `AdvancementVisibilityEvaluatorMixin`, data overrides. |
 | In-world recipe learning | Partial | Villager teaching system implemented. Other discovery methods are not. |
-| Gamerule to bring recipe book back | Not planned | Maintainer clarified this should not be added. |
+| Gamerule to bring recipe book back | Not planned | Developer clarified this should not be added. |
 | Villager as recipe teacher / Terraria-like system | Partial | Profession-based teaching data, custom merchant UI slot, emerald cost, preview payloads. |
 | Librarian tells ingredients | Not implemented | Teaching unlocks recipes; ingredient explanation not found. |
 | Villagers magical pacifists lore | Design only / partial | Villager teaching and golem/illager lore support. No full villager society simulation. |
