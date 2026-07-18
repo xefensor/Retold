@@ -1,6 +1,6 @@
 # Design Implementation Status
 
-> AI-generated status tracker. This file compares the original `Minecraft_ Retold - Design Document.docx` against the current codebase. It is meant for human developers and future AI coding agents. Treat this as a working map, not as a final product spec.
+> Developer-maintained, AI-assisted status tracker. This file compares the original `Minecraft_ Retold - Design Document.docx` against the current codebase. It is meant for human developers and future AI coding agents. Treat this as a working map, not as a final product spec.
 
 Source design document:
 

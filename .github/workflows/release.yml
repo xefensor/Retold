@@ -2,18 +2,15 @@ name: Release
 
 on:
   push:
-    branches: [master]
-    paths:
-      - gradle.properties
-      - CHANGELOG.md
-      - README.md
-      - .github/workflows/release.yml
+    tags:
+      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -34,7 +31,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Read release version
+      - name: Read and validate release version
         id: version
         shell: bash
         run: |
@@ -43,24 +40,28 @@ jobs:
             echo "mod_version is missing from gradle.properties" >&2
             exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "tag=v$version" >> "$GITHUB_OUTPUT"
 
-      - name: Check whether release already exists
-        id: existing
+          tag="v$version"
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "$tag" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match mod_version $version" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure release does not already exist
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists" >&2
+            exit 1
           fi
 
       - name: Verify changelog entry
-        if: steps.existing.outputs.exists == 'false'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -70,47 +71,14 @@ jobs:
             exit 1
           fi
 
-      - name: Update existing release title
-        if: steps.existing.outputs.exists == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
-        shell: bash
-        run: gh release edit "$TAG" --title "Retold $VERSION"
-
-      - name: Upload checksum for existing release
-        if: steps.existing.outputs.exists == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
-        shell: bash
-        run: |
-          artifact="retold-$VERSION.jar"
-          mkdir -p existing-release
-          gh release download "$TAG" --pattern "$artifact" --dir existing-release
-          (
-            cd existing-release
-            sha256sum "$artifact" > "$artifact.sha256"
-          )
-          gh release upload "$TAG" "existing-release/$artifact.sha256" --clobber
-
-      - name: Make Gradle wrapper executable
-        if: steps.existing.outputs.exists == 'false'
-        run: chmod +x ./gradlew
-
       - name: Build and run unit tests
-        if: steps.existing.outputs.exists == 'false'
         run: ./gradlew clean build
 
       - name: Run GameTests
-        if: steps.existing.outputs.exists == 'false'
         run: ./gradlew runGameTestServer
         timeout-minutes: 10
 
       - name: Extract release notes
-        if: steps.existing.outputs.exists == 'false'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -127,7 +95,6 @@ jobs:
           fi
 
       - name: Publish GitHub release
-        if: steps.existing.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}

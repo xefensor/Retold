@@ -1,6 +1,6 @@
 # Retold Design Risks And Open Decisions
 
-> AI-generated design-risk tracker. This file is for planned gaps, undecided design items, implementation watchpoints, and risky future work. Confirmed issues belong in [`retold_issues.md`](retold_issues.md).
+> Developer-maintained, AI-assisted design-risk tracker. This file is for planned gaps, undecided design items, implementation watchpoints, and risky future work. Confirmed issues belong in [`retold_issues.md`](retold_issues.md).
 
 ## Open Design Risks
 
