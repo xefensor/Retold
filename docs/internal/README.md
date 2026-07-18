@@ -1,6 +1,6 @@
 # Internal Retold Documentation
 
-This folder contains maintained internal documentation for Minecraft Retold.
+This folder contains maintained internal documentation for Retold.
 
 The files are intended for two audiences:
 
