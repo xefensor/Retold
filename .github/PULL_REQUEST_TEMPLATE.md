@@ -4,7 +4,7 @@ Describe the change and why it belongs in Retold.
 
 ## Player or developer impact
 
-Explain what players, pack authors, or maintainers will notice.
+Explain what players, pack authors, or developers will notice.
 
 ## Validation
 
@@ -26,4 +26,4 @@ Add screenshots or video for visual, world-generation, UI, model, or texture cha
 
 - [ ] I have the right to contribute every included file.
 - [ ] Code and non-asset contributions are provided under `LICENSE-CODE.md`.
-- [ ] I discussed creative asset contributions with the maintainer before including them.
+- [ ] I discussed creative asset contributions with the developer before including them.
