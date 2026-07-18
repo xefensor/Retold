@@ -166,7 +166,7 @@ The project generates mod metadata from [src/main/templates](src/main/templates)
 
 ## Contact
 
-- Main maintainer: **Xefensor** — [alex@alexejtusl.cz](mailto:alex@alexejtusl.cz)
+- Main developer: **Xefensor** — [alex@alexejtusl.cz](mailto:alex@alexejtusl.cz)
 - Join the [Retold Discord community](https://discord.gg/S3g98zEY8a) for discussion, support, development updates, and public playtesting.
 - Please report bugs and suggestions through [GitHub Issues](https://github.com/xefensor/Retold/issues).
 
