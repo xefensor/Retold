@@ -1,6 +1,6 @@
 # Retold Mob AI System
 
-> Internal documentation. This file is meant for human maintainers and future AI coding agents. Sections named "Design rule", "Adding A New Mob Behavior", "Validation Checklist", and "Refactor Rules" are also implementation guidance for AI-assisted work.
+> Internal documentation. This file is meant for human developers and future AI coding agents. Sections named "Design rule", "Adding A New Mob Behavior", "Validation Checklist", and "Refactor Rules" are also implementation guidance for AI-assisted work.
 
 This document describes the current Retold mob AI design and the technical structure that implements it.
 It is meant to be the main reference before adding behavior, debugging behavior, or doing more performance work.
