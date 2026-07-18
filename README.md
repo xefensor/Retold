@@ -15,7 +15,7 @@ Current target:
 - Minecraft `26.2`
 - NeoForge `26.2.0.7-beta`
 - Java `25`
-- Mod version: `0.1.0`
+- Mod version: `0.2.0`
 - Mod id: `retold`
 - License: All Rights Reserved
 
