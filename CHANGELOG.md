@@ -9,6 +9,12 @@ Each release should be readable in two passes:
 
 ## Next - Unreleased
 
+No changes yet.
+
+## 0.2.0 - 2026-07-18
+
+Feature build focused on bidirectional Aender portal travel, more reliable Aender terrain transitions, and stronger foundations for Retold's mob AI and territory systems.
+
 ### Player-Facing
 
 - Tuned the Air Temple Gale Core encounter: the boss now roams slightly while idle, aggroes when damaged by a valid player even outside its normal activation range, no longer deflects projectiles during phase two, and returns to the top tower area instead of a single exact block.
@@ -19,6 +25,7 @@ Each release should be readable in two passes:
 - Survival and adventure players now charge an Aender portal for at least four seconds with portal distortion and ambient sound; creative and spectator travel remains immediate by default.
 - Aender terrain now prepares during the survival portal charge and finishes before arrival, reducing visible chunk-by-chunk regeneration.
 - Improved volatile Aender reality changes so unstabilized terrain consistently rerolls after the dimension becomes empty while stabilized chunks remain persistent.
+- Fixed hostile spiders failing to acquire and attack valid nearby players in darkness; spiders also retaliate correctly when attacked.
 
 ### Technical
 
@@ -32,6 +39,11 @@ Each release should be readable in two passes:
 - Expanded procedural island bounds to cover the full coast-warp reach, fixing terrain clipped into large flat walls at chunk boundaries.
 - Replaced full-height per-block stale-chunk clearing with section-level replacement and fresh heightmap/light-state updates.
 - Updated the README and internal architecture, implementation-status, roadmap, and design-risk docs for the completed portal/scaling work and remaining verification needs.
+- Added JUnit 5 coverage for deterministic behavior and expanded NeoForge GameTests; CI now runs both unit tests and the GameTest server.
+- Split the mob behavior package by subsystem ownership and moved event registration into explicit subsystem modules.
+- Reworked territory escalation into an explicit state machine covering observation, warnings, attacks, and cooldown.
+- Moved mob behavior profiles from hardcoded Java definitions into reloadable JSON data.
+- Fixed controlled spider combat targeting and added regression GameTests for darkness-based player aggression and retaliation.
 
 ## 0.1.0  - 2026-07-15
 
