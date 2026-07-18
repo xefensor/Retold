@@ -152,7 +152,7 @@ First internal build for the current Retold survival spine, focused on Stage 2 W
 #### Metadata And Documentation
 
 - Changed project version from `1.0.0` to `0.1.0` for the first internal build.
-- Changed NeoForge Mods screen display name to `Minecraft: Retold`.
+- Changed NeoForge Mods screen display name to `Retold`.
 - Replaced example NeoForge mod metadata with a Retold build description.
 - Added README status/development notes and internal design/status documentation.
 - Renamed the generated documentation folder from `docs/ai_generated` to `docs/internal`.
