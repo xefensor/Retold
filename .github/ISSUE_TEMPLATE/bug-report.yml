@@ -1,0 +1,100 @@
+name: Bug report
+description: Report reproducible broken behavior in Retold.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Retold. Please include enough detail to reproduce the problem.
+
+  - type: input
+    id: retold-version
+    attributes:
+      label: Retold version
+      description: The release or commit where the problem occurred.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: minecraft-version
+    attributes:
+      label: Minecraft version
+      placeholder: "26.2"
+    validations:
+      required: true
+
+  - type: input
+    id: neoforge-version
+    attributes:
+      label: NeoForge version
+      placeholder: "26.2.0.7-beta"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Singleplayer
+        - Dedicated server
+        - Both
+        - Unknown
+    validations:
+      required: true
+
+  - type: dropdown
+    id: world-age
+    attributes:
+      label: World type
+      description: Did the problem occur in a new world or an upgraded existing world?
+      options:
+        - New world
+        - Existing or upgraded world
+        - Both
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Give a minimal, numbered sequence that reproduces the problem.
+      placeholder: |
+        1. Create or load...
+        2. Travel to...
+        3. Interact with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, crash reports, and screenshots
+      description: Drag files here. Remove passwords, tokens, server addresses, and other sensitive information.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I tested without unrelated mods when reasonably possible.
+          required: true
