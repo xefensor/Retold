@@ -1,0 +1,48 @@
+name: Gameplay or design suggestion
+description: Suggest a focused improvement that fits Retold's direction.
+title: "[Suggestion]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Retold follows a specific world premise and progression design. Explain the player-facing value and how the idea supports that direction.
+
+  - type: textarea
+    id: opportunity
+    attributes:
+      label: Problem or opportunity
+      description: What part of the current experience could be improved?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the player-facing behavior, not only an implementation detail.
+    validations:
+      required: true
+
+  - type: textarea
+    id: fit
+    attributes:
+      label: Why it fits Retold
+      description: Connect the idea to progression, discovery, consistent lore, or a living reactive world.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional—describe other solutions or relevant tradeoffs.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for similar suggestions.
+          required: true
+        - label: I understand that submitting an idea does not guarantee it will be implemented.
+          required: true

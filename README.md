@@ -1,6 +1,6 @@
-# Minecraft: Retold
+# Retold
 
-Minecraft: Retold is a NeoForge mod that reimagines Minecraft as an alternative evolution of the 1.0 era.
+Retold is a NeoForge mod that reimagines Minecraft as an alternative evolution of the 1.0 era.
 
 The mod treats Minecraft as a world with one connected history instead of a collection of unrelated updates. Dimensions, structures, mobs, progression, recipes, and world rules are rebuilt around a single interpretation of the game: the Overworld, Nether, End, and Aender are tied together by energy, death, ancient civilizations, dragons, and the consequences of what the player does.
 
@@ -8,7 +8,7 @@ Retold is not official Minecraft lore. It is a total-conversion style project in
 
 ## Status
 
-Minecraft: Retold is in active development and is not feature-complete.
+Retold is in active development and is not feature-complete.
 
 Current target:
 
@@ -163,6 +163,16 @@ The project generates mod metadata from [src/main/templates](src/main/templates)
 - [src/main/resources](src/main/resources) - assets, data, mixins, dimensions, tags, and overrides
 - [src/main/templates](src/main/templates) - generated NeoForge mod metadata template
 - [docs/internal](docs/internal) - internal design, status, and technical notes
+
+## License
+
+Retold uses separate licenses for code and creative assets:
+
+- Code and non-asset materials are available under the [MIT License](LICENSE-CODE.md).
+- Textures, audio, models, and other defined creative assets are [All Rights Reserved](LICENSE-ASSETS.md).
+- Modpacks may redistribute the complete, unmodified Retold JAR, but the protected assets may not be extracted, reused, modified, or redistributed separately.
+
+See the root [license notice](LICENSE) for the exact scope and third-party exceptions.
 
 ## Notes
 

@@ -1,0 +1,39 @@
+Retold License Notice
+=====================
+
+Retold uses separate licenses for source code and creative assets.
+
+1. Code and non-asset materials
+
+   Files that are not Asset Files, and are not identified as third-party
+   materials, are licensed under the MIT License in LICENSE-CODE.md.
+
+2. Creative assets
+
+   Asset Files are licensed under the Retold Asset License in
+   LICENSE-ASSETS.md. They are not covered by the MIT License.
+
+   Asset Files include:
+
+   - files inside any textures, sounds, or models directory below
+     src/main/resources/assets or src/generated/resources/assets; and
+   - creative source or media files anywhere in the repository with these
+     extensions:
+
+     .png, .jpg, .jpeg, .gif, .webp, .svg, .ogg, .wav, .mp3,
+     .bbmodel, .blend, .psd, .kra, .ase, .aseprite, .obj, .mtl,
+     .gltf, .glb, .fbx, .ttf, and .otf.
+
+   Minecraft model JSON files inside an assets/**/models directory are Asset
+   Files. Gameplay data, configuration, and other JSON files outside those
+   model directories are not Asset Files unless explicitly marked otherwise.
+
+3. Third-party materials
+
+   Third-party materials remain subject to their original licenses. In
+   particular, NeoForge MDK template files covered by TEMPLATE_LICENSE.txt
+   remain under that license.
+
+If a file contains its own license notice, that file-specific notice controls.
+If there is uncertainty about whether a file is an Asset File, obtain
+permission before reusing it.

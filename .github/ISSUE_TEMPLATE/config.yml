@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Retold releases
+    url: https://github.com/xefensor/Retold/releases
+    about: Download the latest supported Retold build before reporting a problem.
