@@ -1,8 +1,8 @@
-# Minecraft Retold Mod System
+# Retold Mod System
 
 > Internal documentation. This file is meant for human developers and future AI coding agents. Sections named "Design rule", "Performance rules", "Adding New Features", and "Open Technical Watchpoints" are also implementation guidance for AI-assisted work.
 
-This document describes the current Minecraft Retold mod as a whole: what the mod is trying to do, how the major systems fit together, and which code/data files own each system.
+This document describes the current Retold mod as a whole: what the mod is trying to do, how the major systems fit together, and which code/data files own each system.
 
 For the dedicated mob AI design and technical reference, see [`retold_mob_ai_system.md`](retold_mob_ai_system.md).
 
@@ -14,7 +14,7 @@ For design risks and confirmed issues, see [`retold_design_risks.md`](retold_des
 
 ## Mod Shape
 
-Minecraft Retold is not one isolated feature. It is a progression, world, AI, and recipe overhaul built around staged world changes.
+Retold is not one isolated feature. It is a progression, world, AI, and recipe overhaul built around staged world changes.
 
 Current high-level model:
 

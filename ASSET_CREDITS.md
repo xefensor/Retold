@@ -8,6 +8,7 @@ This record complements [`LICENSE`](LICENSE) and [`LICENSE-ASSETS.md`](LICENSE-A
 | --- | --- | --- |
 | Jesse Schramm | Extinguished-torch textures | Included |
 | Xefensor | Gameplay screenshots dated 2026-07-18 | Repository documentation |
+| Future original artists | Final replacements for provisional Aender and other development assets | To be credited when work is accepted |
 
 ## Provisional And Generated Assets
 

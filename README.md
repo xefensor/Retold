@@ -2,12 +2,17 @@
 
 [![Build](https://github.com/xefensor/Retold/actions/workflows/build.yml/badge.svg)](https://github.com/xefensor/Retold/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/xefensor/Retold?label=release)](https://github.com/xefensor/Retold/releases/latest)
+[![NeoForge](https://img.shields.io/badge/loader-NeoForge-f16436)](https://neoforged.net/)
+[![License: MIT code and protected assets](https://img.shields.io/badge/license-MIT%20code%20%7C%20protected%20assets-blue)](LICENSE)
 
 Retold is an experimental NeoForge mod that reimagines Minecraft survival as an alternative evolution of the 1.0 era. Dimensions, progression, structures, mobs, recipes, and world rules are rebuilt around one connected history and a world that reacts to what the player does.
 
 Retold is independently developed and is not an official Minecraft product or source of official Minecraft lore.
 
-**[Modrinth](https://modrinth.com/mod/retold)** · **[CurseForge](https://www.curseforge.com/minecraft/mc-mods/retold)** · **[Discord](https://discord.gg/S3g98zEY8a)** · **[Issues](https://github.com/xefensor/Retold/issues/new/choose)**
+[![Download on Modrinth](https://img.shields.io/badge/Download-Modrinth-00AF5C?logo=modrinth&logoColor=white)](https://modrinth.com/mod/retold)
+[![Download on CurseForge](https://img.shields.io/badge/Download-CurseForge-F16436?logo=curseforge&logoColor=white)](https://www.curseforge.com/minecraft/mc-mods/retold)
+
+**[Discord](https://discord.gg/S3g98zEY8a)** · **[Issues](https://github.com/xefensor/Retold/issues/new/choose)**
 
 > Retold is in active development and is not feature-complete. Back up important worlds before testing new releases.
 
@@ -32,7 +37,7 @@ The Aender screenshot includes AI-generated placeholder textures that are planne
 
 | Component | Current release target |
 | --- | --- |
-| Retold | `0.2.0` |
+| Retold | [Latest release](https://github.com/xefensor/Retold/releases/latest) |
 | Minecraft | `26.2` |
 | NeoForge | `26.2.0.7-beta` |
 | Java | `25` |
