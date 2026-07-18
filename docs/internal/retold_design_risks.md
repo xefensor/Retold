@@ -6,7 +6,7 @@
 
 | Area | Risk / open item | Current note |
 | --- | --- | --- |
-| Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until maintainer decides. |
+| Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until developer decides. |
 | Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path that still needs tuning. |
 | Aender | The new horizontal portal, 8:1 scaling, counterpart creation, and volatile arrival preparation need fresh-world, existing-world, rapid re-entry, high-view-distance, and multiplayer verification. | Implementation exists; `dev_aender_portal_frame` is explicitly a provisional block name/design. |
 | Aender | A separate in-dimension teleportation network and late-game rewards are still planned. | Cross-dimension travel is implemented; remaining travel/reward design needs clarification before code. |
@@ -16,7 +16,7 @@
 | Worldgen | Strongholds should be limited to 3. | Not confirmed implemented. |
 | Mobs | Sniffers and endermites should not be naturally/survival-spawnable if removed from progression. | They may remain in code and Retold AI. |
 | Villages | Village reputation for stealing/crops/animals is planned but not implemented. | Territory warning exists for Illagers/Nether Remnants, not villages. |
-| Stage 3 | Stage 3 illager behavior is enough for now but may need clearer player-facing feedback later. | Avoid major raid redesign without maintainer approval. |
+| Stage 3 | Stage 3 illager behavior is enough for now but may need clearer player-facing feedback later. | Avoid major raid redesign without developer approval. |
 | Piglins | Stage 3 piglin/pigman hiring or follower behavior is planned but not implemented. | Needs feature design. |
 | Items | Tools/armor/ores, enchanting, mending removal, and combat reworks are still planned. | Large scope; ask before implementing. |
 | Environment | Death drops should despawn much later than vanilla, not never. | No implementation confirmed. |
@@ -38,7 +38,7 @@
 
 Update this file when:
 
-- the maintainer changes a design direction
+- the developer changes a design direction
 - a planned gap is implemented
 - an undecided item becomes planned or not planned
 - an implementation risk is discovered during code review
