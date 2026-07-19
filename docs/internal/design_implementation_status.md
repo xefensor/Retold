@@ -208,7 +208,7 @@ Largest missing or partial design areas:
 | Strongholds kept to 3 | Not implemented / unclear | Still planned. |
 | Villages spawn farther/scarcer | Not implemented / unclear | `NoVillageNearWorldSpawnMixin` exists, but full village scarcity design not confirmed here. |
 | Jungle/desert pyramids as boss tombs | Deferred/TBD | Maybe still planned, but design is not final. |
-| Four element temples/challenges | Partial | Water/ocean path exists. Air has a locatable Stage 2 temple with floating islands, wind hazard, Breezes, and a WIP Gale Core boss that drops the Air Element. The Air encounter is playable but not finished/tuned. Fire and earth temples are missing. Element order should be free. |
+| Four element temples/challenges | Partial | Water/ocean path exists. Air has a locatable Stage 2 temple with floating islands, wind hazard, Breezes, and a WIP Gale Core boss that drops the Air Element. GameTests cover activation eligibility, damage aggro, the one-way Phase 2 transition, disengagement, state serialization, and duplicate-spawn repair; the encounter is playable but not finished or tuned in-game. Fire and earth temples are missing. Element order should be free. |
 | Sunflowers point to significant structure | Not implemented |
 
 ## Ocean Monument And Water Element

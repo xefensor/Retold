@@ -253,6 +253,7 @@ Gale Core state:
 - If the boss or target leaves the combat area, the boss clears aggro and returns to its stored tower-top home.
 - Gale Core-owned wind-charge impacts do not deal health damage, but they crack and eventually break nearby breakable blocks.
 - The block-breaking splash skips air, fluids, block entities, unbreakable blocks, and very hard blocks, and breaks blocks without drops.
+- GameTests cover activation eligibility, damage-triggered aggro, the one-way Phase 2 transition, disengagement and reactivation, state serialization, and duplicate-spawn repair.
 
 Current limitation:
 

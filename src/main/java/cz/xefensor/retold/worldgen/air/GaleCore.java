@@ -247,7 +247,7 @@ public class GaleCore extends Breeze {
         return source.is(DamageTypeTags.IS_FALL) || super.isInvulnerableTo(level, source);
     }
 
-    private void tickBossState(ServerLevel level) {
+    void tickBossState(ServerLevel level) {
         ensureHomePosition();
         ensureCombatBounds();
         ServerPlayer target = getTargetPlayer(level);
@@ -321,11 +321,22 @@ public class GaleCore extends Breeze {
             return null;
         }
 
-        if (!(level.getEntity(targetPlayerId) instanceof ServerPlayer player)) {
-            return null;
+        ServerPlayer player = level.getEntity(targetPlayerId) instanceof ServerPlayer trackedPlayer
+                ? trackedPlayer
+                : null;
+
+        // The level player list remains authoritative if general entity tracking
+        // has not resolved the player during a lifecycle transition.
+        if (player == null) {
+            for (ServerPlayer candidate : level.players()) {
+                if (targetPlayerId.equals(candidate.getUUID())) {
+                    player = candidate;
+                    break;
+                }
+            }
         }
 
-        if (!isValidTarget(player) || isOutsideCombatArea(player.position())) {
+        if (player == null || !isValidTarget(player) || isOutsideCombatArea(player.position())) {
             return null;
         }
 

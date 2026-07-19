@@ -15,6 +15,7 @@ import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
+import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
@@ -83,6 +84,7 @@ public final class RetoldGameTests {
         );
 
         RetoldAenderGameTests.register(event, environment);
+        RetoldGaleCoreGameTests.register(event, environment);
     }
 
     private static void registerTest(
