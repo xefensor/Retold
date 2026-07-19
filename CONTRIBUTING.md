@@ -15,6 +15,7 @@ The current target is recorded in [`gradle.properties`](gradle.properties). Usef
 
 ```bash
 ./gradlew build
+./gradlew pmdMain pmdTest
 ./gradlew runClient
 ./gradlew runServer
 ./gradlew runGameTestServer
@@ -33,7 +34,7 @@ Small changes are easier to verify. A technically sound proposal may still be de
 
 ## Validation
 
-Every code contribution should run `./gradlew build`. Run `./gradlew runGameTestServer` when relevant. Test risks where they exist:
+Every code contribution should run `./gradlew build`, which includes unit tests and PMD static analysis. Run `./gradlew runGameTestServer` when relevant. Test risks where they exist:
 
 - gameplay and progression in a fresh survival world
 - world generation across seeds, chunk borders, and existing worlds

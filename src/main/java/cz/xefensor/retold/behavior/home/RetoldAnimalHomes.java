@@ -12,6 +12,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -92,7 +93,7 @@ public final class RetoldAnimalHomes {
         RetoldAnimalHomeType expectedType = homeTypeFor(mob);
 
         if (home.type() != expectedType) {
-            return WRONG_TYPE_PREFIX + expectedType.name().toLowerCase();
+            return WRONG_TYPE_PREFIX + expectedType.name().toLowerCase(Locale.ROOT);
         }
 
         if (isOutsideBuildHeight(level, home.pos())) {
