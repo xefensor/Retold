@@ -77,7 +77,7 @@ public final class RetoldMobRules {
     ) {
         return entity != null
                 && path != null
-                && RetoldAiTickContext.entityPath(entity).equals(path);
+                && path.equals(RetoldAiTickContext.entityPath(entity));
     }
 
     public static boolean isPig(Entity entity) {

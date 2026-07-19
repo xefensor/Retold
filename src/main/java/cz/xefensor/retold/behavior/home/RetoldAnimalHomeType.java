@@ -2,6 +2,8 @@ package cz.xefensor.retold.behavior.home;
 
 import com.mojang.serialization.Codec;
 
+import java.util.Locale;
+
 public enum RetoldAnimalHomeType {
     NONE,
     WOLF_DEN,
@@ -27,7 +29,7 @@ public enum RetoldAnimalHomeType {
             );
 
     public String serializedName() {
-        return name().toLowerCase();
+        return name().toLowerCase(Locale.ROOT);
     }
 
     public static RetoldAnimalHomeType fromSerializedName(String name) {
