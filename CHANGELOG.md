@@ -12,12 +12,14 @@ Each release should be readable in two passes:
 ### Player-Facing
 
 - Updated packaged mod metadata to use Retold branding, the current generated version, and working project and issue-tracker links.
+- Fixed territory suspicion carrying process-wide save and decay timing between worlds; reputation now belongs to the current saved world.
 
 ### Technical
 
 - Added separate MIT code and protected creative-asset licenses, including permission to redistribute the complete, unmodified Retold JAR in modpacks.
 - Added structured bug and suggestion forms, a pull-request template, and monthly Gradle and GitHub Actions dependency checks.
 - Added SHA-256 checksum assets to the release workflow.
+- Moved territory reputation into versioned Minecraft `SavedData` with safe one-time migration and retained backups for legacy JSON data.
 
 ## 0.2.0 - 2026-07-18
 

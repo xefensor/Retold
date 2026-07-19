@@ -894,12 +894,12 @@ Persistence and state owners:
 | `AenderPortalWarmup` | transient per-player destination preparation queues, cleared on completed travel, reality reset, or server stop |
 | `RetoldMobState` / `RetoldMobStates` | mob hunger/stress/confidence and home memory, cached in a weak map and saved to entity persistent NBT |
 | `RetoldTerritoryMobState` / `RetoldTerritoryMobStates` | runtime territory warning posture/debug state, cached in a weak map |
-| `RetoldTerritoryReputation` | runtime per-player territory suspicion/reputation entries |
+| `RetoldTerritoryReputationData` | server-owned, versioned per-player territory suspicion/reputation entries with legacy JSON migration |
 | `RetoldChunkStructureData` | delayed structure/retrogen chunk metadata |
 
 Design rule:
 
-Use the owning persistence or runtime-state class for each subsystem. Do not create parallel runtime-only maps for state that must survive reloads.
+Use the owning persistence or runtime-state class for each subsystem. Do not create parallel runtime-only maps for state that must survive reloads. Territory reputation is stored in the server's global `SavedData` storage because entries can refer to territories across dimensions. Its former `<world>/retold/territory_reputation.json` file stays in place until the SavedData migration is confirmed on a later load, then is renamed to a retained backup.
 
 ## Performance Architecture
 
