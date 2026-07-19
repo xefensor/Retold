@@ -42,12 +42,13 @@ public final class RetoldAiSightCache {
             return false;
         }
 
+        // Cleanup can remove empty observer mappings, so it must run before retaining this list.
+        cleanupIfNeeded(gameTime);
+
         List<SightEntry> entries = SIGHT.computeIfAbsent(
                 observer,
                 ignored -> new ArrayList<>()
         );
-
-        cleanupIfNeeded(gameTime);
 
         SightEntry staleEntry = null;
 
@@ -112,6 +113,16 @@ public final class RetoldAiSightCache {
         ));
 
         return visible;
+    }
+
+    static synchronized void resetForTests() {
+        SIGHT.clear();
+        nextCleanupAt = 0L;
+    }
+
+    static synchronized int cachedEntryCountForTests(Mob observer) {
+        List<SightEntry> entries = SIGHT.get(observer);
+        return entries == null ? -1 : entries.size();
     }
 
     private static void cleanupIfNeeded(long gameTime) {

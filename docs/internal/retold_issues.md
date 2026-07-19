@@ -24,6 +24,7 @@ Move issues here only after the implementation is complete and the behavior has 
 
 | Area | Issue | Resolution |
 | --- | --- | --- |
+| Mob AI performance | Sight-cache cleanup could remove the current observer mapping after its entry list was obtained, so the fresh result was written to a detached list. | Cleanup now runs before the observer list is obtained; a deterministic GameTest verifies expired-observer removal, retained fresh results, and immediate cache reuse. |
 
 ## Maintenance Rule
 

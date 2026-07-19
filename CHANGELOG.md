@@ -23,6 +23,7 @@ Each release should be readable in two passes:
 - Updated NeoForge metadata to report the split code/asset license and routed Aender cleanup and recipe inspection failures through structured logging.
 - Added deterministic GameTests for Aender portal shapes, coordinate scaling, counterpart creation, stability serialization, and volatile-chunk regeneration policy.
 - Added deterministic Gale Core GameTests for activation, damage aggro, phase changes, disengagement, serialization, and duplicate-spawn repair.
+- Fixed AI sight-cache cleanup detaching the current observer's fresh result and forcing avoidable repeat raycasts.
 
 ## 0.2.0 - 2026-07-18
 
