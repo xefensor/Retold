@@ -14,7 +14,8 @@ This directory separates player-facing design information from detailed develope
 
 Technical implementation material lives under [`internal/`](internal/):
 
-- [`internal/README.md`](internal/README.md) — technical index and shared AI-agent instructions
+- [`../AGENTS.md`](../AGENTS.md) — organized entry point and working rules for AI coding agents
+- [`internal/README.md`](internal/README.md) — technical index and documentation roles
 - [`internal/retold_mod_system.md`](internal/retold_mod_system.md) — system architecture
 - [`internal/retold_mob_ai_system.md`](internal/retold_mob_ai_system.md) — mob behavior architecture
 - [`internal/design_implementation_status.md`](internal/design_implementation_status.md) — implementation tracker
