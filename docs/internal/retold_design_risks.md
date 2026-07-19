@@ -7,7 +7,7 @@
 | Area | Risk / open item | Current note |
 | --- | --- | --- |
 | Progression | Stage 1 Wither/Nether star End access gating is undecided. | Do not implement until developer decides. |
-| Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path that still needs tuning. |
+| Elements | Fire and Earth still need full item/challenge paths. | Water has the ocean monument path. Air has a WIP Air Temple/Gale Core acquisition path; deterministic GameTests cover its critical state transitions, but encounter pacing, readability, and balance still need in-game tuning. |
 | Aender | The new horizontal portal, 8:1 scaling, counterpart creation, and volatile arrival preparation need fresh-world, existing-world, rapid re-entry, high-view-distance, and multiplayer verification. | Deterministic GameTests now cover shape lifecycle, scaling, counterpart creation/indexing, stability serialization, and stable-versus-volatile regeneration policy. The GameTest server does not load the custom Aender dimension, so real cross-dimension and multiplayer verification remains required; `dev_aender_portal_frame` is explicitly a provisional block name/design. |
 | Aender | A separate in-dimension teleportation network and late-game rewards are still planned. | Cross-dimension travel is implemented; remaining travel/reward design needs clarification before code. |
 | End | End City/outer End removal needs fresh-world and existing-world verification. | Data/mixins exist, but generated-world behavior should be tested. |
