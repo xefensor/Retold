@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, without the v prefix'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -33,6 +38,8 @@ jobs:
 
       - name: Read and validate release version
         id: version
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
         shell: bash
         run: |
           version="$(sed -n 's/^mod_version=//p' gradle.properties)"
@@ -47,8 +54,42 @@ jobs:
             exit 1
           fi
 
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$MANUAL_VERSION" != "$version" ]]; then
+            echo "Requested version $MANUAL_VERSION does not match mod_version $version" >&2
+            exit 1
+          fi
+
+          case "$version" in
+            *-alpha*|*-snapshot*)
+              release_type="alpha"
+              ;;
+            *-beta*|*-rc*)
+              release_type="beta"
+              ;;
+            *)
+              release_type="release"
+              ;;
+          esac
+
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_type=$release_type" >> "$GITHUB_OUTPUT"
+
+      - name: Verify publisher configuration
+        env:
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        shell: bash
+        run: |
+          for name in             MODRINTH_PROJECT_ID             CURSEFORGE_PROJECT_ID             MODRINTH_TOKEN             CURSEFORGE_TOKEN
+          do
+            if [[ -z "${!name}" ]]; then
+              echo "Required GitHub Actions setting is missing: $name" >&2
+              exit 1
+            fi
+          done
 
       - name: Ensure release does not already exist
         env:
@@ -94,11 +135,10 @@ jobs:
             exit 1
           fi
 
-      - name: Publish GitHub release
+      - name: Prepare release artifact
+        id: artifact
         env:
-          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-          TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
           artifact="build/libs/retold-$VERSION.jar"
@@ -107,12 +147,42 @@ jobs:
             exit 1
           fi
 
-          (
-            cd "$(dirname "$artifact")"
-            sha256sum "$(basename "$artifact")" > "$(basename "$artifact").sha256"
-          )
+          sha256sum "$artifact" > "$artifact.sha256"
+          echo "jar=$artifact" >> "$GITHUB_OUTPUT"
+          echo "checksum=$artifact.sha256" >> "$GITHUB_OUTPUT"
 
-          gh release create "$TAG" "$artifact" "$artifact.sha256" \
-            --target "$GITHUB_SHA" \
-            --title "Retold $VERSION" \
-            --notes-file release-notes.md
+      - name: Publish to GitHub, Modrinth, and CurseForge
+        uses: Kir-Antipov/mc-publish@v3.3.1
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-tag: ${{ steps.version.outputs.tag }}
+          github-commitish: ${{ github.sha }}
+          github-generate-changelog: false
+          github-draft: false
+          github-prerelease: ${{ steps.version.outputs.release_type != 'release' }}
+
+          files: ${{ steps.artifact.outputs.jar }}
+          github-files: |
+            ${{ steps.artifact.outputs.jar }}
+            ${{ steps.artifact.outputs.checksum }}
+
+          name: Retold ${{ steps.version.outputs.version }}
+          version: ${{ steps.version.outputs.version }}
+          version-type: ${{ steps.version.outputs.release_type }}
+          changelog-file: release-notes.md
+
+          loaders: neoforge
+          environment: client | server
+          game-versions: '26.2'
+          game-version-filter: none
+          java: '25'
+
+          retry-attempts: 3
+          retry-delay: 15000
+          fail-mode: fail
