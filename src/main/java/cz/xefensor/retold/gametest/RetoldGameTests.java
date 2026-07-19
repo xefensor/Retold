@@ -28,7 +28,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.spider.Spider;
+import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
@@ -82,6 +84,12 @@ public final class RetoldGameTests {
                 environment,
                 "spider_targets_player_in_darkness",
                 RetoldGameTests::spiderTargetsPlayerInDarkness
+        );
+        registerTest(
+                event,
+                environment,
+                "guardian_ignores_non_player_damage_for_defense_assist",
+                RetoldGameTests::guardianIgnoresNonPlayerDamageForDefenseAssist
         );
 
         RetoldAenderGameTests.register(event, environment);
@@ -337,6 +345,27 @@ public final class RetoldGameTests {
             );
             player.discard();
         });
+    }
+
+    private static void guardianIgnoresNonPlayerDamageForDefenseAssist(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        Guardian guardian = helper.spawn(EntityTypes.GUARDIAN, 1, 2, 1);
+        Drowned drowned = helper.spawn(EntityTypes.DROWNED, 3, 2, 1);
+        float healthBeforeDamage = guardian.getHealth();
+
+        guardian.hurtServer(
+                level,
+                guardian.damageSources().mobAttack(drowned),
+                1.0F
+        );
+
+        helper.assertTrue(
+                guardian.getHealth() < healthBeforeDamage,
+                "Non-player damage must pass without crashing guardian defense assist"
+        );
+        helper.succeed();
     }
 
     private static Spider spawnSightedTestSpider(GameTestHelper helper) {

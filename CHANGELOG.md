@@ -13,6 +13,7 @@ Each release should be readable in two passes:
 
 - Updated packaged mod metadata to use Retold branding, the current generated version, and working project and issue-tracker links.
 - Fixed territory suspicion carrying process-wide save and decay timing between worlds; reputation now belongs to the current saved world.
+- Fixed a crash when a non-player mob, such as a drowned, damaged a guardian at an ocean monument.
 
 ### Technical
 
@@ -24,6 +25,7 @@ Each release should be readable in two passes:
 - Added deterministic GameTests for Aender portal shapes, coordinate scaling, counterpart creation, stability serialization, and volatile-chunk regeneration policy.
 - Added deterministic Gale Core GameTests for activation, damage aggro, phase changes, disengagement, serialization, and duplicate-spawn repair.
 - Fixed AI sight-cache cleanup detaching the current observer's fresh result and forcing avoidable repeat raycasts.
+- Added a regression GameTest verifying that guardian defense assist safely ignores non-player attackers.
 
 ## 0.2.0 - 2026-07-18
 
