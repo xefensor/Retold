@@ -73,4 +73,4 @@ Versions containing `-alpha` or `-snapshot` publish as alpha. Versions containin
 
 The workflow can also be started from **Actions → Release → Run workflow**. Enter the version without the `v` prefix. The entered version must still match `mod_version`, and every normal validation and publishing step still runs.
 
-Use manual publishing only when the release tag workflow did not start. If a run partially uploads to an external platform, inspect all three platforms before retrying so the retry does not create duplicate versions.
+Use manual publishing only when the release tag workflow did not start. If a run partially publishes, first inspect GitHub, Modrinth, and CurseForge. Either upload the missing platform manually, or delete every version and GitHub release created by the failed run before retrying. The existing Git tag can remain in place.
