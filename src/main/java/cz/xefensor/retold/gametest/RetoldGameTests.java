@@ -5,6 +5,7 @@ import cz.xefensor.retold.aender.portal.RetoldAenderGameTests;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
+import cz.xefensor.retold.behavior.performance.RetoldAiSightCacheGameTests;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfile;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
@@ -84,6 +85,7 @@ public final class RetoldGameTests {
         );
 
         RetoldAenderGameTests.register(event, environment);
+        RetoldAiSightCacheGameTests.register(event, environment);
         RetoldGaleCoreGameTests.register(event, environment);
     }
 
