@@ -1,6 +1,7 @@
 package cz.xefensor.retold.gametest;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.aender.portal.RetoldAenderGameTests;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
@@ -80,6 +81,8 @@ public final class RetoldGameTests {
                 "spider_targets_player_in_darkness",
                 RetoldGameTests::spiderTargetsPlayerInDarkness
         );
+
+        RetoldAenderGameTests.register(event, environment);
     }
 
     private static void registerTest(

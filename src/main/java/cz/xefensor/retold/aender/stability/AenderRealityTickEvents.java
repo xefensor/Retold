@@ -196,17 +196,31 @@ public final class AenderRealityTickEvents {
             return false;
         }
 
-        if (AenderStabilityData.get(level).isStable(chunk.getPos())) {
+        AenderStabilityData stability = AenderStabilityData.get(level);
+
+        if (stability.isStable(chunk.getPos())) {
             return true;
         }
 
         AenderVolatility.retainForChunk(chunk);
 
-        if (AenderVolatility.needsRegeneration(chunk)) {
+        if (shouldRegenerate(stability, chunk)) {
             AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
         }
 
         return true;
+    }
+
+    /**
+     * Keeps the stability exclusion explicit and independently testable from
+     * the asynchronous arrival-ticket lifecycle.
+     */
+    public static boolean shouldRegenerate(
+            AenderStabilityData stability,
+            ChunkAccess chunk
+    ) {
+        return !stability.isStable(chunk.getPos())
+                && AenderVolatility.needsRegeneration(chunk);
     }
 
     private static void queueNearbyStaleChunks(ServerLevel level) {

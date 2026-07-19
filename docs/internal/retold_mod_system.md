@@ -975,7 +975,7 @@ These are areas to keep an eye on during future work:
 - Recipe/advancement overrides under `data/minecraft` are broad and should be reviewed carefully when Minecraft updates.
 - Mixins touch several sensitive vanilla systems; version updates need focused regression tests.
 - AI performance is improved but should continue to be checked with `/retoldbehavior perf`.
-- Aender portal scaling/counterpart creation, rapid re-entry regeneration, countdown warm-up, high view distances, stability effects, and multiplayer clients need focused in-game tests.
+- GameTests cover Aender portal shapes, scaling in both directions, deterministic counterpart creation/indexing, stability serialization, and stable-versus-volatile regeneration policy. The GameTest server does not load the custom Aender dimension, so real cross-dimension travel, rapid re-entry, countdown warm-up, high view distances, stability effects, and multiplayer clients still need focused in-game tests.
 
 ## AI Agent Instructions
 
