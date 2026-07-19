@@ -1,5 +1,6 @@
 package cz.xefensor.retold.aender.generation;
 
+import cz.xefensor.retold.Retold;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
@@ -146,7 +147,7 @@ public final class AenderVolatility {
         }
 
         if (forgotten > 0) {
-            System.out.println("[Aender] forgot " + forgotten + " far region columns");
+            Retold.LOGGER.debug("Forgot {} far Aender region columns", forgotten);
         }
     }
 
