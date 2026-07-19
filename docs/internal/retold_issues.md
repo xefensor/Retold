@@ -24,6 +24,7 @@ Move issues here only after the implementation is complete and the behavior has 
 
 | Area | Issue | Resolution |
 | --- | --- | --- |
+| Ocean monument | Guardian defense assist treated non-player attackers as nullable players, crashing when a drowned or another mob damaged a guardian. | Non-player damage sources are now rejected before player target validation; a GameTest reproduces drowned-to-guardian damage and verifies it completes safely. |
 | Mob AI performance | Sight-cache cleanup could remove the current observer mapping after its entry list was obtained, so the fresh result was written to a detached list. | Cleanup now runs before the observer list is obtained; a deterministic GameTest verifies expired-observer removal, retained fresh results, and immediate cache reuse. |
 
 ## Maintenance Rule

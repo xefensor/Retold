@@ -82,7 +82,7 @@ final class RetoldGuardianDefenseAssist {
             Guardian guardian,
             Player attacker
     ) {
-        if (RetoldAiTargets.isInvalidPlayerTarget(attacker)) {
+        if (attacker == null || RetoldAiTargets.isInvalidPlayerTarget(attacker)) {
             return false;
         }
 
