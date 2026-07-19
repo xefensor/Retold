@@ -33,7 +33,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.Optional;
 
 public final class AenderPortalLogic {
-    private static final double OVERWORLD_TO_AENDER_SCALE = 8.0D;
     private static final int TARGET_PORTAL_SIZE = 3;
     private static final int SEARCH_RADIUS_TO_AENDER = 128;
     private static final int SEARCH_RADIUS_TO_OVERWORLD = 16;
@@ -82,15 +81,10 @@ public final class AenderPortalLogic {
             return null;
         }
 
-        double scale = currentLevel.dimension() == Level.OVERWORLD
-                ? OVERWORLD_TO_AENDER_SCALE
-                : 1.0D / OVERWORLD_TO_AENDER_SCALE;
-
-        WorldBorder worldBorder = destinationLevel.getWorldBorder();
-        BlockPos approximateExit = worldBorder.clampToBounds(
-                entity.getX() * scale,
-                entity.getY(),
-                entity.getZ() * scale
+        BlockPos approximateExit = AenderPortalCoordinates.scaleAndClamp(
+                currentLevel.dimension(),
+                destinationLevel.getWorldBorder(),
+                entity.position()
         );
 
         AenderPortalShape.findComplete(currentLevel, portalEntryPos)
@@ -120,10 +114,10 @@ public final class AenderPortalLogic {
             return null;
         }
 
-        BlockPos approximateExit = aender.getWorldBorder().clampToBounds(
-                entity.getX() * OVERWORLD_TO_AENDER_SCALE,
-                entity.getY(),
-                entity.getZ() * OVERWORLD_TO_AENDER_SCALE
+        BlockPos approximateExit = AenderPortalCoordinates.scaleAndClamp(
+                currentLevel.dimension(),
+                aender.getWorldBorder(),
+                entity.position()
         );
 
         return new AenderWarmupTarget(aender, approximateExit);
@@ -274,7 +268,7 @@ public final class AenderPortalLogic {
         }
     }
 
-    private static AenderPortalShape createExitPortal(ServerLevel level, BlockPos approximateExit) {
+    static AenderPortalShape createExitPortal(ServerLevel level, BlockPos approximateExit) {
         BlockPos origin = findExitOrigin(level, approximateExit);
         AenderPortalShape shape = new AenderPortalShape(origin, TARGET_PORTAL_SIZE, TARGET_PORTAL_SIZE);
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();

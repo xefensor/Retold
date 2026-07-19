@@ -21,6 +21,7 @@ Each release should be readable in two passes:
 - Added SHA-256 checksum assets to the release workflow.
 - Moved territory reputation into versioned Minecraft `SavedData` with safe one-time migration and retained backups for legacy JSON data.
 - Updated NeoForge metadata to report the split code/asset license and routed Aender cleanup and recipe inspection failures through structured logging.
+- Added deterministic GameTests for Aender portal shapes, coordinate scaling, counterpart creation, stability serialization, and volatile-chunk regeneration policy.
 
 ## 0.2.0 - 2026-07-18
 
