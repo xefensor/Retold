@@ -11,6 +11,18 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- No unreleased player-facing changes yet.
+
+### Technical
+
+- No unreleased technical changes yet.
+
+## 0.2.1 - 2026-07-20
+
+Patch release focused on reliability, automated coverage, and the ocean-monument guardian crash fix.
+
+### Player-Facing
+
 - Updated packaged mod metadata to use Retold branding, the current generated version, and working project and issue-tracker links.
 - Fixed territory suspicion carrying process-wide save and decay timing between worlds; reputation now belongs to the current saved world.
 - Fixed a crash when a non-player mob, such as a drowned, damaged a guardian at an ocean monument.
@@ -20,6 +32,7 @@ Each release should be readable in two passes:
 - Added separate MIT code and protected creative-asset licenses, including permission to redistribute the complete, unmodified Retold JAR in modpacks.
 - Added structured bug and suggestion forms, a pull-request template, and monthly Gradle and GitHub Actions dependency checks.
 - Added SHA-256 checksum assets to the release workflow.
+- Updated the Gradle wrapper, ModDev, JUnit, and GitHub Actions dependencies used by builds and releases.
 - Moved territory reputation into versioned Minecraft `SavedData` with safe one-time migration and retained backups for legacy JSON data.
 - Updated NeoForge metadata to report the split code/asset license and routed Aender cleanup and recipe inspection failures through structured logging.
 - Added deterministic GameTests for Aender portal shapes, coordinate scaling, counterpart creation, stability serialization, and volatile-chunk regeneration policy.
