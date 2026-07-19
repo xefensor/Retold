@@ -83,8 +83,14 @@ jobs:
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
         shell: bash
         run: |
-          for name in             MODRINTH_PROJECT_ID             CURSEFORGE_PROJECT_ID             MODRINTH_TOKEN             CURSEFORGE_TOKEN
-          do
+          required_settings=(
+            MODRINTH_PROJECT_ID
+            CURSEFORGE_PROJECT_ID
+            MODRINTH_TOKEN
+            CURSEFORGE_TOKEN
+          )
+
+          for name in "${required_settings[@]}"; do
             if [[ -z "${!name}" ]]; then
               echo "Required GitHub Actions setting is missing: $name" >&2
               exit 1
@@ -152,7 +158,7 @@ jobs:
           echo "checksum=$artifact.sha256" >> "$GITHUB_OUTPUT"
 
       - name: Publish to GitHub, Modrinth, and CurseForge
-        uses: Kir-Antipov/mc-publish@v3.3.1
+        uses: Kira-NT/mc-publish@v3.3.1
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
