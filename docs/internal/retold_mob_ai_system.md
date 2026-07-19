@@ -156,7 +156,7 @@ Saved mob state includes:
 - last hunger tick
 - home/range memory
 
-Territory mob state is separate and currently lives in `RetoldTerritoryMobStates` as runtime weak-map state for warning posture/debug values. Per-player suspicion/reputation is owned by `RetoldTerritoryReputation`.
+Territory mob state is separate and currently lives in `RetoldTerritoryMobStates` as runtime weak-map state for warning posture/debug values. Per-player suspicion/reputation is owned by server-global `RetoldTerritoryReputationData` SavedData and accessed through `RetoldTerritoryReputation`.
 
 ## Core Priority Order
 

@@ -5,7 +5,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -14,31 +14,21 @@ public final class RetoldTerritoryReputationDebugEvents {
     }
 
     @SubscribeEvent
-    public static void onServerTickPost(ServerTickEvent.Post event) {
-        MinecraftServer server = event.getServer();
-
-        if (server == null) {
-            return;
-        }
-
-        long gameTime = server.overworld().getGameTime();
-
-        RetoldTerritoryReputation.loadFromServer(server);
-        RetoldTerritoryReputation.tickDecay(gameTime);
-        RetoldTerritoryReputation.saveIfDirty(server, gameTime);
+    public static void onServerStarted(ServerStartedEvent event) {
+        RetoldTerritoryReputationData.get(event.getServer());
     }
 
     @SubscribeEvent
-    public static void onServerStopping(ServerStoppingEvent event) {
+    public static void onServerTickPost(ServerTickEvent.Post event) {
         MinecraftServer server = event.getServer();
-
-        if (server == null) {
-            return;
-        }
-
         long gameTime = server.overworld().getGameTime();
+        RetoldTerritoryReputationData data = RetoldTerritoryReputationData.get(server);
 
-        RetoldTerritoryReputation.saveToServer(server, gameTime);
+        data.tickDecay(gameTime);
+
+        if (data.shouldRequestSave(gameTime)) {
+            server.getDataStorage().scheduleSave();
+        }
     }
 
     @SubscribeEvent
@@ -52,8 +42,6 @@ public final class RetoldTerritoryReputationDebugEvents {
         }
 
         long gameTime = level.getGameTime();
-
-        RetoldTerritoryReputation.loadFromServer(level.getServer());
 
         if (!RetoldTerritoryConstants.DEBUG_REPUTATION) {
             return;

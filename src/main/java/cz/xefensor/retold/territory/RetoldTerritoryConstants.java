@@ -91,6 +91,7 @@ public final class RetoldTerritoryConstants {
     public static final int REPUTATION_SAVE_INTERVAL_TICKS = 20 * 10;
     public static final String REPUTATION_SAVE_DIRECTORY = "retold";
     public static final String REPUTATION_SAVE_FILE_NAME = "territory_reputation.json";
+    public static final String REPUTATION_MIGRATED_FILE_NAME = "territory_reputation.v1.migrated.json";
 
     public static final boolean DEBUG_REPUTATION = false;
     public static final int DEBUG_REPUTATION_INTERVAL_TICKS = 10;
