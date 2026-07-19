@@ -12,9 +12,6 @@ public final class RetoldAiSightCache {
     private static final int DEFAULT_CACHE_TICKS = 10;
     private static final int MIN_CACHE_TICKS = 10;
     private static final int CLEANUP_INTERVAL_TICKS = 20;
-    private static final double MAX_OBSERVER_DRIFT_SQUARED = 3.0D * 3.0D;
-    private static final double MAX_TARGET_DRIFT_SQUARED = 3.0D * 3.0D;
-    private static final double MAX_STALE_DRIFT_SQUARED = 6.0D * 6.0D;
 
     private static final Map<Mob, List<SightEntry>> SIGHT = new WeakHashMap<>();
     private static long nextCleanupAt;
@@ -55,20 +52,37 @@ public final class RetoldAiSightCache {
         SightEntry staleEntry = null;
 
         for (SightEntry entry : entries) {
+            if (entry.target != target) {
+                continue;
+            }
+
+            double observerDriftSquared = observer.distanceToSqr(
+                    entry.observerX,
+                    entry.observerY,
+                    entry.observerZ
+            );
+            double targetDriftSquared = target.distanceToSqr(
+                    entry.targetX,
+                    entry.targetY,
+                    entry.targetZ
+            );
+
             if (
-                    entry.target == target
-                            && staleEntry == null
-                            && observer.distanceToSqr(entry.observerX, entry.observerY, entry.observerZ) <= MAX_STALE_DRIFT_SQUARED
-                            && target.distanceToSqr(entry.targetX, entry.targetY, entry.targetZ) <= MAX_STALE_DRIFT_SQUARED
+                    staleEntry == null
+                            && RetoldAiSightCachePolicy.isStaleCandidate(
+                                    observerDriftSquared,
+                                    targetDriftSquared
+                            )
             ) {
                 staleEntry = entry;
             }
 
-            if (
-                    entry.target == target
-                            && observer.distanceToSqr(entry.observerX, entry.observerY, entry.observerZ) <= MAX_OBSERVER_DRIFT_SQUARED
-                            && target.distanceToSqr(entry.targetX, entry.targetY, entry.targetZ) <= MAX_TARGET_DRIFT_SQUARED
-            ) {
+            if (RetoldAiSightCachePolicy.isNormalCacheHit(
+                    gameTime,
+                    entry.expiresAt,
+                    observerDriftSquared,
+                    targetDriftSquared
+            )) {
                 RetoldBehaviorPerf.recordSightCache(true);
                 return entry.visible;
             }
