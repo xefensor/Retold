@@ -1,0 +1,196 @@
+name: Backfill Existing Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing GitHub release version, without the v prefix'
+        required: true
+        type: string
+      publish_modrinth:
+        description: 'Publish this version to Modrinth'
+        required: true
+        default: true
+        type: boolean
+      publish_curseforge:
+        description: 'Publish this version to CurseForge'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backfill-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate request
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+          PUBLISH_MODRINTH: ${{ inputs.publish_modrinth }}
+          PUBLISH_CURSEFORGE: ${{ inputs.publish_curseforge }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if [[ -z "$VERSION" ]]; then
+            echo "A version is required" >&2
+            exit 1
+          fi
+
+          if [[ "$PUBLISH_MODRINTH" != "true" && "$PUBLISH_CURSEFORGE" != "true" ]]; then
+            echo "Select at least one publishing destination" >&2
+            exit 1
+          fi
+
+          tag="v$VERSION"
+          if ! git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            echo "Git tag $tag does not exist" >&2
+            exit 1
+          fi
+
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            echo "GitHub release $tag does not exist" >&2
+            exit 1
+          fi
+
+          case "$VERSION" in
+            *-alpha*|*-snapshot*)
+              release_type="alpha"
+              ;;
+            *-beta*|*-rc*)
+              release_type="beta"
+              ;;
+            *)
+              release_type="release"
+              ;;
+          esac
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release_type=$release_type" >> "$GITHUB_OUTPUT"
+
+      - name: Verify selected publisher configuration
+        env:
+          PUBLISH_MODRINTH: ${{ inputs.publish_modrinth }}
+          PUBLISH_CURSEFORGE: ${{ inputs.publish_curseforge }}
+          MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        shell: bash
+        run: |
+          if [[ "$PUBLISH_MODRINTH" == "true" ]]; then
+            [[ -n "$MODRINTH_PROJECT_ID" ]] || { echo "MODRINTH_PROJECT_ID is missing" >&2; exit 1; }
+            [[ -n "$MODRINTH_TOKEN" ]] || { echo "MODRINTH_TOKEN is missing" >&2; exit 1; }
+          fi
+
+          if [[ "$PUBLISH_CURSEFORGE" == "true" ]]; then
+            [[ -n "$CURSEFORGE_PROJECT_ID" ]] || { echo "CURSEFORGE_PROJECT_ID is missing" >&2; exit 1; }
+            [[ -n "$CURSEFORGE_TOKEN" ]] || { echo "CURSEFORGE_TOKEN is missing" >&2; exit 1; }
+          fi
+
+      - name: Download the existing GitHub release artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          jar_name="retold-$VERSION.jar"
+          mkdir -p release-assets
+
+          gh release download "$TAG" --pattern "$jar_name" --dir release-assets
+          gh release download "$TAG" --pattern "$jar_name.sha256" --dir release-assets || true
+
+          jar_path="release-assets/$jar_name"
+          if [[ ! -f "$jar_path" ]]; then
+            echo "Expected GitHub release artifact not found: $jar_name" >&2
+            exit 1
+          fi
+
+          checksum_path="$jar_path.sha256"
+          if [[ -f "$checksum_path" ]]; then
+            expected="$(awk 'NR == 1 { print $1 }' "$checksum_path")"
+            actual="$(sha256sum "$jar_path" | awk '{ print $1 }')"
+            if [[ -z "$expected" || "$actual" != "$expected" ]]; then
+              echo "SHA-256 checksum verification failed for $jar_name" >&2
+              exit 1
+            fi
+          else
+            echo "No checksum asset found; continuing with the exact GitHub release JAR"
+          fi
+
+          echo "jar=$jar_path" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from the tagged source
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          git show "$TAG:CHANGELOG.md" > tagged-changelog.md
+
+          awk -v version="$VERSION" '
+            index($0, "## " version " - ") == 1 { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' tagged-changelog.md > release-notes.md
+
+          if [[ ! -s release-notes.md ]]; then
+            echo "Release notes for $VERSION are missing or empty in $TAG" >&2
+            exit 1
+          fi
+
+      - name: Publish existing release to Modrinth
+        if: ${{ inputs.publish_modrinth }}
+        uses: Kira-NT/mc-publish@v3.3.1
+        with:
+          modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+
+          files: ${{ steps.artifact.outputs.jar }}
+          name: Retold ${{ steps.version.outputs.version }}
+          version: ${{ steps.version.outputs.version }}
+          version-type: ${{ steps.version.outputs.release_type }}
+          changelog-file: release-notes.md
+          loaders: neoforge
+          environment: client | server
+          game-versions: '26.2'
+          game-version-filter: none
+          java: '25'
+          retry-attempts: 3
+          retry-delay: 15000
+          fail-mode: fail
+
+      - name: Publish existing release to CurseForge
+        if: ${{ inputs.publish_curseforge }}
+        uses: Kira-NT/mc-publish@v3.3.1
+        with:
+          curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          files: ${{ steps.artifact.outputs.jar }}
+          name: Retold ${{ steps.version.outputs.version }}
+          version: ${{ steps.version.outputs.version }}
+          version-type: ${{ steps.version.outputs.release_type }}
+          changelog-file: release-notes.md
+          loaders: neoforge
+          environment: client | server
+          game-versions: '26.2'
+          game-version-filter: none
+          java: '25'
+          retry-attempts: 3
+          retry-delay: 15000
+          fail-mode: fail
