@@ -1,0 +1,117 @@
+name: Repair CurseForge Changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version whose changelog should be repaired, without the v prefix'
+        required: true
+        type: string
+      curseforge_file_id:
+        description: 'Numeric CurseForge file ID from the file page URL'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repair-curseforge-changelog-${{ inputs.curseforge_file_id }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate request
+        id: version
+        env:
+          VERSION: ${{ inputs.version }}
+          CURSEFORGE_FILE_ID: ${{ inputs.curseforge_file_id }}
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$VERSION" ]]; then
+            echo "A version is required" >&2
+            exit 1
+          fi
+
+          if [[ ! "$CURSEFORGE_FILE_ID" =~ ^[0-9]+$ ]]; then
+            echo "CurseForge file ID must be numeric" >&2
+            exit 1
+          fi
+
+          [[ -n "$CURSEFORGE_PROJECT_ID" ]] || { echo "CURSEFORGE_PROJECT_ID is missing" >&2; exit 1; }
+          [[ -n "$CURSEFORGE_TOKEN" ]] || { echo "CURSEFORGE_TOKEN is missing" >&2; exit 1; }
+
+          tag="v$VERSION"
+          if ! git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            echo "Git tag $tag does not exist" >&2
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Extract release notes from the tagged source
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          git show "$TAG:CHANGELOG.md" > tagged-changelog.md
+
+          awk -v version="$VERSION" '
+            index($0, "## " version " - ") == 1 { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' tagged-changelog.md > release-notes.md
+
+          if [[ ! -s release-notes.md ]]; then
+            echo "Release notes for $VERSION are missing or empty in $TAG" >&2
+            exit 1
+          fi
+
+      - name: Render changelog as HTML
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          jq -Rs '{ text: ., mode: "gfm" }' release-notes.md \
+            | gh api --method POST markdown --input - \
+            > curseforge-release-notes.html
+
+          if [[ ! -s curseforge-release-notes.html ]]; then
+            echo "Rendered CurseForge changelog is empty" >&2
+            exit 1
+          fi
+
+      - name: Update CurseForge changelog
+        env:
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_FILE_ID: ${{ inputs.curseforge_file_id }}
+        shell: bash
+        run: |
+          jq -cn \
+            --argjson fileID "$CURSEFORGE_FILE_ID" \
+            --rawfile changelog curseforge-release-notes.html \
+            '{ fileID: $fileID, changelog: $changelog, changelogType: "html" }' \
+            > curseforge-update.json
+
+          response="$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "X-Api-Token: $CURSEFORGE_TOKEN" \
+            --form "metadata=<curseforge-update.json;type=application/json" \
+            "https://minecraft.curseforge.com/api/projects/$CURSEFORGE_PROJECT_ID/update-file")"
+
+          updated_id="$(jq -r '.id // empty' <<< "$response")"
+          if [[ "$updated_id" != "$CURSEFORGE_FILE_ID" ]]; then
+            echo "CurseForge returned an unexpected file ID: $updated_id" >&2
+            exit 1
+          fi

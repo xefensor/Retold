@@ -153,6 +153,21 @@ jobs:
             exit 1
           fi
 
+      - name: Render CurseForge changelog
+        if: ${{ inputs.publish_curseforge }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          jq -Rs '{ text: ., mode: "gfm" }' release-notes.md \
+            | gh api --method POST markdown --input - \
+            > curseforge-release-notes.html
+
+          if [[ ! -s curseforge-release-notes.html ]]; then
+            echo "Rendered CurseForge changelog is empty" >&2
+            exit 1
+          fi
+
       - name: Publish existing release to Modrinth
         if: ${{ inputs.publish_modrinth }}
         uses: Kira-NT/mc-publish@v3.3.1
@@ -176,6 +191,7 @@ jobs:
 
       - name: Publish existing release to CurseForge
         if: ${{ inputs.publish_curseforge }}
+        id: publish_curseforge
         uses: Kira-NT/mc-publish@v3.3.1
         with:
           curseforge-id: ${{ vars.CURSEFORGE_PROJECT_ID }}
@@ -194,3 +210,34 @@ jobs:
           retry-attempts: 3
           retry-delay: 15000
           fail-mode: fail
+
+      - name: Apply formatted CurseForge changelog
+        if: ${{ inputs.publish_curseforge }}
+        env:
+          CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
+          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          CURSEFORGE_FILE_ID: ${{ steps.publish_curseforge.outputs.curseforge-version }}
+        shell: bash
+        run: |
+          if [[ ! "$CURSEFORGE_FILE_ID" =~ ^[0-9]+$ ]]; then
+            echo "Publisher did not return a valid CurseForge file ID: $CURSEFORGE_FILE_ID" >&2
+            exit 1
+          fi
+
+          jq -cn \
+            --argjson fileID "$CURSEFORGE_FILE_ID" \
+            --rawfile changelog curseforge-release-notes.html \
+            '{ fileID: $fileID, changelog: $changelog, changelogType: "html" }' \
+            > curseforge-update.json
+
+          response="$(curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "X-Api-Token: $CURSEFORGE_TOKEN" \
+            --form "metadata=<curseforge-update.json;type=application/json" \
+            "https://minecraft.curseforge.com/api/projects/$CURSEFORGE_PROJECT_ID/update-file")"
+
+          updated_id="$(jq -r '.id // empty' <<< "$response")"
+          if [[ "$updated_id" != "$CURSEFORGE_FILE_ID" ]]; then
+            echo "CurseForge returned an unexpected file ID: $updated_id" >&2
+            exit 1
+          fi
