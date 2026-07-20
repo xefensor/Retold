@@ -93,24 +93,10 @@ When all checks pass, the workflow publishes:
 - an HTML-rendered copy of those notes on CurseForge to preserve headings, lists, and inline code
 - NeoForge, Minecraft 26.2, Java 25, and client-and-server metadata
 
-Versions containing `-alpha` or `-snapshot` publish as alpha. Versions containing `-beta` or `-rc` publish as beta. Other versions publish as releases.
+Retold currently publishes every version as **alpha** on Modrinth and CurseForge, and as a prerelease on GitHub. This is intentional even when the version is a plain number such as `0.2.1`. When Retold is ready to move to beta or stable, update the explicit `release_type` assignment in both publishing workflows.
 
 ## Manual Recovery
 
 The workflow can also be started from **Actions → Release → Run workflow**. Enter the version without the `v` prefix. The entered version must still match `mod_version`, and every normal validation and publishing step still runs.
 
 Use manual publishing only when the release tag workflow did not start. If a run partially publishes, first inspect GitHub, Modrinth, and CurseForge. Either upload the missing platform manually, or delete every version and GitHub release created by the failed run before retrying. The existing Git tag can remain in place.
-
-## Repair A CurseForge Changelog
-
-Use **Actions → Repair CurseForge Changelog → Run workflow** when a CurseForge file already exists but its changelog was flattened or otherwise formatted incorrectly.
-
-1. Open the affected file in the CurseForge author dashboard.
-2. Copy the numeric file ID from the file page URL.
-3. Open **Actions → Repair CurseForge Changelog → Run workflow** in GitHub.
-4. Enter the version without the `v` prefix and the numeric CurseForge file ID.
-5. Run the workflow.
-
-The repair workflow reads the matching release section from the tagged `CHANGELOG.md`, renders it to HTML with GitHub's Markdown renderer, and updates only that existing CurseForge file. It does not upload another JAR or modify GitHub or Modrinth.
-
-New normal and backfilled releases perform this HTML update automatically after the CurseForge upload.

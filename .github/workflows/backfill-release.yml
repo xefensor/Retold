@@ -64,17 +64,8 @@ jobs:
             exit 1
           fi
 
-          case "$VERSION" in
-            *-alpha*|*-snapshot*)
-              release_type="alpha"
-              ;;
-            *-beta*|*-rc*)
-              release_type="beta"
-              ;;
-            *)
-              release_type="release"
-              ;;
-          esac
+          # Retold is currently in alpha, independent of its numeric version.
+          release_type="alpha"
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
