@@ -26,6 +26,30 @@ Never commit either token to the repository, paste it into an issue, or include 
 
 Modrinth recommends storing the stable project ID rather than the editable slug. The ID can be read from the project settings or from the public project API. The CurseForge project ID is shown in the project's author/dashboard information.
 
+## Backfill An Existing GitHub Release
+
+Use the separate **Backfill Existing Release** workflow only when a version already exists on GitHub Releases but is missing from Modrinth, CurseForge, or both. Do not use the normal **Release** workflow for this situation because it intentionally refuses to recreate an existing GitHub release.
+
+1. Confirm the existing GitHub release has a `retold-<version>.jar` asset.
+2. Open **Actions → Backfill Existing Release → Run workflow**.
+3. Leave the branch set to `master`.
+4. Enter the version without the `v` prefix, for example `0.2.1`.
+5. Enable only the destinations that do not already contain that version.
+6. Click **Run workflow** and open the resulting run to follow each step.
+
+The backfill workflow:
+
+- requires the matching `v<version>` tag and GitHub release
+- downloads the exact existing GitHub release JAR instead of rebuilding current source
+- verifies the GitHub checksum when a checksum asset exists
+- reads release notes from the tagged version of `CHANGELOG.md`
+- publishes independently to Modrinth and CurseForge
+- never creates or modifies a GitHub release
+
+If one destination succeeds and the other fails, rerun the workflow with only the failed destination enabled. This avoids attempting to create a duplicate version on the successful platform.
+
+This process is for historical or missed uploads. New releases should always use the tagged automatic process below.
+
 ## Prepare A Release
 
 1. Update `mod_version` in `gradle.properties`.
