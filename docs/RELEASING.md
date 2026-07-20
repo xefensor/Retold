@@ -44,6 +44,7 @@ The backfill workflow:
 - verifies the GitHub checksum when a checksum asset exists
 - reads release notes from the tagged version of `CHANGELOG.md`
 - publishes independently to Modrinth and CurseForge
+- renders the CurseForge changelog as HTML after upload so headings, lists, and inline code remain intact
 - never creates or modifies a GitHub release
 
 If one destination succeeds and the other fails, rerun the workflow with only the failed destination enabled. This avoids attempting to create a duplicate version on the successful platform.
@@ -89,6 +90,7 @@ When all checks pass, the workflow publishes:
 - `retold-<version>.jar` to Modrinth and CurseForge
 - the same JAR plus its `.sha256` checksum to GitHub Releases
 - the matching `CHANGELOG.md` section as the changelog on every platform
+- an HTML-rendered copy of those notes on CurseForge to preserve headings, lists, and inline code
 - NeoForge, Minecraft 26.2, Java 25, and client-and-server metadata
 
 Versions containing `-alpha` or `-snapshot` publish as alpha. Versions containing `-beta` or `-rc` publish as beta. Other versions publish as releases.
@@ -98,3 +100,17 @@ Versions containing `-alpha` or `-snapshot` publish as alpha. Versions containin
 The workflow can also be started from **Actions → Release → Run workflow**. Enter the version without the `v` prefix. The entered version must still match `mod_version`, and every normal validation and publishing step still runs.
 
 Use manual publishing only when the release tag workflow did not start. If a run partially publishes, first inspect GitHub, Modrinth, and CurseForge. Either upload the missing platform manually, or delete every version and GitHub release created by the failed run before retrying. The existing Git tag can remain in place.
+
+## Repair A CurseForge Changelog
+
+Use **Actions → Repair CurseForge Changelog → Run workflow** when a CurseForge file already exists but its changelog was flattened or otherwise formatted incorrectly.
+
+1. Open the affected file in the CurseForge author dashboard.
+2. Copy the numeric file ID from the file page URL.
+3. Open **Actions → Repair CurseForge Changelog → Run workflow** in GitHub.
+4. Enter the version without the `v` prefix and the numeric CurseForge file ID.
+5. Run the workflow.
+
+The repair workflow reads the matching release section from the tagged `CHANGELOG.md`, renders it to HTML with GitHub's Markdown renderer, and updates only that existing CurseForge file. It does not upload another JAR or modify GitHub or Modrinth.
+
+New normal and backfilled releases perform this HTML update automatically after the CurseForge upload.
