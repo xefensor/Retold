@@ -2,6 +2,7 @@ package cz.xefensor.retold.module;
 
 import cz.xefensor.retold.worldgen.RetoldWorldSpawnCache;
 import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
+import cz.xefensor.retold.worldgen.air.AirTempleDiscoveryEvents;
 import cz.xefensor.retold.worldgen.air.GaleCoreAttackEvents;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindEvents;
 import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
@@ -23,6 +24,7 @@ public final class RetoldWorldgenModule {
 
     public static void registerGameBus(IEventBus gameEventBus) {
         gameEventBus.register(RetoldWorldSpawnCache.class);
+        gameEventBus.register(AirTempleDiscoveryEvents.class);
         gameEventBus.register(AirTempleWindEvents.class);
         gameEventBus.register(GaleCoreAttackEvents.class);
         gameEventBus.register(RetoldChunkEditEvents.class);

@@ -55,7 +55,7 @@ Only the locations linked above are official downloads. Version settings are def
 
 The current build includes the survival spine, Water and Air progression, staged world changes, Aender foundations, recipe discovery, and the Retold mob-behavior framework. Major unfinished areas include:
 
-- natural Air Temple discovery and further Gale Core tuning
+- wider seed, upgraded-world, server, and multiplayer verification of the cartographer Air Temple map, plus further Gale Core tuning
 - Fire and Earth element paths
 - original replacements for provisional Aender assets and naming
 - Aender travel networks and late-game rewards
