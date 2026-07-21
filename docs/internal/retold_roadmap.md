@@ -22,7 +22,7 @@ Retold is still built around:
 These are the strongest next design-aligned areas:
 
 1. Finish the four-element progression model.
-2. Add missing Fire and Earth element item/challenge paths, and continue tuning the Air Temple/Gale Core path.
+2. Add missing Fire and Earth element item/challenge paths, verify the initial cartographer Air Temple discovery map, and continue tuning the Air Temple/Gale Core path.
 3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 4. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
 5. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.

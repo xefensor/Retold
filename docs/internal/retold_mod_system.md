@@ -222,6 +222,7 @@ Technical owners:
 - `AirTemplePiece`
 - `AirTempleIslandGenerator`
 - `AirTempleTowerGenerator`
+- `AirTempleDiscoveryEvents`
 - `AirTempleWindEvents`
 - `AirTempleWindData`
 - `AirTempleBreezeSpawner`
@@ -233,6 +234,8 @@ Technical owners:
 Current behavior:
 
 - `/locate structure retold:air_temple` finds the structure.
+- After Stage 2 begins, journeyman-or-higher cartographers sell an Air Temple Explorer Map for 12 emeralds and a compass. It marks the nearest Air Temple with an exact X.
+- The map trade is appended on server-side interaction so saved cartographers from before the stage transition keep their existing offers and gain the trade without a profession reroll.
 - It generates in `frozen_peaks`, `jagged_peaks`, and `stony_peaks`.
 - It builds a floating island, satellite islands, carved crater, and open tuff/copper tower.
 - It creates a large horizontal wind zone around the island and tower.
@@ -253,11 +256,11 @@ Gale Core state:
 - If the boss or target leaves the combat area, the boss clears aggro and returns to its stored tower-top home.
 - Gale Core-owned wind-charge impacts do not deal health damage, but they crack and eventually break nearby breakable blocks.
 - The block-breaking splash skips air, fluids, block entities, unbreakable blocks, and very hard blocks, and breaks blocks without drops.
-- GameTests cover activation eligibility, damage-triggered aggro, the one-way Phase 2 transition, disengagement and reactivation, state serialization, and duplicate-spawn repair.
+- GameTests cover the cartographer trade's stage gate, exact marker, cost, and duplicate prevention, plus activation eligibility, damage-triggered aggro, the one-way Phase 2 transition, disengagement and reactivation, state serialization, and duplicate-spawn repair.
 
 Current limitation:
 
-The Air challenge has a playable boss/reward spine, but it is still WIP. Tune attacks, movement, pacing, phase readability, block-breaking rules, telegraphs, tower layout, Breeze spawns, and traversal readability before treating the encounter as final.
+The Air challenge has a playable boss/reward spine and an initial discovery path, but it is still WIP. The basic cartographer interaction and exact-map behavior were developer-verified in-game on 2026-07-22. The provisional path still needs wider seed, upgraded-world retrogen, dedicated-server, and multiplayer verification. Tune attacks, movement, pacing, phase readability, block-breaking rules, telegraphs, tower layout, Breeze spawns, and traversal readability before treating the encounter as final.
 
 ## Aender Dimension
 

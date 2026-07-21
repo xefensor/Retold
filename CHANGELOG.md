@@ -11,11 +11,12 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
-- No unreleased player-facing changes yet.
+- Journeyman cartographers now sell an Air Temple Explorer Map for 12 emeralds and a compass after the world reaches Stage 2. The map marks the nearest Air Temple with an exact X.
 
 ### Technical
 
-- No unreleased technical changes yet.
+- Added a data-driven Air Temple map-destination tag and a server-authoritative cartographer interaction hook. The hook preserves existing saved offers, supports already-generated cartographers in upgraded worlds, and avoids duplicate map trades.
+- Added a GameTest covering Stage 1 gating, Stage 2 availability, preservation of existing saved offers, map marking, trade cost, and duplicate prevention.
 
 ## 0.2.1 - 2026-07-20
 

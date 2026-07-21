@@ -4,7 +4,7 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Now
 
-- Give the Air Temple a natural, in-world discovery path.
+- Verify and refine the initial Stage 2 cartographer explorer-map path for finding Air Temples in fresh and upgraded worlds.
 - Continue tuning and testing the Gale Core encounter and Air Element reward.
 - Verify Aender portals, terrain regeneration, stabilizers, and progression in fresh worlds, upgraded worlds, dedicated servers, and multiplayer.
 - Replace provisional Aender naming and visual assets as final designs become available.
