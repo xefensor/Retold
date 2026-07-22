@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 1.0,
+  "group": "aenderite_ingot",
+  "ingredient": "retold:raw_aenderite",
+  "result": {
+    "id": "retold:aenderite_ingot"
+  }
+}

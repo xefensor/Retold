@@ -19,6 +19,7 @@
   "block.retold.aender_hanging_sign": "Aender Hanging Sign",
   "block.retold.aender_soil": "Aender Soil",
   "block.retold.aender_stone": "Aender Stone",
+  "block.retold.aenderite_ore": "Aenderite Ore",
   "block.retold.aender_sand": "Aender Sand",
   "block.retold.aender_sandstone": "Aender Sandstone",
   "block.retold.aender_cactus": "Aender Cactus",
@@ -35,6 +36,8 @@
   "item.retold.aender_boat": "Aender Boat",
   "item.retold.aender_chest_boat": "Aender Chest Boat",
   "item.retold.aender_eye_spawn_egg": "Aender Eye Spawn Egg",
+  "item.retold.raw_aenderite": "Raw Aenderite",
+  "item.retold.aenderite_ingot": "Aenderite Ingot",
   "item.retold.gale_core_spawn_egg": "Gale Core Spawn Egg",
   "item.retold.water_element": "Water Element",
   "item.retold.water_element.tooltip": "A condensed current of living energy."

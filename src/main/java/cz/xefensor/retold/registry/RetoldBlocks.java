@@ -15,15 +15,18 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ColorRGBA;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ColoredFallingBlock;
+import net.minecraft.world.level.block.DropExperienceBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.util.valueproviders.UniformInt;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -120,6 +123,33 @@ public final class RetoldBlocks {
                     Registries.ITEM,
                     AENDER_STONE.getId()
             ))
+    );
+
+    public static final DeferredBlock<DropExperienceBlock> AENDERITE_ORE = BLOCKS.register(
+            "aenderite_ore",
+            registryName -> new DropExperienceBlock(
+                    UniformInt.of(3, 7),
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.DIAMOND_ORE)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .strength(4.5F, 4.0F)
+                            .sound(SoundType.CALCITE)
+            )
+    );
+
+    public static final DeferredItem<BlockItem> AENDERITE_ORE_ITEM = ITEMS.registerSimpleBlockItem(
+            AENDERITE_ORE,
+            properties -> properties.setId(ResourceKey.create(Registries.ITEM, AENDERITE_ORE.getId()))
+    );
+
+    public static final DeferredItem<Item> RAW_AENDERITE = ITEMS.registerItem(
+            "raw_aenderite",
+            Item::new
+    );
+
+    public static final DeferredItem<Item> AENDERITE_INGOT = ITEMS.registerItem(
+            "aenderite_ingot",
+            Item::new
     );
 
     public static final DeferredBlock<ColoredFallingBlock> AENDER_SAND = BLOCKS.register(

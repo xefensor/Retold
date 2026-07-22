@@ -481,6 +481,7 @@ public final class RetoldAenderGameTests {
         BlockState grass = RetoldBlocks.AENDER_GRASS_BLOCK.get().defaultBlockState();
         BlockState soil = RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
         BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockState aenderiteOre = RetoldBlocks.AENDERITE_ORE.get().defaultBlockState();
         BlockState sand = RetoldBlocks.AENDER_SAND.get().defaultBlockState();
         BlockState sandstone = RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState();
         BlockState cactus = RetoldBlocks.AENDER_CACTUS.get().defaultBlockState();
@@ -493,6 +494,18 @@ public final class RetoldAenderGameTests {
             helper.assertTrue(grass.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender grass must be shovel-mineable");
             helper.assertTrue(soil.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender soil must be shovel-mineable");
             helper.assertTrue(stone.is(BlockTags.MINEABLE_WITH_PICKAXE), "Aender stone must be pickaxe-mineable");
+            helper.assertTrue(
+                    aenderiteOre.is(BlockTags.MINEABLE_WITH_PICKAXE),
+                    "Aenderite ore must be pickaxe-mineable"
+            );
+            helper.assertFalse(
+                    new ItemStack(Items.DIAMOND_PICKAXE).isCorrectToolForDrops(aenderiteOre),
+                    "A Diamond Pickaxe must not harvest Aenderite"
+            );
+            helper.assertTrue(
+                    new ItemStack(Items.NETHERITE_PICKAXE).isCorrectToolForDrops(aenderiteOre),
+                    "A Netherite Pickaxe must harvest Aenderite"
+            );
             helper.assertTrue(sand.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender sand must be shovel-mineable");
             helper.assertTrue(sand.is(BlockTags.SAND), "Aender sand must participate in the sand tag");
             helper.assertTrue(
@@ -561,6 +574,20 @@ public final class RetoldAenderGameTests {
             helper.assertTrue(
                     isOnlyDrop(Block.getDrops(stone, level, groundPos, null), RetoldBlocks.AENDER_STONE_ITEM.get()),
                     "Aender stone must drop itself"
+            );
+            helper.assertTrue(
+                    isOnlyDrop(
+                            Block.getDrops(
+                                    aenderiteOre,
+                                    level,
+                                    groundPos,
+                                    null,
+                                    null,
+                                    new ItemStack(Items.NETHERITE_PICKAXE)
+                            ),
+                            RetoldBlocks.RAW_AENDERITE.get()
+                    ),
+                    "Aenderite ore must drop Raw Aenderite with a valid pickaxe"
             );
             helper.assertTrue(
                     isOnlyDrop(Block.getDrops(sand, level, groundPos, null), RetoldBlocks.AENDER_SAND_ITEM.get()),
@@ -778,6 +805,7 @@ public final class RetoldAenderGameTests {
                 CreativeModeTabs.NATURAL_BLOCKS,
                 Items.END_STONE,
                 RetoldBlocks.AENDER_STONE_ITEM.get(),
+                RetoldBlocks.AENDERITE_ORE_ITEM.get(),
                 RetoldBlocks.AENDER_SAND_ITEM.get(),
                 RetoldBlocks.AENDER_SANDSTONE_ITEM.get(),
                 RetoldBlocks.AENDER_CACTUS_ITEM.get()
@@ -820,6 +848,18 @@ public final class RetoldAenderGameTests {
                 Items.PALE_OAK_CHEST_BOAT,
                 RetoldAenderWood.AENDER_BOAT_ITEM.get(),
                 RetoldAenderWood.AENDER_CHEST_BOAT_ITEM.get()
+        );
+        assertConsecutiveItems(
+                helper,
+                CreativeModeTabs.INGREDIENTS,
+                Items.RAW_GOLD,
+                RetoldBlocks.RAW_AENDERITE.get()
+        );
+        assertConsecutiveItems(
+                helper,
+                CreativeModeTabs.INGREDIENTS,
+                Items.NETHERITE_INGOT,
+                RetoldBlocks.AENDERITE_INGOT.get()
         );
         assertConsecutiveItems(
                 helper,

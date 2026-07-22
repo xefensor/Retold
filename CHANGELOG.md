@@ -27,6 +27,7 @@ Each release should be readable in two passes:
 - Retold content now appears alongside equivalent vanilla content in Building Blocks, Natural Blocks, Functional Blocks, Tools & Utilities, Ingredients, Spawn Eggs, and permission-gated Operator Utilities; Retold does not add a separate creative tab. The Aender Stabilizer and Chronolith are available in ordinary Functional Blocks, while only the development portal frame is operator-gated. Aender Eye and Gale Core now have functional spawn eggs, and previously hidden block items have modern client-item definitions.
 - Added credited AI-generated placeholder textures for the previously missing Aender Chronolith model and the new Aender Eye and Gale Core spawn eggs.
 - Fresh worlds now assign either Aender Plains or an experimental inverted Aender Desert to each floating island. Stacked islands can have different biomes; plains islands use broad rolling surfaces, while desert islands are wider and flatter with denim-blue sand, periwinkle sandstone, lavender cacti, a rose-lavender atmosphere, and rising energy spores. Both biomes now vary between distinct island silhouettes, irregular height clusters, eroded openings, warped detached satellite fragments, biome-specific dunes/basins/undersides, clustered vegetation, and rare spires or impact-like energy craters. Volatile regeneration changes biome data together with terrain, while stabilized chunks preserve both.
+- Added Aenderite Ore in uncommon 2–5 block veins inside Aender Stone, biased toward island undersides. It requires a Netherite Pickaxe, drops Fortune-compatible Raw Aenderite, and can be smelted or blasted into Aenderite Ingots; the ingot has no crafting use yet.
 
 ### Technical
 
@@ -48,6 +49,7 @@ Each release should be readable in two passes:
 - Added an indefinite, TPS-aware portal preparation state machine with unit coverage for its transition gate and a 5x5 asynchronously prepared safety core.
 - Added deterministic coverage for Aender counterpart surface selection and the Y=100 void fallback.
 - Added the data-driven Aender tree grower, NeoForge stripping/composting data maps, complete wood-family resources and entities, and GameTest coverage for renewal, tags, loot, stripping, signs, and boats.
+- Added a pure coordinate-deterministic Aenderite vein planner with cross-chunk coverage, Netherite-only harvest tags, ore loot and cooking recipes, vanilla creative-tab placement, survival GameTest assertions, and deterministic JUnit distribution tests.
 
 ## 0.2.1 - 2026-07-20
 
