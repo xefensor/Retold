@@ -110,6 +110,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             }
         }
 
+        if (AenderVolatility.currentGeneratorVersion()
+                >= AenderRealityData.ISLAND_BIOMES_GENERATOR_VERSION) {
+            AenderCaveCarver.carve(chunk, cachedIslands);
+        }
+
         placePortalFrameDeposits(chunk, cachedIslands);
 
         for (CachedIsland island : cachedIslands) {
@@ -1525,7 +1530,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 && z <= minZ + 15;
     }
 
-    private static final class CachedIsland {
+    private static final class CachedIsland implements AenderCaveCarver.IslandView {
         private final AenderIslandSampler.Island island;
         private final int chunkMinX;
         private final int chunkMinZ;
@@ -1536,6 +1541,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             this.island = island;
             this.chunkMinX = chunkMinX;
             this.chunkMinZ = chunkMinZ;
+        }
+
+        @Override
+        public AenderIslandSampler.Island island() {
+            return island;
         }
 
         private int minX() {
@@ -1578,7 +1588,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             return island.underside();
         }
 
-        private AenderIslandSampler.Island.Column columnAt(int x, int z) {
+        @Override
+        public AenderIslandSampler.Island.Column columnAt(int x, int z) {
             int localX = x - chunkMinX;
             int localZ = z - chunkMinZ;
 

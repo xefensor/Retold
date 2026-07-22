@@ -5,6 +5,7 @@ import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.aender.generation.AenderAttachments;
 import cz.xefensor.retold.aender.generation.AenderChunkRealityData;
+import cz.xefensor.retold.aender.generation.AenderGenerationGameTests;
 import cz.xefensor.retold.aender.generation.AenderLoadedChunkReplacement;
 import cz.xefensor.retold.aender.generation.AenderRealityData;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
@@ -126,6 +127,24 @@ public final class RetoldAenderGameTests {
                 environment,
                 "aender_content_uses_vanilla_creative_tabs",
                 RetoldAenderGameTests::contentUsesVanillaCreativeTabs
+        );
+        registerTest(
+                event,
+                environment,
+                "aenderite_is_written_by_full_chunk_generation",
+                AenderGenerationGameTests::aenderiteIsWrittenByFullChunkGeneration
+        );
+        registerTest(
+                event,
+                environment,
+                "aender_caves_are_carved_by_full_chunk_generation",
+                AenderGenerationGameTests::cavesAreCarvedByFullChunkGeneration
+        );
+        registerTest(
+                event,
+                environment,
+                "aender_surface_cave_entrances_breach_terrain_cap",
+                AenderGenerationGameTests::surfaceCaveEntrancesBreachTerrainCap
         );
     }
 

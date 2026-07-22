@@ -3,7 +3,9 @@ package cz.xefensor.retold.aender.generation;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -11,36 +13,57 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AenderOrePlannerTest {
     @Test
-    void realIslandSamplerProducesUncommonRatherThanRareVeins() {
+    void realIslandSamplerProducesDiamondLikeFrequency() {
         int sampledChunks = 0;
         int chunksWithVeins = 0;
+        int plannedBlocks = 0;
 
         for (int chunkX = -32; chunkX <= 32; chunkX++) {
             for (int chunkZ = -32; chunkZ <= 32; chunkZ++) {
                 sampledChunks++;
-                if (!AenderOrePlanner.veinsForChunk(
+                List<AenderOrePlanner.Vein> veins = AenderOrePlanner.veinsForChunk(
                         AenderIslandSampler.islandsForChunk(chunkX, chunkZ),
                         chunkX,
                         chunkZ
-                ).isEmpty()) {
+                );
+
+                if (!veins.isEmpty()) {
                     chunksWithVeins++;
                 }
+
+                Set<AenderOrePlanner.OreBlock> blocks = new HashSet<>();
+
+                for (AenderOrePlanner.Vein vein : veins) {
+                    for (AenderOrePlanner.OreBlock block : vein.blocks()) {
+                        if (Math.floorDiv(block.x(), 16) == chunkX
+                                && Math.floorDiv(block.z(), 16) == chunkZ) {
+                            blocks.add(block);
+                        }
+                    }
+                }
+
+                plannedBlocks += blocks.size();
             }
         }
 
         double oreBearingRatio = chunksWithVeins / (double) sampledChunks;
+        double blocksPerChunk = plannedBlocks / (double) sampledChunks;
         assertTrue(
-                oreBearingRatio >= 0.07D,
-                "Aenderite must be uncommon and discoverable, not effectively absent"
+                oreBearingRatio >= 0.25D,
+                "Aenderite should occur with diamond-like regularity in Aender terrain"
         );
         assertTrue(
-                oreBearingRatio <= 0.16D,
-                "Aenderite must remain uncommon rather than becoming a common terrain block"
+                oreBearingRatio <= 0.40D,
+                "Aenderite should remain an ore rather than becoming a common terrain block"
+        );
+        assertTrue(
+                blocksPerChunk >= 2.5D && blocksPerChunk <= 4.0D,
+                "Aenderite should average a diamond-like number of planned blocks per chunk"
         );
     }
 
     @Test
-    void veinsAreDeterministicCompactAndTwoToFiveBlocks() {
+    void veinsAreDeterministicCompactAndDiamondSized() {
         AenderIslandSampler.Island island = island(41L);
         List<AenderOrePlanner.Vein> first = sampleVeins(island);
         List<AenderOrePlanner.Vein> second = sampleVeins(island);
@@ -49,11 +72,11 @@ class AenderOrePlannerTest {
         assertEquals(first, second, "The same island reality must produce identical veins");
 
         for (AenderOrePlanner.Vein vein : first) {
-            assertTrue(vein.blocks().size() >= 2 && vein.blocks().size() <= 5);
+            assertTrue(vein.blocks().size() >= 3 && vein.blocks().size() <= 12);
 
             for (AenderOrePlanner.OreBlock block : vein.blocks()) {
                 assertTrue(
-                        vein.origin().manhattanDistance(block) <= 4,
+                        vein.origin().manhattanDistance(block) <= 11,
                         "A vein must remain a compact local cluster"
                 );
                 AenderIslandSampler.Island.Column column = island.columnAt(block.x(), block.z());
