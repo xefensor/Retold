@@ -24,7 +24,7 @@ public final class AenderLoadedChunkReplacement {
     public static void regenerate(ServerLevel level, ChunkAccess chunk) {
         ChunkPos chunkPos = chunk.getPos();
         List<Entity> entities = entitiesInChunk(level, chunkPos);
-        AenderChunkGenerator.regenerateLoadedChunk(chunk);
+        AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
         reconcileEntitiesAfterRegeneration(level, chunkPos, entities);
         resend(level, chunk);
     }

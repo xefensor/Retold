@@ -23,7 +23,9 @@ import java.util.Map;
  */
 public final class AenderRealityData extends SavedData {
     public static final int LEGACY_GENERATOR_VERSION = 1;
-    public static final int CURRENT_GENERATOR_VERSION = 2;
+    public static final int MERGED_TERRAIN_GENERATOR_VERSION = 2;
+    public static final int ISLAND_BIOMES_GENERATOR_VERSION = 3;
+    public static final int CURRENT_GENERATOR_VERSION = ISLAND_BIOMES_GENERATOR_VERSION;
 
     private static final Codec<RegionEpochEntry> REGION_EPOCH_CODEC =
             RecordCodecBuilder.create(instance -> instance.group(

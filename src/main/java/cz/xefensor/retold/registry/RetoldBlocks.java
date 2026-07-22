@@ -6,18 +6,21 @@ import cz.xefensor.retold.item.WaterElementItem;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
 import cz.xefensor.retold.block.AenderChronolithBlock;
+import cz.xefensor.retold.block.AenderCactusBlock;
 import cz.xefensor.retold.block.AenderGrassBlock;
 import cz.xefensor.retold.block.AenderLeavesBlock;
 import cz.xefensor.retold.block.AenderPortalBlock;
 import cz.xefensor.retold.block.AenderPortalFrameBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.ColorRGBA;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColoredFallingBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -117,6 +120,51 @@ public final class RetoldBlocks {
                     Registries.ITEM,
                     AENDER_STONE.getId()
             ))
+    );
+
+    public static final DeferredBlock<ColoredFallingBlock> AENDER_SAND = BLOCKS.register(
+            "aender_sand",
+            registryName -> new ColoredFallingBlock(
+                    new ColorRGBA(0xFF434F79),
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.SAND)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .sound(SoundType.SAND)
+            )
+    );
+
+    public static final DeferredItem<BlockItem> AENDER_SAND_ITEM = ITEMS.registerSimpleBlockItem(
+            AENDER_SAND,
+            properties -> properties.setId(ResourceKey.create(Registries.ITEM, AENDER_SAND.getId()))
+    );
+
+    public static final DeferredBlock<Block> AENDER_SANDSTONE = BLOCKS.register(
+            "aender_sandstone",
+            registryName -> new Block(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.SANDSTONE)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .sound(SoundType.STONE)
+            )
+    );
+
+    public static final DeferredItem<BlockItem> AENDER_SANDSTONE_ITEM = ITEMS.registerSimpleBlockItem(
+            AENDER_SANDSTONE,
+            properties -> properties.setId(ResourceKey.create(Registries.ITEM, AENDER_SANDSTONE.getId()))
+    );
+
+    public static final DeferredBlock<AenderCactusBlock> AENDER_CACTUS = BLOCKS.register(
+            "aender_cactus",
+            registryName -> new AenderCactusBlock(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.CACTUS)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+            )
+    );
+
+    public static final DeferredItem<BlockItem> AENDER_CACTUS_ITEM = ITEMS.registerSimpleBlockItem(
+            AENDER_CACTUS,
+            properties -> properties.setId(ResourceKey.create(Registries.ITEM, AENDER_CACTUS.getId()))
     );
 
     public static final DeferredBlock<RotatedPillarBlock> AENDER_LOG = BLOCKS.register(

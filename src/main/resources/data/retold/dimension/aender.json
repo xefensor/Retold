@@ -3,8 +3,9 @@
   "generator": {
     "type": "retold:aender",
     "biome_source": {
-      "type": "minecraft:fixed",
-      "biome": "retold:aender"
+      "type": "retold:aender",
+      "plains": "retold:aender",
+      "desert": "retold:aender_desert"
     }
   }
 }

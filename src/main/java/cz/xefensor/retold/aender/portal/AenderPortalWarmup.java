@@ -25,6 +25,7 @@ public final class AenderPortalWarmup {
 
     private static final int SAFE_CORE_RADIUS = 2;
     private static final int MAX_CHUNKS_PER_TICK = 32;
+    private static final int MAX_VISIBILITY_CHECKS_PER_TICK = 128;
     private static final long MAX_WORK_NANOS_PER_TICK = 12_000_000L;
     private static final long ABANDONED_STATE_TICKS = 1_200L;
 
@@ -82,6 +83,28 @@ public final class AenderPortalWarmup {
             return;
         }
 
+        long startedAt = System.nanoTime();
+        int visibilityChecks = Math.min(state.pendingVisibility.size(), MAX_VISIBILITY_CHECKS_PER_TICK);
+
+        while (visibilityChecks-- > 0 && !state.pendingVisibility.isEmpty()) {
+            long packed = state.pendingVisibility.remove();
+            int chunkX = (int) packed;
+            int chunkZ = (int) (packed >> 32);
+
+            if (!AenderRealityTickEvents.prepareArrivalVisibilityChunk(aender, chunkX, chunkZ)) {
+                state.pendingVisibility.add(packed);
+            }
+
+            if (System.nanoTime() - startedAt >= workBudgetNanos) {
+                break;
+            }
+        }
+
+        if (!state.pendingVisibility.isEmpty()
+                || System.nanoTime() - startedAt >= workBudgetNanos) {
+            return;
+        }
+
         int portalTime = player.portalProcess == null ? 0 : player.portalProcess.getPortalTime();
         int ticksRemaining = Math.max(1, chargeTicks - portalTime);
         int desiredThisTick = Math.max(1, divideCeil(state.pending.size(), ticksRemaining));
@@ -91,7 +114,6 @@ public final class AenderPortalWarmup {
 
         int prepared = 0;
         int attempts = state.pending.size();
-        long startedAt = System.nanoTime();
 
         while (prepared < desiredThisTick && attempts-- > 0 && !state.pending.isEmpty()) {
             long packed = state.pending.remove();
@@ -119,7 +141,7 @@ public final class AenderPortalWarmup {
             );
         }
 
-        if (state.safeCoreReady() && target.portalCandidate() != null
+        if (state.arrivalReady() && target.portalCandidate() != null
                 && AenderPortalShape.findComplete(aender, target.portalCandidate().centerBlock()).isEmpty()) {
             AenderPortalData.get(aender).remove(aender, target.portalCandidate());
             STATES.remove(player.getUUID());
@@ -135,9 +157,9 @@ public final class AenderPortalWarmup {
         STATES.remove(entity.getUUID());
     }
 
-    public static boolean isSafeCoreReady(Entity entity) {
+    public static boolean isArrivalReady(Entity entity) {
         WarmupState state = STATES.get(entity.getUUID());
-        return state != null && state.safeCoreReady();
+        return state != null && state.arrivalReady();
     }
 
     public static void clear() {
@@ -155,6 +177,7 @@ public final class AenderPortalWarmup {
         private final long realityEpoch;
         private final Queue<Long> pending = new ArrayDeque<>();
         private final Set<Long> pendingCore = new HashSet<>();
+        private final Queue<Long> pendingVisibility = new ArrayDeque<>();
         private long lastWorkGameTime = Long.MIN_VALUE;
         private long lastSeenGameTime;
         private boolean loggedCompletion;
@@ -171,6 +194,7 @@ public final class AenderPortalWarmup {
                         if (Math.max(Math.abs(dx), Math.abs(dz)) == ring) {
                             long packed = pack(centerChunkX + dx, centerChunkZ + dz);
                             pending.add(packed);
+                            pendingVisibility.add(packed);
 
                             if (ring <= SAFE_CORE_RADIUS) {
                                 pendingCore.add(packed);
@@ -181,8 +205,8 @@ public final class AenderPortalWarmup {
             }
         }
 
-        private boolean safeCoreReady() {
-            return pendingCore.isEmpty();
+        private boolean arrivalReady() {
+            return pendingVisibility.isEmpty() && pendingCore.isEmpty();
         }
 
         private boolean matches(int centerChunkX, int centerChunkZ, int radius, long realityEpoch) {

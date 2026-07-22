@@ -10,6 +10,7 @@ This record complements [`LICENSE`](LICENSE) and [`LICENSE-ASSETS.md`](LICENSE-A
 | Xefensor | Gameplay screenshots dated 2026-07-18 | Repository documentation |
 | OpenAI image generation, directed and processed by Codex | Aender wood-family placeholder textures: planks, stripped log, sapling, door, trapdoor, signs, boats, and derived model atlases | AI-generated placeholder; 2026-07-22 |
 | OpenAI image generation, directed and processed by Codex | Aender Chronolith block and Aender Eye/Gale Core spawn-egg placeholder textures | AI-generated placeholder; 2026-07-22 |
+| OpenAI image generation, directed and processed by Codex | Experimental Aender Desert placeholder textures: Aender sand, sandstone, and cactus | AI-generated placeholder; 2026-07-22 |
 | Future original artists | Final replacements for provisional Aender and other development assets | To be credited when work is accepted |
 
 ## Provisional And Generated Assets
@@ -23,6 +24,8 @@ The provisional portal frame uses the development identifier `retold:dev_aender_
 The Aender wood-family placeholders were generated specifically for Retold from prompts describing original purple pixel-art wood components. Mechanical post-processing removed backgrounds, resized the sources to Minecraft texture dimensions, split the door sheet, and assembled sign and boat model textures from the generated material. No Minecraft texture pixels were used in those derived files.
 
 The Aender Chronolith and spawn-egg placeholders were generated specifically for Retold from prompts describing original purple time-rune stone, a green-eyed Aender egg, and a pale cyan/gold Gale Core egg. Mechanical post-processing removed chroma-key backgrounds and reduced the sources to 16x16 game textures. No Minecraft texture pixels were used in these files.
+
+The experimental Aender Desert placeholders were generated specifically for Retold from prompts describing original deep denim energy sand, medium periwinkle layered sandstone with a separate smoother top face, and lavender ribbed cactus material. Mechanical post-processing reduced the generated material sources to 16x16 game textures and derived the cactus top from the original generated cactus material. Developer-provided inverted-desert screenshots were used only as color, mood, and block-face-layout references; no pixels from them or from Minecraft textures were included.
 
 ## Third-Party Material
 

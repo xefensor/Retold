@@ -11,7 +11,7 @@ public final class AenderPortalTransitionGate {
             int configuredDelay,
             boolean invulnerable,
             boolean enteringAender,
-            boolean safeCoreReady,
+            boolean arrivalReady,
             int portalTime,
             int survivalMinimumCharge
     ) {
@@ -23,7 +23,7 @@ public final class AenderPortalTransitionGate {
                 ? configuredDelay
                 : Math.max(configuredDelay, survivalMinimumCharge);
 
-        if (safeCoreReady || portalTime < minimumCharge) {
+        if (arrivalReady || portalTime < minimumCharge) {
             return minimumCharge;
         }
 

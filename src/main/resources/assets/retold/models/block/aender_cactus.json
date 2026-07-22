@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/cactus",
+  "textures": {
+    "particle": "retold:block/aender_cactus_side",
+    "bottom": "retold:block/aender_cactus_top",
+    "top": "retold:block/aender_cactus_top",
+    "side": "retold:block/aender_cactus_side"
+  }
+}

@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "retold:aender_stone",
+    "retold:aender_sandstone",
     "retold:dev_aender_portal_frame"
   ]
 }

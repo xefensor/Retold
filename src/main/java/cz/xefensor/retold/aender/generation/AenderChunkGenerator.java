@@ -5,6 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cz.xefensor.retold.aender.RetoldAenderEntryPlatform;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -70,7 +71,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         generateChunk(chunk, false);
     }
 
-    public static void regenerateLoadedChunk(ChunkAccess chunk) {
+    public static void regenerateLoadedChunk(ServerLevel level, ChunkAccess chunk) {
+        chunk.fillBiomesFromNoise(
+                level.getChunkSource().getGenerator().getBiomeSource(),
+                level.getChunkSource().randomState().sampler()
+        );
         generateChunk(chunk, true);
     }
 
@@ -95,7 +100,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         }
 
         boolean mergedGeneration = AenderVolatility.currentGeneratorVersion()
-                >= AenderRealityData.CURRENT_GENERATOR_VERSION;
+                >= AenderRealityData.MERGED_TERRAIN_GENERATOR_VERSION;
 
         if (mergedGeneration) {
             generateMergedTerrain(chunk, cachedIslands, terrainBlocks, pos);
@@ -365,7 +370,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 pos.set(x, surfaceY, z);
 
                 if (mergedGeneration
-                        && (!chunk.getBlockState(pos).is(RetoldBlocks.AENDER_GRASS_BLOCK)
+                        && (!isSurfaceBlock(chunk.getBlockState(pos), island.biome())
                         || !chunk.getBlockState(pos.above()).isAir())) {
                     continue;
                 }
@@ -376,12 +381,12 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
-                placeUndersideSpur(chunk, column, x, z, island.seed(), mergedGeneration, pos);
-                placeUndersideGrowth(chunk, column, x, z, island.seed(), pos);
+                placeUndersideSpur(chunk, column, island, x, z, mergedGeneration, pos);
+                placeUndersideGrowth(chunk, column, island, x, z, pos);
 
                 pos.set(x, surfaceY, z);
 
-                if (!chunk.getBlockState(pos).is(RetoldBlocks.AENDER_GRASS_BLOCK)) {
+                if (!isSurfaceBlock(chunk.getBlockState(pos), island.biome())) {
                     continue;
                 }
 
@@ -391,12 +396,17 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
+                if (formationContaining(island, x, z) != null) {
+                    continue;
+                }
+
                 if (!mergedGeneration && isBoulderOrigin(x, z, island.seed())) {
-                    placeBoulder(chunk, x, surfaceY, z, island.seed());
+                    placeBoulder(chunk, x, surfaceY, z, island.seed(), island.biome());
                     continue;
                 }
 
                 if (!mergedGeneration
+                        && island.biome() == AenderBiomeKind.PLAINS
                         && isTreeOrigin(x, z, island.seed())
                         && hasTreeRoom(chunk, x, surfaceY, z)
                         && hasGentleGround(island, x, surfaceY, z)) {
@@ -410,7 +420,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
-                placeGroundDecoration(chunk, x, surfaceY, z, island.seed(), pos);
+                placeGroundDecoration(chunk, island, x, surfaceY, z, pos);
             }
         }
     }
@@ -419,6 +429,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             ChunkAccess chunk,
             List<CachedIsland> islands
     ) {
+        placeCrossChunkTerrainFormations(chunk, islands);
+
         final int featureHalo = 5;
         int minX = chunk.getPos().getMinBlockX() - featureHalo;
         int maxX = chunk.getPos().getMaxBlockX() + featureHalo;
@@ -436,14 +448,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
                     int surfaceY = column.maxY();
 
-                    if (!isExposedSurfaceOwner(islands, island, x, z, surfaceY)
+                    if (!isExposedSurfaceOwner(islands, island, x, z, surfaceY)) {
+                        continue;
+                    }
+
+                    if (formationContaining(island, x, z) != null
                             || isStoneOutcrop(island.seed(), x, z)
                             || lakeColumnAt(island, x, z, surfaceY) != null) {
                         continue;
                     }
 
                     if (isBoulderOrigin(x, z, island.seed())) {
-                        placeBoulder(chunk, x, surfaceY, z, island.seed());
+                        placeBoulder(chunk, x, surfaceY, z, island.seed(), island.biome());
                         continue;
                     }
 
@@ -455,6 +471,32 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         }
     }
 
+    private static void placeCrossChunkTerrainFormations(
+            ChunkAccess chunk,
+            List<CachedIsland> islands
+    ) {
+        int minX = chunk.getPos().getMinBlockX();
+        int maxX = chunk.getPos().getMaxBlockX();
+        int minZ = chunk.getPos().getMinBlockZ();
+        int maxZ = chunk.getPos().getMaxBlockZ();
+
+        for (CachedIsland island : islands) {
+            List<AenderDecorationPlanner.Formation> formations =
+                    AenderDecorationPlanner.formationsIntersecting(island.seed(), minX, maxX, minZ, maxZ);
+
+            for (AenderDecorationPlanner.Formation formation : formations) {
+                AenderIslandSampler.Island.Column column = island.columnAt(formation.x(), formation.z());
+
+                if (column.empty()
+                        || !isExposedSurfaceOwner(islands, island, formation.x(), formation.z(), column.maxY())) {
+                    continue;
+                }
+
+                placeTerrainFormation(chunk, island, islands, formation, column.maxY());
+            }
+        }
+    }
+
     private static boolean isTreePlacement(
             List<CachedIsland> islands,
             CachedIsland island,
@@ -462,7 +504,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             int surfaceY,
             int z
     ) {
-        return surfaceY + 8 < AenderIslandSampler.MAX_Y
+        return island.biome() == AenderBiomeKind.PLAINS
+                && surfaceY + 8 < AenderIslandSampler.MAX_Y
                 && isTreeOrigin(x, z, island.seed())
                 && !isBoulderOrigin(x, z, island.seed())
                 && !isStoneOutcrop(island.seed(), x, z)
@@ -520,7 +563,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             LevelHeightAccessor level,
             RandomState random
     ) {
-        if (AenderVolatility.currentGeneratorVersion() >= AenderRealityData.CURRENT_GENERATOR_VERSION) {
+        if (AenderVolatility.currentGeneratorVersion() >= AenderRealityData.MERGED_TERRAIN_GENERATOR_VERSION) {
             return getMergedBaseColumn(x, z);
         }
 
@@ -624,6 +667,22 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     }
 
     private static BlockState terrainBlockForDepth(TerrainBlocks terrainBlocks, long seed, int x, int z, int surfaceDepth) {
+        if (AenderBiomeKind.fromIslandSeed(seed) == AenderBiomeKind.DESERT) {
+            if (surfaceDepth <= 2 && isStoneOutcrop(seed, x, z)) {
+                return terrainBlocks.sandstone();
+            }
+
+            if (surfaceDepth <= 3) {
+                return terrainBlocks.sand();
+            }
+
+            if (surfaceDepth <= 10) {
+                return terrainBlocks.sandstone();
+            }
+
+            return terrainBlocks.stone();
+        }
+
         if (seed != 0L && surfaceDepth <= 2 && isStoneOutcrop(seed, x, z)) {
             return terrainBlocks.stone();
         }
@@ -658,6 +717,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     }
 
     private static LakeColumn lakeColumnAt(CachedIsland island, int x, int z, int surfaceY) {
+        if (island.biome() == AenderBiomeKind.DESERT) {
+            return null;
+        }
+
+        double lakeChance = switch (island.archetype()) {
+            case ROUND -> 0.28D;
+            case ELONGATED -> 0.24D;
+            case TWIN -> 0.18D;
+            case CRESCENT, SPLIT -> 0.12D;
+            default -> 0.0D;
+        };
+
         int cellX = Math.floorDiv(x, 64);
         int cellZ = Math.floorDiv(z, 64);
 
@@ -668,7 +739,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                         ^ (long) cz * 0xC6BC279692B5CC83L
                         ^ 0x1A4E5EADL);
 
-                if (unit(lakeSeed) >= 0.24D) {
+                if (unit(lakeSeed) >= lakeChance) {
                     continue;
                 }
 
@@ -755,29 +826,50 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
     private static void placeGroundDecoration(
             ChunkAccess chunk,
+            CachedIsland island,
             int x,
             int surfaceY,
             int z,
-            long seed,
             BlockPos.MutableBlockPos pos
     ) {
+        long seed = island.seed();
+
+        if (island.biome() == AenderBiomeKind.DESERT) {
+            if (isCactusOrigin(x, z, seed)) {
+                placeCactus(chunk, island, x, surfaceY, z, seed);
+            }
+
+            return;
+        }
+
+        double vegetation = AenderDecorationPlanner.plainsVegetationStrength(seed, x, z);
+
+        if (vegetation <= 0.02D) {
+            return;
+        }
+
         double roll = unit(seed
                 ^ (long) x * 0xD1342543DE82EF95L
                 ^ (long) z * 0xC6BC279692B5CC83L
                 ^ 0x61746C696665L);
 
-        if (roll >= 0.34D) {
+        if (roll >= 0.12D + vegetation * 0.52D) {
             return;
         }
 
         BlockState decoration;
+        double flowerPatch = AenderDecorationPlanner.flowerPatchStrength(seed, x, z);
+        double detailRoll = unit(seed
+                ^ (long) x * 0x9E3779B97F4A7C15L
+                ^ (long) z * 0xC2B2AE3D27D4EB4FL
+                ^ 0xDEC02A7EL);
 
-        if (roll < 0.030D) {
+        if (detailRoll < 0.035D) {
             decoration = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
-        } else if (roll < 0.070D) {
+        } else if (flowerPatch > 0.10D && detailRoll < 0.16D + flowerPatch * 0.42D) {
             int flowerIndex = (int) (unit(seed ^ (long) x * 0x9E3779B97F4A7C15L ^ (long) z) * FLOWERS.length);
             decoration = FLOWERS[Math.min(flowerIndex, FLOWERS.length - 1)];
-        } else if (roll < 0.130D) {
+        } else if (detailRoll < 0.30D) {
             decoration = FERN;
         } else {
             decoration = SHORT_GRASS;
@@ -785,6 +877,66 @@ public final class AenderChunkGenerator extends ChunkGenerator {
 
         pos.set(x, surfaceY + 1, z);
         chunk.setBlockState(pos, decoration, 0);
+    }
+
+    private static boolean isSurfaceBlock(BlockState state, AenderBiomeKind biome) {
+        return biome == AenderBiomeKind.DESERT
+                ? state.is(RetoldBlocks.AENDER_SAND)
+                : state.is(RetoldBlocks.AENDER_GRASS_BLOCK);
+    }
+
+    private static boolean isCactusOrigin(int x, int z, long seed) {
+        int cellX = Math.floorDiv(x, 13);
+        int cellZ = Math.floorDiv(z, 13);
+        long cellSeed = mix64(seed
+                ^ (long) cellX * 0x9E3779B97F4A7C15L
+                ^ (long) cellZ * 0xC2B2AE3D27D4EB4FL
+                ^ 0xCA67C5L);
+
+        double patch = AenderDecorationPlanner.cactusPatchStrength(seed, x, z);
+        double chance = patch > 0.0D ? 0.36D + patch * 0.48D : 0.08D;
+
+        if (unit(cellSeed) >= chance) {
+            return false;
+        }
+
+        int originX = cellX * 13 + 3 + (int) (unit(cellSeed ^ 0x31L) * 7.0D);
+        int originZ = cellZ * 13 + 3 + (int) (unit(cellSeed ^ 0x32L) * 7.0D);
+        return x == originX && z == originZ;
+    }
+
+    private static void placeCactus(
+            ChunkAccess chunk,
+            CachedIsland island,
+            int x,
+            int surfaceY,
+            int z,
+            long seed
+    ) {
+        if (surfaceDelta(island, x + 1, z, surfaceY) > 0
+                || surfaceDelta(island, x - 1, z, surfaceY) > 0
+                || surfaceDelta(island, x, z + 1, surfaceY) > 0
+                || surfaceDelta(island, x, z - 1, surfaceY) > 0) {
+            return;
+        }
+
+        long cactusSeed = mix64(seed
+                ^ (long) x * 0xD1342543DE82EF95L
+                ^ (long) z * 0xC6BC279692B5CC83L
+                ^ 0xA3C7C5L);
+        int height = 1 + (int) (unit(cactusSeed) * 3.0D);
+        BlockState cactus = RetoldBlocks.AENDER_CACTUS.get().defaultBlockState();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int dy = 1; dy <= height; dy++) {
+            pos.set(x, surfaceY + dy, z);
+
+            if (!isInsideChunk(chunk, pos) || !chunk.getBlockState(pos).isAir()) {
+                return;
+            }
+
+            chunk.setBlockState(pos, cactus, 0);
+        }
     }
 
     private static boolean isBoulderOrigin(int x, int z, long seed) {
@@ -804,14 +956,23 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         return x == originX && z == originZ;
     }
 
-    private static void placeBoulder(ChunkAccess chunk, int x, int surfaceY, int z, long seed) {
+    private static void placeBoulder(
+            ChunkAccess chunk,
+            int x,
+            int surfaceY,
+            int z,
+            long seed,
+            AenderBiomeKind biome
+    ) {
         long boulderSeed = mix64(seed
                 ^ (long) x * 0xD1342543DE82EF95L
                 ^ (long) z * 0xC6BC279692B5CC83L
                 ^ 0xB075D32L);
         int radius = unit(boulderSeed ^ 0x51L) < 0.55D ? 1 : 2;
         int height = radius + 1;
-        BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockState stone = biome == AenderBiomeKind.DESERT
+                ? RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState()
+                : RetoldBlocks.AENDER_STONE.get().defaultBlockState();
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
         for (int dy = 1; dy <= height; dy++) {
@@ -839,27 +1000,175 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         }
     }
 
+    private static AenderDecorationPlanner.Formation formationContaining(
+            CachedIsland island,
+            int x,
+            int z
+    ) {
+        AenderDecorationPlanner.Formation formation = AenderDecorationPlanner.formationContaining(
+                island.seed(),
+                x,
+                z
+        );
+
+        if (formation == null || island.columnAt(formation.x(), formation.z()).empty()) {
+            return null;
+        }
+
+        return formation;
+    }
+
+    private static void placeTerrainFormation(
+            ChunkAccess chunk,
+            CachedIsland island,
+            List<CachedIsland> islands,
+            AenderDecorationPlanner.Formation formation,
+            int surfaceY
+    ) {
+        BlockState stone = island.biome() == AenderBiomeKind.DESERT
+                ? RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState()
+                : RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+
+        switch (formation.kind()) {
+            case SPIRE -> placeStoneSpire(chunk, formation, surfaceY, stone);
+            case CRATER -> carveEnergyCrater(chunk, island, islands, formation, stone);
+        }
+    }
+
+    private static void placeStoneSpire(
+            ChunkAccess chunk,
+            AenderDecorationPlanner.Formation formation,
+            int surfaceY,
+            BlockState stone
+    ) {
+        int height = 8 + (int) (unit(formation.seed() ^ 0x51L) * 12.0D);
+        int baseRadius = unit(formation.seed() ^ 0x52L) < 0.72D ? 2 : 3;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int dy = 1; dy <= height; dy++) {
+            double taper = 1.0D - dy / (double) (height + 1);
+            int radius = Math.max(0, (int) Math.floor(baseRadius * taper));
+
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (dx * dx + dz * dz > radius * radius + (dy <= 2 ? 1 : 0)) {
+                        continue;
+                    }
+
+                    if (dy > 2 && unit(formation.seed() ^ dx * 31L ^ dz * 17L ^ dy * 13L) < 0.08D) {
+                        continue;
+                    }
+
+                    pos.set(formation.x() + dx, surfaceY + dy, formation.z() + dz);
+
+                    if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+                        chunk.setBlockState(pos, stone, 0);
+                    }
+                }
+            }
+        }
+    }
+
+    private static void carveEnergyCrater(
+            ChunkAccess chunk,
+            CachedIsland island,
+            List<CachedIsland> islands,
+            AenderDecorationPlanner.Formation formation,
+            BlockState stone
+    ) {
+        double radiusX = 6.0D + unit(formation.seed() ^ 0x71L) * 3.0D;
+        double radiusZ = 6.0D + unit(formation.seed() ^ 0x72L) * 3.0D;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int dx = -(int) Math.ceil(radiusX); dx <= Math.ceil(radiusX); dx++) {
+            for (int dz = -(int) Math.ceil(radiusZ); dz <= Math.ceil(radiusZ); dz++) {
+                double normalizedX = dx / radiusX;
+                double normalizedZ = dz / radiusZ;
+                double distance = Math.sqrt(normalizedX * normalizedX + normalizedZ * normalizedZ);
+
+                if (distance > 1.0D) {
+                    continue;
+                }
+
+                int x = formation.x() + dx;
+                int z = formation.z() + dz;
+
+                if (!isInsideChunkColumn(chunk, x, z)) {
+                    continue;
+                }
+
+                AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+                if (column.empty()) {
+                    continue;
+                }
+
+                if (!isExposedSurfaceOwner(islands, island, x, z, column.maxY())) {
+                    continue;
+                }
+
+                int depth = 1 + (int) Math.floor((1.0D - distance) * 5.0D);
+                int floorY = Math.max(column.minY(), column.maxY() - depth);
+
+                for (int y = floorY + 1; y <= column.maxY() + 8; y++) {
+                    pos.set(x, y, z);
+
+                    if (isInsideChunk(chunk, pos)
+                            && !chunk.getBlockState(pos).is(RetoldBlocks.DEV_AENDER_PORTAL_FRAME)) {
+                        chunk.setBlockState(pos, AIR, 0);
+                    }
+                }
+
+                pos.set(x, floorY, z);
+
+                if (isInsideChunk(chunk, pos)
+                        && !chunk.getBlockState(pos).is(RetoldBlocks.DEV_AENDER_PORTAL_FRAME)) {
+                    chunk.setBlockState(pos, stone, 0);
+                }
+            }
+        }
+    }
+
     private static void placeUndersideSpur(
             ChunkAccess chunk,
             AenderIslandSampler.Island.Column column,
+            CachedIsland island,
             int x,
             int z,
-            long seed,
             boolean stopAtOccupiedBlock,
             BlockPos.MutableBlockPos pos
     ) {
+        long seed = island.seed();
         long spurSeed = mix64(seed
                 ^ (long) x * 0xA24BAED4963EE407L
                 ^ (long) z * 0x9FB21C651E98DF25L
                 ^ 0x5F013E5DL);
 
-        if (unit(spurSeed) >= 0.045D || column.minY() <= AenderIslandSampler.MIN_Y + 4) {
+        double chance = switch (island.underside()) {
+            case TAPERED -> 0.050D;
+            case ROOTED -> 0.055D;
+            case FRACTURED -> 0.078D;
+            case TERRACED -> 0.026D;
+        };
+
+        if (unit(spurSeed) >= chance || column.minY() <= AenderIslandSampler.MIN_Y + 4) {
             return;
         }
 
-        int length = 2 + (int) (unit(spurSeed ^ 0x61L) * 7.0D);
-        BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
-        BlockState soil = RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
+        int extraLength = switch (island.underside()) {
+            case TAPERED -> 6;
+            case ROOTED -> 4;
+            case FRACTURED -> 5;
+            case TERRACED -> 2;
+        };
+        int length = 2 + (int) (unit(spurSeed ^ 0x61L) * extraLength);
+        AenderBiomeKind biome = island.biome();
+        BlockState stone = biome == AenderBiomeKind.DESERT
+                ? RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState()
+                : RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockState soil = biome == AenderBiomeKind.DESERT
+                ? stone
+                : RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
 
         for (int dy = 1; dy <= length; dy++) {
             int y = column.minY() - dy;
@@ -903,17 +1212,24 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     private static void placeUndersideGrowth(
             ChunkAccess chunk,
             AenderIslandSampler.Island.Column column,
+            CachedIsland island,
             int x,
             int z,
-            long seed,
             BlockPos.MutableBlockPos pos
     ) {
+        if (island.biome() == AenderBiomeKind.DESERT) {
+            return;
+        }
+
+        long seed = island.seed();
         long growthSeed = mix64(seed
                 ^ (long) x * 0xD6E8FEB86659FD93L
                 ^ (long) z * 0xA5A3564E27F886BFL
                 ^ 0xA11FEAFL);
 
-        if (unit(growthSeed) >= 0.025D || column.minY() <= AenderIslandSampler.MIN_Y + 6) {
+        double chance = island.underside() == AenderUndersideProfile.ROOTED ? 0.052D : 0.017D;
+
+        if (unit(growthSeed) >= chance || column.minY() <= AenderIslandSampler.MIN_Y + 6) {
             return;
         }
 
@@ -968,12 +1284,10 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 ^ (long) cellZ * 0x85157AF5C91D1B35L
                 ^ 0x7472656573L);
 
-        double grove = unit(mix64(seed
-                ^ (long) cellX * 0x8CB92BA72F3D8DD7L
-                ^ (long) cellZ * 0xB5AD4ECEDA1CE2A9L
-                ^ 0x6500D5L));
+        double grove = AenderDecorationPlanner.groveStrength(seed, x, z);
+        double chance = grove > 0.0D ? 0.38D + grove * 0.42D : 0.07D;
 
-        if (unit(cellSeed) >= (grove < 0.38D ? 0.62D : 0.32D)) {
+        if (unit(cellSeed) >= chance) {
             return false;
         }
 
@@ -1165,14 +1479,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     }
 
     private static boolean isInsideChunk(ChunkAccess chunk, BlockPos pos) {
-        int minX = chunk.getPos().getMinBlockX();
-        int minZ = chunk.getPos().getMinBlockZ();
-        return pos.getX() >= minX
-                && pos.getX() <= minX + 15
-                && pos.getZ() >= minZ
-                && pos.getZ() <= minZ + 15
+        return isInsideChunkColumn(chunk, pos.getX(), pos.getZ())
                 && pos.getY() >= AenderIslandSampler.MIN_Y
                 && pos.getY() < AenderIslandSampler.MAX_Y;
+    }
+
+    private static boolean isInsideChunkColumn(ChunkAccess chunk, int x, int z) {
+        int minX = chunk.getPos().getMinBlockX();
+        int minZ = chunk.getPos().getMinBlockZ();
+        return x >= minX
+                && x <= minX + 15
+                && z >= minZ
+                && z <= minZ + 15;
     }
 
     private static final class CachedIsland {
@@ -1216,6 +1534,18 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             return island.seed();
         }
 
+        private AenderBiomeKind biome() {
+            return island.biome();
+        }
+
+        private AenderIslandArchetype archetype() {
+            return island.archetype();
+        }
+
+        private AenderUndersideProfile underside() {
+            return island.underside();
+        }
+
         private AenderIslandSampler.Island.Column columnAt(int x, int z) {
             int localX = x - chunkMinX;
             int localZ = z - chunkMinZ;
@@ -1240,12 +1570,20 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         return ((long) x & 0xffffffffL) | (((long) z & 0xffffffffL) << 32);
     }
 
-    private record TerrainBlocks(BlockState grass, BlockState soil, BlockState stone) {
+    private record TerrainBlocks(
+            BlockState grass,
+            BlockState soil,
+            BlockState stone,
+            BlockState sand,
+            BlockState sandstone
+    ) {
         private static TerrainBlocks create() {
             return new TerrainBlocks(
                     RetoldBlocks.AENDER_GRASS_BLOCK.get().defaultBlockState(),
                     RetoldBlocks.AENDER_SOIL.get().defaultBlockState(),
-                    RetoldBlocks.AENDER_STONE.get().defaultBlockState()
+                    RetoldBlocks.AENDER_STONE.get().defaultBlockState(),
+                    RetoldBlocks.AENDER_SAND.get().defaultBlockState(),
+                    RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState()
             );
         }
     }

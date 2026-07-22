@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "retold:aender_grass_block",
-    "retold:aender_soil"
+    "retold:aender_soil",
+    "retold:aender_sand"
   ]
 }

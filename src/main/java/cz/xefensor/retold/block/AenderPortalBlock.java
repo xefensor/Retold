@@ -118,7 +118,7 @@ public final class AenderPortalBlock extends Block implements Portal {
                 configuredDelay,
                 player.getAbilities().invulnerable,
                 level.dimension() == Level.OVERWORLD,
-                AenderPortalWarmup.isSafeCoreReady(entity),
+                AenderPortalWarmup.isArrivalReady(entity),
                 portalTime,
                 AenderPortalWarmup.MAX_PREPARATION_TICKS
         );
