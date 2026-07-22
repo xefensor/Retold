@@ -2,7 +2,6 @@ package cz.xefensor.retold.aender.portal;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
-import cz.xefensor.retold.aender.generation.AenderLoadedChunkReplacement;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
 import cz.xefensor.retold.aender.stability.AenderStabilityData;
@@ -94,7 +93,7 @@ public final class AenderPortalLogic {
 
         if (!enteringAender) {
             destinationLevel.getChunk(approximateExit.getX() >> 4, approximateExit.getZ() >> 4);
-        } else if (!AenderPortalWarmup.isSafeCoreReady(entity)) {
+        } else if (!AenderPortalWarmup.isArrivalReady(entity)) {
             /*
              * Players using this portal wait for the asynchronous warm-up. This
              * bounded fallback remains for commands, other portal integrations,
@@ -208,7 +207,9 @@ public final class AenderPortalLogic {
                     continue;
                 }
 
-                regenerateAenderChunkIfStale(level, chunk);
+                if (!isAenderChunkCurrent(level, chunk)) {
+                    continue;
+                }
 
                 for (int sectionIndex = 0; sectionIndex < chunk.getSections().length; sectionIndex++) {
                     if (!chunk.getSections()[sectionIndex].maybeHas(state -> state.is(RetoldBlocks.AENDER_PORTAL))) {
@@ -264,20 +265,23 @@ public final class AenderPortalLogic {
         return true;
     }
 
-    private static void regenerateAenderChunkIfStale(ServerLevel level, ChunkAccess chunk) {
+    private static boolean isAenderChunkCurrent(ServerLevel level, ChunkAccess chunk) {
         if (level.dimension() != RetoldAenderDimensions.AENDER) {
-            return;
+            return true;
         }
 
         if (AenderStabilityData.get(level).isStable(chunk.getPos())) {
-            return;
+            return true;
         }
 
         AenderVolatility.retainForChunk(chunk);
 
         if (AenderVolatility.needsRegeneration(chunk)) {
-            AenderLoadedChunkReplacement.regenerate(level, chunk);
+            AenderRealityTickEvents.enqueueIfNeeded(level, chunk);
+            return false;
         }
+
+        return true;
     }
 
     static AenderPortalShape createExitPortal(ServerLevel level, BlockPos approximateExit) {

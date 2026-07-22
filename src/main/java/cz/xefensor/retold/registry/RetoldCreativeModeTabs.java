@@ -62,7 +62,14 @@ public final class RetoldCreativeModeTabs {
                 RetoldBlocks.AENDER_GRASS_BLOCK_ITEM.get(),
                 RetoldBlocks.AENDER_SOIL_ITEM.get()
         );
-        insertAfter(event, Items.END_STONE, RetoldBlocks.AENDER_STONE_ITEM.get());
+        insertAfter(
+                event,
+                Items.END_STONE,
+                RetoldBlocks.AENDER_STONE_ITEM.get(),
+                RetoldBlocks.AENDER_SAND_ITEM.get(),
+                RetoldBlocks.AENDER_SANDSTONE_ITEM.get(),
+                RetoldBlocks.AENDER_CACTUS_ITEM.get()
+        );
         insertAfter(event, Items.PALE_OAK_LOG, RetoldBlocks.AENDER_LOG_ITEM.get());
         insertAfter(event, Items.PALE_OAK_LEAVES, RetoldBlocks.AENDER_LEAVES_ITEM.get());
         insertAfter(event, Items.PALE_OAK_SAPLING, RetoldAenderWood.AENDER_SAPLING_ITEM.get());

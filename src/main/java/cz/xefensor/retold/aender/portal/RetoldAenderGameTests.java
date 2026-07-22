@@ -476,9 +476,14 @@ public final class RetoldAenderGameTests {
         BlockPos plantPos = groundPos.above();
         BlockPos leafPos = helper.absolutePos(new BlockPos(5, 3, 5));
         BlockPos leafLogPos = leafPos.below();
+        BlockPos cactusGroundPos = helper.absolutePos(new BlockPos(8, 2, 2));
+        BlockPos cactusPos = cactusGroundPos.above();
         BlockState grass = RetoldBlocks.AENDER_GRASS_BLOCK.get().defaultBlockState();
         BlockState soil = RetoldBlocks.AENDER_SOIL.get().defaultBlockState();
         BlockState stone = RetoldBlocks.AENDER_STONE.get().defaultBlockState();
+        BlockState sand = RetoldBlocks.AENDER_SAND.get().defaultBlockState();
+        BlockState sandstone = RetoldBlocks.AENDER_SANDSTONE.get().defaultBlockState();
+        BlockState cactus = RetoldBlocks.AENDER_CACTUS.get().defaultBlockState();
         BlockState log = RetoldBlocks.AENDER_LOG.get().defaultBlockState();
         BlockState leaves = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
 
@@ -488,6 +493,12 @@ public final class RetoldAenderGameTests {
             helper.assertTrue(grass.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender grass must be shovel-mineable");
             helper.assertTrue(soil.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender soil must be shovel-mineable");
             helper.assertTrue(stone.is(BlockTags.MINEABLE_WITH_PICKAXE), "Aender stone must be pickaxe-mineable");
+            helper.assertTrue(sand.is(BlockTags.MINEABLE_WITH_SHOVEL), "Aender sand must be shovel-mineable");
+            helper.assertTrue(sand.is(BlockTags.SAND), "Aender sand must participate in the sand tag");
+            helper.assertTrue(
+                    sandstone.is(BlockTags.MINEABLE_WITH_PICKAXE),
+                    "Aender sandstone must be pickaxe-mineable"
+            );
             helper.assertTrue(log.is(BlockTags.MINEABLE_WITH_AXE), "Aender logs must be axe-mineable");
             helper.assertTrue(log.is(BlockTags.LOGS), "Aender logs must participate in the vanilla logs tag");
             helper.assertTrue(
@@ -520,6 +531,12 @@ public final class RetoldAenderGameTests {
                     "Covered Aender grass must revert to Aender soil"
             );
 
+            level.setBlock(cactusGroundPos, sand, 3);
+            helper.assertTrue(
+                    cactus.canSurvive(level, cactusPos),
+                    "Aender cactus must survive on Aender sand"
+            );
+
             level.setBlock(leafLogPos, log, 3);
             level.setBlock(leafPos, leaves.setValue(LeavesBlock.PERSISTENT, false), 3);
             helper.tickBlock(new BlockPos(5, 3, 5));
@@ -546,6 +563,21 @@ public final class RetoldAenderGameTests {
                     "Aender stone must drop itself"
             );
             helper.assertTrue(
+                    isOnlyDrop(Block.getDrops(sand, level, groundPos, null), RetoldBlocks.AENDER_SAND_ITEM.get()),
+                    "Aender sand must drop itself"
+            );
+            helper.assertTrue(
+                    isOnlyDrop(
+                            Block.getDrops(sandstone, level, groundPos, null),
+                            RetoldBlocks.AENDER_SANDSTONE_ITEM.get()
+                    ),
+                    "Aender sandstone must drop itself"
+            );
+            helper.assertTrue(
+                    isOnlyDrop(Block.getDrops(cactus, level, cactusPos, null), RetoldBlocks.AENDER_CACTUS_ITEM.get()),
+                    "Aender cactus must drop itself"
+            );
+            helper.assertTrue(
                     isOnlyDrop(Block.getDrops(log, level, groundPos, null), RetoldBlocks.AENDER_LOG_ITEM.get()),
                     "Aender logs must drop themselves"
             );
@@ -570,6 +602,8 @@ public final class RetoldAenderGameTests {
             level.setBlock(groundPos, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(leafPos, Blocks.AIR.defaultBlockState(), 3);
             level.setBlock(leafLogPos, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(cactusPos, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(cactusGroundPos, Blocks.AIR.defaultBlockState(), 3);
         }
     }
 
@@ -743,7 +777,10 @@ public final class RetoldAenderGameTests {
                 helper,
                 CreativeModeTabs.NATURAL_BLOCKS,
                 Items.END_STONE,
-                RetoldBlocks.AENDER_STONE_ITEM.get()
+                RetoldBlocks.AENDER_STONE_ITEM.get(),
+                RetoldBlocks.AENDER_SAND_ITEM.get(),
+                RetoldBlocks.AENDER_SANDSTONE_ITEM.get(),
+                RetoldBlocks.AENDER_CACTUS_ITEM.get()
         );
         assertConsecutiveItems(
                 helper,

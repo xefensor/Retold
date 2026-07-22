@@ -16,6 +16,7 @@ public final class AenderVolatility {
     private static long realitySalt = mix64(0xA3D1E41F29B7C53DL);
     private static long realityEpoch = 0L;
     private static int generatorVersion = AenderRealityData.LEGACY_GENERATOR_VERSION;
+    private static volatile long generationRevision;
     private static AenderRealityData realityData;
 
     private static final Map<RegionKey, Long> ACTIVE_REGION_SALTS = new HashMap<>();
@@ -70,6 +71,7 @@ public final class AenderVolatility {
         realitySalt = mix64(0xA3D1E41F29B7C53DL);
         realityEpoch = 0L;
         generatorVersion = AenderRealityData.LEGACY_GENERATOR_VERSION;
+        generationRevision++;
     }
 
     private static void installReality(AenderRealityData data) {
@@ -82,6 +84,7 @@ public final class AenderVolatility {
         realitySalt = data.seed();
         realityEpoch = data.epoch();
         generatorVersion = data.generatorVersion();
+        generationRevision++;
     }
 
     public static synchronized void retainForChunk(ChunkAccess chunk) {
@@ -202,6 +205,7 @@ public final class AenderVolatility {
                         ^ 0xA3D1E41F29B7C53DL
         );
         realityData = null;
+        generationRevision++;
     }
 
     public static synchronized long currentRealityEpoch() {
@@ -212,8 +216,13 @@ public final class AenderVolatility {
         return generatorVersion;
     }
 
+    public static long currentGenerationRevision() {
+        return generationRevision;
+    }
+
     public static synchronized void advanceRegion(ServerLevel level, int regionX, int regionZ) {
         forgetRegionColumn(new RegionColumn(regionX, regionZ));
+        generationRevision++;
         level.getServer().getDataStorage().scheduleSave();
     }
 

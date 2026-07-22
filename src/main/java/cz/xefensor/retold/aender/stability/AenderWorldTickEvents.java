@@ -105,6 +105,6 @@ public final class AenderWorldTickEvents {
         AenderVolatility.advanceReality(level);
         AenderRealityTickEvents.beginRealityTransition(level, loadedChunks);
         hadPlayers = false;
-        Retold.LOGGER.debug("Cleared volatile Aender terrain after the last player travelled out");
+        Retold.LOGGER.debug("Queued volatile Aender terrain clearing after the last player travelled out");
     }
 }

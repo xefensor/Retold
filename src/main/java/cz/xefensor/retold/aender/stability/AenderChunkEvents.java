@@ -1,7 +1,6 @@
 package cz.xefensor.retold.aender.stability;
 
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
-import cz.xefensor.retold.aender.generation.AenderChunkGenerator;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -40,11 +39,12 @@ public final class AenderChunkEvents {
 
         if (AenderVolatility.needsRegeneration(chunk)) {
             /*
-             * A stale in-memory chunk must be regenerated during its load event. Queuing it
-             * allows the chunk to become visible before the queue reaches it, which creates
-             * hard walls between the old and current Aender realities.
+             * Never rebuild terrain synchronously from a chunk-load callback. A burst of
+             * stale loads can otherwise put several complete chunk generations into one
+             * server tick. Blank the old reality immediately, then let the adaptive queue
+             * rebuild it without exposing an old/new terrain wall to clients.
              */
-            AenderChunkGenerator.regenerateLoadedChunk(chunk);
+            AenderRealityTickEvents.blankLoadedStaleChunk(level, chunk);
         }
     }
 
