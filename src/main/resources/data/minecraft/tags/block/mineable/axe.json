@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "#retold:aender_logs",
+    "retold:aender_planks",
+    "retold:aender_stairs",
+    "retold:aender_slab",
+    "retold:aender_fence",
+    "retold:aender_fence_gate",
+    "retold:aender_door",
+    "retold:aender_trapdoor",
+    "retold:aender_button",
+    "retold:aender_pressure_plate",
+    "retold:aender_sign",
+    "retold:aender_wall_sign",
+    "retold:aender_hanging_sign",
+    "retold:aender_wall_hanging_sign"
+  ]
+}

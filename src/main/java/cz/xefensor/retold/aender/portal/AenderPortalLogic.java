@@ -2,7 +2,7 @@ package cz.xefensor.retold.aender.portal;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
-import cz.xefensor.retold.aender.generation.AenderChunkGenerator;
+import cz.xefensor.retold.aender.generation.AenderLoadedChunkReplacement;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
 import cz.xefensor.retold.aender.stability.AenderStabilityData;
@@ -90,13 +90,23 @@ public final class AenderPortalLogic {
         AenderPortalShape.findComplete(currentLevel, portalEntryPos)
                 .ifPresent(shape -> AenderPortalData.get(currentLevel).register(currentLevel, shape));
 
-        prepareArrivalArea(destinationLevel, approximateExit);
+        boolean enteringAender = destinationLevel.dimension() == RetoldAenderDimensions.AENDER;
+
+        if (!enteringAender) {
+            destinationLevel.getChunk(approximateExit.getX() >> 4, approximateExit.getZ() >> 4);
+        } else if (!AenderPortalWarmup.isSafeCoreReady(entity)) {
+            /*
+             * Players using this portal wait for the asynchronous warm-up. This
+             * bounded fallback remains for commands, other portal integrations,
+             * and non-player entities that bypass the charging state machine.
+             */
+            AenderRealityTickEvents.prepareArrivalCore(destinationLevel, approximateExit);
+        }
 
         AenderPortalShape exitPortal = findClosestPortal(destinationLevel, approximateExit)
                 .orElseGet(() -> createExitPortal(destinationLevel, approximateExit));
 
-        if (destinationLevel.dimension() == RetoldAenderDimensions.AENDER) {
-            AenderRealityTickEvents.prepareArrivalView(destinationLevel, exitPortal.centerBlock());
+        if (enteringAender) {
             AenderPortalWarmup.finish(entity);
         }
 
@@ -120,10 +130,23 @@ public final class AenderPortalLogic {
                 entity.position()
         );
 
-        return new AenderWarmupTarget(aender, approximateExit);
+        AenderPortalShape portalCandidate = AenderPortalData.get(aender)
+                .findNear(aender, approximateExit, SEARCH_RADIUS_TO_AENDER)
+                .stream()
+                .findFirst()
+                .orElse(null);
+        BlockPos preparationCenter = portalCandidate == null
+                ? approximateExit
+                : portalCandidate.centerBlock();
+
+        return new AenderWarmupTarget(aender, preparationCenter, portalCandidate);
     }
 
-    record AenderWarmupTarget(ServerLevel level, BlockPos center) {
+    record AenderWarmupTarget(
+            ServerLevel level,
+            BlockPos center,
+            @Nullable AenderPortalShape portalCandidate
+    ) {
     }
 
     private static @Nullable ResourceKey<Level> destinationDimension(ServerLevel currentLevel) {
@@ -150,7 +173,10 @@ public final class AenderPortalLogic {
         AenderPortalData portalData = AenderPortalData.get(level);
 
         for (AenderPortalShape candidate : portalData.findNear(level, approximateExit, horizontalRadius)) {
-            preparePortalArea(level, candidate);
+            if (!isPortalAreaLoaded(level, candidate)) {
+                continue;
+            }
+
             Optional<AenderPortalShape> found = AenderPortalShape.findComplete(level, candidate.centerBlock());
 
             if (found.isPresent()) {
@@ -221,21 +247,7 @@ public final class AenderPortalLogic {
         return Optional.empty();
     }
 
-    private static void prepareArrivalArea(ServerLevel level, BlockPos approximateExit) {
-        if (level.dimension() != RetoldAenderDimensions.AENDER) {
-            level.getChunk(approximateExit.getX() >> 4, approximateExit.getZ() >> 4);
-            return;
-        }
-
-        AenderRealityTickEvents.regenerateLoadedArea(level, approximateExit);
-    }
-
-    private static void preparePortalArea(ServerLevel level, AenderPortalShape shape) {
-        if (level.dimension() != RetoldAenderDimensions.AENDER) {
-            level.getChunk(shape.centerBlock().getX() >> 4, shape.centerBlock().getZ() >> 4);
-            return;
-        }
-
+    private static boolean isPortalAreaLoaded(ServerLevel level, AenderPortalShape shape) {
         int minChunkX = Math.floorDiv(shape.minCorner().getX() - 1, 16);
         int maxChunkX = Math.floorDiv(shape.minCorner().getX() + shape.width(), 16);
         int minChunkZ = Math.floorDiv(shape.minCorner().getZ() - 1, 16);
@@ -243,13 +255,13 @@ public final class AenderPortalLogic {
 
         for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
             for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
-                regenerateAenderChunkIfStale(level, chunkX, chunkZ);
+                if (level.getChunkSource().getChunkNow(chunkX, chunkZ) == null) {
+                    return false;
+                }
             }
         }
-    }
 
-    private static void regenerateAenderChunkIfStale(ServerLevel level, int chunkX, int chunkZ) {
-        regenerateAenderChunkIfStale(level, level.getChunk(chunkX, chunkZ));
+        return true;
     }
 
     private static void regenerateAenderChunkIfStale(ServerLevel level, ChunkAccess chunk) {
@@ -264,7 +276,7 @@ public final class AenderPortalLogic {
         AenderVolatility.retainForChunk(chunk);
 
         if (AenderVolatility.needsRegeneration(chunk)) {
-            AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+            AenderLoadedChunkReplacement.regenerate(level, chunk);
         }
     }
 
@@ -308,6 +320,7 @@ public final class AenderPortalLogic {
 
     private static BlockPos findExitOrigin(ServerLevel level, BlockPos approximateExit) {
         BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
+        boolean destinationIsAender = level.dimension() == RetoldAenderDimensions.AENDER;
 
         for (BlockPos.MutableBlockPos column : BlockPos.spiralAround(
                 approximateExit,
@@ -315,7 +328,17 @@ public final class AenderPortalLogic {
                 Direction.EAST,
                 Direction.SOUTH
         )) {
-            int y = preferredPortalY(level, column);
+            int surfaceY = level.getHeight(
+                    Heightmap.Types.MOTION_BLOCKING,
+                    column.getX(),
+                    column.getZ()
+            );
+
+            if (!AenderPortalPlacement.canUseSurface(destinationIsAender, surfaceY, level.getMinY())) {
+                continue;
+            }
+
+            int y = preferredPortalY(level, surfaceY);
             candidate.set(column.getX() - 1, y, column.getZ() - 1);
 
             if (canCreatePortal(level, candidate)) {
@@ -328,8 +351,10 @@ public final class AenderPortalLogic {
                 approximateExit.getX(),
                 approximateExit.getZ()
         );
-        int fallbackY = Mth.clamp(
-                Math.max(surfaceY, approximateExit.getY()),
+        int fallbackY = AenderPortalPlacement.fallbackY(
+                destinationIsAender,
+                surfaceY,
+                approximateExit.getY(),
                 level.getMinY() + 8,
                 Math.min(level.getMaxY() - 6, level.getMinY() + level.getLogicalHeight() - 6)
         );
@@ -349,11 +374,10 @@ public final class AenderPortalLogic {
         return new BlockPos(fallbackX, fallbackY, fallbackZ);
     }
 
-    private static int preferredPortalY(ServerLevel level, BlockPos column) {
-        int height = level.getHeight(Heightmap.Types.MOTION_BLOCKING, column.getX(), column.getZ());
+    private static int preferredPortalY(ServerLevel level, int surfaceY) {
         int minY = level.getMinY() + 4;
         int maxY = Math.min(level.getMaxY() - 6, level.getMinY() + level.getLogicalHeight() - 6);
-        return Mth.clamp(height, minY, maxY);
+        return Mth.clamp(surfaceY, minY, maxY);
     }
 
     private static boolean canCreatePortal(ServerLevel level, BlockPos origin) {

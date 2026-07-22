@@ -12,11 +12,39 @@ Each release should be readable in two passes:
 ### Player-Facing
 
 - Journeyman cartographers now sell an Air Temple Explorer Map for 12 emeralds and a compass after the world reaches Stage 2. The map marks the nearest Air Temple with an exact X.
+- Aender terrain now keeps the same reality across disconnects, saves, normal game/server restarts, and recovery after a crash. Volatile terrain receives a new seed only after the last player actually travels out of the dimension.
+- Fresh worlds use improved Aender terrain composition that removes buried overlap surfaces and lets trees and boulders continue cleanly across chunk borders. Existing saves retain legacy generation, including newly explored chunks.
+- Entering the Aender now charges for at least five seconds and waits longer when necessary until an asynchronously prepared 5x5 arrival core is genuinely safe. The transition no longer forces that core, or the whole view-distance square, to generate synchronously, and preparation happens without technical action-bar text during normal gameplay.
+- Automatically created Aender portal counterparts now search nearby island terrain first and use a supported floating platform at Y=100 when the destination area is entirely void, instead of appearing near the dimension floor.
+- The Aender portal now preserves the Nether portal's exact animated pattern, timing, and transparency while recoloring it to the vivid Aender green palette at resource-load time. Its particles use the same palette and emerge above the horizontal surface with a gentle upward drift instead of spawning partly underneath it where players could not see them.
+- Leaving the Aender now blanks all loaded volatile chunks as one reality transition before regenerating them incrementally in concentric rings from arriving players, preventing old and new island layouts from forming full-height seams or rebuilding in arbitrary coordinate order. Stabilized chunks remain intact.
+- Blanking volatile Aender chunks now removes their non-player entities immediately, preventing mobs and dropped items from falling through the temporary empty terrain before regeneration reaches them.
+- Aender regeneration now measures average server tick time and dynamically uses available tick headroom: healthy servers rebuild several chunks per tick, while regeneration scales down or pauses before threatening TPS.
+- Multiplayer Aender volatility now follows actually player-tracked generator regions instead of waiting for the entire dimension to empty. An area may change after its last watcher leaves even while other players remain elsewhere; regions watched by any player and stabilized chunks are never reset.
+- Placed and broken blocks in Aender chunks now survive saves, quits, restarts, and normal crash recovery while their regional reality remains current. Persistent chunk signatures distinguish saved player edits from terrain that genuinely needs regeneration, and the obsolete unstable-chunk save/read interception no longer discards those chunks.
+- Aender grass now spreads, responds to bonemeal, becomes snowy, and reverts to Aender soil under cover. Aender leaves now track logs, decay naturally, and drop renewable saplings and sticks; player-placed and upgraded legacy leaves remain persistent.
+- Aender trees now form a complete renewable wood family with wood and stripped variants, planks, stairs, slabs, fences and gates, doors and trapdoors, redstone components, signs, hanging signs, boats, and chest boats. The family supports normal recipes, fuel, composting, axe stripping, tags, and survival drops; its current purple textures are explicitly AI-generated placeholders.
+- Retold content now appears alongside equivalent vanilla content in Building Blocks, Natural Blocks, Functional Blocks, Tools & Utilities, Ingredients, Spawn Eggs, and permission-gated Operator Utilities; Retold does not add a separate creative tab. The Aender Stabilizer and Chronolith are available in ordinary Functional Blocks, while only the development portal frame is operator-gated. Aender Eye and Gale Core now have functional spawn eggs, and previously hidden block items have modern client-item definitions.
+- Added credited AI-generated placeholder textures for the previously missing Aender Chronolith model and the new Aender Eye and Gale Core spawn eggs.
 
 ### Technical
 
 - Added a data-driven Air Temple map-destination tag and a server-authoritative cartographer interaction hook. The hook preserves existing saved offers, supports already-generated cartographers in upgraded worlds, and avoids duplicate map trades.
 - Added a GameTest covering Stage 1 gating, Stage 2 availability, preservation of existing saved offers, map marking, trade cost, and duplicate prevention.
+- Added versioned `AenderRealityData` for the persisted reality seed, global and regional epochs, and fresh-world generator selection. Reality changes are saved before new terrain can generate.
+- Added generator V2 with order-independent island-interval composition and chunk-halo placement for large decorations; generator V1 remains selected for upgraded saves.
+- Added deterministic JUnit coverage for terrain interval composition and a GameTest for Aender reality serialization and legacy-version fallback.
+- Extended Aender volatility coverage to verify the blank intermediate state used by progressive reality regeneration.
+- Added deterministic tests for the adaptive tick-time regeneration budget.
+- Added multiplayer region-lifecycle tests covering shared regions, watcher departure, final disconnect preservation, and transient dimension-transfer tracking gaps.
+- Added the serialized `retold:aender_chunk_reality` chunk attachment with explicit current/stale states. Chunks upgraded without the attachment adopt their saved blocks into the current reality instead of being destructively regenerated once.
+- Unloaded Aender chunks now evict their duplicate runtime generation signature while retaining the persistent chunk attachment, bounding that cache during long exploration sessions.
+- Added Aender terrain-block tags, loot tables, and GameTest coverage for vegetation support, mining categories, harvesting behavior, and signature cache restoration.
+- Split loaded-chunk replacement, entity reconciliation, heightmaps, lighting, and packet resends out of `AenderChunkGenerator` into `AenderLoadedChunkReplacement` and `AenderChunkSectionEditor`.
+- Renamed the misleading runtime signature diagnostic to `Aender cached chunk signatures`.
+- Added an indefinite, TPS-aware portal preparation state machine with unit coverage for its transition gate and a 5x5 asynchronously prepared safety core.
+- Added deterministic coverage for Aender counterpart surface selection and the Y=100 void fallback.
+- Added the data-driven Aender tree grower, NeoForge stripping/composting data maps, complete wood-family resources and entities, and GameTest coverage for renewal, tags, loot, stripping, signs, and boats.
 
 ## 0.2.1 - 2026-07-20
 

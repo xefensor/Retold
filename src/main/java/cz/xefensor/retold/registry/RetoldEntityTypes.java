@@ -5,6 +5,8 @@ import cz.xefensor.retold.aender.entity.AenderEye;
 import cz.xefensor.retold.worldgen.air.GaleCore;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.vehicle.boat.Boat;
+import net.minecraft.world.entity.vehicle.boat.ChestBoat;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -33,6 +35,34 @@ public final class RetoldEntityTypes {
                             .sized(1.35F, 3.98F)
                             .clientTrackingRange(10)
                             .updateInterval(3)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Boat>> AENDER_BOAT =
+            ENTITY_TYPES.registerEntityType(
+                    "aender_boat",
+                    (type, level) -> new Boat(type, level, () -> RetoldAenderWood.AENDER_BOAT_ITEM.get()),
+                    MobCategory.MISC,
+                    builder -> builder
+                            .noLootTable()
+                            .sized(1.375F, 0.5625F)
+                            .eyeHeight(0.5625F)
+                            .clientTrackingRange(10)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<ChestBoat>> AENDER_CHEST_BOAT =
+            ENTITY_TYPES.registerEntityType(
+                    "aender_chest_boat",
+                    (type, level) -> new ChestBoat(
+                            type,
+                            level,
+                            () -> RetoldAenderWood.AENDER_CHEST_BOAT_ITEM.get()
+                    ),
+                    MobCategory.MISC,
+                    builder -> builder
+                            .noLootTable()
+                            .sized(1.375F, 0.5625F)
+                            .eyeHeight(0.5625F)
+                            .clientTrackingRange(10)
             );
 
     private RetoldEntityTypes() {

@@ -5,14 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cz.xefensor.retold.aender.RetoldAenderEntryPlatform;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.SectionPos;
-import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.level.WorldGenRegion;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.NoiseColumn;
@@ -20,19 +13,16 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.biome.BiomeSource;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
-import net.minecraft.world.phys.AABB;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,14 +74,6 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         generateChunk(chunk, true);
     }
 
-    public static void regenerateLoadedChunk(ServerLevel level, ChunkAccess chunk) {
-        ChunkPos chunkPos = chunk.getPos();
-        List<Entity> entities = entitiesInRegenerationBounds(level, chunkPos);
-        generateChunk(chunk, true);
-        reconcileEntitiesAfterRegeneration(level, chunkPos, entities);
-        resendRegeneratedChunk(level, chunk);
-    }
-
     private static void generateChunk(ChunkAccess chunk, boolean clearFirst) {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
@@ -102,7 +84,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         TerrainBlocks terrainBlocks = TerrainBlocks.create();
 
         if (clearFirst) {
-            clearChunkSections(chunk);
+            AenderChunkSectionEditor.clear(chunk);
         }
 
         List<AenderIslandSampler.Island> islands = AenderIslandSampler.islandsForChunk(chunk);
@@ -112,99 +94,42 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             cachedIslands.add(new CachedIsland(island, chunkMinX, chunkMinZ));
         }
 
-        for (CachedIsland island : cachedIslands) {
-            generateIslandTerrain(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, terrainBlocks, pos);
+        boolean mergedGeneration = AenderVolatility.currentGeneratorVersion()
+                >= AenderRealityData.CURRENT_GENERATOR_VERSION;
+
+        if (mergedGeneration) {
+            generateMergedTerrain(chunk, cachedIslands, terrainBlocks, pos);
+        } else {
+            for (CachedIsland island : cachedIslands) {
+                generateIslandTerrain(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, terrainBlocks, pos);
+            }
         }
 
         placePortalFrameDeposits(chunk, cachedIslands);
 
         for (CachedIsland island : cachedIslands) {
-            decorateIsland(chunk, island, chunkMinX, chunkMaxX, chunkMinZ, chunkMaxZ, pos);
+            decorateIsland(
+                    chunk,
+                    island,
+                    cachedIslands,
+                    chunkMinX,
+                    chunkMaxX,
+                    chunkMinZ,
+                    chunkMaxZ,
+                    mergedGeneration,
+                    pos
+            );
+        }
+
+        if (mergedGeneration) {
+            placeCrossChunkLargeDecorations(chunk, cachedIslands);
         }
 
         RetoldAenderEntryPlatform.generateInChunk(chunk);
 
-        primeFreshHeightmaps(chunk);
+        AenderChunkSectionEditor.primeFreshHeightmaps(chunk);
 
         AenderVolatility.markGenerated(chunk);
-    }
-
-    private static void clearChunkSections(ChunkAccess chunk) {
-        // Remove block entities and their tickers before replacing their backing states.
-        for (BlockPos blockEntityPos : chunk.getBlockEntitiesPos()) {
-            chunk.removeBlockEntity(blockEntityPos);
-        }
-
-        LevelChunkSection[] sections = chunk.getSections();
-        LevelChunk levelChunk = chunk instanceof LevelChunk loadedChunk ? loadedChunk : null;
-
-        for (int sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
-            LevelChunkSection oldSection = sections[sectionIndex];
-
-            if (oldSection.hasOnlyAir()) {
-                continue;
-            }
-
-            if (levelChunk != null) {
-                int sectionY = chunk.getSectionYFromSectionIndex(sectionIndex);
-                BlockPos sectionOrigin = new BlockPos(
-                        chunk.getPos().getMinBlockX(),
-                        SectionPos.sectionToBlockCoord(sectionY),
-                        chunk.getPos().getMinBlockZ()
-                );
-
-                levelChunk.getLevel().getChunkSource().getLightEngine().updateSectionStatus(sectionOrigin, true);
-                levelChunk.getLevel().getChunkSource().onSectionEmptinessChanged(
-                        chunk.getPos().x(),
-                        sectionY,
-                        chunk.getPos().z(),
-                        true
-                );
-
-                sections[sectionIndex] = new LevelChunkSection(
-                        levelChunk.getLevel().palettedContainerFactory().createForBlockStates(),
-                        oldSection.getBiomes()
-                );
-            } else {
-                // World-generation containers start with air at palette index zero.
-                sections[sectionIndex] = new LevelChunkSection(
-                        oldSection.getStates().recreate(),
-                        oldSection.getBiomes()
-                );
-            }
-        }
-
-        chunk.markUnsaved();
-    }
-
-    private static void primeFreshHeightmaps(ChunkAccess chunk) {
-        EnumSet<Heightmap.Types> heightmaps = EnumSet.of(
-                Heightmap.Types.WORLD_SURFACE_WG,
-                Heightmap.Types.OCEAN_FLOOR_WG,
-                Heightmap.Types.MOTION_BLOCKING
-        );
-
-        chunk.getHeightmaps().forEach(entry -> {
-            heightmaps.add(entry.getKey());
-            Arrays.fill(entry.getValue().getRawData(), 0L);
-        });
-
-        Heightmap.primeHeightmaps(chunk, heightmaps);
-    }
-
-    private static void resendRegeneratedChunk(ServerLevel level, ChunkAccess chunk) {
-        if (!(chunk instanceof LevelChunk levelChunk)) {
-            return;
-        }
-
-        levelChunk.markUnsaved();
-
-        ClientboundLevelChunkWithLightPacket packet =
-                new ClientboundLevelChunkWithLightPacket(levelChunk, level.getLightEngine(), null, null);
-
-        for (ServerPlayer player : level.getChunkSource().chunkMap.getPlayers(chunk.getPos(), false)) {
-            player.connection.send(packet);
-        }
     }
 
     private static void generateIslandTerrain(
@@ -245,6 +170,82 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 }
             }
         }
+    }
+
+    private static void generateMergedTerrain(
+            ChunkAccess chunk,
+            List<CachedIsland> islands,
+            TerrainBlocks terrainBlocks,
+            BlockPos.MutableBlockPos pos
+    ) {
+        int[] intervalMins = new int[islands.size()];
+        int[] intervalMaxes = new int[islands.size()];
+        long[] intervalSeeds = new long[islands.size()];
+        int chunkMinX = chunk.getPos().getMinBlockX();
+        int chunkMinZ = chunk.getPos().getMinBlockZ();
+
+        for (int localX = 0; localX < 16; localX++) {
+            int x = chunkMinX + localX;
+
+            for (int localZ = 0; localZ < 16; localZ++) {
+                int z = chunkMinZ + localZ;
+                int intervalCount = collectTerrainIntervals(
+                        islands,
+                        x,
+                        z,
+                        intervalMins,
+                        intervalMaxes,
+                        intervalSeeds
+                );
+                int mergedCount = AenderTerrainIntervals.merge(
+                        intervalMins,
+                        intervalMaxes,
+                        intervalSeeds,
+                        intervalCount
+                );
+
+                for (int intervalIndex = 0; intervalIndex < mergedCount; intervalIndex++) {
+                    int mergedMin = intervalMins[intervalIndex];
+                    int mergedMax = intervalMaxes[intervalIndex];
+                    long surfaceSeed = intervalSeeds[intervalIndex];
+
+                    for (int y = mergedMin; y <= mergedMax; y++) {
+                        pos.set(x, y, z);
+                        chunk.setBlockState(
+                                pos,
+                                terrainBlockForDepth(terrainBlocks, surfaceSeed, x, z, mergedMax - y),
+                                0
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    private static int collectTerrainIntervals(
+            List<CachedIsland> islands,
+            int x,
+            int z,
+            int[] intervalMins,
+            int[] intervalMaxes,
+            long[] intervalSeeds
+    ) {
+        int count = 0;
+
+        for (CachedIsland island : islands) {
+            AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+            if (column.empty()) {
+                continue;
+            }
+
+            intervalMins[count] = column.minY();
+            intervalMaxes[count] = column.maxY();
+            intervalSeeds[count] = island.seed();
+            count++;
+        }
+
+        return count;
     }
 
     private static void placePortalFrameDeposits(ChunkAccess chunk, List<CachedIsland> islands) {
@@ -329,10 +330,12 @@ public final class AenderChunkGenerator extends ChunkGenerator {
     private static void decorateIsland(
             ChunkAccess chunk,
             CachedIsland island,
+            List<CachedIsland> islands,
             int chunkMinX,
             int chunkMaxX,
             int chunkMinZ,
             int chunkMaxZ,
+            boolean mergedGeneration,
             BlockPos.MutableBlockPos pos
     ) {
         int minX = Math.max(chunkMinX, island.minX());
@@ -354,13 +357,26 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
+                if (mergedGeneration
+                        && !isExposedSurfaceOwner(islands, island, x, z, surfaceY)) {
+                    continue;
+                }
+
+                pos.set(x, surfaceY, z);
+
+                if (mergedGeneration
+                        && (!chunk.getBlockState(pos).is(RetoldBlocks.AENDER_GRASS_BLOCK)
+                        || !chunk.getBlockState(pos.above()).isAir())) {
+                    continue;
+                }
+
                 LakeColumn lake = lakeColumnAt(island, x, z, surfaceY);
 
                 if (lake != null && carveLakeColumn(chunk, column, x, z, surfaceY, lake, pos)) {
                     continue;
                 }
 
-                placeUndersideSpur(chunk, column, x, z, island.seed(), pos);
+                placeUndersideSpur(chunk, column, x, z, island.seed(), mergedGeneration, pos);
                 placeUndersideGrowth(chunk, column, x, z, island.seed(), pos);
 
                 pos.set(x, surfaceY, z);
@@ -375,21 +391,115 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                     continue;
                 }
 
-                if (isBoulderOrigin(x, z, island.seed())) {
+                if (!mergedGeneration && isBoulderOrigin(x, z, island.seed())) {
                     placeBoulder(chunk, x, surfaceY, z, island.seed());
                     continue;
                 }
 
-                if (isTreeOrigin(x, z, island.seed())
+                if (!mergedGeneration
+                        && isTreeOrigin(x, z, island.seed())
                         && hasTreeRoom(chunk, x, surfaceY, z)
                         && hasGentleGround(island, x, surfaceY, z)) {
                     placeTree(chunk, x, surfaceY, z, island.seed());
                     continue;
                 }
 
+                if (mergedGeneration
+                        && (isBoulderOrigin(x, z, island.seed())
+                        || isTreePlacement(islands, island, x, surfaceY, z))) {
+                    continue;
+                }
+
                 placeGroundDecoration(chunk, x, surfaceY, z, island.seed(), pos);
             }
         }
+    }
+
+    private static void placeCrossChunkLargeDecorations(
+            ChunkAccess chunk,
+            List<CachedIsland> islands
+    ) {
+        final int featureHalo = 5;
+        int minX = chunk.getPos().getMinBlockX() - featureHalo;
+        int maxX = chunk.getPos().getMaxBlockX() + featureHalo;
+        int minZ = chunk.getPos().getMinBlockZ() - featureHalo;
+        int maxZ = chunk.getPos().getMaxBlockZ() + featureHalo;
+
+        for (CachedIsland island : islands) {
+            for (int x = minX; x <= maxX; x++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+
+                    if (column.empty()) {
+                        continue;
+                    }
+
+                    int surfaceY = column.maxY();
+
+                    if (!isExposedSurfaceOwner(islands, island, x, z, surfaceY)
+                            || isStoneOutcrop(island.seed(), x, z)
+                            || lakeColumnAt(island, x, z, surfaceY) != null) {
+                        continue;
+                    }
+
+                    if (isBoulderOrigin(x, z, island.seed())) {
+                        placeBoulder(chunk, x, surfaceY, z, island.seed());
+                        continue;
+                    }
+
+                    if (isTreePlacement(islands, island, x, surfaceY, z)) {
+                        placeTree(chunk, x, surfaceY, z, island.seed());
+                    }
+                }
+            }
+        }
+    }
+
+    private static boolean isTreePlacement(
+            List<CachedIsland> islands,
+            CachedIsland island,
+            int x,
+            int surfaceY,
+            int z
+    ) {
+        return surfaceY + 8 < AenderIslandSampler.MAX_Y
+                && isTreeOrigin(x, z, island.seed())
+                && !isBoulderOrigin(x, z, island.seed())
+                && !isStoneOutcrop(island.seed(), x, z)
+                && lakeColumnAt(island, x, z, surfaceY) == null
+                && isExposedSurfaceOwner(islands, island, x, z, surfaceY)
+                && hasGentleGround(island, x, surfaceY, z);
+    }
+
+    private static boolean isExposedSurfaceOwner(
+            List<CachedIsland> islands,
+            CachedIsland candidate,
+            int x,
+            int z,
+            int surfaceY
+    ) {
+        for (CachedIsland island : islands) {
+            if (island == candidate) {
+                continue;
+            }
+
+            AenderIslandSampler.Island.Column other = island.columnAt(x, z);
+
+            if (other.empty()) {
+                continue;
+            }
+
+            if (other.minY() <= surfaceY + 1 && other.maxY() >= surfaceY + 1) {
+                return false;
+            }
+
+            if (other.maxY() == surfaceY
+                    && Long.compareUnsigned(island.seed(), candidate.seed()) < 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override
@@ -410,6 +520,10 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             LevelHeightAccessor level,
             RandomState random
     ) {
+        if (AenderVolatility.currentGeneratorVersion() >= AenderRealityData.CURRENT_GENERATOR_VERSION) {
+            return getMergedBaseColumn(x, z);
+        }
+
         TerrainBlocks terrainBlocks = TerrainBlocks.create();
         BlockState[] states = new BlockState[AenderIslandSampler.HEIGHT];
 
@@ -417,6 +531,41 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             int y = AenderIslandSampler.MIN_Y + i;
             int surfaceDepth = AenderIslandSampler.surfaceDepthAt(x, y, z);
             states[i] = surfaceDepth >= 0 ? terrainBlockForDepth(terrainBlocks, 0L, x, z, surfaceDepth) : AIR;
+        }
+
+        return new NoiseColumn(AenderIslandSampler.MIN_Y, states);
+    }
+
+    private static NoiseColumn getMergedBaseColumn(int x, int z) {
+        List<AenderIslandSampler.Island> islands = AenderIslandSampler.islandsAtColumn(x, z);
+        int[] mins = new int[islands.size()];
+        int[] maxes = new int[islands.size()];
+        long[] seeds = new long[islands.size()];
+
+        for (int index = 0; index < islands.size(); index++) {
+            AenderIslandSampler.Island island = islands.get(index);
+            AenderIslandSampler.Island.Column column = island.columnAt(x, z);
+            mins[index] = column.minY();
+            maxes[index] = column.maxY();
+            seeds[index] = island.seed();
+        }
+
+        int intervalCount = AenderTerrainIntervals.merge(mins, maxes, seeds, islands.size());
+        TerrainBlocks terrainBlocks = TerrainBlocks.create();
+        BlockState[] states = new BlockState[AenderIslandSampler.HEIGHT];
+        Arrays.fill(states, AIR);
+
+        for (int intervalIndex = 0; intervalIndex < intervalCount; intervalIndex++) {
+            for (int y = mins[intervalIndex]; y <= maxes[intervalIndex]; y++) {
+                int surfaceDepth = maxes[intervalIndex] - y;
+                states[y - AenderIslandSampler.MIN_Y] = terrainBlockForDepth(
+                        terrainBlocks,
+                        seeds[intervalIndex],
+                        x,
+                        z,
+                        surfaceDepth
+                );
+            }
         }
 
         return new NoiseColumn(AenderIslandSampler.MIN_Y, states);
@@ -471,121 +620,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         info.add("Retold Aender volatile terrain");
         info.add("Aender retained chunks: " + AenderVolatility.retainedChunkCount());
         info.add("Aender active regions: " + AenderVolatility.activeRegionCount());
-        info.add("Aender generated chunks: " + AenderVolatility.generatedThisSessionCount());
-    }
-
-    private static List<Entity> entitiesInRegenerationBounds(ServerLevel level, ChunkPos chunkPos) {
-        AABB chunkBounds = new AABB(
-                chunkPos.getMinBlockX(),
-                AenderIslandSampler.MIN_Y,
-                chunkPos.getMinBlockZ(),
-                chunkPos.getMaxBlockX() + 1,
-                AenderIslandSampler.MAX_Y,
-                chunkPos.getMaxBlockZ() + 1
-        );
-
-        return level.getEntities(
-                (Entity) null,
-                chunkBounds,
-                entity -> !(entity instanceof Player)
-        );
-    }
-
-    private static void reconcileEntitiesAfterRegeneration(
-            ServerLevel level,
-            ChunkPos chunkPos,
-            List<Entity> entities
-    ) {
-        for (Entity entity : entities) {
-            if (entity.isRemoved() || entity instanceof Player) {
-                continue;
-            }
-
-            if (isEntityValidAfterRegeneration(level, entity)) {
-                continue;
-            }
-
-            if (shouldTryPreserveRegeneratedEntity(entity)
-                    && moveEntityToRegeneratedSafeSpot(level, chunkPos, entity)) {
-                continue;
-            }
-
-            entity.discard();
-        }
-    }
-
-    private static boolean isEntityValidAfterRegeneration(ServerLevel level, Entity entity) {
-        return entity.getY() >= AenderIslandSampler.MIN_Y
-                && entity.getY() < AenderIslandSampler.MAX_Y
-                && level.noCollision(entity, entity.getBoundingBox());
-    }
-
-    private static boolean shouldTryPreserveRegeneratedEntity(Entity entity) {
-        if (entity.hasCustomName() || entity.isVehicle() || entity.isPassenger()) {
-            return true;
-        }
-
-        return entity instanceof Mob mob && mob.isPersistenceRequired();
-    }
-
-    private static boolean moveEntityToRegeneratedSafeSpot(ServerLevel level, ChunkPos chunkPos, Entity entity) {
-        BlockPos origin = entity.blockPosition();
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
-
-        for (int radius = 0; radius <= 4; radius++) {
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    if (Math.abs(dx) != radius && Math.abs(dz) != radius) {
-                        continue;
-                    }
-
-                    int x = origin.getX() + dx;
-                    int z = origin.getZ() + dz;
-
-                    if (!isInsideChunk(chunkPos, x, z)) {
-                        continue;
-                    }
-
-                    int surfaceY = AenderIslandSampler.highestBlockYAt(x, z);
-
-                    if (surfaceY < AenderIslandSampler.MIN_Y) {
-                        continue;
-                    }
-
-                    int minY = Math.max(AenderIslandSampler.MIN_Y, surfaceY + 1);
-                    int maxY = Math.min(AenderIslandSampler.MAX_Y - 1, surfaceY + 8);
-
-                    for (int y = minY; y <= maxY; y++) {
-                        pos.set(x, y, z);
-
-                        if (!level.isEmptyBlock(pos) || !level.isEmptyBlock(pos.above())) {
-                            continue;
-                        }
-
-                        entity.snapTo(
-                                x + 0.5D,
-                                y,
-                                z + 0.5D,
-                                entity.getYRot(),
-                                entity.getXRot()
-                        );
-
-                        if (isEntityValidAfterRegeneration(level, entity)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean isInsideChunk(ChunkPos chunkPos, int x, int z) {
-        return x >= chunkPos.getMinBlockX()
-                && x <= chunkPos.getMaxBlockX()
-                && z >= chunkPos.getMinBlockZ()
-                && z <= chunkPos.getMaxBlockZ();
+        info.add("Aender cached chunk signatures: " + AenderVolatility.cachedChunkSignatureCount());
     }
 
     private static BlockState terrainBlockForDepth(TerrainBlocks terrainBlocks, long seed, int x, int z, int surfaceDepth) {
@@ -810,6 +845,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             int x,
             int z,
             long seed,
+            boolean stopAtOccupiedBlock,
             BlockPos.MutableBlockPos pos
     ) {
         long spurSeed = mix64(seed
@@ -833,6 +869,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             }
 
             pos.set(x, y, z);
+
+            if (stopAtOccupiedBlock && !chunk.getBlockState(pos).isAir()) {
+                break;
+            }
+
             chunk.setBlockState(pos, dy < 3 && unit(spurSeed ^ dy) < 0.35D ? soil : stone, 0);
 
             if (dy <= 2 && unit(spurSeed ^ 0x71L ^ dy) < 0.55D) {
@@ -976,7 +1017,9 @@ public final class AenderChunkGenerator extends ChunkGenerator {
         boolean leanAlongX = unit(treeSeed ^ 0x14L) < 0.5D;
 
         BlockState log = RetoldBlocks.AENDER_LOG.get().defaultBlockState();
-        BlockState leaves = RetoldBlocks.AENDER_LEAVES.get().defaultBlockState();
+        BlockState leaves = RetoldBlocks.AENDER_LEAVES.get()
+                .defaultBlockState()
+                .setValue(LeavesBlock.PERSISTENT, false);
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
         int[] trunkX = new int[height + 1];
@@ -996,7 +1039,10 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             trunkZ[dy] = z + offsetZ;
 
             pos.set(trunkX[dy], surfaceY + dy, trunkZ[dy]);
-            chunk.setBlockState(pos, log, 0);
+
+            if (isInsideChunk(chunk, pos) && chunk.getBlockState(pos).isAir()) {
+                chunk.setBlockState(pos, log, 0);
+            }
         }
 
         placeTreeRoots(chunk, x, surfaceY, z, treeSeed, log, pos);

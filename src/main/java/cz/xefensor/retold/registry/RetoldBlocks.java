@@ -6,6 +6,8 @@ import cz.xefensor.retold.item.WaterElementItem;
 import cz.xefensor.retold.block.ExtinguishedTorchBlock;
 import cz.xefensor.retold.block.ExtinguishedWallTorchBlock;
 import cz.xefensor.retold.block.AenderChronolithBlock;
+import cz.xefensor.retold.block.AenderGrassBlock;
+import cz.xefensor.retold.block.AenderLeavesBlock;
 import cz.xefensor.retold.block.AenderPortalBlock;
 import cz.xefensor.retold.block.AenderPortalFrameBlock;
 import net.minecraft.core.registries.Registries;
@@ -13,6 +15,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RotatedPillarBlock;
@@ -43,9 +46,19 @@ public final class RetoldBlocks {
                     .rarity(Rarity.EPIC)
     );
 
-    public static final DeferredBlock<Block> AENDER_GRASS_BLOCK = BLOCKS.register(
+    public static final DeferredItem<SpawnEggItem> AENDER_EYE_SPAWN_EGG = ITEMS.registerItem(
+            "aender_eye_spawn_egg",
+            properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.AENDER_EYE.get()))
+    );
+
+    public static final DeferredItem<SpawnEggItem> GALE_CORE_SPAWN_EGG = ITEMS.registerItem(
+            "gale_core_spawn_egg",
+            properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.GALE_CORE.get()))
+    );
+
+    public static final DeferredBlock<AenderGrassBlock> AENDER_GRASS_BLOCK = BLOCKS.register(
             "aender_grass_block",
-            registryName -> new Block(
+            registryName -> new AenderGrassBlock(
                     BlockBehaviour.Properties
                             .ofFullCopy(Blocks.GRASS_BLOCK)
                             .setId(ResourceKey.create(
@@ -127,9 +140,9 @@ public final class RetoldBlocks {
             ))
     );
 
-    public static final DeferredBlock<Block> AENDER_LEAVES = BLOCKS.register(
+    public static final DeferredBlock<AenderLeavesBlock> AENDER_LEAVES = BLOCKS.register(
             "aender_leaves",
-            registryName -> new Block(
+            registryName -> new AenderLeavesBlock(
                     BlockBehaviour.Properties
                             .ofFullCopy(Blocks.OAK_LEAVES)
                             .setId(ResourceKey.create(

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column_horizontal",
+  "textures": {
+    "end": "retold:block/stripped_aender_log",
+    "side": "retold:block/stripped_aender_log"
+  }
+}

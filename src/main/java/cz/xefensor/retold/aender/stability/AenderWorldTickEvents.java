@@ -6,15 +6,41 @@ import cz.xefensor.retold.aender.generation.AenderVolatility;
 import cz.xefensor.retold.aender.portal.AenderPortalWarmup;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+
+import java.util.List;
 
 public final class AenderWorldTickEvents {
     private static boolean hadPlayers = false;
 
     private AenderWorldTickEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onLevelLoad(LevelEvent.Load event) {
+        if (event.getLevel() instanceof ServerLevel level
+                && level.dimension() == RetoldAenderDimensions.AENDER) {
+            AenderVolatility.initializeReality(level);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onCreateSpawnPosition(LevelEvent.CreateSpawnPosition event) {
+        if (event.getLevel() instanceof ServerLevel level
+                && level.dimension() == Level.OVERWORLD) {
+            /*
+             * This event only fires while a brand-new save chooses its first
+             * spawn. Worlds from older Retold releases never receive it, so a
+             * missing Aender reality record safely defaults to generator V1.
+             */
+            AenderVolatility.enableCurrentGeneratorForFreshWorld(level);
+        }
     }
 
     @SubscribeEvent
@@ -27,13 +53,9 @@ public final class AenderWorldTickEvents {
             return;
         }
 
-        boolean hasPlayers = !level.players().isEmpty();
-
-        if (hadPlayers && !hasPlayers) {
-            resetVolatileTerrain();
+        if (!level.players().isEmpty()) {
+            hadPlayers = true;
         }
-
-        hadPlayers = hasPlayers;
     }
 
     @SubscribeEvent
@@ -41,11 +63,11 @@ public final class AenderWorldTickEvents {
         if (event.getTo() == RetoldAenderDimensions.AENDER) {
             if (event.getEntity() instanceof ServerPlayer player) {
                 /*
-                 * Portal travel normally prepares this view before the transition.
-                 * Keeping the same synchronous preparation here also covers commands
-                 * and other mods that place a player directly into the Aender.
+                 * Portal travel normally prepares this bounded core before the
+                 * transition. Doing the same here covers commands and other mods
+                 * that place a player directly into the Aender.
                  */
-                AenderRealityTickEvents.prepareArrivalView(player.level(), player.blockPosition());
+                AenderRealityTickEvents.prepareArrivalCore(player.level(), player.blockPosition());
             }
 
             hadPlayers = true;
@@ -66,22 +88,23 @@ public final class AenderWorldTickEvents {
             return;
         }
 
-        resetVolatileTerrain();
+        resetVolatileTerrain(aender);
     }
 
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         AenderPortalWarmup.clear();
         AenderRealityTickEvents.clearPendingRegeneration();
-        AenderVolatility.clearForgottenWorld();
+        AenderVolatility.clearRuntime();
         hadPlayers = false;
     }
 
-    private static void resetVolatileTerrain() {
+    private static void resetVolatileTerrain(ServerLevel level) {
+        List<ChunkPos> loadedChunks = AenderVolatility.retainedChunkPositions();
         AenderPortalWarmup.clear();
-        AenderRealityTickEvents.clearPendingRegeneration();
-        AenderVolatility.clearForgottenWorld();
+        AenderVolatility.advanceReality(level);
+        AenderRealityTickEvents.beginRealityTransition(level, loadedChunks);
         hadPlayers = false;
-        Retold.LOGGER.debug("Cleared volatile Aender terrain because the dimension became empty");
+        Retold.LOGGER.debug("Cleared volatile Aender terrain after the last player travelled out");
     }
 }

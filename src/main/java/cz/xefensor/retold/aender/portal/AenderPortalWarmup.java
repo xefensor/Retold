@@ -13,14 +13,19 @@ import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.UUID;
 
 /**
  * Uses the survival portal charge as useful loading time for the destination.
  */
 public final class AenderPortalWarmup {
-    private static final int MAX_CHUNKS_PER_TICK = 16;
-    private static final long MAX_WORK_NANOS_PER_TICK = 8_000_000L;
+    public static final int MAX_PREPARATION_TICKS = 100;
+
+    private static final int SAFE_CORE_RADIUS = 2;
+    private static final int MAX_CHUNKS_PER_TICK = 32;
+    private static final long MAX_WORK_NANOS_PER_TICK = 12_000_000L;
     private static final long ABANDONED_STATE_TICKS = 1_200L;
 
     private static final Map<UUID, WarmupState> STATES = new HashMap<>();
@@ -32,7 +37,7 @@ public final class AenderPortalWarmup {
         AenderPortalLogic.AenderWarmupTarget target =
                 AenderPortalLogic.getAenderWarmupTarget(sourceLevel, player);
 
-        if (target == null || chargeTicks <= 0) {
+        if (target == null) {
             return;
         }
 
@@ -68,9 +73,20 @@ public final class AenderPortalWarmup {
                 radius
         );
 
+        long workBudgetNanos = AenderRealityTickEvents.adaptiveRegenerationBudget(
+                aender,
+                MAX_WORK_NANOS_PER_TICK
+        );
+
+        if (workBudgetNanos <= 0L) {
+            return;
+        }
+
         int portalTime = player.portalProcess == null ? 0 : player.portalProcess.getPortalTime();
         int ticksRemaining = Math.max(1, chargeTicks - portalTime);
         int desiredThisTick = Math.max(1, divideCeil(state.pending.size(), ticksRemaining));
+        int opportunisticThisTick = Math.max(1, (int) (workBudgetNanos / 500_000L));
+        desiredThisTick = Math.max(desiredThisTick, opportunisticThisTick);
         desiredThisTick = Math.min(desiredThisTick, MAX_CHUNKS_PER_TICK);
 
         int prepared = 0;
@@ -83,13 +99,14 @@ public final class AenderPortalWarmup {
             int chunkZ = (int) (packed >> 32);
 
             if (AenderRealityTickEvents.prepareLoadedArrivalChunk(aender, chunkX, chunkZ)) {
+                state.pendingCore.remove(packed);
                 prepared++;
             } else {
                 // The ticket's asynchronous load has not completed yet; revisit it later.
                 state.pending.add(packed);
             }
 
-            if (System.nanoTime() - startedAt >= MAX_WORK_NANOS_PER_TICK) {
+            if (System.nanoTime() - startedAt >= workBudgetNanos) {
                 break;
             }
         }
@@ -102,6 +119,13 @@ public final class AenderPortalWarmup {
             );
         }
 
+        if (state.safeCoreReady() && target.portalCandidate() != null
+                && AenderPortalShape.findComplete(aender, target.portalCandidate().centerBlock()).isEmpty()) {
+            AenderPortalData.get(aender).remove(aender, target.portalCandidate());
+            STATES.remove(player.getUUID());
+            return;
+        }
+
         if ((gameTime & 255L) == 0L) {
             STATES.entrySet().removeIf(entry -> gameTime - entry.getValue().lastSeenGameTime > ABANDONED_STATE_TICKS);
         }
@@ -109,6 +133,11 @@ public final class AenderPortalWarmup {
 
     public static void finish(Entity entity) {
         STATES.remove(entity.getUUID());
+    }
+
+    public static boolean isSafeCoreReady(Entity entity) {
+        WarmupState state = STATES.get(entity.getUUID());
+        return state != null && state.safeCoreReady();
     }
 
     public static void clear() {
@@ -125,6 +154,7 @@ public final class AenderPortalWarmup {
         private final int radius;
         private final long realityEpoch;
         private final Queue<Long> pending = new ArrayDeque<>();
+        private final Set<Long> pendingCore = new HashSet<>();
         private long lastWorkGameTime = Long.MIN_VALUE;
         private long lastSeenGameTime;
         private boolean loggedCompletion;
@@ -139,22 +169,25 @@ public final class AenderPortalWarmup {
                 for (int dx = -ring; dx <= ring; dx++) {
                     for (int dz = -ring; dz <= ring; dz++) {
                         if (Math.max(Math.abs(dx), Math.abs(dz)) == ring) {
-                            pending.add(pack(centerChunkX + dx, centerChunkZ + dz));
+                            long packed = pack(centerChunkX + dx, centerChunkZ + dz);
+                            pending.add(packed);
+
+                            if (ring <= SAFE_CORE_RADIUS) {
+                                pendingCore.add(packed);
+                            }
                         }
                     }
                 }
             }
         }
 
+        private boolean safeCoreReady() {
+            return pendingCore.isEmpty();
+        }
+
         private boolean matches(int centerChunkX, int centerChunkZ, int radius, long realityEpoch) {
-            /*
-             * Entity coordinates are scaled by eight, so merely walking across
-             * the 3x3 source portal can shift the approximate Aender chunk by a
-             * chunk or two. Keep the same warm-up instead of throwing away its
-             * progress for that small movement.
-             */
-            return Math.abs(this.centerChunkX - centerChunkX) <= 2
-                    && Math.abs(this.centerChunkZ - centerChunkZ) <= 2
+            return this.centerChunkX == centerChunkX
+                    && this.centerChunkZ == centerChunkZ
                     && this.radius == radius
                     && this.realityEpoch == realityEpoch;
         }

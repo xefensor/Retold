@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "group": "planks",
+  "ingredients": [
+    "#retold:aender_logs"
+  ],
+  "result": {
+    "count": 4,
+    "id": "retold:aender_planks"
+  }
+}
