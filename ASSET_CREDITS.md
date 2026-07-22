@@ -11,6 +11,7 @@ This record complements [`LICENSE`](LICENSE) and [`LICENSE-ASSETS.md`](LICENSE-A
 | OpenAI image generation, directed and processed by Codex | Aender wood-family placeholder textures: planks, stripped log, sapling, door, trapdoor, signs, boats, and derived model atlases | AI-generated placeholder; 2026-07-22 |
 | OpenAI image generation, directed and processed by Codex | Aender Chronolith block and Aender Eye/Gale Core spawn-egg placeholder textures | AI-generated placeholder; 2026-07-22 |
 | OpenAI image generation, directed and processed by Codex | Experimental Aender Desert placeholder textures: Aender sand, sandstone, and cactus | AI-generated placeholder; 2026-07-22 |
+| OpenAI image generation, directed and processed by Codex | Aenderite Ore, Raw Aenderite, and Aenderite Ingot placeholder textures | AI-generated placeholder; 2026-07-22 |
 | Future original artists | Final replacements for provisional Aender and other development assets | To be credited when work is accepted |
 
 ## Provisional And Generated Assets
@@ -26,6 +27,8 @@ The Aender wood-family placeholders were generated specifically for Retold from 
 The Aender Chronolith and spawn-egg placeholders were generated specifically for Retold from prompts describing original purple time-rune stone, a green-eyed Aender egg, and a pale cyan/gold Gale Core egg. Mechanical post-processing removed chroma-key backgrounds and reduced the sources to 16x16 game textures. No Minecraft texture pixels were used in these files.
 
 The experimental Aender Desert placeholders were generated specifically for Retold from prompts describing original deep denim energy sand, medium periwinkle layered sandstone with a separate smoother top face, and lavender ribbed cactus material. Mechanical post-processing reduced the generated material sources to 16x16 game textures and derived the cactus top from the original generated cactus material. Developer-provided inverted-desert screenshots were used only as color, mood, and block-face-layout references; no pixels from them or from Minecraft textures were included.
+
+The Aenderite placeholders were generated specifically for Retold from prompts describing muted mint-green and deep teal mineral chips, a raw mineral lump, and a refined ingot. Mechanical post-processing removed chroma-key backgrounds and reduced the item sources to 16x16. The ore pattern was rebuilt as original pixel clusters over Retold's existing animated Aender Stone base and repeated across all animation frames. A developer-provided End Portal Frame image was used only as a green-palette reference; no pixels or frame geometry from that image or from Minecraft textures were included.
 
 ## Third-Party Material
 

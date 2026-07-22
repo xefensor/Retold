@@ -66,6 +66,7 @@ public final class RetoldCreativeModeTabs {
                 event,
                 Items.END_STONE,
                 RetoldBlocks.AENDER_STONE_ITEM.get(),
+                RetoldBlocks.AENDERITE_ORE_ITEM.get(),
                 RetoldBlocks.AENDER_SAND_ITEM.get(),
                 RetoldBlocks.AENDER_SANDSTONE_ITEM.get(),
                 RetoldBlocks.AENDER_CACTUS_ITEM.get()
@@ -100,6 +101,8 @@ public final class RetoldCreativeModeTabs {
     }
 
     private static void addIngredients(BuildCreativeModeTabContentsEvent event) {
+        insertAfter(event, Items.RAW_GOLD, RetoldBlocks.RAW_AENDERITE.get());
+        insertAfter(event, Items.NETHERITE_INGOT, RetoldBlocks.AENDERITE_INGOT.get());
         insertAfter(
                 event,
                 Items.NETHER_STAR,

@@ -110,6 +110,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             }
         }
 
+        if (AenderVolatility.currentGeneratorVersion()
+                >= AenderRealityData.ISLAND_BIOMES_GENERATOR_VERSION) {
+            AenderCaveCarver.carve(chunk, cachedIslands);
+        }
+
         placePortalFrameDeposits(chunk, cachedIslands);
 
         for (CachedIsland island : cachedIslands) {
@@ -130,11 +135,43 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             placeCrossChunkLargeDecorations(chunk, cachedIslands);
         }
 
+        placeAenderiteOre(chunk, islands);
+
         RetoldAenderEntryPlatform.generateInChunk(chunk);
 
         AenderChunkSectionEditor.primeFreshHeightmaps(chunk);
 
         AenderVolatility.markGenerated(chunk);
+    }
+
+    private static void placeAenderiteOre(
+            ChunkAccess chunk,
+            List<AenderIslandSampler.Island> islands
+    ) {
+        BlockState ore = RetoldBlocks.AENDERITE_ORE.get().defaultBlockState();
+        int chunkMinX = chunk.getPos().getMinBlockX();
+        int chunkMaxX = chunkMinX + 15;
+        int chunkMinZ = chunk.getPos().getMinBlockZ();
+        int chunkMaxZ = chunkMinZ + 15;
+
+        for (AenderOrePlanner.Vein vein : AenderOrePlanner.veinsForChunk(
+                islands,
+                chunk.getPos().x(),
+                chunk.getPos().z()
+        )) {
+            for (AenderOrePlanner.OreBlock block : vein.blocks()) {
+                if (block.x() < chunkMinX || block.x() > chunkMaxX
+                        || block.z() < chunkMinZ || block.z() > chunkMaxZ) {
+                    continue;
+                }
+
+                BlockPos blockPos = new BlockPos(block.x(), block.y(), block.z());
+
+                if (chunk.getBlockState(blockPos).is(RetoldBlocks.AENDER_STONE)) {
+                    chunk.setBlockState(blockPos, ore, 0);
+                }
+            }
+        }
     }
 
     private static void generateIslandTerrain(
@@ -1493,7 +1530,7 @@ public final class AenderChunkGenerator extends ChunkGenerator {
                 && z <= minZ + 15;
     }
 
-    private static final class CachedIsland {
+    private static final class CachedIsland implements AenderCaveCarver.IslandView {
         private final AenderIslandSampler.Island island;
         private final int chunkMinX;
         private final int chunkMinZ;
@@ -1504,6 +1541,11 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             this.island = island;
             this.chunkMinX = chunkMinX;
             this.chunkMinZ = chunkMinZ;
+        }
+
+        @Override
+        public AenderIslandSampler.Island island() {
+            return island;
         }
 
         private int minX() {
@@ -1546,7 +1588,8 @@ public final class AenderChunkGenerator extends ChunkGenerator {
             return island.underside();
         }
 
-        private AenderIslandSampler.Island.Column columnAt(int x, int z) {
+        @Override
+        public AenderIslandSampler.Island.Column columnAt(int x, int z) {
             int localX = x - chunkMinX;
             int localZ = z - chunkMinZ;
 

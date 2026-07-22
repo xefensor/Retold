@@ -34,7 +34,7 @@ These are the strongest next design-aligned areas:
 
 These are still planned but need feature-specific design before implementation:
 
-- full tools, armor, ores, and station progression rework
+- full tools, armor, ores, and station progression rework beyond the initial Aenderite material foundation
 - enchanting rework
 - mending removal
 - sword/shield combat rework
