@@ -273,6 +273,10 @@ Technical owners:
 - `RetoldAenderRegistries`
 - `AenderChunkGenerator`
 - `AenderIslandSampler`
+- `AenderTerrainIntervals`
+- `AenderRealityData`
+- `AenderLoadedChunkReplacement`
+- `AenderChunkSectionEditor`
 - `AenderVolatility`
 - `AenderWorldTickEvents`
 - `AenderRealityTickEvents`
@@ -294,14 +298,15 @@ Access behavior:
 
 - Stage 3 redirects Overworld End portal use into `retold:aender`.
 - Players in vanilla End are ejected when Stage 3 begins.
-- Redirected End portal entry remains fixed near `0.5, 8.0, 0.5`.
+- Redirected End portal entry remains fixed near `0.5, 128.0, 0.5`.
 - A separate horizontal Aender portal works between the Overworld and Aender after Stage 3.
 - The provisional frame block is `retold:dev_aender_portal_frame`; deposits generate inside Aender islands.
 - A valid portal is a horizontal rectangular frame with a 3x3 to 21x21 empty interior. Placing the final frame block activates it automatically; breaking the frame invalidates it.
+- `AenderPortalSpriteSource` derives the portal field from the installed Nether portal sprite during resource loading, preserving its exact animation metadata and alpha while remapping its purple brightness into the Aender green palette. Retold does not package a copied or recolored Minecraft portal texture. Portal particles use the same visual palette.
 - Overworld-to-Aender travel multiplies X/Z by 8, and Aender-to-Overworld travel divides X/Z by 8. Destinations are clamped to the world border.
-- Nearby indexed/unindexed counterpart portals are reused; otherwise a safe 3x3 counterpart and support are created near the scaled destination.
-- Survival/adventure players charge for at least 80 ticks using the Nether portal delay gamerule as a configurable higher value. Creative/spectator delay follows the creative Nether portal gamerule.
-- During survival charge, `AenderPortalWarmup` refreshes a vanilla portal ticket and incrementally prepares loaded stale chunks with an 8 ms/16-chunk per-tick cap. Final transition synchronously completes the destination view.
+- Nearby indexed/unindexed counterpart portals are reused; otherwise a safe 3x3 counterpart and support are created near the scaled destination. Aender-side creation searches nearby island surfaces first; if the area has no terrain, it builds the supported fallback platform at Y=100 rather than near the dimension floor.
+- Survival/adventure players charge for at least 100 ticks. Creative/spectator players keep their configured creative delay, but every player entering the Aender waits beyond that minimum when necessary until the destination safety core is ready.
+- `AenderPortalWarmup` refreshes a vanilla portal ticket and incrementally prepares loaded stale chunks using an adaptive budget derived from average server tick time, capped at 12 ms/32 chunks per tick. It spends only half of the headroom below 90% of the configured tick duration and pauses when that reserve is exhausted. The 5x5 arrival core is processed first and gates travel without synchronous generation or technical action-bar text. The wider view continues opportunistically. Commands, non-player entities, and third-party integrations that bypass the warm-up retain a bounded synchronous 5x5 fallback.
 - Vanilla End remains technically available through commands by design, so old player builds are not permanently inaccessible.
 - Lava bucket emptying vaporizes in the Aender like water in the Nether, leaving no lava block behind.
 
@@ -310,8 +315,15 @@ Generation behavior:
 - Aender uses a custom chunk generator.
 - Terrain is floating-island based.
 - Chunks are generated from sampled island data.
+- Fresh worlds select generator V2, which merges overlapping vertical island intervals before assigning exposed surface materials and evaluates trees/boulders through a chunk halo so large decorations cross chunk boundaries cleanly.
+- Worlds upgraded from a release without `AenderRealityData` default to legacy generator V1 for all future Aender chunks.
 - Decoration includes grass, plants, lakes, underside spurs/growth, Aender block palette, and provisional portal-frame deposits.
-- `AenderVolatility` tracks generated/current chunk state for regeneration and stability behavior.
+- Aender grass and soil are vegetation supports. `AenderGrassBlock` spreads, accepts bonemeal, exposes vanilla snowy state, and reverts specifically to Aender soil under blocked light. `AenderLeavesBlock` is waterloggable, follows Aender logs, and decays; its persistent default preserves upgraded generic-leaf states and player placements, while generated foliage explicitly uses `persistent=false`.
+- Grass/soil, stone, logs, leaves, and the Aender wood family use their expected mining categories and vanilla block/item tags. Grass falls back to Aender soil without Silk Touch. Natural leaves can drop Aender saplings and sticks, while shears or Silk Touch harvest the leaves. Logs and wood are flammable, furnace fuel, charcoal-capable, and axe-strippable; leaves and saplings are compostable.
+- `RetoldAenderWood` owns the complete renewable family: sapling, wood, stripped log/wood, planks, stairs, slab, fence/gate, door/trapdoor, button, pressure plate, signs, hanging signs, boat, and chest boat. The sapling grows the data-driven `retold:aender_tree`; recipes, loot, tags, data maps, block entities, entity renderers, and boat model layers follow vanilla family conventions. Current wood-family textures are credited AI-generated placeholders pending final art.
+- `AenderRealityData` persists the current terrain seed, reality epoch, regional epochs, and generator version. Disconnecting, saving, quitting, restarting, or crash recovery does not independently reroll terrain; the seed advances only after the last player actually travels out of the Aender.
+- `AenderVolatility` holds the loaded runtime state and caches the serialized `retold:aender_chunk_reality` attachment. Each chunk stores either its last generated reality signature or an explicit stale marker, so saved player placements and broken blocks survive runtime-cache loss while legitimate global/regional changes still regenerate terrain. The duplicate runtime signature is evicted when its chunk unloads and restored from the attachment on demand, bounding the cache during extended exploration.
+- Chunks upgraded without an Aender reality attachment are adopted into the current reality on first load. This migration favors preservation of saved player edits over a destructive one-time regeneration.
 - Procedural island bounds include coast warp/lobes so islands are not clipped at chunk boundaries.
 
 Design rule:
@@ -341,8 +353,10 @@ Behavior:
 - Breaking a stabilizer removes that halo count.
 - Stable chunk counts are saved in `AenderStabilityData`.
 - Loaded chunks around a removed stabilizer are marked current before removing stability.
-- When the last player leaves, the volatile reality resets once; empty-dimension ticks do not repeatedly reset it while a portal warm-up is active.
-- Arrival preparation force-loads the destination view, synchronously replaces stale unstable sections, rebuilds heightmaps/light section state, reconciles entities, and resends changed chunks.
+- When the last player travels out, the persisted volatile reality seed advances once. All still-loaded volatile chunks are blanked in one cheap section-level pass, and their non-player entities are discarded immediately so nothing can fall through the temporary void. The chunks are not regenerated in arbitrary coordinate order while the dimension is empty. Arrival preparation and nearby-chunk scans rebuild them in concentric rings from each player, so terrain appears outward like normal chunk loading and old/new realities cannot remain visibly stitched together. Background regeneration uses the same average-tick-time headroom policy, up to 12 ms/16 chunks per tick, and pauses under load. Stabilized chunks and their entities are preserved and marked current. Disconnects and empty-dimension ticks do not reset the seed or invalidate later portal warm-up work.
+- While players remain in different parts of the Aender, volatility is tracked per 384-block generator region column. The active set is derived from chunks actually tracked by clients plus the neighboring-region dependency halo used by island sampling. A region epoch advances only when it transitions from watched by at least one player to watched by none. Loaded chunks made stale by that transition are blanked only when no client tracks them, then regenerate from a future approaching player outward. A final disconnect clears the runtime watcher baseline without advancing epochs, and an empty tracking frame during dimension transfer is ignored.
+- Chunk block contents and reality signatures are saved together. Ordinary block placement/breaking does not change the signature, so vanilla chunk saves preserve those edits across quit/restart. Blanking a volatile chunk writes a stale marker before progressive regeneration; completing generation replaces it with the current signature. Breaking a stabilizer force-loads at most its 3x3 halo so each released chunk can persist that stale state reliably.
+- Normal portal arrival uses a ticket to asynchronously load the 5x5 destination core, then incrementally replaces stale unstable sections, rebuilds heightmaps/light section state, reconciles entities, and resends changed chunks before allowing travel. Wider-view work remains bounded and asynchronous. Direct teleports and non-player portal use retain the bounded synchronous core fallback because they do not have a charging phase.
 - Server tick renders a merged outer forcefield around stable regions for players.
 
 Design rule:
@@ -388,16 +402,21 @@ Chronolith state is runtime-only and must stop cleanly on logout/server stop/blo
 Technical owner:
 
 - `RetoldBlocks`
+- `RetoldAenderWood`
+- `RetoldCreativeModeTabs`
 
 Registered items/blocks include:
 
 - `water_element`
 - `air_element`
+- `aender_eye_spawn_egg`
+- `gale_core_spawn_egg`
 - `aender_grass_block`
 - `aender_soil`
 - `aender_stone`
 - `aender_log`
 - `aender_leaves`
+- complete Aender wood family from `aender_sapling` through `aender_chest_boat`
 - `dev_aender_portal_frame` (provisional name)
 - `aender_portal` (non-item portal field block)
 - `aender_stabilizer`
@@ -419,6 +438,8 @@ Assets:
 - `assets/retold/models`
 - `assets/retold/textures`
 - `assets/retold/lang/en_us.json`
+
+Creative inventory integration follows vanilla placement: construction blocks are in Building Blocks; terrain and renewable tree blocks are in Natural Blocks; signs, the stabilizer, and the Chronolith are in ordinary Functional Blocks; boats are in Tools & Utilities; elemental progression items are in Ingredients; and custom mob eggs are in Spawn Eggs. Only the explicitly named development portal-frame item requires permission and appears in Operator Utilities. Retold does not register a separate creative tab. Modern client-item definitions cover every registered Retold item.
 
 Data:
 
@@ -852,7 +873,7 @@ Main mixin groups:
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
 | Villager teaching UI | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker` |
 | World/stage/worldgen | `DelayedStructurePlacementMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
-| Aender physics/rendering | `AenderChunkMapSaveMixin`, `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
+| Aender physics/rendering | `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
 | Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin` |
 | Guardian behavior | `ElderGuardianMixin`, `ElderGuardianInvulnerableHitMixin` |
 | Enderman/client visuals | `EndermanRendererMixin`, `EndermanParticleMixin`, `LivingEntityTeleportParticleMixin`, `PortalParticleMixin` |
@@ -913,7 +934,7 @@ Main performance-sensitive systems:
 - delayed structure retrogen queue
 - torch chunk indexing cap
 - Aender forcefield rendering interval
-- Aender portal-ticket warm-up with an 8 ms/16-chunk per-player tick budget
+- Aender portal-ticket warm-up with a TPS-aware 12 ms/32-chunk per-player maximum and an indefinite safe-core gate
 - section-level Aender regeneration instead of full-height per-block clearing
 - chronolith active channel map
 - recipe/villager preview server checks
@@ -979,7 +1000,7 @@ These are areas to keep an eye on during future work:
 - Recipe/advancement overrides under `data/minecraft` are broad and should be reviewed carefully when Minecraft updates.
 - Mixins touch several sensitive vanilla systems; version updates need focused regression tests.
 - AI performance is improved but should continue to be checked with `/retoldbehavior perf`.
-- GameTests cover Aender portal shapes, scaling in both directions, deterministic counterpart creation/indexing, stability serialization, and stable-versus-volatile regeneration policy. The GameTest server does not load the custom Aender dimension, so real cross-dimension travel, rapid re-entry, countdown warm-up, high view distances, stability effects, and multiplayer clients still need focused in-game tests.
+- All 24 required GameTests cover Aender portal shapes, scaling in both directions, deterministic counterpart creation/indexing, living terrain and wood-family survival and vanilla creative-tab integration, stability/reality serialization, entity cleanup, and stable-versus-volatile regeneration policy. JUnit also covers the preparation-aware portal transition gate. The GameTest server does not load the custom Aender dimension. A three-start dedicated-server check on an isolated affected-world copy verified place/save/reload and break/save/reload; real cross-dimension travel, delayed arrival behavior, high view distances, wood-family client rendering, stability effects, crash recovery, and multiplayer clients still need focused in-game tests.
 
 ## AI Agent Instructions
 

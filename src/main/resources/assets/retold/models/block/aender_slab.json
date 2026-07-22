@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "retold:block/aender_planks",
+    "side": "retold:block/aender_planks",
+    "top": "retold:block/aender_planks"
+  }
+}

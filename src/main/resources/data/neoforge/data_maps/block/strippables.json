@@ -1,0 +1,10 @@
+{
+  "values": {
+    "retold:aender_log": {
+      "stripped_block": "retold:stripped_aender_log"
+    },
+    "retold:aender_wood": {
+      "stripped_block": "retold:stripped_aender_wood"
+    }
+  }
+}

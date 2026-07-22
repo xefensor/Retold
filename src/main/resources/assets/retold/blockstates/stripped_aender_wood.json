@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "axis=x": { "model": "retold:block/stripped_aender_wood_horizontal", "x": 90, "y": 90 },
+    "axis=y": { "model": "retold:block/stripped_aender_wood" },
+    "axis=z": { "model": "retold:block/stripped_aender_wood_horizontal", "x": 90 }
+  }
+}

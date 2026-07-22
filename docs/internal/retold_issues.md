@@ -17,6 +17,8 @@ When adding an issue, include:
 
 | Area | Issue | Reproduction / Evidence | Status |
 | --- | --- | --- | --- |
+| Aender portal | When an automatically created counterpart has no nearby island terrain, replaceable void support allowed it to be placed near the dimension floor instead of at a useful altitude. | Developer in-game report on 2026-07-22. | Fix implemented to skip void columns and use a supported Y=100 fallback; needs real-Aender verification before moving to Resolved Issues. |
+| Aender portal | Ambient particles spawned partly below the horizontal portal plane and were occluded instead of being visible to a player standing beside it. | Developer screenshot and in-game report on 2026-07-22. | Spawn height moved above the rendered plane with upward/outward drift; needs client visual verification before moving to Resolved Issues. |
 
 ## Resolved Issues
 
@@ -24,6 +26,7 @@ Move issues here only after the implementation is complete and the behavior has 
 
 | Area | Issue | Resolution |
 | --- | --- | --- |
+| Aender persistence | An obsolete chunk-storage mixin cancelled saves and disk reads for every unstabilized Aender chunk, leaving terrain region files empty and discarding placed/broken blocks after reload. | Removed the obsolete interception so vanilla region storage saves terrain together with the persistent reality signature. Verified on an isolated copy of the affected world across three dedicated-server starts: place/save/reload, break/save/reload, with the formerly empty region file populated. |
 | Ocean monument | Guardian defense assist treated non-player attackers as nullable players, crashing when a drowned or another mob damaged a guardian. | Non-player damage sources are now rejected before player target validation; a GameTest reproduces drowned-to-guardian damage and verifies it completes safely. |
 | Mob AI performance | Sight-cache cleanup could remove the current observer mapping after its entry list was obtained, so the fresh result was written to a detached list. | Cleanup now runs before the observer list is obtained; a deterministic GameTest verifies expired-observer removal, retained fresh results, and immediate cache reuse. |
 

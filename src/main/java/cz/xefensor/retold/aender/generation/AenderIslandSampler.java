@@ -62,6 +62,28 @@ public final class AenderIslandSampler {
         return result;
     }
 
+    static List<Island> islandsAtColumn(int x, int z) {
+        List<Island> result = new ArrayList<>();
+        int regionX = Math.floorDiv(x, REGION_SIZE);
+        int regionZ = Math.floorDiv(z, REGION_SIZE);
+        int minLayer = Math.floorDiv(MIN_Y, LAYER_HEIGHT) - 1;
+        int maxLayer = Math.floorDiv(MAX_Y - 1, LAYER_HEIGHT) + 1;
+
+        for (int rx = regionX - 1; rx <= regionX + 1; rx++) {
+            for (int rz = regionZ - 1; rz <= regionZ + 1; rz++) {
+                for (int ly = minLayer; ly <= maxLayer; ly++) {
+                    Island island = islandAt(rx, rz, ly);
+
+                    if (island != null && !island.columnAt(x, z).empty()) {
+                        result.add(island);
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     public static double density(int x, int y, int z) {
         double best = -10.0D;
 

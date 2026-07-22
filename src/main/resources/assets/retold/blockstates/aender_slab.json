@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "retold:block/aender_slab"
+    },
+    "type=double": {
+      "model": "retold:block/aender_planks"
+    },
+    "type=top": {
+      "model": "retold:block/aender_slab_top"
+    }
+  }
+}

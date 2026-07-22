@@ -2,34 +2,34 @@ package cz.xefensor.retold.aender.stability;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
-import cz.xefensor.retold.aender.generation.AenderChunkGenerator;
 import cz.xefensor.retold.aender.generation.AenderIslandSampler;
+import cz.xefensor.retold.aender.generation.AenderLoadedChunkReplacement;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Queue;
 import java.util.Set;
 
 public final class AenderRealityTickEvents {
-    private static final int MIN_FORGET_DISTANCE_BLOCKS = 640;
-    private static final int EXTRA_FORGET_MARGIN_BLOCKS = 128;
-    private static final int MAX_ISLAND_RADIUS_BLOCKS = 224;
-
     private static final int EXTRA_REGEN_RADIUS_CHUNKS = 2;
-    private static final int MAX_REGEN_CHUNKS_PER_TICK = 1;
-    private static final int MIN_REGEN_INTERVAL_TICKS = 2;
+    private static final int SAFE_ARRIVAL_RADIUS_CHUNKS = 2;
+    private static final int MAX_REGEN_CHUNKS_PER_TICK = 16;
+    private static final int OVERLOADED_RETRY_TICKS = 5;
     private static final int MAX_QUEUE_SIZE = 8192;
-    private static final long MAX_REGEN_NANOS_PER_TICK = 2_000_000L;
+    private static final long MAX_REGEN_NANOS_PER_TICK = 12_000_000L;
 
     private static final Queue<Long> REGEN_QUEUE = new ArrayDeque<>();
     private static final Set<Long> QUEUED = new HashSet<>();
+    private static final AenderActiveRegionTracker ACTIVE_REGIONS = new AenderActiveRegionTracker();
     private static long nextRegenGameTime;
 
     private AenderRealityTickEvents() {
@@ -46,8 +46,7 @@ public final class AenderRealityTickEvents {
         }
 
         if ((level.getGameTime() & 15L) == 0L) {
-            int forgetDistanceBlocks = dynamicForgetDistance(level);
-            AenderVolatility.forgetFarRegionColumns(level.players(), forgetDistanceBlocks);
+            updatePlayerLoadedRegions(level);
             queueNearbyStaleChunks(level);
         }
 
@@ -73,65 +72,73 @@ public final class AenderRealityTickEvents {
     public static void clearPendingRegeneration() {
         REGEN_QUEUE.clear();
         QUEUED.clear();
+        ACTIVE_REGIONS.clear();
         nextRegenGameTime = 0L;
     }
 
-    public static void regenerateLoadedArea(ServerLevel level, BlockPos center) {
+    /**
+     * Removes the previous reality from every still-loaded volatile chunk before
+     * any of those chunks can be shown beside the new terrain.
+     *
+     * <p>This deliberately uses two phases: first all volatile chunks become
+     * empty, then player-centered arrival preparation and nearby-chunk scans
+     * regenerate them from the player outward. Stabilized chunks retain their
+     * blocks and are marked current in the new runtime reality.</p>
+     */
+    public static void beginRealityTransition(ServerLevel level, List<ChunkPos> previouslyLoaded) {
         if (level.dimension() != RetoldAenderDimensions.AENDER) {
             return;
         }
 
-        int centerChunkX = center.getX() >> 4;
-        int centerChunkZ = center.getZ() >> 4;
-        int radius = regenerationRadius(level);
-        int regenerated = 0;
+        clearPendingRegeneration();
+        AenderStabilityData stability = AenderStabilityData.get(level);
+        int cleared = 0;
+        int preserved = 0;
 
-        // Ensure the arrival chunk exists. Newly generated chunks already carry the current signature.
-        level.getChunk(centerChunkX, centerChunkZ);
+        for (ChunkPos pos : previouslyLoaded) {
+            ChunkAccess chunk = getLoadedChunk(level, pos.x(), pos.z());
 
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) {
-                ChunkAccess chunk = getLoadedChunk(level, centerChunkX + dx, centerChunkZ + dz);
-
-                if (chunk == null || AenderStabilityData.get(level).isStable(chunk.getPos())) {
-                    continue;
-                }
-
-                AenderVolatility.retainForChunk(chunk);
-
-                if (AenderVolatility.needsRegeneration(chunk)) {
-                    AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
-                    regenerated++;
-                }
+            if (chunk == null) {
+                continue;
             }
+
+            AenderVolatility.retainForChunk(chunk);
+
+            if (stability.isStable(pos)) {
+                AenderVolatility.markGenerated(chunk);
+                preserved++;
+                continue;
+            }
+
+            AenderLoadedChunkReplacement.blankForProgressiveRegeneration(level, chunk);
+            cleared++;
         }
 
-        if (regenerated > 0) {
+        if (cleared > 0 || preserved > 0) {
             Retold.LOGGER.debug(
-                    "Regenerated {} stale loaded Aender chunks in the arrival view around {}, {}",
-                    regenerated,
-                    centerChunkX,
-                    centerChunkZ
+                    "Started Aender reality transition with {} blank volatile chunks and {} preserved stable chunks",
+                    cleared,
+                    preserved
             );
         }
     }
 
     /**
-     * Loads and prepares the complete client view before a player arrives in the Aender.
+     * Synchronously guarantees only the 5x5 collision-safe arrival core.
      *
-     * Unlike {@link #regenerateLoadedArea(ServerLevel, BlockPos)}, this deliberately
-     * forces missing chunks to load. Doing that while the portal transition is still
-     * being resolved keeps the player on the source side until the new reality is
-     * complete, instead of exposing the one-chunk-at-a-time fallback queue.
+     * <p>The portal charge asynchronously prepares the wider client view for at
+     * most five seconds. Keeping the final synchronous fallback fixed at this
+     * radius prevents configured view distance from turning a teleport into an
+     * unbounded main-thread generation stall.</p>
      */
-    public static void prepareArrivalView(ServerLevel level, BlockPos center) {
+    public static void prepareArrivalCore(ServerLevel level, BlockPos center) {
         if (level.dimension() != RetoldAenderDimensions.AENDER) {
             return;
         }
 
         int centerChunkX = center.getX() >> 4;
         int centerChunkZ = center.getZ() >> 4;
-        int radius = arrivalPreparationRadius(level);
+        int radius = SAFE_ARRIVAL_RADIUS_CHUNKS;
         int loaded = 0;
         int regenerated = 0;
         long startedAtNanos = System.nanoTime();
@@ -161,7 +168,7 @@ public final class AenderRealityTickEvents {
                     AenderVolatility.retainForChunk(chunk);
 
                     if (AenderVolatility.needsRegeneration(chunk)) {
-                        AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+                        AenderLoadedChunkReplacement.regenerate(level, chunk);
                         regenerated++;
                     }
                 }
@@ -170,7 +177,7 @@ public final class AenderRealityTickEvents {
 
         if (loaded > 0 || regenerated > 0) {
             Retold.LOGGER.debug(
-                    "Prepared Aender arrival view around {}, {} in {} ms: loaded {} chunks and regenerated {} chunks",
+                    "Prepared Aender arrival core around {}, {} in {} ms: loaded {} chunks and regenerated {} chunks",
                     centerChunkX,
                     centerChunkZ,
                     (System.nanoTime() - startedAtNanos) / 1_000_000L,
@@ -205,7 +212,7 @@ public final class AenderRealityTickEvents {
         AenderVolatility.retainForChunk(chunk);
 
         if (shouldRegenerate(stability, chunk)) {
-            AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+            AenderLoadedChunkReplacement.regenerate(level, chunk);
         }
 
         return true;
@@ -223,6 +230,14 @@ public final class AenderRealityTickEvents {
                 && AenderVolatility.needsRegeneration(chunk);
     }
 
+    public static long adaptiveRegenerationBudget(ServerLevel level, long maximumBudgetNanos) {
+        return AenderRegenerationBudget.calculate(
+                level.getServer().getAverageTickTimeNanos(),
+                level.getServer().tickRateManager().nanosecondsPerTick(),
+                maximumBudgetNanos
+        );
+    }
+
     private static void queueNearbyStaleChunks(ServerLevel level) {
         AenderStabilityData stability = AenderStabilityData.get(level);
         int radius = regenerationRadius(level);
@@ -233,31 +248,103 @@ public final class AenderRealityTickEvents {
             int centerChunkX = playerPos.getX() >> 4;
             int centerChunkZ = playerPos.getZ() >> 4;
 
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    int chunkX = centerChunkX + dx;
-                    int chunkZ = centerChunkZ + dz;
+            for (int ring = 0; ring <= radius; ring++) {
+                for (int dx = -ring; dx <= ring; dx++) {
+                    for (int dz = -ring; dz <= ring; dz++) {
+                        if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) {
+                            continue;
+                        }
 
-                    ChunkAccess chunk = getLoadedChunk(level, chunkX, chunkZ);
+                        int chunkX = centerChunkX + dx;
+                        int chunkZ = centerChunkZ + dz;
 
-                    if (chunk == null) {
-                        continue;
+                        ChunkAccess chunk = getLoadedChunk(level, chunkX, chunkZ);
+
+                        if (chunk == null) {
+                            continue;
+                        }
+
+                        if (stability.isStable(chunk.getPos())) {
+                            continue;
+                        }
+
+                        AenderVolatility.retainForChunk(chunk);
+
+                        if (!AenderVolatility.needsRegeneration(chunk)) {
+                            continue;
+                        }
+
+                        enqueue(chunkX, chunkZ);
                     }
-
-                    if (stability.isStable(chunk.getPos())) {
-                        continue;
-                    }
-
-                    AenderVolatility.retainForChunk(chunk);
-
-                    if (!AenderVolatility.needsRegeneration(chunk)) {
-                        continue;
-                    }
-
-                    enqueue(chunkX, chunkZ);
                 }
             }
         }
+    }
+
+    private static void updatePlayerLoadedRegions(ServerLevel level) {
+        boolean hasPlayers = !level.players().isEmpty();
+        Set<Long> currentlyActive = hasPlayers ? collectPlayerLoadedRegions(level) : Set.of();
+        Set<Long> departed = ACTIVE_REGIONS.update(currentlyActive, hasPlayers);
+
+        if (departed.isEmpty()) {
+            return;
+        }
+
+        for (long key : departed) {
+            AenderVolatility.advanceRegion(level, unpackX(key), unpackZ(key));
+        }
+
+        int blanked = blankUnwatchedStaleChunks(level);
+        Retold.LOGGER.debug(
+                "Advanced {} unattended Aender region columns and blanked {} loaded stale chunks",
+                departed.size(),
+                blanked
+        );
+    }
+
+    private static Set<Long> collectPlayerLoadedRegions(ServerLevel level) {
+        Set<Long> result = new HashSet<>();
+
+        for (ChunkPos pos : AenderVolatility.retainedChunkPositions()) {
+            if (level.getChunkSource().chunkMap.getPlayers(pos, false).isEmpty()) {
+                continue;
+            }
+
+            int minRegionX = Math.floorDiv(pos.getMinBlockX(), AenderIslandSampler.REGION_SIZE) - 1;
+            int maxRegionX = Math.floorDiv(pos.getMaxBlockX(), AenderIslandSampler.REGION_SIZE) + 1;
+            int minRegionZ = Math.floorDiv(pos.getMinBlockZ(), AenderIslandSampler.REGION_SIZE) - 1;
+            int maxRegionZ = Math.floorDiv(pos.getMaxBlockZ(), AenderIslandSampler.REGION_SIZE) + 1;
+
+            for (int regionX = minRegionX; regionX <= maxRegionX; regionX++) {
+                for (int regionZ = minRegionZ; regionZ <= maxRegionZ; regionZ++) {
+                    result.add(pack(regionX, regionZ));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static int blankUnwatchedStaleChunks(ServerLevel level) {
+        AenderStabilityData stability = AenderStabilityData.get(level);
+        int blanked = 0;
+
+        for (ChunkPos pos : AenderVolatility.retainedChunkPositions()) {
+            if (!level.getChunkSource().chunkMap.getPlayers(pos, false).isEmpty() || stability.isStable(pos)) {
+                continue;
+            }
+
+            ChunkAccess chunk = getLoadedChunk(level, pos.x(), pos.z());
+
+            if (chunk == null || !AenderVolatility.needsRegeneration(chunk)) {
+                continue;
+            }
+
+            AenderLoadedChunkReplacement.blankForProgressiveRegeneration(level, chunk);
+            blanked++;
+        }
+
+        return blanked;
     }
 
     private static void processRegenQueue(ServerLevel level) {
@@ -267,11 +354,18 @@ public final class AenderRealityTickEvents {
             return;
         }
 
+        long workBudgetNanos = adaptiveRegenerationBudget(level, MAX_REGEN_NANOS_PER_TICK);
+
+        if (workBudgetNanos <= 0L) {
+            nextRegenGameTime = gameTime + OVERLOADED_RETRY_TICKS;
+            return;
+        }
+
         int regenerated = 0;
         long startNanos = System.nanoTime();
 
         while (regenerated < MAX_REGEN_CHUNKS_PER_TICK && !REGEN_QUEUE.isEmpty()) {
-            if (System.nanoTime() - startNanos >= MAX_REGEN_NANOS_PER_TICK) {
+            if (System.nanoTime() - startNanos >= workBudgetNanos) {
                 break;
             }
 
@@ -295,12 +389,12 @@ public final class AenderRealityTickEvents {
                 continue;
             }
 
-            AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
+            AenderLoadedChunkReplacement.regenerate(level, chunk);
             regenerated++;
         }
 
         if (regenerated > 0) {
-            nextRegenGameTime = gameTime + MIN_REGEN_INTERVAL_TICKS;
+            nextRegenGameTime = gameTime + 1L;
         }
     }
 
@@ -318,21 +412,6 @@ public final class AenderRealityTickEvents {
         if (QUEUED.add(key)) {
             REGEN_QUEUE.add(key);
         }
-    }
-
-    private static int dynamicForgetDistance(ServerLevel level) {
-        int viewDistanceChunks = level.getServer().getPlayerList().getViewDistance();
-        int viewDistanceBlocks = viewDistanceChunks * 16;
-
-        int islandSafetyMargin =
-                AenderIslandSampler.REGION_SIZE / 2
-                        + MAX_ISLAND_RADIUS_BLOCKS
-                        + EXTRA_FORGET_MARGIN_BLOCKS;
-
-        return Math.max(
-                MIN_FORGET_DISTANCE_BLOCKS,
-                viewDistanceBlocks + islandSafetyMargin
-        );
     }
 
     private static int regenerationRadius(ServerLevel level) {

@@ -3,6 +3,7 @@ package cz.xefensor.retold.block;
 import com.mojang.serialization.MapCodec;
 import cz.xefensor.retold.aender.portal.AenderPortalLogic;
 import cz.xefensor.retold.aender.portal.AenderPortalShape;
+import cz.xefensor.retold.aender.portal.AenderPortalTransitionGate;
 import cz.xefensor.retold.aender.portal.AenderPortalWarmup;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -35,10 +36,8 @@ import org.jspecify.annotations.Nullable;
 public final class AenderPortalBlock extends Block implements Portal {
     public static final MapCodec<AenderPortalBlock> CODEC = simpleCodec(AenderPortalBlock::new);
 
-    private static final DustParticleOptions PARTICLE = new DustParticleOptions(0x660F92, 0.85F);
+    private static final DustParticleOptions PARTICLE = new DustParticleOptions(0x9FC694, 0.85F);
     private static final VoxelShape SHAPE = Block.column(16.0D, 6.0D, 10.0D);
-    private static final int SURVIVAL_TRANSITION_TICKS = 80;
-
     public AenderPortalBlock(BlockBehaviour.Properties properties) {
         super(properties);
     }
@@ -87,8 +86,7 @@ public final class AenderPortalBlock extends Block implements Portal {
             entity.setAsInsidePortal(this, pos);
 
             if (level instanceof ServerLevel serverLevel
-                    && entity instanceof ServerPlayer player
-                    && !player.getAbilities().invulnerable) {
+                    && entity instanceof ServerPlayer player) {
                 AenderPortalWarmup.tick(
                         serverLevel,
                         player,
@@ -113,9 +111,17 @@ public final class AenderPortalBlock extends Block implements Portal {
                 )
         );
 
-        return player.getAbilities().invulnerable
-                ? configuredDelay
-                : Math.max(SURVIVAL_TRANSITION_TICKS, configuredDelay);
+        int portalTime = entity.portalProcess == null
+                ? 0
+                : entity.portalProcess.getPortalTime();
+        return AenderPortalTransitionGate.transitionTime(
+                configuredDelay,
+                player.getAbilities().invulnerable,
+                level.dimension() == Level.OVERWORLD,
+                AenderPortalWarmup.isSafeCoreReady(entity),
+                portalTime,
+                AenderPortalWarmup.MAX_PREPARATION_TICKS
+        );
     }
 
     @Override
@@ -148,9 +154,12 @@ public final class AenderPortalBlock extends Block implements Portal {
         }
 
         double x = pos.getX() + random.nextDouble();
-        double y = pos.getY() + 0.25D + random.nextDouble() * 0.25D;
+        double y = pos.getY() + 0.7D + random.nextDouble() * 0.25D;
         double z = pos.getZ() + random.nextDouble();
-        level.addParticle(PARTICLE, x, y, z, 0.0D, 0.02D, 0.0D);
+        double xd = (random.nextDouble() - 0.5D) * 0.02D;
+        double yd = 0.025D + random.nextDouble() * 0.025D;
+        double zd = (random.nextDouble() - 0.5D) * 0.02D;
+        level.addParticle(PARTICLE, x, y, z, xd, yd, zd);
     }
 
     @Override

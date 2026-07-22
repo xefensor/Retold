@@ -1,11 +1,11 @@
 package cz.xefensor.retold.aender.generation;
 
-import cz.xefensor.retold.Retold;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,16 +13,18 @@ import java.util.Map;
 import java.util.Set;
 
 public final class AenderVolatility {
-    private static long realitySalt = mix64(System.nanoTime() ^ 0xA3D1E41F29B7C53DL);
+    private static long realitySalt = mix64(0xA3D1E41F29B7C53DL);
     private static long realityEpoch = 0L;
+    private static int generatorVersion = AenderRealityData.LEGACY_GENERATOR_VERSION;
+    private static AenderRealityData realityData;
 
     private static final Map<RegionKey, Long> ACTIVE_REGION_SALTS = new HashMap<>();
     private static final Map<RegionKey, Integer> REGION_REFS = new HashMap<>();
 
     private static final Set<Long> RETAINED_CHUNKS = new HashSet<>();
     /*
-     * Stores the "reality signature" that a chunk was last generated with.
-     * If surrounding region epochs change, this signature changes and the chunk must regenerate.
+     * Runtime cache of the persistent per-chunk reality attachment. If surrounding
+     * region epochs change, the signature changes and the chunk must regenerate.
      */
     private static final Map<Long, Long> CHUNK_GENERATION_SIGNATURES = new HashMap<>();
 
@@ -32,6 +34,54 @@ public final class AenderVolatility {
     private static final Map<RegionColumn, Long> REGION_EPOCHS = new HashMap<>();
 
     private AenderVolatility() {
+    }
+
+    public static synchronized void initializeReality(ServerLevel level) {
+        installReality(AenderRealityData.get(level));
+    }
+
+    public static synchronized void enableCurrentGeneratorForFreshWorld(ServerLevel level) {
+        AenderRealityData data = AenderRealityData.get(level);
+        data.enableCurrentGeneratorForFreshWorld();
+        level.getServer().getDataStorage().saveAndJoin();
+        installReality(data);
+    }
+
+    public static synchronized void advanceReality(ServerLevel level) {
+        AenderRealityData data = AenderRealityData.get(level);
+        data.advanceReality();
+
+        /*
+         * Persist the new seed before any destination warm-up can generate chunks
+         * from it. A normal quit also joins pending SavedData writes, while this
+         * immediate save protects the reality boundary from a subsequent crash.
+         */
+        level.getServer().getDataStorage().saveAndJoin();
+        installReality(data);
+    }
+
+    public static synchronized void clearRuntime() {
+        ACTIVE_REGION_SALTS.clear();
+        REGION_REFS.clear();
+        RETAINED_CHUNKS.clear();
+        CHUNK_GENERATION_SIGNATURES.clear();
+        REGION_EPOCHS.clear();
+        realityData = null;
+        realitySalt = mix64(0xA3D1E41F29B7C53DL);
+        realityEpoch = 0L;
+        generatorVersion = AenderRealityData.LEGACY_GENERATOR_VERSION;
+    }
+
+    private static void installReality(AenderRealityData data) {
+        ACTIVE_REGION_SALTS.clear();
+        REGION_REFS.clear();
+        RETAINED_CHUNKS.clear();
+        CHUNK_GENERATION_SIGNATURES.clear();
+        REGION_EPOCHS.clear();
+        realityData = data;
+        realitySalt = data.seed();
+        realityEpoch = data.epoch();
+        generatorVersion = data.generatorVersion();
     }
 
     public static synchronized void retainForChunk(ChunkAccess chunk) {
@@ -49,6 +99,13 @@ public final class AenderVolatility {
 
     public static synchronized void releaseForChunk(ChunkAccess chunk) {
         long chunkKey = chunkKey(chunk);
+
+        /*
+         * The chunk attachment is the durable source of truth. Do not retain a
+         * duplicate signature for every chunk visited during a long-running
+         * server session after that chunk has unloaded.
+         */
+        CHUNK_GENERATION_SIGNATURES.remove(chunkKey);
 
         if (!RETAINED_CHUNKS.remove(chunkKey)) {
             return;
@@ -68,13 +125,27 @@ public final class AenderVolatility {
         cleanupUnreferencedSalts();
     }
 
+    public static synchronized List<ChunkPos> retainedChunkPositions() {
+        List<ChunkPos> positions = new ArrayList<>(RETAINED_CHUNKS.size());
+
+        for (long key : RETAINED_CHUNKS) {
+            positions.add(new ChunkPos((int) key, (int) (key >> 32)));
+        }
+
+        positions.sort(Comparator.comparingInt(ChunkPos::x).thenComparingInt(ChunkPos::z));
+        return List.copyOf(positions);
+    }
+
     public static synchronized long islandSeed(int regionX, int regionZ, int layerY) {
         RegionKey key = new RegionKey(regionX, regionZ, layerY);
         return ACTIVE_REGION_SALTS.computeIfAbsent(key, AenderVolatility::createRegionSalt);
     }
 
     public static synchronized void markGenerated(ChunkAccess chunk) {
-        CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), chunkEpochSignature(chunk));
+        long signature = chunkEpochSignature(chunk);
+        CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), signature);
+        chunk.setData(AenderAttachments.CHUNK_REALITY, AenderChunkRealityData.current(signature));
+        chunk.markUnsaved();
     }
 
     public static synchronized boolean wasGeneratedThisSession(ChunkAccess chunk) {
@@ -84,22 +155,40 @@ public final class AenderVolatility {
     public static synchronized boolean needsRegeneration(ChunkAccess chunk) {
         Long previous = CHUNK_GENERATION_SIGNATURES.get(chunkKey(chunk));
 
-        if (previous == null) {
+        if (previous != null) {
+            return previous.longValue() != chunkEpochSignature(chunk);
+        }
+
+        AenderChunkRealityData persisted = chunk.getExistingDataOrNull(AenderAttachments.CHUNK_REALITY);
+        long currentSignature = chunkEpochSignature(chunk);
+
+        if (persisted == null) {
+            /*
+             * Migration for chunks saved before persistent reality signatures.
+             * Adopt their blocks into the current reality instead of destroying
+             * player builds merely because the old runtime cache was not saved.
+             */
+            CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), currentSignature);
+            chunk.setData(AenderAttachments.CHUNK_REALITY, AenderChunkRealityData.current(currentSignature));
+            chunk.markUnsaved();
+            return false;
+        }
+
+        if (persisted.stale()) {
             return true;
         }
 
-        return previous.longValue() != chunkEpochSignature(chunk);
+        CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), persisted.signature());
+        return persisted.signature() != currentSignature;
     }
 
     public static synchronized void forgetGeneratedMark(ChunkAccess chunk) {
         CHUNK_GENERATION_SIGNATURES.remove(chunkKey(chunk));
+        chunk.setData(AenderAttachments.CHUNK_REALITY, AenderChunkRealityData.STALE);
+        chunk.markUnsaved();
     }
 
-    public static synchronized void forgetGeneratedMark(ChunkPos pos) {
-        CHUNK_GENERATION_SIGNATURES.remove(chunkKey(pos));
-    }
-
-    public static synchronized void clearForgottenWorld() {
+    public static synchronized void advanceTransientRealityForTest() {
         ACTIVE_REGION_SALTS.clear();
         REGION_REFS.clear();
         RETAINED_CHUNKS.clear();
@@ -109,50 +198,31 @@ public final class AenderVolatility {
         realityEpoch++;
         realitySalt = mix64(
                 realitySalt
-                        ^ System.nanoTime()
                         ^ realityEpoch * 0x9E3779B97F4A7C15L
                         ^ 0xA3D1E41F29B7C53DL
         );
+        realityData = null;
     }
 
     public static synchronized long currentRealityEpoch() {
         return realityEpoch;
     }
 
-    public static synchronized void forgetFarRegionColumns(List<ServerPlayer> players, int forgetDistanceBlocks) {
-        if (players.isEmpty()) {
-            /*
-             * AenderWorldTickEvents already changes reality once when the last
-             * player leaves. Repeating that reset every 16 empty-dimension ticks
-             * would invalidate chunks being prepared by an Overworld portal.
-             */
-            return;
-        }
+    public static synchronized int currentGeneratorVersion() {
+        return generatorVersion;
+    }
 
-        Set<RegionColumn> columns = new HashSet<>();
-
-        for (RegionKey key : ACTIVE_REGION_SALTS.keySet()) {
-            columns.add(new RegionColumn(key.regionX(), key.regionZ()));
-        }
-
-        int forgotten = 0;
-
-        for (RegionColumn column : columns) {
-            if (isColumnNearAnyPlayer(column, players, forgetDistanceBlocks)) {
-                continue;
-            }
-
-            forgetRegionColumn(column);
-            forgotten++;
-        }
-
-        if (forgotten > 0) {
-            Retold.LOGGER.debug("Forgot {} far Aender region columns", forgotten);
-        }
+    public static synchronized void advanceRegion(ServerLevel level, int regionX, int regionZ) {
+        forgetRegionColumn(new RegionColumn(regionX, regionZ));
+        level.getServer().getDataStorage().scheduleSave();
     }
 
     private static void forgetRegionColumn(RegionColumn column) {
-        REGION_EPOCHS.merge(column, 1L, Long::sum);
+        if (realityData == null) {
+            REGION_EPOCHS.merge(column, 1L, Long::sum);
+        } else {
+            realityData.advanceRegion(column.regionX(), column.regionZ());
+        }
 
         /*
          * Important:
@@ -165,28 +235,6 @@ public final class AenderVolatility {
         );
     }
 
-    private static boolean isColumnNearAnyPlayer(
-            RegionColumn column,
-            List<ServerPlayer> players,
-            int forgetDistanceBlocks
-    ) {
-        double centerX = (column.regionX() + 0.5D) * AenderIslandSampler.REGION_SIZE;
-        double centerZ = (column.regionZ() + 0.5D) * AenderIslandSampler.REGION_SIZE;
-
-        double maxDistanceSq = (double) forgetDistanceBlocks * (double) forgetDistanceBlocks;
-
-        for (ServerPlayer player : players) {
-            double dx = player.getX() - centerX;
-            double dz = player.getZ() - centerZ;
-
-            if (dx * dx + dz * dz <= maxDistanceSq) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public static synchronized int activeRegionCount() {
         return ACTIVE_REGION_SALTS.size();
     }
@@ -195,7 +243,7 @@ public final class AenderVolatility {
         return RETAINED_CHUNKS.size();
     }
 
-    public static synchronized int generatedThisSessionCount() {
+    public static synchronized int cachedChunkSignatureCount() {
         return CHUNK_GENERATION_SIGNATURES.size();
     }
 
@@ -276,6 +324,7 @@ public final class AenderVolatility {
         long signature = mix64(
                 realitySalt
                         ^ realityEpoch * 0xD1B54A32D192ED03L
+                        ^ (long) generatorVersion * 0x94D049BB133111EBL
                         ^ 0x9E3779B97F4A7C15L
         );
 
@@ -294,6 +343,10 @@ public final class AenderVolatility {
     }
 
     private static long regionEpoch(int regionX, int regionZ) {
+        if (realityData != null) {
+            return realityData.regionEpoch(regionX, regionZ);
+        }
+
         return REGION_EPOCHS.getOrDefault(new RegionColumn(regionX, regionZ), 0L);
     }
 

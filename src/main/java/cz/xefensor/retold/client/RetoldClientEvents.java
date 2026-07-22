@@ -1,5 +1,6 @@
 package cz.xefensor.retold.client;
 
+import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
@@ -7,20 +8,34 @@ import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.sky.RetoldClientEndSky;
 import cz.xefensor.retold.client.sky.RetoldEndSkyPatcher;
+import cz.xefensor.retold.client.texture.AenderPortalSpriteSource;
 import cz.xefensor.retold.registry.RetoldEntityTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.RandomSource;
 import net.minecraft.client.renderer.entity.EndermanRenderer;
+import net.minecraft.client.renderer.entity.BoatRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.model.object.boat.BoatModel;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 public final class RetoldClientEvents {
+    private static final ModelLayerLocation AENDER_BOAT_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "boat/aender"),
+            "main"
+    );
+    private static final ModelLayerLocation AENDER_CHEST_BOAT_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "chest_boat/aender"),
+            "main"
+    );
     private static final DustParticleOptions AENDER_GREEN_PARTICLE =
             new DustParticleOptions(0x6CA983, 0.30F);
     private static final DustParticleOptions AENDER_BRIGHT_GREEN_PARTICLE =
@@ -33,9 +48,18 @@ public final class RetoldClientEvents {
 
     public static void register(IEventBus modEventBus) {
         modEventBus.addListener(RetoldClientEvents::registerEntityRenderers);
+        modEventBus.addListener(RetoldClientEvents::registerLayerDefinitions);
         modEventBus.addListener(RetoldClientEvents::addEntityRenderLayers);
+        modEventBus.addListener(RetoldClientEvents::registerSpriteSources);
         RetoldChronolithBeamClient.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientTick);
+    }
+
+    private static void registerSpriteSources(RegisterSpriteSourcesEvent event) {
+        event.register(
+                Identifier.fromNamespaceAndPath(Retold.MODID, "aender_portal_recolor"),
+                AenderPortalSpriteSource.MAP_CODEC
+        );
     }
 
     private static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -47,6 +71,19 @@ public final class RetoldClientEvents {
                 RetoldEntityTypes.GALE_CORE.get(),
                 GaleCoreRenderer::new
         );
+        event.registerEntityRenderer(
+                RetoldEntityTypes.AENDER_BOAT.get(),
+                context -> new BoatRenderer(context, AENDER_BOAT_LAYER)
+        );
+        event.registerEntityRenderer(
+                RetoldEntityTypes.AENDER_CHEST_BOAT.get(),
+                context -> new BoatRenderer(context, AENDER_CHEST_BOAT_LAYER)
+        );
+    }
+
+    private static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(AENDER_BOAT_LAYER, BoatModel::createBoatModel);
+        event.registerLayerDefinition(AENDER_CHEST_BOAT_LAYER, BoatModel::createChestBoatModel);
     }
 
     private static void addEntityRenderLayers(EntityRenderersEvent.AddLayers event) {

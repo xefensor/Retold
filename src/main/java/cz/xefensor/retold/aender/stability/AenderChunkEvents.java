@@ -27,17 +27,9 @@ public final class AenderChunkEvents {
         ChunkPos pos = chunk.getPos();
 
         /*
-         * Important:
-         * Even stable chunks must be retained and marked as current.
-         *
-         * Otherwise this happens:
-         * 1. Place stabilizer.
-         * 2. Save and quit.
-         * 3. Load world again.
-         * 4. Stable chunk loads, but gets no AenderVolatility signature.
-         * 5. Break stabilizer.
-         * 6. Chunk becomes unstable.
-         * 7. needsRegeneration() sees no signature and instantly regenerates it.
+         * Stable chunks are adopted into the current reality without replacing
+         * their blocks. The signature is persisted with the chunk, so save/reload
+         * does not turn missing runtime state into destructive regeneration.
          */
         AenderVolatility.retainForChunk(chunk);
 

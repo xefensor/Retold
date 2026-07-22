@@ -114,13 +114,8 @@ public final class AenderStabilizerEvents {
                  * Stable chunks are marked current while protected. When the last
                  * stabilizer releases them, they need to rejoin volatile terrain.
                  */
-                AenderVolatility.forgetGeneratedMark(pos);
-
-                ChunkAccess chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
-
-                if (chunk == null) {
-                    continue;
-                }
+                ChunkAccess chunk = level.getChunk(chunkX, chunkZ);
+                AenderVolatility.forgetGeneratedMark(chunk);
 
                 AenderRealityTickEvents.enqueueIfNeeded(level, chunk);
             }

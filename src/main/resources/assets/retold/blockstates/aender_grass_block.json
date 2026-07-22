@@ -1,7 +1,10 @@
 {
   "variants": {
-    "": {
+    "snowy=false": {
       "model": "retold:block/aender_grass_block"
+    },
+    "snowy=true": {
+      "model": "retold:block/aender_grass_block_snowy"
     }
   }
 }

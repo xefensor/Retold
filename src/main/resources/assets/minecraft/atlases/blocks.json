@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "retold:aender_portal_recolor",
+      "source": "minecraft:block/nether_portal",
+      "target": "retold:block/aender_portal"
+    }
+  ]
+}
