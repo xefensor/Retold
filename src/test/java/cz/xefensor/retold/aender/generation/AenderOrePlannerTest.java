@@ -11,6 +11,35 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AenderOrePlannerTest {
     @Test
+    void realIslandSamplerProducesUncommonRatherThanRareVeins() {
+        int sampledChunks = 0;
+        int chunksWithVeins = 0;
+
+        for (int chunkX = -32; chunkX <= 32; chunkX++) {
+            for (int chunkZ = -32; chunkZ <= 32; chunkZ++) {
+                sampledChunks++;
+                if (!AenderOrePlanner.veinsForChunk(
+                        AenderIslandSampler.islandsForChunk(chunkX, chunkZ),
+                        chunkX,
+                        chunkZ
+                ).isEmpty()) {
+                    chunksWithVeins++;
+                }
+            }
+        }
+
+        double oreBearingRatio = chunksWithVeins / (double) sampledChunks;
+        assertTrue(
+                oreBearingRatio >= 0.07D,
+                "Aenderite must be uncommon and discoverable, not effectively absent"
+        );
+        assertTrue(
+                oreBearingRatio <= 0.16D,
+                "Aenderite must remain uncommon rather than becoming a common terrain block"
+        );
+    }
+
+    @Test
     void veinsAreDeterministicCompactAndTwoToFiveBlocks() {
         AenderIslandSampler.Island island = island(41L);
         List<AenderOrePlanner.Vein> first = sampleVeins(island);

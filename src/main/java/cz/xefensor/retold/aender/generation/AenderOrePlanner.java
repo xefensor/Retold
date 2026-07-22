@@ -7,9 +7,9 @@ import java.util.Set;
 
 /** Pure, coordinate-deterministic planning for Aenderite veins. */
 final class AenderOrePlanner {
-    private static final int CELL_SIZE = 24;
+    private static final int CELL_SIZE = 18;
     private static final int MAX_VEIN_REACH = 4;
-    private static final double VEIN_CHANCE = 0.22D;
+    private static final double VEIN_CHANCE = 0.32D;
 
     private AenderOrePlanner() {
     }

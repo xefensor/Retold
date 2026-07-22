@@ -49,7 +49,7 @@ Each release should be readable in two passes:
 - Added an indefinite, TPS-aware portal preparation state machine with unit coverage for its transition gate and a 5x5 asynchronously prepared safety core.
 - Added deterministic coverage for Aender counterpart surface selection and the Y=100 void fallback.
 - Added the data-driven Aender tree grower, NeoForge stripping/composting data maps, complete wood-family resources and entities, and GameTest coverage for renewal, tags, loot, stripping, signs, and boats.
-- Added a pure coordinate-deterministic Aenderite vein planner with cross-chunk coverage, Netherite-only harvest tags, ore loot and cooking recipes, vanilla creative-tab placement, survival GameTest assertions, and deterministic JUnit distribution tests.
+- Added a pure coordinate-deterministic Aenderite vein planner with cross-chunk coverage, Netherite-only harvest tags, ore loot and cooking recipes, vanilla creative-tab placement, survival GameTest assertions, and deterministic JUnit tests for structure and real-sampler frequency. Initial tuning that produced ore in only about 3.6% of sampled chunks was raised to an uncommon 8.6% in the same 9,409-chunk probe.
 
 ## 0.2.1 - 2026-07-20
 
