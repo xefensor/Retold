@@ -11,6 +11,18 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- No unreleased player-facing changes yet.
+
+### Technical
+
+- No unreleased technical changes yet.
+
+## 0.3.0 - 2026-07-27
+
+Feature release focused on a richer, persistent Aender, safer portal travel, and the first in-game discovery path for the Air Temple.
+
+### Player-Facing
+
 - Journeyman cartographers now sell an Air Temple Explorer Map for 12 emeralds and a compass after the world reaches Stage 2. The map marks the nearest Air Temple with an exact X.
 - Aender terrain now keeps the same reality across disconnects, saves, normal game/server restarts, and recovery after a crash. Volatile terrain receives a new seed only after the last player actually travels out of the dimension.
 - Fresh worlds use improved Aender terrain composition that removes buried overlap surfaces and lets trees and boulders continue cleanly across chunk borders. Existing saves retain legacy generation, including newly explored chunks.
