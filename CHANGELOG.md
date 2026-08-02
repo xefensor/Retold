@@ -11,11 +11,11 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
-- No unreleased player-facing changes yet.
+- Fixed extinguished soul and copper wall torches dropping nothing when broken.
 
 ### Technical
 
-- No unreleased technical changes yet.
+- Added GameTest coverage for the drops of all six extinguished torch variants.
 
 ## 0.3.0 - 2026-07-27
 
