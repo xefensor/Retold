@@ -11,6 +11,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
@@ -35,11 +36,16 @@ import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.function.Consumer;
 
 public final class RetoldGameTests {
@@ -91,6 +97,12 @@ public final class RetoldGameTests {
                 environment,
                 "guardian_ignores_non_player_damage_for_defense_assist",
                 RetoldGameTests::guardianIgnoresNonPlayerDamageForDefenseAssist
+        );
+        registerTest(
+                event,
+                environment,
+                "extinguished_torches_drop_matching_lit_items",
+                RetoldGameTests::extinguishedTorchesDropMatchingLitItems
         );
 
         RetoldAenderGameTests.register(event, environment);
@@ -368,6 +380,86 @@ public final class RetoldGameTests {
                 "Non-player damage must pass without crashing guardian defense assist"
         );
         helper.succeed();
+    }
+
+    private static void extinguishedTorchesDropMatchingLitItems(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        BlockPos pos = helper.absolutePos(new BlockPos(1, 1, 1));
+
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_TORCH.get(),
+                Items.TORCH,
+                "An extinguished torch must drop a normal torch"
+        );
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_WALL_TORCH.get(),
+                Items.TORCH,
+                "An extinguished wall torch must drop a normal torch"
+        );
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_SOUL_TORCH.get(),
+                Items.SOUL_TORCH,
+                "An extinguished soul torch must drop a soul torch"
+        );
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_SOUL_WALL_TORCH.get(),
+                Items.SOUL_TORCH,
+                "An extinguished soul wall torch must drop a soul torch"
+        );
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_COPPER_TORCH.get(),
+                Items.COPPER_TORCH,
+                "An extinguished copper torch must drop a copper torch"
+        );
+        assertOnlyDrop(
+                helper,
+                level,
+                pos,
+                RetoldBlocks.EXTINGUISHED_COPPER_WALL_TORCH.get(),
+                Items.COPPER_TORCH,
+                "An extinguished copper wall torch must drop a copper torch"
+        );
+
+        helper.succeed();
+    }
+
+    private static void assertOnlyDrop(
+            GameTestHelper helper,
+            ServerLevel level,
+            BlockPos pos,
+            Block block,
+            Item expectedItem,
+            String message
+    ) {
+        List<ItemStack> drops = Block.getDrops(
+                block.defaultBlockState(),
+                level,
+                pos,
+                null
+        );
+        helper.assertTrue(
+                drops.size() == 1
+                        && drops.getFirst().is(expectedItem)
+                        && drops.getFirst().getCount() == 1,
+                message
+        );
     }
 
     private static Spider spawnSightedTestSpider(GameTestHelper helper) {
