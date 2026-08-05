@@ -638,6 +638,13 @@ prey, Sniffer forage, and Cube Mob swallowing all supply their world position. H
 external world position, so it uses the point directly in front of the mob's face. The pose priority
 remains below faction pressure, defense, attacks, territory work, and flee control; if any higher
 priority owner takes control, the transient pose is discarded without clearing that urgent owner.
+Every meal also rechecks `RetoldBehaviorCoordinator.canCompleteMeal` immediately before changing
+hunger or consuming an item, block, or prey. `HUNT` may complete its own bite/kill meal, but
+`FLEE`, defense, attack, support, shelter, territory, and unrelated live-target work cannot. The
+same rule gates vanilla `EatBlockGoal`: urgent ownership prevents a new graze, ends an active one,
+and cancels its delayed block transaction. This transaction-time check is required even when the
+owning dispatcher already screened danger, because vanilla goals and event callbacks can remain
+active across an ownership change.
 
 ## Home, Range, And Social Systems
 

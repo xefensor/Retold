@@ -514,6 +514,10 @@ public final class RetoldArmadilloDefenseEvents {
             RetoldMobState state,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(armadillo)) {
+            return false;
+        }
+
         BlockState soilState = level.getBlockState(grubSoil);
 
         if (!level.getBlockState(grubSoil.above()).isAir()

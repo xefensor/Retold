@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
 import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
@@ -48,6 +49,10 @@ public final class RetoldTraderLlamaSustenance {
         if (state.hunger() <= 0
                 || state.lastAteAt() > 0L
                 && gameTime - state.lastAteAt() < CARAVAN_FODDER_INTERVAL_TICKS) {
+            return true;
+        }
+
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(llama)) {
             return true;
         }
 

@@ -286,6 +286,10 @@ public final class RetoldControlledHuntingEvents {
 
         long gameTime = level.getGameTime();
 
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(killer)) {
+            return;
+        }
+
         if (RetoldAxolotlHelperEvents.recordKilledPrey(
                 level,
                 killer,

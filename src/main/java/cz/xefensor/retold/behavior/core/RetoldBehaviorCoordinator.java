@@ -48,7 +48,7 @@ public final class RetoldBehaviorCoordinator {
         return RetoldAiTargets.isInvalidPlayerTarget(entity);
     }
 
-    public static boolean hasLiveTarget(PathfinderMob mob) {
+    public static boolean hasLiveTarget(Mob mob) {
         if (mob == null) {
             return false;
         }
@@ -59,7 +59,7 @@ public final class RetoldBehaviorCoordinator {
     }
 
     public static boolean canStartLowPriorityHomeBehavior(PathfinderMob mob) {
-        if (!isUsableMob(mob) || hasLiveTarget(mob)) {
+        if (!isUsableEntity(mob) || hasLiveTarget(mob)) {
             return false;
         }
 
@@ -108,8 +108,8 @@ public final class RetoldBehaviorCoordinator {
         );
     }
 
-    public static boolean canFeedNow(PathfinderMob mob) {
-        if (!isUsableMob(mob) || hasLiveTarget(mob)) {
+    public static boolean canFeedNow(Mob mob) {
+        if (!isUsableEntity(mob) || hasLiveTarget(mob)) {
             return false;
         }
 
@@ -119,5 +119,30 @@ public final class RetoldBehaviorCoordinator {
                 || mode == RetoldAiControlMode.FEED
                 || mode == RetoldAiControlMode.SEARCH
                 || mode == RetoldAiControlMode.REGROUP;
+    }
+
+    /**
+     * Rechecks priority at the instant a meal would change hunger or consume its
+     * source. Hunting is included because a successful bite or kill is itself a
+     * meal; urgent flight and every unrelated duty remain ineligible.
+     */
+    public static boolean canCompleteMeal(Mob mob) {
+        if (!isUsableEntity(mob)) {
+            return false;
+        }
+
+        RetoldAiControlMode mode = RetoldAiControl.getMode(mob);
+
+        if (mode == RetoldAiControlMode.HUNT) {
+            return true;
+        }
+
+        return !hasLiveTarget(mob)
+                && (
+                mode == RetoldAiControlMode.NONE
+                        || mode == RetoldAiControlMode.FEED
+                        || mode == RetoldAiControlMode.SEARCH
+                        || mode == RetoldAiControlMode.REGROUP
+        );
     }
 }

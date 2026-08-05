@@ -31,6 +31,7 @@
     "BrainMemoryMixin",
     "PiglinAiMixin",
     "PathNavigationMixin",
+    "EatBlockGoalMixin",
     "ThrownEnderpearlMixin",
     "AnimalBreedingMixin",
     "MobHurtTargetMixin",

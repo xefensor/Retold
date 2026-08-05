@@ -603,7 +603,8 @@ public final class RetoldFoodBehaviorEvents {
             ItemEntity food,
             long gameTime
     ) {
-        if (mob.distanceToSqr(food) > EAT_ITEM_DISTANCE_SQUARED) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(mob)
+                || mob.distanceToSqr(food) > EAT_ITEM_DISTANCE_SQUARED) {
             return false;
         }
 
@@ -787,7 +788,8 @@ public final class RetoldFoodBehaviorEvents {
             BlockPos foragePos,
             long gameTime
     ) {
-        if (mob.blockPosition().distSqr(foragePos) > FORAGE_EAT_DISTANCE_SQUARED) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(mob)
+                || mob.blockPosition().distSqr(foragePos) > FORAGE_EAT_DISTANCE_SQUARED) {
             return false;
         }
 

@@ -397,6 +397,10 @@ public final class RetoldAmphibianForagerEvents {
             LivingEntity prey,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(frog)) {
+            return;
+        }
+
         boolean hurt = prey.hurtServer(
                 level,
                 frog.damageSources().mobAttack(frog),
@@ -445,7 +449,8 @@ public final class RetoldAmphibianForagerEvents {
                 || prey == null
                 || frog.level() != level
                 || !RetoldMobRules.isAmphibianForager(frog)
-                || !RetoldPreyTargeting.isTinyWetlandPrey(prey)) {
+                || !RetoldPreyTargeting.isTinyWetlandPrey(prey)
+                || !RetoldBehaviorCoordinator.canCompleteMeal(frog)) {
             return false;
         }
 
