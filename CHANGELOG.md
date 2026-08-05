@@ -11,6 +11,12 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+### Technical
+
+## 0.4.0 - 2026-08-05
+
+### Player-Facing
+
 - Cows and mooshrooms now share one bovine herd-range identity, while horses/donkeys/mules and llamas/trader llamas retain their confirmed mixed groups. Cod, Salmon, Tropical Fish, and Pufferfish now pull isolated members back toward exact-species schools through aquatic paths. Squid and Glow Squid copy nearby panic only from their own exact species.
 - Sheep, other ordinary livestock, small foragers, and fish now immediately run after taking damage from any source, including attacks by Zombies or players. Combat-capable mobs and species with specialized defense behavior keep their own reactions.
 - Fixed extinguished soul and copper wall torches dropping nothing when broken.

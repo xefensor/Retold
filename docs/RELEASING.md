@@ -2,7 +2,7 @@
 
 Retold releases are published from one GitHub Actions workflow to GitHub Releases, Modrinth, and CurseForge.
 
-The workflow validates the version and changelog, builds the release JAR, runs unit tests and NeoForge GameTests, creates a SHA-256 checksum, and publishes the same version metadata and release notes to all three platforms.
+The workflow validates the version and changelog, builds the release JAR, runs unit tests and static analysis, creates a SHA-256 checksum, and publishes the same version metadata and release notes to all three platforms. Focused NeoForge GameTests are selected and run before release preparation according to [`internal/testing_strategy.md`](internal/testing_strategy.md); the publishing workflow does not repeat the complete GameTest suite.
 
 ## One-Time GitHub Setup
 
@@ -82,7 +82,7 @@ Pushing the tag starts `.github/workflows/release.yml`. The workflow refuses to 
 - the matching changelog section is missing or empty
 - a GitHub release for the version already exists
 - required project IDs or API tokens are missing
-- the build, unit tests, PMD, or GameTests fail
+- the build, unit tests, or PMD fail
 - the expected release JAR is missing
 
 When all checks pass, the workflow publishes:
