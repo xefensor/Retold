@@ -216,6 +216,9 @@ jobs:
             > curseforge-update.json
 
           response="$(curl --fail-with-body --silent --show-error \
+            --retry 4 \
+            --retry-delay 5 \
+            --retry-all-errors \
             --request POST \
             --header "X-Api-Token: $CURSEFORGE_TOKEN" \
             --form "metadata=<curseforge-update.json;type=application/json" \
