@@ -11,9 +11,9 @@ Some sections are written as implementation guidance or refactor rules. Treat th
 
 ## Accuracy Notes
 
-Last targeted audit: 2026-07-17.
-Last developer design clarification pass: 2026-07-12.
-Last documentation consolidation pass: 2026-07-17.
+Last targeted audit: 2026-08-03.
+Last developer design clarification pass: 2026-08-03.
+Last documentation consolidation pass: 2026-08-04.
 
 These docs are checked against code and resource files, but they are still working documentation. When a row says `needs verification`, it means code/data exists but the final in-game behavior should still be tested before treating it as complete.
 
@@ -27,6 +27,10 @@ Use the files this way:
 | [`design_implementation_status.md`](design_implementation_status.md) | original design compared with current implementation status |
 | [`retold_mod_system.md`](retold_mod_system.md) | whole-mod architecture and subsystem ownership |
 | [`retold_mob_ai_system.md`](retold_mob_ai_system.md) | mob AI architecture, implementation rules, and completion checklist |
+| [`mob_ai_work_report_2026-08-03.md`](mob_ai_work_report_2026-08-03.md) | dated consolidated record of the mob/faction design and implementation pass |
+| [`mob_ai_handoff_prompt.md`](mob_ai_handoff_prompt.md) | copy-paste context and ordered tasks for continuing the mob work in a new conversation |
+| [`mob_tps_benchmark.md`](mob_tps_benchmark.md) | reproducible 68-species TPS matrix method and baseline results |
+| [`testing_strategy.md`](testing_strategy.md) | risk-based rules for choosing focused checks and escalating to complete suites |
 | [`retold_design_risks.md`](retold_design_risks.md) | planned gaps, undecided decisions, and implementation watchpoints |
 | [`retold_issues.md`](retold_issues.md) | confirmed issues, failed tests, and reproducible broken behavior |
 
@@ -40,6 +44,10 @@ Current internal docs:
 - [`design_implementation_status.md`](design_implementation_status.md)
 - [`retold_mod_system.md`](retold_mod_system.md)
 - [`retold_mob_ai_system.md`](retold_mob_ai_system.md)
+- [`mob_ai_work_report_2026-08-03.md`](mob_ai_work_report_2026-08-03.md)
+- [`mob_ai_handoff_prompt.md`](mob_ai_handoff_prompt.md)
+- [`mob_tps_benchmark.md`](mob_tps_benchmark.md)
+- [`testing_strategy.md`](testing_strategy.md)
 - [`retold_design_risks.md`](retold_design_risks.md)
 - [`retold_issues.md`](retold_issues.md)
 

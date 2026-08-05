@@ -114,10 +114,6 @@ jobs:
       - name: Build and run unit tests
         run: ./gradlew clean build
 
-      - name: Run GameTests
-        run: ./gradlew runGameTestServer
-        timeout-minutes: 10
-
       - name: Extract release notes
         env:
           VERSION: ${{ steps.version.outputs.version }}

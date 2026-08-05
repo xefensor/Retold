@@ -29,6 +29,8 @@ public final class RetoldFactionRelations {
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
                         RetoldFaction.ARTHROPODS,
+                        RetoldFaction.SILVERFISH,
+                        RetoldFaction.ENDERMITES,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
                         RetoldFaction.WARDENS,
@@ -46,6 +48,8 @@ public final class RetoldFactionRelations {
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
                         RetoldFaction.ARTHROPODS,
+                        RetoldFaction.SILVERFISH,
+                        RetoldFaction.ENDERMITES,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
                         RetoldFaction.WARDENS,
@@ -56,7 +60,7 @@ public final class RetoldFactionRelations {
         );
 
         /*
-         * Undead attack everyone except other undead.
+         * Undead attack every living non-undead creature except creepers.
          *
          * This includes:
          * - players
@@ -64,7 +68,6 @@ public final class RetoldFactionRelations {
          * - illagers
          * - slimes/magma cubes
          * - guardians
-         * - creepers
          * - arthropods
          * - nether beasts
          * - breezes
@@ -83,6 +86,8 @@ public final class RetoldFactionRelations {
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
                         RetoldFaction.ARTHROPODS,
+                        RetoldFaction.SILVERFISH,
+                        RetoldFaction.ENDERMITES,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
                         RetoldFaction.WARDENS,
@@ -127,6 +132,24 @@ public final class RetoldFactionRelations {
 
         TARGET_FACTIONS.put(
                 RetoldFaction.ARTHROPODS,
+                Set.of(
+                        RetoldFaction.NETHER_REMNANTS,
+                        RetoldFaction.ILLAGERS,
+                        RetoldFaction.VILLAGE_DEFENDERS
+                )
+        );
+
+        TARGET_FACTIONS.put(
+                RetoldFaction.SILVERFISH,
+                Set.of(
+                        RetoldFaction.NETHER_REMNANTS,
+                        RetoldFaction.ILLAGERS,
+                        RetoldFaction.VILLAGE_DEFENDERS
+                )
+        );
+
+        TARGET_FACTIONS.put(
+                RetoldFaction.ENDERMITES,
                 Set.of(
                         RetoldFaction.NETHER_REMNANTS,
                         RetoldFaction.ILLAGERS,
@@ -193,6 +216,8 @@ public final class RetoldFactionRelations {
                         RetoldFaction.SLIMES,
                         RetoldFaction.AQUATIC_HOSTILES,
                         RetoldFaction.ARTHROPODS,
+                        RetoldFaction.SILVERFISH,
+                        RetoldFaction.ENDERMITES,
                         RetoldFaction.NETHER_BEASTS,
                         RetoldFaction.BREEZES,
                         RetoldFaction.WARDENS,
@@ -230,7 +255,8 @@ public final class RetoldFactionRelations {
         RetoldFaction targetFaction = RetoldFactionMembers.getFaction(target);
 
         if (targetFaction == null) {
-            return false;
+            RetoldFaction attackerFaction = RetoldFactionMembers.getFaction(attacker);
+            return isIndiscriminateLivingAttacker(attackerFaction);
         }
 
         return shouldAttackFaction(attacker, targetFaction);
@@ -270,7 +296,17 @@ public final class RetoldFactionRelations {
             return false;
         }
 
+        if (isIndiscriminateLivingAttacker(first)) {
+            return second != RetoldFaction.CREEPERS;
+        }
+
         return targetsOf(first).contains(second);
+    }
+
+    private static boolean isIndiscriminateLivingAttacker(RetoldFaction faction) {
+        return faction == RetoldFaction.UNDEAD
+                || faction == RetoldFaction.SLIMES
+                || faction == RetoldFaction.AQUATIC_HOSTILES;
     }
 
     private static Set<RetoldFaction> targetsOf(RetoldFaction faction) {

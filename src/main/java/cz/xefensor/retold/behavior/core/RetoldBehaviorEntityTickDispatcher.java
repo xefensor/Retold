@@ -5,12 +5,17 @@ import cz.xefensor.retold.behavior.species.RetoldAmphibianForagerEvents;
 import cz.xefensor.retold.behavior.home.RetoldAnimalHomeRepairEvents;
 import cz.xefensor.retold.behavior.species.RetoldArmadilloDefenseEvents;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlHelperEvents;
+import cz.xefensor.retold.behavior.species.RetoldAquaticSchoolEvents;
+import cz.xefensor.retold.behavior.species.RetoldBatColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldCommanderSupportEvents;
 import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
+import cz.xefensor.retold.behavior.flee.RetoldCreeperAwareness;
 import cz.xefensor.retold.behavior.hunting.RetoldControlledRegroupEvents;
 import cz.xefensor.retold.behavior.species.RetoldDolphinPodEvents;
 import cz.xefensor.retold.behavior.species.RetoldGhastArtilleryEvents;
 import cz.xefensor.retold.behavior.food.RetoldHeldFoodConsumptionEvents;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
+import cz.xefensor.retold.behavior.food.RetoldWeakBarrierBehavior;
 import cz.xefensor.retold.behavior.home.RetoldHerdRangeEvents;
 import cz.xefensor.retold.behavior.species.RetoldHiveColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldIllagerRoamingEvents;
@@ -28,16 +33,28 @@ import cz.xefensor.retold.behavior.species.RetoldSkeletonRangedEvents;
 import cz.xefensor.retold.behavior.home.RetoldSmallForagerHomeEvents;
 import cz.xefensor.retold.behavior.species.RetoldSnifferForagerEvents;
 import cz.xefensor.retold.behavior.home.RetoldSoloOpportunistHomeEvents;
+import cz.xefensor.retold.behavior.species.RetoldSpiderLairEvents;
 import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
 import cz.xefensor.retold.behavior.species.RetoldTerritoryGuardEvents;
 import cz.xefensor.retold.behavior.species.RetoldTurtleBeachEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadHordeEvents;
 import cz.xefensor.retold.behavior.control.RetoldVanillaAiBlockerEvents;
+import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreeding;
 import cz.xefensor.retold.behavior.species.RetoldZoglinRampagerEvents;
+import cz.xefensor.retold.villager.RetoldVillagerTradeRefresh;
+import cz.xefensor.retold.villager.RetoldVillagerAnimalTending;
+import cz.xefensor.retold.villager.RetoldVillagerCommunalFood;
+import cz.xefensor.retold.villager.RetoldVillagerCommunalSupply;
+import cz.xefensor.retold.villager.RetoldVillagerGolemConstruction;
+import cz.xefensor.retold.villager.RetoldVillagerTorchRelighting;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.animal.Animal;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -64,6 +81,30 @@ public final class RetoldBehaviorEntityTickDispatcher {
         long gameTime = level.getGameTime();
         RetoldMobProfile profile = RetoldAiTickContext.profile(mob);
 
+        if (mob instanceof Villager villager) {
+            boolean villagerCadence = shouldDispatch(mob, gameTime, 20);
+
+            if (villagerCadence) {
+                RetoldVillagerTradeRefresh.tick(level, villager);
+                RetoldVillagerCommunalFood.tick(level, villager, gameTime);
+                RetoldVillagerCommunalSupply.tick(level, villager, gameTime);
+                RetoldVillagerAnimalTending.tick(level, villager, gameTime);
+                RetoldVillagerGolemConstruction.tick(level, villager, gameTime);
+            }
+
+            boolean torchRelightingTick = villagerCadence
+                    || RetoldVillagerTorchRelighting.requiresContinuousTick(villager);
+
+            if (torchRelightingTick) {
+                RetoldVillagerTorchRelighting.tick(level, villager, gameTime);
+            }
+        }
+
+        if (mob instanceof Animal animal
+                && shouldDispatch(animal, gameTime, 20)) {
+            RetoldAnimalBreeding.tick(level, animal, gameTime);
+        }
+
         if (shouldDispatch(mob, gameTime, 4)) {
             RetoldControlledFleeEvents.onEntityTickPost(event);
         }
@@ -76,6 +117,10 @@ public final class RetoldBehaviorEntityTickDispatcher {
         }
 
         if (RetoldMobRules.canUseOrdinaryLifeSystems(mob)) {
+            if (shouldDispatch(mob, gameTime, 2)) {
+                RetoldWeakBarrierBehavior.tick(level, mob, gameTime);
+            }
+
             if (shouldDispatch(mob, gameTime, 20)) {
                 RetoldMobStateRecoveryEvents.onEntityTickPost(event);
                 RetoldAnimalHomeRepairEvents.onEntityTickPost(event);
@@ -103,12 +148,31 @@ public final class RetoldBehaviorEntityTickDispatcher {
             case TURTLE_BEACH -> dispatchEvery(event, mob, gameTime, 10, RetoldTurtleBeachEvents::onEntityTickPost);
             case AMPHIBIAN_FORAGER -> dispatchEvery(event, mob, gameTime, 6, RetoldAmphibianForagerEvents::onEntityTickPost);
             case AQUATIC_HELPER_PREDATOR -> dispatchEvery(event, mob, gameTime, 5, RetoldAxolotlHelperEvents::onEntityTickPost);
+            case AQUATIC_SCHOOL -> dispatchEvery(
+                    event,
+                    mob,
+                    gameTime,
+                    10,
+                    ignored -> RetoldAquaticSchoolEvents.tick(level, mob, gameTime)
+            );
             case AQUATIC_TERRITORY_GUARD, TERRITORY_GUARD -> dispatchEvery(event, mob, gameTime, 10, RetoldTerritoryGuardEvents::onEntityTickPost);
             case COMMANDER_SUPPORT -> dispatchCommanderSupport(event, mob, gameTime);
             case ILLAGER_RAIDER -> dispatchIllagerRaider(event, mob, gameTime);
-            case NONE, SPECIAL_VANILLA, APEX_OR_BOSS -> {
+            case NONE, LOOSE_AQUATIC_GROUP, VILLAGER_COMMUNAL, BAT_COLONY, SPECIAL_VANILLA, APEX_OR_BOSS -> {
             }
         }
+
+        /*
+         * Creeper danger is applied last so urgent flight can interrupt ordinary combat,
+         * hunting, home, and territory movement from this tick.
+         */
+        RetoldCreeperAwareness.tick(
+                level,
+                mob,
+                gameTime,
+                RetoldBehaviorTiming.shouldThink(mob, gameTime, 4)
+        );
+        RetoldFeedingPose.tick(mob, gameTime);
     }
 
     private static void dispatchNonPathfinder(
@@ -121,12 +185,32 @@ public final class RetoldBehaviorEntityTickDispatcher {
 
         long gameTime = level.getGameTime();
 
+        if (entity instanceof Bat bat
+                && RetoldMobRules.isBatColony(bat)
+                && shouldDispatch(bat, gameTime, 4)) {
+            RetoldBatColonyEvents.tick(
+                    level,
+                    bat,
+                    gameTime
+            );
+        }
+
         if (shouldDispatch(entity, gameTime, 8)) {
             RetoldGhastArtilleryEvents.onEntityTickPost(event);
         }
 
         if (shouldDispatch(entity, gameTime, 6)) {
             RetoldPhantomStalkerEvents.onEntityTickPost(event);
+        }
+
+        if (entity instanceof Mob mob) {
+            RetoldCreeperAwareness.tick(
+                    level,
+                    mob,
+                    gameTime,
+                    RetoldBehaviorTiming.shouldThink(mob, gameTime, 4)
+            );
+            RetoldFeedingPose.tick(mob, gameTime);
         }
     }
 
@@ -185,6 +269,7 @@ public final class RetoldBehaviorEntityTickDispatcher {
     ) {
         dispatchEvery(event, mob, gameTime, 10, RetoldPredatorSearchEvents::onEntityTickPost);
         dispatchEvery(event, mob, gameTime, 6, RetoldSwarmScavengerEvents::onEntityTickPost);
+        dispatchEvery(event, mob, gameTime, 20, RetoldSpiderLairEvents::onEntityTickPost);
     }
 
     private static void dispatchCommanderSupport(

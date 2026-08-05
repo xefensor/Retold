@@ -34,6 +34,17 @@ public final class RetoldPlayerSyncEvents {
             return;
         }
 
+        /*
+         * GameTests can create server-side mock players without a connected
+         * client. They still participate in player events, but custom payloads
+         * have nowhere to go. Real login, respawn, and dimension-change events
+         * always have an active play connection before synchronization runs.
+         */
+        if (serverPlayer.connection == null
+                || !serverPlayer.connection.getConnection().isConnected()) {
+            return;
+        }
+
         ServerLevel level = serverPlayer.level();
 
         RetoldWorldData worldData = RetoldWorldData.get(level);

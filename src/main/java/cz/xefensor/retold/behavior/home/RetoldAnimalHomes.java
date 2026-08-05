@@ -7,6 +7,7 @@ import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 
 import java.util.Collections;
@@ -26,7 +27,7 @@ public final class RetoldAnimalHomes {
     public static final String STALE_UNUSED_FAR = "stale_unused_far";
     public static final String WRONG_TYPE_PREFIX = "wrong_type_expected_";
 
-    private static final Map<PathfinderMob, RetoldAnimalHomeMemory> HOMES = new WeakHashMap<>();
+    private static final Map<Mob, RetoldAnimalHomeMemory> HOMES = new WeakHashMap<>();
     private static final int HOME_OWNER_SCAN_CACHE_TICKS = 15;
     private static final int HOME_MEMBER_POSITION_SCAN_CACHE_TICKS = 15;
     private static final long STALE_HOME_UNUSED_TICKS = 24000L * 7L;
@@ -37,7 +38,7 @@ public final class RetoldAnimalHomes {
     private RetoldAnimalHomes() {
     }
 
-    public static RetoldAnimalHomeMemory get(PathfinderMob mob) {
+    public static RetoldAnimalHomeMemory get(Mob mob) {
         if (mob == null) {
             return null;
         }
@@ -53,7 +54,7 @@ public final class RetoldAnimalHomes {
 
     public static boolean isValidFor(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         String reason = invalidReason(
@@ -75,7 +76,7 @@ public final class RetoldAnimalHomes {
 
     public static String invalidReason(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         if (level == null || mob == null || home == null) {
@@ -124,7 +125,7 @@ public final class RetoldAnimalHomes {
     }
 
     public static double distanceSquaredToHome(
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         if (mob == null || home == null) {
@@ -147,8 +148,12 @@ public final class RetoldAnimalHomes {
         Set<PathfinderMob> counted = Collections.newSetFromMap(new IdentityHashMap<>());
         int count = 0;
 
-        for (Map.Entry<PathfinderMob, RetoldAnimalHomeMemory> entry : HOMES.entrySet()) {
-            PathfinderMob candidate = entry.getKey();
+        for (Map.Entry<Mob, RetoldAnimalHomeMemory> entry : HOMES.entrySet()) {
+            Mob storedMob = entry.getKey();
+
+            if (!(storedMob instanceof PathfinderMob candidate)) {
+                continue;
+            }
 
             if (
                     isCurrentHomeMember(
@@ -190,7 +195,7 @@ public final class RetoldAnimalHomes {
         return count;
     }
 
-    public static RetoldAnimalHomeType homeTypeFor(PathfinderMob mob) {
+    public static RetoldAnimalHomeType homeTypeFor(Mob mob) {
         if (RetoldMobRules.isWolf(mob)) {
             return RetoldAnimalHomeType.WOLF_DEN;
         }
@@ -251,11 +256,19 @@ public final class RetoldAnimalHomes {
             return RetoldAnimalHomeType.AXOLOTL_WATER_RANGE;
         }
 
+        if (RetoldMobRules.isHungrySwarmPredator(mob)) {
+            return RetoldAnimalHomeType.SPIDER_LAIR;
+        }
+
+        if (RetoldMobRules.isBatColony(mob)) {
+            return RetoldAnimalHomeType.BAT_ROOST;
+        }
+
         return RetoldAnimalHomeType.NONE;
     }
 
     public static void markUsed(
-            PathfinderMob mob,
+            Mob mob,
             long gameTime
     ) {
         RetoldAnimalHomeMemory home = get(mob);
@@ -361,7 +374,7 @@ public final class RetoldAnimalHomes {
         return replacement;
     }
 
-    public static void remove(PathfinderMob mob) {
+    public static void remove(Mob mob) {
         if (mob == null) {
             return;
         }
@@ -372,7 +385,7 @@ public final class RetoldAnimalHomes {
 
     public static boolean hasSameValidHomeAs(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         return hasSameValidHome(
@@ -542,7 +555,7 @@ public final class RetoldAnimalHomes {
 
     private static boolean hasSameValidHome(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         RetoldAnimalHomeMemory current = get(mob);
@@ -671,7 +684,36 @@ public final class RetoldAnimalHomes {
         persist(mob, home);
     }
 
-    private static RetoldAnimalHomeMemory loadPersistedHome(PathfinderMob mob) {
+    public static RetoldAnimalHomeMemory rememberSingleHome(
+            ServerLevel level,
+            Mob mob,
+            BlockPos pos,
+            long gameTime
+    ) {
+        if (level == null || mob == null || pos == null || mob.level() != level) {
+            return null;
+        }
+
+        RetoldAnimalHomeType type = homeTypeFor(mob);
+
+        if (type == RetoldAnimalHomeType.NONE || level.isOutsideBuildHeight(pos)) {
+            return null;
+        }
+
+        RetoldAnimalHomeMemory home = new RetoldAnimalHomeMemory(
+                type,
+                level.dimension(),
+                pos,
+                gameTime
+        );
+
+        home.markUsed(gameTime);
+        HOMES.put(mob, home);
+        persist(mob, home);
+        return home;
+    }
+
+    private static RetoldAnimalHomeMemory loadPersistedHome(Mob mob) {
         RetoldAnimalHomeData data = mob.getExistingDataOrNull(
                 RetoldAttachments.ANIMAL_HOME_DATA.get()
         );
@@ -691,7 +733,7 @@ public final class RetoldAnimalHomes {
     }
 
     private static void persist(
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         if (mob == null || home == null) {
@@ -713,7 +755,7 @@ public final class RetoldAnimalHomes {
 
     private static boolean isStaleUnusedFarHome(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             RetoldAnimalHomeMemory home
     ) {
         if (home.lastUsedAt() <= 0L) {

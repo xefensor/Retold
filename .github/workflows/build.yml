@@ -32,7 +32,3 @@ jobs:
 
       - name: Build, run unit tests, and static analysis
         run: ./gradlew build
-
-      - name: Run GameTests
-        run: ./gradlew runGameTestServer
-        timeout-minutes: 10

@@ -14,16 +14,22 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.hunting.RetoldPreyTargeting;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.monster.Guardian;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -48,10 +54,6 @@ public final class RetoldAxolotlHelperEvents {
     private static final double PREY_SEARCH_RADIUS_SQUARED =
             PREY_SEARCH_RADIUS_BLOCKS * PREY_SEARCH_RADIUS_BLOCKS;
 
-    private static final double GUARDIAN_SEARCH_RADIUS_BLOCKS = 9.0D;
-    private static final double GUARDIAN_SEARCH_RADIUS_SQUARED =
-            GUARDIAN_SEARCH_RADIUS_BLOCKS * GUARDIAN_SEARCH_RADIUS_BLOCKS;
-
     private static final double FAR_FROM_RANGE_BLOCKS = 22.0D;
     private static final double FAR_FROM_RANGE_SQUARED =
             FAR_FROM_RANGE_BLOCKS * FAR_FROM_RANGE_BLOCKS;
@@ -63,6 +65,10 @@ public final class RetoldAxolotlHelperEvents {
     private static final double BITE_DISTANCE_BLOCKS = 2.35D;
     private static final double BITE_DISTANCE_SQUARED =
             BITE_DISTANCE_BLOCKS * BITE_DISTANCE_BLOCKS;
+    private static final double GUARDIAN_DEFENSE_KEEP_RADIUS_BLOCKS = 36.0D;
+    private static final double GUARDIAN_DEFENSE_KEEP_RADIUS_SQUARED =
+            GUARDIAN_DEFENSE_KEEP_RADIUS_BLOCKS
+                    * GUARDIAN_DEFENSE_KEEP_RADIUS_BLOCKS;
 
     private static final float AXOLOTL_BITE_DAMAGE = 4.0F;
     private static final int BITE_HUNGER_RELIEF = 24;
@@ -109,6 +115,19 @@ public final class RetoldAxolotlHelperEvents {
             PathfinderMob axolotl,
             long gameTime
     ) {
+        if (RetoldAiControl.isControlledAsBy(
+                axolotl,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.AQUATIC_HELPER
+        )) {
+            continueGuardianDefense(
+                    level,
+                    axolotl,
+                    gameTime
+            );
+            return;
+        }
+
         RetoldAnimalHomeMemory range = getOrCreateWaterRange(
                 level,
                 axolotl,
@@ -300,10 +319,6 @@ public final class RetoldAxolotlHelperEvents {
                 score -= 8.0D;
             }
 
-            if (RetoldPreyTargeting.isGuardianPrey(candidate)) {
-                score += 16.0D;
-            }
-
             if (score < bestScore) {
                 bestScore = score;
                 best = candidate;
@@ -335,6 +350,143 @@ public final class RetoldAxolotlHelperEvents {
                 prey,
                 gameTime
         );
+    }
+
+    static boolean beginGuardianDefense(
+            PathfinderMob axolotl,
+            Guardian guardian,
+            RetoldTargetSource source,
+            long gameTime
+    ) {
+        if (!RetoldMobRules.isAquaticHelperPredator(axolotl)
+                || guardian == null
+                || !guardian.isAlive()
+                || guardian.isRemoved()
+                || guardian.level() != axolotl.level()) {
+            return false;
+        }
+
+        if (source != RetoldTargetSource.RETALIATION
+                && source != RetoldTargetSource.FACTION_ASSIST) {
+            return false;
+        }
+
+        if (!RetoldAiControl.tryClaim(
+                axolotl,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.AQUATIC_HELPER,
+                RetoldAiPriorities.ATTACK,
+                source == RetoldTargetSource.RETALIATION
+                        ? "axolotl_guardian_retaliation"
+                        : "axolotl_guardian_assist",
+                gameTime,
+                HUNT_CONTROL_TICKS
+        )) {
+            return false;
+        }
+
+        if (!RetoldCombatTargets.applyAttackTarget(
+                axolotl,
+                guardian,
+                source
+        )) {
+            RetoldAiControl.clearIfOwnedBy(
+                    axolotl,
+                    RetoldAiControlOwner.AQUATIC_HELPER
+            );
+            return false;
+        }
+
+        chaseGuardian(
+                axolotl,
+                guardian,
+                gameTime
+        );
+        return true;
+    }
+
+    private static void continueGuardianDefense(
+            ServerLevel level,
+            PathfinderMob axolotl,
+            long gameTime
+    ) {
+        LivingEntity target = axolotl.getTarget();
+
+        if (!(target instanceof Guardian guardian)
+                || !guardian.isAlive()
+                || guardian.isRemoved()
+                || guardian.level() != axolotl.level()
+                || axolotl.distanceToSqr(guardian)
+                > GUARDIAN_DEFENSE_KEEP_RADIUS_SQUARED
+                || !RetoldFactionTargetMemory.isOwnedByAny(
+                axolotl,
+                guardian,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST
+        )) {
+            stopControl(axolotl);
+            return;
+        }
+
+        RetoldAiControl.refreshIfOwnedBy(
+                axolotl,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.AQUATIC_HELPER,
+                gameTime,
+                HUNT_CONTROL_TICKS
+        );
+
+        if (axolotl.distanceToSqr(guardian) <= BITE_DISTANCE_SQUARED) {
+            biteGuardian(
+                    level,
+                    axolotl,
+                    guardian
+            );
+            return;
+        }
+
+        chaseGuardian(
+                axolotl,
+                guardian,
+                gameTime
+        );
+    }
+
+    private static void chaseGuardian(
+            PathfinderMob axolotl,
+            Guardian guardian,
+            long gameTime
+    ) {
+        axolotl.getLookControl().setLookAt(
+                guardian,
+                30.0F,
+                30.0F
+        );
+
+        RetoldBehaviorMovement.throttledMoveTo(
+                axolotl,
+                guardian,
+                AXOLOTL_HUNT_SPEED,
+                gameTime,
+                AXOLOTL_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        );
+    }
+
+    private static void biteGuardian(
+            ServerLevel level,
+            PathfinderMob axolotl,
+            Guardian guardian
+    ) {
+        guardian.hurtServer(
+                level,
+                axolotl.damageSources().mobAttack(axolotl),
+                AXOLOTL_BITE_DAMAGE
+        );
+
+        if (!guardian.isAlive() || guardian.isRemoved()) {
+            stopControl(axolotl);
+        }
     }
 
     private static void continueHunt(
@@ -426,19 +578,52 @@ public final class RetoldAxolotlHelperEvents {
             return;
         }
 
+        Vec3 foodSource = prey.position();
         RetoldMobState state = RetoldMobStates.getOrCreate(
                 axolotl,
                 gameTime
         );
 
-        state.addHunger(-BITE_HUNGER_RELIEF);
-        state.markAte(gameTime);
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            state.markSuccessfulHunt(gameTime);
+        if (prey.isAlive() && !prey.isRemoved()) {
+            state.addHunger(-BITE_HUNGER_RELIEF);
+            state.markAte(gameTime);
         }
 
         stopControl(axolotl);
+        RetoldFeedingPose.begin(axolotl, foodSource, gameTime);
+    }
+
+    /**
+     * Credits aquatic prey killed by either vanilla Axolotl combat or a lethal
+     * Retold bite. Nonlethal Retold bites continue to grant their own partial
+     * meal, while lethal bites are credited here once through LivingDeathEvent.
+     */
+    public static boolean recordKilledPrey(
+            ServerLevel level,
+            PathfinderMob axolotl,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        if (level == null
+                || axolotl == null
+                || prey == null
+                || axolotl.level() != level
+                || !RetoldMobRules.isAquaticHelperPredator(axolotl)
+                || !(RetoldPreyTargeting.isFishPrey(prey)
+                || RetoldPreyTargeting.isSquidPrey(prey)
+                || RetoldPreyTargeting.isDrownedPrey(prey))) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                axolotl,
+                gameTime
+        );
+        state.addHunger(-BITE_HUNGER_RELIEF);
+        state.markAte(gameTime);
+        state.markSuccessfulHunt(gameTime);
+        RetoldFeedingPose.begin(axolotl, prey.position(), gameTime);
+        return true;
     }
 
     private static void stopFailedHunt(
@@ -534,18 +719,7 @@ public final class RetoldAxolotlHelperEvents {
             return true;
         }
 
-        if (!RetoldPreyTargeting.isGuardianPrey(prey)) {
-            return false;
-        }
-
-        RetoldMobState state = RetoldMobStates.getOrCreate(
-                axolotl,
-                gameTime
-        );
-
-        return axolotl.distanceToSqr(prey) <= GUARDIAN_SEARCH_RADIUS_SQUARED
-                && state.confidence() >= 45
-                && RetoldMobRules.hasRiskyFoodDrive(state);
+        return false;
     }
 
     private static boolean isLowHealth(PathfinderMob axolotl) {

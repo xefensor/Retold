@@ -1,6 +1,7 @@
 package cz.xefensor.retold.mixin;
 
 import cz.xefensor.retold.behavior.hunting.RetoldPredatorAttackGuards;
+import cz.xefensor.retold.combat.RetoldMobTargetPolicy;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -27,6 +28,11 @@ public abstract class MobHurtTargetMixin {
         Mob attacker = (Mob) (Object) this;
 
         if (!(target instanceof LivingEntity livingTarget)) {
+            return;
+        }
+
+        if (RetoldMobTargetPolicy.shouldBlockDeliberateHostility(attacker, livingTarget)) {
+            cir.setReturnValue(false);
             return;
         }
 

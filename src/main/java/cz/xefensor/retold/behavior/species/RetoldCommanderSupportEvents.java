@@ -12,6 +12,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -68,6 +69,24 @@ public final class RetoldCommanderSupportEvents {
         long gameTime = level.getGameTime();
 
         if (!shouldThink(support, gameTime)) {
+            return;
+        }
+
+        tickSupportBehavior(
+                level,
+                support,
+                gameTime
+        );
+    }
+
+    static void tickSupportBehavior(
+            ServerLevel level,
+            PathfinderMob support,
+            long gameTime
+    ) {
+        if (!canCoordinateWithIllagers(support)) {
+            stopSupportIfOwned(support);
+            clearFactionAssistTarget(support);
             return;
         }
 
@@ -195,7 +214,11 @@ public final class RetoldCommanderSupportEvents {
             return false;
         }
 
-        return RetoldFactionMembers.isIllagerAligned(ally);
+        return RetoldFactionMembers.areCooperatingAllies(
+                support,
+                ally,
+                RetoldFaction.ILLAGERS
+        );
     }
 
     private static boolean isValidSupportTarget(
@@ -357,6 +380,27 @@ public final class RetoldCommanderSupportEvents {
             );
             support.getNavigation().stop();
         }
+    }
+
+    private static boolean canCoordinateWithIllagers(PathfinderMob support) {
+        return RetoldFactionMembers.isCombatAlignedWith(
+                support,
+                RetoldFaction.ILLAGERS
+        );
+    }
+
+    private static void clearFactionAssistTarget(PathfinderMob support) {
+        LivingEntity target = support.getTarget();
+
+        if (target == null) {
+            return;
+        }
+
+        RetoldFactionTargetMemory.clearTargetIfOwnedBy(
+                support,
+                target,
+                RetoldTargetSource.FACTION_ASSIST
+        );
     }
 
     private record SupportContext(

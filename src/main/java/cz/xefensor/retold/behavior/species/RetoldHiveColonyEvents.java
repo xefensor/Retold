@@ -12,6 +12,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -22,6 +23,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -448,6 +450,11 @@ public final class RetoldHiveColonyEvents {
                 RetoldAiControlOwner.HIVE_COLONY
         );
         bee.getNavigation().stop();
+        RetoldFeedingPose.begin(
+                bee,
+                Vec3.atCenterOf(flowerPos),
+                gameTime
+        );
     }
 
     private static void moveTowardFlower(

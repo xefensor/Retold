@@ -78,6 +78,8 @@ Some systems still need broader real-world validation, especially dimension trav
 - [`docs/internal/README.md`](docs/internal/README.md) — developer and technical documentation
 - [`docs/internal/retold_mod_system.md`](docs/internal/retold_mod_system.md) — implementation architecture
 - [`docs/internal/retold_mob_ai_system.md`](docs/internal/retold_mob_ai_system.md) — mob-AI architecture
+- [`docs/internal/mob_ai_work_report_2026-08-03.md`](docs/internal/mob_ai_work_report_2026-08-03.md) — consolidated mob/faction implementation record
+- [`docs/internal/mob_tps_benchmark.md`](docs/internal/mob_tps_benchmark.md) — per-species performance baseline
 
 ## Development
 

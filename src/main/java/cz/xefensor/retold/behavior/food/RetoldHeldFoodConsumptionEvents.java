@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -157,6 +158,9 @@ public final class RetoldHeldFoodConsumptionEvents {
             EquipmentSlot slot,
             ItemStack stack
     ) {
+        Vec3 foodSource = mob.getEyePosition().add(
+                mob.getLookAngle().scale(0.5D)
+        );
         int relief = RetoldMobRules.foodRelief(
                 mob,
                 RetoldMobRules.getItemPath(stack)
@@ -199,6 +203,8 @@ public final class RetoldHeldFoodConsumptionEvents {
                     stack
             );
         }
+
+        RetoldFeedingPose.begin(mob, foodSource, gameTime);
     }
 
 }

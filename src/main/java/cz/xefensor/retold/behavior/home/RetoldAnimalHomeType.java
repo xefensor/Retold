@@ -20,7 +20,9 @@ public enum RetoldAnimalHomeType {
     ARMADILLO_SCRUB_RANGE,
     TURTLE_BEACH,
     AMPHIBIAN_WETLAND,
-    AXOLOTL_WATER_RANGE;
+    AXOLOTL_WATER_RANGE,
+    SPIDER_LAIR,
+    BAT_ROOST;
 
     public static final Codec<RetoldAnimalHomeType> CODEC =
             Codec.STRING.xmap(

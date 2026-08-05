@@ -1,7 +1,7 @@
 package cz.xefensor.retold.behavior.profiles;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Mob;
 
 import java.lang.ref.WeakReference;
 import java.util.Iterator;
@@ -12,13 +12,13 @@ public final class RetoldMobStates {
     private static final String PERSISTENT_KEY = "RetoldMobState";
     private static final long INACTIVE_STATE_CLEANUP_TICKS = 20L * 20L;
 
-    private static final Map<PathfinderMob, RetoldMobState> STATES = new WeakHashMap<>();
+    private static final Map<Mob, RetoldMobState> STATES = new WeakHashMap<>();
 
     private RetoldMobStates() {
     }
 
     public static RetoldMobState getOrCreate(
-            PathfinderMob mob,
+            Mob mob,
             long gameTime
     ) {
         RetoldMobState state = STATES.get(mob);
@@ -45,7 +45,7 @@ public final class RetoldMobStates {
         return state;
     }
 
-    public static RetoldMobState get(PathfinderMob mob) {
+    public static RetoldMobState get(Mob mob) {
         if (mob == null) {
             return null;
         }
@@ -53,7 +53,7 @@ public final class RetoldMobStates {
         return STATES.get(mob);
     }
 
-    public static void remove(PathfinderMob mob) {
+    public static void remove(Mob mob) {
         if (mob == null) {
             return;
         }
@@ -67,12 +67,12 @@ public final class RetoldMobStates {
     }
 
     public static void cleanup(long gameTime) {
-        Iterator<Map.Entry<PathfinderMob, RetoldMobState>> iterator =
+        Iterator<Map.Entry<Mob, RetoldMobState>> iterator =
                 STATES.entrySet().iterator();
 
         while (iterator.hasNext()) {
-            Map.Entry<PathfinderMob, RetoldMobState> entry = iterator.next();
-            PathfinderMob mob = entry.getKey();
+            Map.Entry<Mob, RetoldMobState> entry = iterator.next();
+            Mob mob = entry.getKey();
             RetoldMobState state = entry.getValue();
 
             if (
@@ -87,7 +87,7 @@ public final class RetoldMobStates {
         }
     }
 
-    private static RetoldMobState loadState(PathfinderMob mob) {
+    private static RetoldMobState loadState(Mob mob) {
         if (mob == null) {
             return new RetoldMobState();
         }
@@ -104,13 +104,13 @@ public final class RetoldMobStates {
     }
 
     private static void bindSaveCallback(
-            PathfinderMob mob,
+            Mob mob,
             RetoldMobState state
     ) {
-        WeakReference<PathfinderMob> mobReference = new WeakReference<>(mob);
+        WeakReference<Mob> mobReference = new WeakReference<>(mob);
 
         state.setSaveCallback(() -> {
-            PathfinderMob referencedMob = mobReference.get();
+            Mob referencedMob = mobReference.get();
 
             if (referencedMob == null || referencedMob.isRemoved()) {
                 return;

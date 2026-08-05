@@ -13,14 +13,18 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.animal.polarbear.PolarBear;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class RetoldNeutralWildlifeEvents {
     private static final int THINK_INTERVAL_TICKS = 10;
@@ -28,6 +32,7 @@ public final class RetoldNeutralWildlifeEvents {
     private static final int NEUTRAL_PATH_INTERVAL_TICKS = 6;
     private static final int DEFENSE_CONTROL_TICKS = 20 * 4;
     private static final int DEFENSE_PRIORITY = RetoldAiPriorities.DEFENSE;
+    private static final int CUB_WARNING_DURATION_TICKS = 40;
 
     private static final double CUB_SCAN_RADIUS_BLOCKS = 16.0D;
     private static final double CUB_SCAN_RADIUS_SQUARED =
@@ -42,6 +47,9 @@ public final class RetoldNeutralWildlifeEvents {
             DEFENSE_KEEP_RADIUS_BLOCKS * DEFENSE_KEEP_RADIUS_BLOCKS;
 
     private static final double POLAR_BEAR_DEFENSE_SPEED = 1.18D;
+
+    private static final Map<PathfinderMob, CubWarningState> CUB_WARNINGS =
+            new WeakHashMap<>();
 
     private RetoldNeutralWildlifeEvents() {
     }
@@ -70,25 +78,31 @@ public final class RetoldNeutralWildlifeEvents {
             return;
         }
 
-        handleProtectiveNeutral(
+        tickProtectiveNeutral(
                 level,
                 mob,
                 gameTime
         );
     }
 
-    private static void handleProtectiveNeutral(
+    static void tickProtectiveNeutral(
             ServerLevel level,
             PathfinderMob protector,
             long gameTime
     ) {
         if (!isAdultPolarBear(protector)) {
+            clearWarningState(protector, true);
             return;
         }
 
         LivingEntity target = protector.getTarget();
 
-        if (isValidDefenseTarget(protector, target) && hasNearbyCub(level, protector)) {
+        if (RetoldAiControl.isControlledAsBy(
+                protector,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.NEUTRAL_WILDLIFE
+        ) && isValidDefenseTarget(protector, target) && hasNearbyCub(level, protector)) {
+            clearWarningState(protector, false);
             continueDefense(
                     protector,
                     target,
@@ -97,19 +111,52 @@ public final class RetoldNeutralWildlifeEvents {
             return;
         }
 
-        if (RetoldAiControl.isControlledBy(protector, RetoldAiControlOwner.NEUTRAL_WILDLIFE)) {
-            stopDefense(protector);
-        }
-
         LivingEntity threat = findBestCubThreat(
                 level,
-                protector
+                protector,
+                gameTime
         );
 
         if (threat == null) {
+            clearWarningState(protector, true);
+
+            if (RetoldAiControl.isControlledBy(protector, RetoldAiControlOwner.NEUTRAL_WILDLIFE)) {
+                stopDefense(protector);
+            }
             return;
         }
 
+        if (isImmediateCubThreat(level, protector, threat, gameTime)) {
+            clearWarningState(protector, false);
+            beginDefense(
+                    protector,
+                    threat,
+                    gameTime
+            );
+            return;
+        }
+
+        CubWarningState warningState = CUB_WARNINGS.get(protector);
+
+        if (warningState == null || warningState.target() != threat) {
+            beginWarning(
+                    protector,
+                    threat,
+                    gameTime
+            );
+            return;
+        }
+
+        if (gameTime - warningState.startedAt() < CUB_WARNING_DURATION_TICKS) {
+            continueWarning(
+                    protector,
+                    threat,
+                    gameTime
+            );
+            return;
+        }
+
+        clearWarningState(protector, false);
         beginDefense(
                 protector,
                 threat,
@@ -117,16 +164,133 @@ public final class RetoldNeutralWildlifeEvents {
         );
     }
 
+    private static void beginWarning(
+            PathfinderMob protector,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!RetoldAiControl.tryClaim(
+                protector,
+                RetoldAiControlMode.REGROUP,
+                RetoldAiControlOwner.NEUTRAL_WILDLIFE,
+                DEFENSE_PRIORITY,
+                "warn_cub_intruder",
+                gameTime,
+                DEFENSE_CONTROL_TICKS
+        )) {
+            return;
+        }
+
+        RetoldBehaviorTargets.setTargetAndAggression(protector, null, false);
+        protector.getNavigation().stop();
+        CUB_WARNINGS.put(protector, new CubWarningState(target, gameTime));
+        showWarning(protector, target, true);
+    }
+
+    private static void continueWarning(
+            PathfinderMob protector,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!RetoldAiControl.refreshIfOwnedBy(
+                protector,
+                RetoldAiControlMode.REGROUP,
+                RetoldAiControlOwner.NEUTRAL_WILDLIFE,
+                gameTime,
+                DEFENSE_CONTROL_TICKS
+        )) {
+            clearWarningState(protector, false);
+            return;
+        }
+
+        RetoldBehaviorTargets.setTargetAndAggression(protector, null, false);
+        protector.getNavigation().stop();
+        showWarning(protector, target, false);
+    }
+
+    private static void showWarning(
+            PathfinderMob protector,
+            LivingEntity target,
+            boolean playSound
+    ) {
+        protector.getLookControl().setLookAt(target, 30.0F, 30.0F);
+
+        if (protector instanceof PolarBear polarBear) {
+            polarBear.setStanding(true);
+
+            if (playSound) {
+                polarBear.playSound(SoundEvents.POLAR_BEAR_WARNING, 1.0F, 1.0F);
+            }
+        }
+    }
+
+    private static void clearWarningState(
+            PathfinderMob protector,
+            boolean clearControl
+    ) {
+        CUB_WARNINGS.remove(protector);
+
+        if (protector instanceof PolarBear polarBear) {
+            polarBear.setStanding(false);
+        }
+
+        if (clearControl && RetoldAiControl.isControlledAsBy(
+                protector,
+                RetoldAiControlMode.REGROUP,
+                RetoldAiControlOwner.NEUTRAL_WILDLIFE
+        )) {
+            RetoldAiControl.clearIfOwnedBy(
+                    protector,
+                    RetoldAiControlOwner.NEUTRAL_WILDLIFE
+            );
+        }
+    }
+
+    private static boolean isImmediateCubThreat(
+            ServerLevel level,
+            PathfinderMob protector,
+            LivingEntity threat,
+            long gameTime
+    ) {
+        if (threat == protector.getLastHurtByMob()) {
+            return true;
+        }
+
+        for (PathfinderMob cub : RetoldAiScanCache.nearby(
+                level,
+                protector,
+                PathfinderMob.class,
+                CUB_SCAN_RADIUS_BLOCKS,
+                gameTime,
+                NEUTRAL_SCAN_CACHE_TICKS
+        )) {
+            if (!isNearbyPolarBearCub(protector, cub)) {
+                continue;
+            }
+
+            if (threat == cub.getLastHurtByMob()) {
+                return true;
+            }
+
+            if (threat instanceof PathfinderMob mob && mob.getTarget() == cub) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static LivingEntity findBestCubThreat(
             ServerLevel level,
-            PathfinderMob protector
+            PathfinderMob protector,
+            long gameTime
     ) {
         List<PathfinderMob> cubs = RetoldAiScanCache.nearby(
                 level,
                 protector,
                 PathfinderMob.class,
                 CUB_SCAN_RADIUS_BLOCKS,
-                level.getGameTime(),
+                gameTime,
                 NEUTRAL_SCAN_CACHE_TICKS
         );
 
@@ -171,7 +335,7 @@ public final class RetoldNeutralWildlifeEvents {
                     cub,
                     LivingEntity.class,
                     CUB_THREAT_RADIUS_BLOCKS,
-                    level.getGameTime(),
+                    gameTime,
                     NEUTRAL_SCAN_CACHE_TICKS
             )) {
                 if (!isValidCubProximityThreat(protector, cub, candidate)) {
@@ -205,7 +369,13 @@ public final class RetoldNeutralWildlifeEvents {
             return current;
         }
 
-        if (cub.distanceToSqr(candidate) > CUB_THREAT_RADIUS_SQUARED) {
+        boolean actualAttacker = candidate == cub.getLastHurtByMob()
+                || candidate == protector.getLastHurtByMob();
+        double allowedDistanceSquared = actualAttacker
+                ? DEFENSE_KEEP_RADIUS_SQUARED
+                : CUB_THREAT_RADIUS_SQUARED;
+
+        if (cub.distanceToSqr(candidate) > allowedDistanceSquared) {
             return current;
         }
 
@@ -297,6 +467,8 @@ public final class RetoldNeutralWildlifeEvents {
             LivingEntity target,
             long gameTime
     ) {
+        clearWarningState(protector, false);
+
         if (!RetoldAiControl.tryClaim(
                 protector,
                 RetoldAiControlMode.ATTACK,
@@ -368,6 +540,7 @@ public final class RetoldNeutralWildlifeEvents {
     }
 
     private static void stopDefense(PathfinderMob protector) {
+        clearWarningState(protector, false);
         RetoldBehaviorTargets.setTargetAndAggression(protector, null, false);
 
         protector.getNavigation().stop();
@@ -437,5 +610,11 @@ public final class RetoldNeutralWildlifeEvents {
                 entity,
                 "polar_bear"
         );
+    }
+
+    private record CubWarningState(
+            LivingEntity target,
+            long startedAt
+    ) {
     }
 }

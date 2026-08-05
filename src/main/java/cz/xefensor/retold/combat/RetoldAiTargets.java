@@ -8,6 +8,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.animal.axolotl.Axolotl;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 import net.minecraft.world.entity.player.Player;
 
@@ -92,7 +93,7 @@ public final class RetoldAiTargets {
             RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
         }
 
-        clearPiglinBrainTargetIfPresent(mob, target);
+        clearRetoldBrainTargetIfPresent(mob, target);
         RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
 
         if (stopNavigation && mob instanceof PathfinderMob pathfinderMob) {
@@ -128,44 +129,42 @@ public final class RetoldAiTargets {
         }
     }
 
-    public static void setPiglinBrainTargetIfNeeded(
+    public static void setRetoldBrainTargetIfNeeded(
             Mob mob,
             LivingEntity target
     ) {
-        if (!(mob instanceof AbstractPiglin piglin)) {
-            return;
-        }
-
         if (!isValidAssignmentTarget(mob, target)) {
             return;
         }
 
-        if (piglin.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) != target) {
-            piglin.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+        if (mob instanceof Axolotl || mob instanceof AbstractPiglin) {
+            if (getBrainAttackTargetSafely(mob) != target) {
+                mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            }
         }
 
-        piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
+        if (mob instanceof AbstractPiglin piglin) {
+            piglin.getBrain().setMemory(MemoryModuleType.ANGRY_AT, target.getUUID());
+        }
     }
 
-    public static void clearPiglinBrainTargetIfPresent(
+    public static void clearRetoldBrainTargetIfPresent(
             Mob mob,
             LivingEntity target
     ) {
-        if (!(mob instanceof AbstractPiglin piglin)) {
+        if (!(mob instanceof Axolotl) && !(mob instanceof AbstractPiglin)) {
             return;
         }
 
-        LivingEntity brainTarget = piglin.getBrain()
-                .getMemory(MemoryModuleType.ATTACK_TARGET)
-                .orElse(null);
+        LivingEntity brainTarget = getBrainAttackTargetSafely(mob);
 
         if (brainTarget != target) {
             return;
         }
 
-        piglin.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        mob.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
 
-        if (target != null) {
+        if (mob instanceof AbstractPiglin piglin && target != null) {
             piglin.getBrain().eraseMemory(MemoryModuleType.ANGRY_AT);
         }
     }

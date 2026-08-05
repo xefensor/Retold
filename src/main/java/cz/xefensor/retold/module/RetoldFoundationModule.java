@@ -8,6 +8,7 @@ import cz.xefensor.retold.event.TorchWeatherEvents;
 import cz.xefensor.retold.gametest.RetoldGameTests;
 import cz.xefensor.retold.network.RetoldNetworking;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldBlockEntities;
 import cz.xefensor.retold.registry.RetoldEntityEvents;
 import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.registry.RetoldGameRules;
@@ -23,6 +24,7 @@ public final class RetoldFoundationModule {
 
     public static void registerModBus(IEventBus modEventBus) {
         RetoldBlocks.register(modEventBus);
+        RetoldBlockEntities.register(modEventBus);
         RetoldEntityTypes.register(modEventBus);
         RetoldGameRules.register(modEventBus);
 

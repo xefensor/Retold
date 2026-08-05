@@ -3,8 +3,11 @@ package cz.xefensor.retold.module;
 import cz.xefensor.retold.event.RetoldElderGuardianEvents;
 import cz.xefensor.retold.event.RetoldEndermanEvents;
 import cz.xefensor.retold.event.RetoldGolemEvents;
+import cz.xefensor.retold.event.RetoldMobAvailability;
 import cz.xefensor.retold.event.RetoldPiglinEvents;
+import cz.xefensor.retold.event.RetoldSnowballEvents;
 import cz.xefensor.retold.event.RetoldUndeadEvents;
+import cz.xefensor.retold.event.RetoldVexEvents;
 import net.neoforged.bus.api.IEventBus;
 
 public final class RetoldMobModule {
@@ -17,5 +20,8 @@ public final class RetoldMobModule {
         gameEventBus.register(RetoldGolemEvents.class);
         gameEventBus.register(RetoldEndermanEvents.class);
         gameEventBus.register(RetoldElderGuardianEvents.class);
+        gameEventBus.register(RetoldVexEvents.class);
+        gameEventBus.register(RetoldMobAvailability.class);
+        gameEventBus.register(RetoldSnowballEvents.class);
     }
 }

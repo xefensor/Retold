@@ -6,6 +6,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raid;
+import net.minecraft.world.entity.raid.Raider;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,16 +36,19 @@ public final class RetoldFactionMembers {
                 "zombified_piglin",
                 "phantom",
                 "ghast",
-                "zoglin"
+                "zoglin",
+                "wither"
         );
         register(RetoldFaction.SLIMES, "slime", "magma_cube");
         register(RetoldFaction.AQUATIC_HOSTILES, "guardian", "elder_guardian");
         register(RetoldFaction.CREEPERS, "creeper");
-        register(RetoldFaction.ARTHROPODS, "spider", "cave_spider", "silverfish", "endermite");
+        register(RetoldFaction.ARTHROPODS, "spider", "cave_spider");
+        register(RetoldFaction.SILVERFISH, "silverfish");
+        register(RetoldFaction.ENDERMITES, "endermite");
         register(RetoldFaction.NETHER_BEASTS, "hoglin");
         register(RetoldFaction.BREEZES, "breeze");
         register(RetoldFaction.WARDENS, "warden");
-        register(RetoldFaction.BOSSES, "wither", "ender_dragon");
+        register(RetoldFaction.BOSSES, "ender_dragon");
         register(RetoldFaction.CREAKINGS, "creaking");
         register(RetoldFaction.VILLAGE_DEFENDERS, "iron_golem", "snow_golem");
         register(RetoldFaction.ENDERS, "enderman", "shulker");
@@ -81,6 +86,10 @@ public final class RetoldFactionMembers {
     }
 
     public static boolean isAlignedWith(Entity entity, RetoldFaction faction) {
+        /*
+         * Permanent identity relation. A loose ally remains non-hostile even when its
+         * context-dependent combat cooperation is inactive.
+         */
         return isMemberOf(entity, faction)
                 || isLooseAllyOf(entity, faction);
     }
@@ -94,6 +103,55 @@ public final class RetoldFactionMembers {
 
         return faction == RetoldFaction.ILLAGERS
                 && ILLAGER_LOOSE_ALLIES.contains(id);
+    }
+
+    public static boolean isCombatAlignedWith(
+            Entity entity,
+            RetoldFaction faction
+    ) {
+        /*
+         * Active relation used by help calls and combat coordination. Witches only
+         * enter this relation while attached to an active raid.
+         */
+        return isMemberOf(entity, faction)
+                || isActiveLooseAllyOf(entity, faction);
+    }
+
+    public static boolean areCooperatingAllies(
+            Entity first,
+            Entity second,
+            RetoldFaction faction
+    ) {
+        if (first == null || second == null || faction == null) {
+            return false;
+        }
+
+        if (!isCombatAlignedWith(first, faction)
+                || !isCombatAlignedWith(second, faction)) {
+            return false;
+        }
+
+        if (!isLooseAllyOf(first, faction)
+                && !isLooseAllyOf(second, faction)) {
+            return true;
+        }
+
+        /* Conditional allies must share the exact active raid, not merely be near one. */
+        return shareActiveRaid(first, second);
+    }
+
+    public static RetoldFaction getActiveCombatFaction(Entity entity) {
+        RetoldFaction faction = getFaction(entity);
+
+        if (faction != null) {
+            return faction;
+        }
+
+        if (isActiveLooseAllyOf(entity, RetoldFaction.ILLAGERS)) {
+            return RetoldFaction.ILLAGERS;
+        }
+
+        return null;
     }
 
     public static RetoldFaction getFactionOrLooseAllyFaction(Entity entity) {
@@ -128,6 +186,28 @@ public final class RetoldFactionMembers {
 
     public static boolean isIllagerAligned(Entity entity) {
         return isAlignedWith(entity, RetoldFaction.ILLAGERS);
+    }
+
+    private static boolean isActiveLooseAllyOf(
+            Entity entity,
+            RetoldFaction faction
+    ) {
+        return isLooseAllyOf(entity, faction)
+                && entity instanceof Raider raider
+                && raider.hasActiveRaid();
+    }
+
+    private static boolean shareActiveRaid(Entity first, Entity second) {
+        if (!(first instanceof Raider firstRaider)
+                || !(second instanceof Raider secondRaider)) {
+            return false;
+        }
+
+        Raid raid = firstRaider.getCurrentRaid();
+
+        return raid != null
+                && raid.isActive()
+                && secondRaider.getCurrentRaid() == raid;
     }
 
     public static boolean isUndead(Entity entity) {

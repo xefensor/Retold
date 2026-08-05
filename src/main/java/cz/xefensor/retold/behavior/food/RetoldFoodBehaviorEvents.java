@@ -9,22 +9,37 @@ import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
+import cz.xefensor.retold.behavior.hunting.RetoldPredatorStrike;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.behavior.species.RetoldSlimeItemStorage;
+import cz.xefensor.retold.behavior.species.RetoldSlimeStarvationBehavior;
+import cz.xefensor.retold.behavior.species.RetoldStriderLavaSustenance;
+import cz.xefensor.retold.behavior.species.RetoldTraderLlamaSustenance;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.cubemob.AbstractCubeMob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class RetoldFoodBehaviorEvents {
     private static final RetoldAiControlOwner CONTROL_OWNER = RetoldAiControlOwner.FOOD;
@@ -33,8 +48,11 @@ public final class RetoldFoodBehaviorEvents {
     private static final int FOOD_SCAN_CACHE_TICKS = 8;
     private static final int FOOD_BLOCK_SEARCH_CACHE_TICKS = 30;
     private static final int FOOD_PATH_INTERVAL_TICKS = 8;
+    private static final int FOOD_SEARCH_PATH_INTERVAL_TICKS = 10;
     private static final int CLEANUP_INTERVAL_TICKS = 20 * 10;
     private static final int FEED_CONTROL_TICKS = 20 * 4;
+    private static final int SEARCH_CONTROL_TICKS = 20 * 5;
+    private static final int SEARCH_POINT_LIFE_TICKS = 20 * 5;
     private static final int FEED_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.FEED, 1);
 
     private static final double DROPPED_FOOD_RADIUS = 8.0D;
@@ -54,6 +72,15 @@ public final class RetoldFoodBehaviorEvents {
 
     private static final double PASSIVE_FOOD_SPEED = 0.65D;
     private static final double PREDATOR_FOOD_SPEED = 0.82D;
+    private static final double FOOD_SEARCH_SPEED = 0.72D;
+    private static final double SEARCH_POINT_REACHED_DISTANCE_SQUARED = 2.5D * 2.5D;
+
+    private static final int FOOD_SEARCH_HORIZONTAL_RADIUS = 12;
+    private static final int FOOD_SEARCH_VERTICAL_RADIUS = 2;
+    private static final int FOOD_SEARCH_DESTINATION_ATTEMPTS = 2;
+
+    private static final Map<PathfinderMob, FoodSearchMemory> FOOD_SEARCH_MEMORIES =
+            new WeakHashMap<>();
 
     private static long nextCleanupAt;
 
@@ -85,35 +112,65 @@ public final class RetoldFoodBehaviorEvents {
                 gameTime
         );
 
-        tickHunger(
+        if (!tickHunger(
                 mob,
                 state,
                 gameTime
-        );
+        )) {
+            return;
+        }
+
+        if (RetoldStriderLavaSustenance.isSustainedByLava(level, mob)) {
+            return;
+        }
+
+        if (RetoldTraderLlamaSustenance.tick(level, mob, state, gameTime)) {
+            return;
+        }
+
+        if (RetoldMobRules.wantsDroppedFood(mob, state)
+                && canConsiderDroppedFood(mob)) {
+            ItemEntity droppedFood = findBestDroppedFood(
+                    level,
+                    mob
+            );
+
+            if (droppedFood != null
+                    && prepareForDroppedFood(mob, droppedFood, gameTime)) {
+                handleDroppedFood(
+                        mob,
+                        state,
+                        droppedFood,
+                        gameTime
+                );
+                return;
+            }
+        }
 
         if (!shouldSeekFood(mob, state)) {
+            stopOwnedFoodSearch(mob);
             return;
         }
 
-        ItemEntity droppedFood = findBestDroppedFood(
+        if (RetoldAnimalFeederBehavior.tryUse(
                 level,
-                mob
-        );
-
-        if (droppedFood != null) {
-            handleDroppedFood(
-                    mob,
-                    state,
-                    droppedFood,
-                    gameTime
-            );
+                mob,
+                state,
+                gameTime
+        )) {
             return;
         }
 
-        BlockPos foragePos = findBestForageBlock(
-                level,
-                mob
-        );
+        BlockPos foragePos = findBestForageBlock(level, mob);
+
+        if (foragePos != null
+                && !RetoldMobGriefing.canModifyBlocks(level, mob)
+                && !RetoldMobRules.isRenewableEnvironmentalForage(
+                mob,
+                level.getBlockState(foragePos)
+        )) {
+            foragePos = null;
+        }
 
         if (foragePos != null) {
             handleForageBlock(
@@ -123,7 +180,15 @@ public final class RetoldFoodBehaviorEvents {
                     foragePos,
                     gameTime
             );
+            return;
         }
+
+        if (RetoldForageBlockSearch.isSearchDeferred(mob)) {
+            stopOwnedFoodSearch(mob);
+            return;
+        }
+
+        tryStartOrContinueFoodSearch(level, mob, state, gameTime);
     }
 
     @SubscribeEvent
@@ -138,6 +203,7 @@ public final class RetoldFoodBehaviorEvents {
 
         RetoldMobStates.cleanup(gameTime);
         RetoldAiControl.cleanup(gameTime);
+        RetoldWeakBarrierBehavior.cleanup(gameTime);
     }
 
     private static boolean shouldThink(
@@ -151,7 +217,7 @@ public final class RetoldFoodBehaviorEvents {
         );
     }
 
-    private static void tickHunger(
+    private static boolean tickHunger(
             PathfinderMob mob,
             RetoldMobState state,
             long gameTime
@@ -159,15 +225,22 @@ public final class RetoldFoodBehaviorEvents {
         int interval = RetoldMobRules.hungerInterval(mob);
 
         if (interval <= 0) {
-            return;
+            return true;
         }
 
         if (gameTime - state.lastHungerTickAt() < interval) {
-            return;
+            return true;
         }
 
-        state.addHunger(1);
+        state.addHunger(RetoldSlimeStarvationBehavior.hungerGain(mob));
         state.markHungerTick(gameTime);
+
+        return RetoldStarvationBehavior.applyCriticalHunger(
+                (ServerLevel) mob.level(),
+                mob,
+                state,
+                gameTime
+        );
     }
 
     private static boolean shouldSeekFood(
@@ -184,7 +257,13 @@ public final class RetoldFoodBehaviorEvents {
 
         RetoldAiControlMode mode = RetoldAiControl.getMode(mob);
 
-        if (mode != RetoldAiControlMode.NONE && mode != RetoldAiControlMode.FEED) {
+        if (mode != RetoldAiControlMode.NONE
+                && mode != RetoldAiControlMode.FEED
+                && !RetoldAiControl.isControlledAsBy(
+                mob,
+                RetoldAiControlMode.SEARCH,
+                CONTROL_OWNER
+        )) {
             return false;
         }
 
@@ -192,6 +271,206 @@ public final class RetoldFoodBehaviorEvents {
                 mob,
                 state
         );
+    }
+
+    static boolean tryStartOrContinueFoodSearch(
+            ServerLevel level,
+            PathfinderMob mob,
+            RetoldMobState state,
+            long gameTime
+    ) {
+        if (level == null
+                || mob == null
+                || state == null
+                || mob.level() != level
+                || !RetoldMobRules.hasActiveSearchDrive(state)
+                || RetoldMobRules.canUseNaturalPreyHuntingSystems(mob)
+                || RetoldMobRules.isSnifferForager(mob)
+                || RetoldMobRules.isHiveColony(mob)) {
+            stopOwnedFoodSearch(mob);
+            return false;
+        }
+
+        RetoldAiControlMode mode = RetoldAiControl.getMode(mob);
+
+        if (mode != RetoldAiControlMode.NONE
+                && !RetoldAiControl.isControlledAsBy(
+                mob,
+                RetoldAiControlMode.SEARCH,
+                CONTROL_OWNER
+        )) {
+            FOOD_SEARCH_MEMORIES.remove(mob);
+            return false;
+        }
+
+        FoodSearchMemory memory = FOOD_SEARCH_MEMORIES.get(mob);
+
+        if (memory == null
+                || gameTime > memory.expiresAt()
+                || mob.getNavigation().isDone()
+                || mob.distanceToSqr(Vec3.atCenterOf(memory.pos()))
+                <= SEARCH_POINT_REACHED_DISTANCE_SQUARED) {
+            memory = null;
+        }
+
+        if (!RetoldAiControl.tryClaim(
+                mob,
+                RetoldAiControlMode.SEARCH,
+                CONTROL_OWNER,
+                RetoldAiPriorities.SEARCH,
+                "search_for_food",
+                gameTime,
+                SEARCH_CONTROL_TICKS
+        )) {
+            FOOD_SEARCH_MEMORIES.remove(mob);
+            return false;
+        }
+
+        mob.setSprinting(false);
+
+        if (memory != null && RetoldBehaviorMovement.throttledMoveTo(
+                mob,
+                memory.pos(),
+                FOOD_SEARCH_SPEED,
+                gameTime,
+                FOOD_SEARCH_PATH_INTERVAL_TICKS,
+                2.0D * 2.0D
+        )) {
+            return true;
+        }
+
+        for (int attempt = 0; attempt < FOOD_SEARCH_DESTINATION_ATTEMPTS; attempt++) {
+            Vec3 searchPosition = LandRandomPos.getPos(
+                    mob,
+                    FOOD_SEARCH_HORIZONTAL_RADIUS,
+                    FOOD_SEARCH_VERTICAL_RADIUS
+            );
+
+            if (searchPosition == null) {
+                continue;
+            }
+
+            FoodSearchMemory candidate = new FoodSearchMemory(
+                    BlockPos.containing(
+                            searchPosition.x(),
+                            mob.getY(),
+                            searchPosition.z()
+                    ),
+                    gameTime + SEARCH_POINT_LIFE_TICKS
+            );
+
+            if (!RetoldBehaviorMovement.throttledMoveTo(
+                    mob,
+                    candidate.pos(),
+                    FOOD_SEARCH_SPEED,
+                    gameTime,
+                    FOOD_SEARCH_PATH_INTERVAL_TICKS,
+                    2.0D * 2.0D
+            )) {
+                continue;
+            }
+
+            FOOD_SEARCH_MEMORIES.put(mob, candidate);
+            return true;
+        }
+
+        stopOwnedFoodSearch(mob);
+        return false;
+    }
+
+    static BlockPos foodSearchTarget(PathfinderMob mob) {
+        FoodSearchMemory memory = FOOD_SEARCH_MEMORIES.get(mob);
+        return memory == null ? null : memory.pos();
+    }
+
+    private static void stopOwnedFoodSearch(PathfinderMob mob) {
+        if (mob == null) {
+            return;
+        }
+
+        FOOD_SEARCH_MEMORIES.remove(mob);
+
+        if (RetoldAiControl.isControlledAsBy(
+                mob,
+                RetoldAiControlMode.SEARCH,
+                CONTROL_OWNER
+        )) {
+            RetoldAiControl.clearIfControlledAsByAny(
+                    mob,
+                    CONTROL_OWNER,
+                    RetoldAiControlMode.SEARCH
+            );
+            RetoldBehaviorMovement.stopOwnedMovement(
+                    mob,
+                    CONTROL_OWNER
+            );
+        }
+    }
+
+    private static boolean canConsiderDroppedFood(PathfinderMob mob) {
+        return RetoldBehaviorCoordinator.canFeedNow(mob)
+                || RetoldAiControl.getMode(mob) == RetoldAiControlMode.HUNT;
+    }
+
+    private static boolean prepareForDroppedFood(
+            PathfinderMob mob,
+            ItemEntity food,
+            long gameTime
+    ) {
+        if (RetoldBehaviorCoordinator.canFeedNow(mob)) {
+            return true;
+        }
+
+        return tryPreferDroppedFoodOverHunt(
+                mob,
+                food,
+                gameTime
+        );
+    }
+
+    public static boolean tryPreferDroppedFoodOverHunt(
+            PathfinderMob mob,
+            ItemEntity food,
+            long gameTime
+    ) {
+        if (mob == null || food == null) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(mob, gameTime);
+
+        if (!RetoldMobRules.wantsDroppedFood(mob, state)
+                || RetoldAiControl.getMode(mob) != RetoldAiControlMode.HUNT
+                || !isValidDroppedFood(mob, food)) {
+            return false;
+        }
+
+        var target = mob.getTarget();
+
+        if (target != null && RetoldFactionTargetMemory.isOwnedByAny(
+                mob,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.TERRITORY_ATTACK
+        )) {
+            return false;
+        }
+
+        if (!claimFoodControl(mob, gameTime)) {
+            return false;
+        }
+
+        if (target != null) {
+            RetoldBehaviorTargets.clearTargetAndAggression(
+                    mob,
+                    target,
+                    true
+            );
+        }
+
+        RetoldPredatorStrike.clear(mob);
+        mob.setSprinting(false);
+        return true;
     }
 
     private static ItemEntity findBestDroppedFood(
@@ -278,7 +557,7 @@ public final class RetoldFoodBehaviorEvents {
             long gameTime
     ) {
         if (mob.distanceToSqr(food) <= EAT_ITEM_DISTANCE_SQUARED) {
-            consumeDroppedFood(
+            tryConsumeDroppedFood(
                     mob,
                     state,
                     food,
@@ -301,20 +580,49 @@ public final class RetoldFoodBehaviorEvents {
         );
     }
 
-    private static void consumeDroppedFood(
+    public static boolean tryConsumeDroppedFood(
+            PathfinderMob mob,
+            ItemEntity food,
+            long gameTime
+    ) {
+        if (mob == null || food == null) {
+            return false;
+        }
+
+        return tryConsumeDroppedFood(
+                mob,
+                RetoldMobStates.getOrCreate(mob, gameTime),
+                food,
+                gameTime
+        );
+    }
+
+    private static boolean tryConsumeDroppedFood(
             PathfinderMob mob,
             RetoldMobState state,
             ItemEntity food,
             long gameTime
     ) {
+        if (mob.distanceToSqr(food) > EAT_ITEM_DISTANCE_SQUARED) {
+            return false;
+        }
+
+        Vec3 foodSource = food.position();
         ItemStack stack = food.getItem();
 
         if (stack.isEmpty()) {
-            return;
+            return false;
         }
 
         if (!RetoldMobRules.canEatDroppedItem(mob, stack)) {
-            return;
+            return false;
+        }
+
+        boolean swallowedStack = mob instanceof AbstractCubeMob;
+
+        if (swallowedStack
+                && !RetoldSlimeItemStorage.swallow((AbstractCubeMob) mob, stack)) {
+            return false;
         }
 
         String itemPath = RetoldMobRules.getItemPath(stack);
@@ -330,28 +638,38 @@ public final class RetoldFoodBehaviorEvents {
 
         RetoldFeedingAnimations.play(mob);
 
-        stack.shrink(1);
-
-        if (stack.isEmpty()) {
+        if (swallowedStack) {
             food.discard();
         } else {
-            food.setItem(stack);
+            stack.shrink(1);
+
+            if (stack.isEmpty()) {
+                food.discard();
+            } else {
+                food.setItem(stack);
+            }
         }
 
         mob.getNavigation().stop();
         RetoldAiControl.clear(mob);
+        RetoldFeedingPose.begin(mob, foodSource, gameTime);
+        return true;
     }
 
     private static BlockPos findBestForageBlock(
             ServerLevel level,
             PathfinderMob mob
     ) {
+        double maxDistanceSquared = RetoldMobRules.usesRenewableEnvironmentalForage(mob)
+                ? FORAGE_HORIZONTAL_RADIUS * FORAGE_HORIZONTAL_RADIUS
+                : 16.0D;
+
         return RetoldForageBlockSearch.findOrdinaryForageBlock(
                 level,
                 mob,
                 FORAGE_HORIZONTAL_RADIUS,
                 FORAGE_VERTICAL_RADIUS,
-                16.0D,
+                maxDistanceSquared,
                 level.getGameTime(),
                 FOOD_BLOCK_SEARCH_CACHE_TICKS
         );
@@ -365,7 +683,7 @@ public final class RetoldFoodBehaviorEvents {
             long gameTime
     ) {
         if (mob.blockPosition().distSqr(foragePos) <= FORAGE_EAT_DISTANCE_SQUARED) {
-            consumeForageBlock(
+            tryConsumeForageBlock(
                     level,
                     mob,
                     state,
@@ -379,27 +697,117 @@ public final class RetoldFoodBehaviorEvents {
             return;
         }
 
-        RetoldBehaviorMovement.throttledMoveTo(
+        BlockPos movementTarget = foragePos;
+
+        if (foragePos.getY() >= mob.blockPosition().getY()
+                && !level.getBlockState(foragePos)
+                .getCollisionShape(level, foragePos)
+                .isEmpty()) {
+            movementTarget = findForageAccessPos(
+                    level,
+                    mob,
+                    foragePos
+            );
+        }
+
+        if (movementTarget == null
+                || !RetoldBehaviorMovement.throttledMoveToExact(
                 mob,
-                foragePos,
+                movementTarget,
                 getFoodSpeed(mob),
                 gameTime,
                 FOOD_PATH_INTERVAL_TICKS,
                 1.5D * 1.5D
+        )) {
+            RetoldBehaviorMovement.stopOwnedMovement(
+                    mob,
+                    RetoldAiControlOwner.FOOD
+            );
+        }
+    }
+
+    private static BlockPos findForageAccessPos(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos foragePos
+    ) {
+        int accessDistance = mob.getBbWidth() > 1.0F ? 2 : 1;
+        BlockPos best = null;
+        double bestDistanceSquared = Double.MAX_VALUE;
+
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos candidate = foragePos.relative(direction, accessDistance);
+
+            if (!mob.getNavigation().isStableDestination(candidate)
+                    || !level.getBlockState(candidate)
+                    .getCollisionShape(level, candidate)
+                    .isEmpty()
+                    || !level.getBlockState(candidate.above())
+                    .getCollisionShape(level, candidate.above())
+                    .isEmpty()) {
+                continue;
+            }
+
+            double distanceSquared = mob.distanceToSqr(
+                    Vec3.atBottomCenterOf(candidate)
+            );
+
+            if (distanceSquared < bestDistanceSquared) {
+                bestDistanceSquared = distanceSquared;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    public static boolean tryConsumeForageBlock(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos foragePos,
+            long gameTime
+    ) {
+        if (level == null || mob == null || foragePos == null) {
+            return false;
+        }
+
+        return tryConsumeForageBlock(
+                level,
+                mob,
+                RetoldMobStates.getOrCreate(mob, gameTime),
+                foragePos,
+                gameTime
         );
     }
 
-    private static void consumeForageBlock(
+    private static boolean tryConsumeForageBlock(
             ServerLevel level,
             PathfinderMob mob,
             RetoldMobState state,
             BlockPos foragePos,
             long gameTime
     ) {
+        if (mob.blockPosition().distSqr(foragePos) > FORAGE_EAT_DISTANCE_SQUARED) {
+            return false;
+        }
+
         BlockState blockState = level.getBlockState(foragePos);
+        boolean renewableEnvironmentalForage =
+                RetoldMobRules.isRenewableEnvironmentalForage(mob, blockState);
+
+        if (!renewableEnvironmentalForage
+                && !RetoldMobGriefing.canModifyBlocks(level, mob)) {
+            return false;
+        }
+
+        if (renewableEnvironmentalForage
+                && state.lastAteAt() > 0L
+                && gameTime - state.lastAteAt() < 20 * 30) {
+            return false;
+        }
 
         if (!RetoldMobRules.canForageBlock(mob, blockState)) {
-            return;
+            return false;
         }
 
         String blockPath = RetoldMobRules.getBlockPath(blockState);
@@ -415,14 +823,22 @@ public final class RetoldFoodBehaviorEvents {
 
         RetoldFeedingAnimations.play(mob);
 
-        destroyForageBlock(
-                level,
-                foragePos,
-                blockPath
-        );
+        if (!renewableEnvironmentalForage) {
+            destroyForageBlock(
+                    level,
+                    foragePos,
+                    blockPath
+            );
+        }
 
         mob.getNavigation().stop();
         RetoldAiControl.clear(mob);
+        RetoldFeedingPose.begin(
+                mob,
+                Vec3.atCenterOf(foragePos),
+                gameTime
+        );
+        return true;
     }
 
     private static void destroyForageBlock(
@@ -457,14 +873,34 @@ public final class RetoldFoodBehaviorEvents {
             PathfinderMob mob,
             long gameTime
     ) {
-        return RetoldAiControl.tryClaim(
+        return claimFoodControl(mob, gameTime, "seek_food");
+    }
+
+    static boolean claimFoodControl(
+            PathfinderMob mob,
+            long gameTime,
+            String reason
+    ) {
+        boolean claimed = RetoldAiControl.tryClaim(
                 mob,
                 RetoldAiControlMode.FEED,
                 CONTROL_OWNER,
                 FEED_PRIORITY,
-                "seek_food",
+                reason,
                 gameTime,
                 FEED_CONTROL_TICKS
         );
+
+        if (claimed) {
+            FOOD_SEARCH_MEMORIES.remove(mob);
+        }
+
+        return claimed;
+    }
+
+    private record FoodSearchMemory(
+            BlockPos pos,
+            long expiresAt
+    ) {
     }
 }

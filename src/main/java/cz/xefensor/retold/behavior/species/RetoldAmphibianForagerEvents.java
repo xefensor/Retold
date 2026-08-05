@@ -15,6 +15,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -25,6 +26,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -409,6 +411,7 @@ public final class RetoldAmphibianForagerEvents {
             return;
         }
 
+        Vec3 foodSource = prey.position();
         RetoldFeedingAnimations.play(frog);
 
         RetoldMobState state = RetoldMobStates.getOrCreate(
@@ -416,14 +419,45 @@ public final class RetoldAmphibianForagerEvents {
                 gameTime
         );
 
-        state.addHunger(-BITE_HUNGER_RELIEF);
-        state.markAte(gameTime);
-
-        if (!prey.isAlive() || prey.isRemoved()) {
-            state.markSuccessfulHunt(gameTime);
+        if (prey.isAlive() && !prey.isRemoved()) {
+            state.addHunger(-BITE_HUNGER_RELIEF);
+            state.markAte(gameTime);
         }
 
         stopControl(frog);
+        RetoldFeedingPose.begin(frog, foodSource, gameTime);
+    }
+
+    /**
+     * Credits prey eaten through the vanilla Frog tongue behavior. Vanilla removes
+     * the swallowed entity itself, so the ordinary Retold bite path never sees that
+     * meal. Kill credit is also used by the Retold bite when its damage is lethal,
+     * keeping hunger relief single-counted in both paths.
+     */
+    public static boolean recordKilledPrey(
+            ServerLevel level,
+            PathfinderMob frog,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        if (level == null
+                || frog == null
+                || prey == null
+                || frog.level() != level
+                || !RetoldMobRules.isAmphibianForager(frog)
+                || !RetoldPreyTargeting.isTinyWetlandPrey(prey)) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                frog,
+                gameTime
+        );
+        state.addHunger(-BITE_HUNGER_RELIEF);
+        state.markAte(gameTime);
+        state.markSuccessfulHunt(gameTime);
+        RetoldFeedingPose.begin(frog, prey.position(), gameTime);
+        return true;
     }
 
     private static void stopFailedHunt(

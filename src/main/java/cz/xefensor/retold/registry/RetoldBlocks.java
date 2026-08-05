@@ -11,6 +11,7 @@ import cz.xefensor.retold.block.AenderGrassBlock;
 import cz.xefensor.retold.block.AenderLeavesBlock;
 import cz.xefensor.retold.block.AenderPortalBlock;
 import cz.xefensor.retold.block.AenderPortalFrameBlock;
+import cz.xefensor.retold.block.AnimalFeederBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ColorRGBA;
@@ -60,6 +61,26 @@ public final class RetoldBlocks {
     public static final DeferredItem<SpawnEggItem> GALE_CORE_SPAWN_EGG = ITEMS.registerItem(
             "gale_core_spawn_egg",
             properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.GALE_CORE.get()))
+    );
+
+    public static final DeferredBlock<AnimalFeederBlock> ANIMAL_FEEDER = BLOCKS.register(
+            "animal_feeder",
+            registryName -> new AnimalFeederBlock(
+                    BlockBehaviour.Properties
+                            .ofFullCopy(Blocks.OAK_PLANKS)
+                            .setId(ResourceKey.create(Registries.BLOCK, registryName))
+                            .strength(2.0F, 3.0F)
+                            .sound(SoundType.WOOD)
+                            .noOcclusion()
+            )
+    );
+
+    public static final DeferredItem<BlockItem> ANIMAL_FEEDER_ITEM = ITEMS.registerSimpleBlockItem(
+            ANIMAL_FEEDER,
+            properties -> properties.setId(ResourceKey.create(
+                    Registries.ITEM,
+                    ANIMAL_FEEDER.getId()
+            ))
     );
 
     public static final DeferredBlock<AenderGrassBlock> AENDER_GRASS_BLOCK = BLOCKS.register(

@@ -1,4 +1,6 @@
 {
+  "message.retold.iron_golem_requires_levels": "Animating an Iron Golem requires %s experience levels.",
+  "block.retold.animal_feeder": "Animal Feeder",
   "block.retold.aender_grass_block": "Aender Grass Block",
   "block.retold.aender_leaves": "Aender Leaves",
   "block.retold.aender_log": "Aender Log",

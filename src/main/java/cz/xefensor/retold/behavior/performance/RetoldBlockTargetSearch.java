@@ -1,11 +1,16 @@
 package cz.xefensor.retold.behavior.performance;
 
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.behavior.core.RetoldWeakBarriers;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.FluidTags;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -15,10 +20,9 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public final class RetoldBlockTargetSearch {
-    private static final double MAX_MOB_DRIFT_SQUARED = 5.0D * 5.0D;
     private static final int MIN_BLOCK_TARGET_CACHE_TICKS = 40;
 
-    private static final Map<PathfinderMob, List<BlockTargetEntry>> TARGETS = new WeakHashMap<>();
+    private static final Map<Entity, List<BlockTargetEntry>> TARGETS = new WeakHashMap<>();
 
     private RetoldBlockTargetSearch() {
     }
@@ -214,9 +218,117 @@ public final class RetoldBlockTargetSearch {
         );
     }
 
-    private static BlockPos findTarget(
+    public static synchronized BlockPos findArmadilloGrubSoil(
             ServerLevel level,
             PathfinderMob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                BlockSearchMode.ARMADILLO_GRUB,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findWeakBarrier(
+            ServerLevel level,
+            PathfinderMob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                BlockSearchMode.WEAK_BARRIER,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findCobwebPlacement(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos searchCenter,
+            int horizontalRadius,
+            int verticalRadius,
+            double maxDistanceSquared,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                searchCenter,
+                BlockSearchMode.COBWEB_PLACEMENT,
+                horizontalRadius,
+                verticalRadius,
+                maxDistanceSquared,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findBatRoost(
+            ServerLevel level,
+            Mob bat,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                bat,
+                bat != null ? bat.blockPosition() : null,
+                BlockSearchMode.BAT_ROOST,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findBatRoost(
+            ServerLevel level,
+            Mob bat,
+            BlockPos searchCenter,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                bat,
+                searchCenter,
+                BlockSearchMode.BAT_ROOST,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    private static BlockPos findTarget(
+            ServerLevel level,
+            Entity mob,
             BlockPos searchCenter,
             BlockSearchMode mode,
             int horizontalRadius,
@@ -244,7 +356,6 @@ public final class RetoldBlockTargetSearch {
                             && entry.horizontalRadius == horizontalRadius
                             && entry.verticalRadius == verticalRadius
                             && Double.compare(entry.maxDistanceSquared, maxDistanceSquared) == 0
-                            && mob.distanceToSqr(entry.mobX, entry.mobY, entry.mobZ) <= MAX_MOB_DRIFT_SQUARED
                             && isCachedTargetStillValid(level, entry.mode, entry.target)
             ) {
                 RetoldBehaviorPerf.recordBlockSearchCache(true);
@@ -284,9 +395,6 @@ public final class RetoldBlockTargetSearch {
                 verticalRadius,
                 maxDistanceSquared,
                 gameTime + Math.max(MIN_BLOCK_TARGET_CACHE_TICKS, RetoldAiLod.cacheTicks(mob, cacheTicks)),
-                mob.getX(),
-                mob.getY(),
-                mob.getZ(),
                 target
         ));
 
@@ -295,15 +403,25 @@ public final class RetoldBlockTargetSearch {
 
     private static BlockPos scan(
             ServerLevel level,
-            PathfinderMob mob,
+            Entity mob,
             BlockPos center,
             BlockSearchMode mode,
             int horizontalRadius,
             int verticalRadius,
             double maxDistanceSquared
     ) {
+        if (mode == BlockSearchMode.BAT_ROOST) {
+            return scanBatRoost(
+                    level,
+                    center,
+                    horizontalRadius,
+                    verticalRadius
+            );
+        }
+
         BlockPos best = null;
         double bestScore = Double.MAX_VALUE;
+        long positionsChecked = 0L;
         BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
 
         for (int dx = -horizontalRadius; dx <= horizontalRadius; dx++) {
@@ -315,6 +433,8 @@ public final class RetoldBlockTargetSearch {
                         continue;
                     }
 
+                    positionsChecked++;
+
                     mutable.set(
                             center.getX() + dx,
                             center.getY() + dy,
@@ -322,6 +442,11 @@ public final class RetoldBlockTargetSearch {
                     );
 
                     if (level.isOutsideBuildHeight(mutable) || !isValid(level, mode, mutable)) {
+                        continue;
+                    }
+
+                    if (mode == BlockSearchMode.COBWEB_PLACEMENT
+                            && mutable.equals(mob.blockPosition())) {
                         continue;
                     }
 
@@ -343,7 +468,57 @@ public final class RetoldBlockTargetSearch {
             }
         }
 
+        RetoldBehaviorPerf.recordBlockTargetPositionsChecked(positionsChecked);
         return best;
+    }
+
+    private static BlockPos scanBatRoost(
+            ServerLevel level,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius
+    ) {
+        int maxRing = horizontalRadius * 2;
+        long positionsChecked = 0L;
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+
+        for (int ring = 0; ring <= maxRing; ring++) {
+            for (int offsetX = -ring; offsetX <= ring; offsetX++) {
+                for (int offsetZ = -ring; offsetZ <= ring; offsetZ++) {
+                    if (Math.max(Math.abs(offsetX), Math.abs(offsetZ)) != ring) {
+                        continue;
+                    }
+
+                    int dx = offsetX;
+                    int dz = offsetZ;
+
+                    if (Math.abs(dx) > horizontalRadius
+                            || Math.abs(dz) > horizontalRadius) {
+                        continue;
+                    }
+
+                    for (int dy = verticalRadius; dy >= 0; dy--) {
+                        positionsChecked++;
+                        mutable.set(
+                                center.getX() + dx,
+                                center.getY() + dy,
+                                center.getZ() + dz
+                        );
+
+                        if (!level.isOutsideBuildHeight(mutable)
+                                && isBatRoostAt(level, mutable)) {
+                            RetoldBehaviorPerf.recordBlockTargetPositionsChecked(
+                                    positionsChecked
+                            );
+                            return mutable.immutable();
+                        }
+                    }
+                }
+            }
+        }
+
+        RetoldBehaviorPerf.recordBlockTargetPositionsChecked(positionsChecked);
+        return null;
     }
 
     private static boolean isCachedTargetStillValid(
@@ -364,17 +539,28 @@ public final class RetoldBlockTargetSearch {
             case BEACH_SAND -> isBeachSand(level, pos);
             case WATER -> isWater(level, pos);
             case WETLAND -> isWater(level, pos) && hasNearbyLand(level, pos, 4);
-            case SNIFFER_RANGE -> isDiggable(level, pos) || hasNearbyDiggable(level, pos, 5);
+            /*
+             * A newly discovered range anchor can be the diggable block itself.
+             * Checking a second 11x5x11 volume for every candidate here made one
+             * nominal 37x9x37 range scan perform millions of block lookups.
+             * Existing shared range memories may still be near (rather than on)
+             * diggable ground; RetoldSnifferForagerEvents validates those separately.
+             */
+            case SNIFFER_RANGE -> isDiggable(level, pos);
             case SNIFFER_DIGGABLE -> isDiggable(level, pos);
             case BAMBOO -> isBamboo(level, pos);
             case WATER_RANGE -> isWater(level, pos) && hasNearbyWater(level, pos, 4);
             case SCRUB_RANGE -> isScrubRange(level, pos);
+            case ARMADILLO_GRUB -> isArmadilloGrubSoil(level, pos);
+            case WEAK_BARRIER -> RetoldWeakBarriers.isBreakable(level.getBlockState(pos));
+            case COBWEB_PLACEMENT -> canPlaceCobwebAt(level, pos);
+            case BAT_ROOST -> isBatRoostAt(level, pos);
         };
     }
 
     private static double score(
             ServerLevel level,
-            PathfinderMob mob,
+            Entity mob,
             BlockSearchMode mode,
             int dx,
             int dy,
@@ -389,8 +575,83 @@ public final class RetoldBlockTargetSearch {
             }
             case WATER, WETLAND, SNIFFER_RANGE -> dx * dx + dy * dy * 1.5D + dz * dz;
             case SNIFFER_DIGGABLE -> mob.blockPosition().distSqr(pos);
-            case BAMBOO, WATER_RANGE, SCRUB_RANGE -> dx * dx + dy * dy * 1.4D + dz * dz;
+            case BAMBOO, WATER_RANGE, SCRUB_RANGE, ARMADILLO_GRUB ->
+                    dx * dx + dy * dy * 1.4D + dz * dz;
+            case WEAK_BARRIER -> dx * dx + dy * dy * 1.5D + dz * dz;
+            case COBWEB_PLACEMENT -> dx * dx + dy * dy * 1.25D + dz * dz;
+            case BAT_ROOST -> batRoostScore(mob, dx, dy, dz);
         };
+    }
+
+    private static double batRoostScore(
+            Entity bat,
+            int dx,
+            int dy,
+            int dz
+    ) {
+        int slot = Math.floorMod(bat.getId() * 7, 25);
+        int preferredX = slot % 5 - 2;
+        int preferredZ = slot / 5 - 2;
+        int offsetX = dx - preferredX;
+        int offsetZ = dz - preferredZ;
+
+        return offsetX * offsetX + dy * dy * 1.25D + offsetZ * offsetZ;
+    }
+
+    public static boolean isBatRoostAt(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        if (level == null
+                || pos == null
+                || level.isOutsideBuildHeight(pos)
+                || !level.getBlockState(pos).isAir()
+                || level.getMaxLocalRawBrightness(pos) >= 8
+                || !hasLowRawSkyLight(level, pos)) {
+            return false;
+        }
+
+        BlockPos ceiling = pos.above();
+
+        return level.getBlockState(ceiling).isRedstoneConductor(level, ceiling);
+    }
+
+    public static boolean canPlaceCobwebAt(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        if (level == null
+                || pos == null
+                || level.isOutsideBuildHeight(pos)
+                || !level.getBlockState(pos).isAir()
+                || !hasLowRawSkyLight(level, pos)
+                || level.getMaxLocalRawBrightness(pos) >= 8) {
+            return false;
+        }
+
+        for (Direction direction : Direction.values()) {
+            BlockPos supportPos = pos.relative(direction);
+
+            if (level.getBlockState(supportPos).isFaceSturdy(
+                    level,
+                    supportPos,
+                    direction.getOpposite()
+            )) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static boolean hasLowRawSkyLight(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        return level != null
+                && pos != null
+                && !level.isOutsideBuildHeight(pos)
+                && level.getBrightness(LightLayer.SKY, pos) < 8;
     }
 
     private static boolean isBeachSand(
@@ -547,6 +808,14 @@ public final class RetoldBlockTargetSearch {
                 || state.is(Blocks.TERRACOTTA);
     }
 
+    private static boolean isArmadilloGrubSoil(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        return level.getBlockState(pos.above()).isAir()
+                && RetoldMobRules.canDigForGrubs(level.getBlockState(pos));
+    }
+
     private enum BlockSearchMode {
         FLOWER,
         BEACH_SAND,
@@ -556,7 +825,11 @@ public final class RetoldBlockTargetSearch {
         SNIFFER_DIGGABLE,
         BAMBOO,
         WATER_RANGE,
-        SCRUB_RANGE
+        SCRUB_RANGE,
+        ARMADILLO_GRUB,
+        WEAK_BARRIER,
+        COBWEB_PLACEMENT,
+        BAT_ROOST
     }
 
     private record BlockTargetEntry(
@@ -566,9 +839,6 @@ public final class RetoldBlockTargetSearch {
             int verticalRadius,
             double maxDistanceSquared,
             long expiresAt,
-            double mobX,
-            double mobY,
-            double mobZ,
             BlockPos target
     ) {
     }

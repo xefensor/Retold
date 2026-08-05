@@ -13,6 +13,8 @@ import cz.xefensor.retold.behavior.home.RetoldAnimalSocialGroups;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
@@ -23,8 +25,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -34,16 +38,22 @@ public final class RetoldArmadilloDefenseEvents {
     private static final int THINK_INTERVAL_TICKS = 8;
     private static final int ARMADILLO_SCAN_CACHE_TICKS = 6;
     private static final int SCRUB_BLOCK_SEARCH_CACHE_TICKS = 24;
+    private static final int GRUB_BLOCK_SEARCH_CACHE_TICKS = 24;
     private static final int SHELTER_CONTROL_TICKS = 20 * 4;
     private static final int RETREAT_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 5;
+    private static final int GRUB_CONTROL_TICKS = 20 * 5;
+    private static final int GRUB_DIG_COOLDOWN_TICKS = 20 * 30;
 
     private static final int SHELTER_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.SHELTER, 2);
     private static final int RETREAT_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FLEE, 3);
     private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 4);
+    private static final int GRUB_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 3);
 
     private static final int SCRUB_SEARCH_HORIZONTAL_RADIUS = 14;
     private static final int SCRUB_SEARCH_VERTICAL_RADIUS = 4;
+    private static final int GRUB_SEARCH_HORIZONTAL_RADIUS = 12;
+    private static final int GRUB_SEARCH_VERTICAL_RADIUS = 3;
     private static final double RANGE_MEMBER_SEARCH_RADIUS_BLOCKS = 12.0D;
 
     private static final int RECENT_DANGER_RETURN_TICKS = 20 * 35;
@@ -66,6 +76,9 @@ public final class RetoldArmadilloDefenseEvents {
 
     private static final double ARMADILLO_RETREAT_SPEED = 1.08D;
     private static final double ARMADILLO_RETURN_SPEED = 0.72D;
+    private static final double ARMADILLO_FORAGE_SPEED = 0.72D;
+    private static final double GRUB_REACHED_SQUARED = 2.5D * 2.5D;
+    private static final int GRUB_HUNGER_RELIEF = 24;
 
     private RetoldArmadilloDefenseEvents() {
     }
@@ -149,6 +162,10 @@ public final class RetoldArmadilloDefenseEvents {
 
         if (RetoldAiControl.isControlledBy(armadillo, RetoldAiControlOwner.ARMADILLO_DEFENSE)) {
             stopDefenseControl(armadillo);
+        }
+
+        if (tryStartOrContinueGrubForaging(level, armadillo, gameTime)) {
+            return;
         }
 
         if (range == null) {
@@ -438,6 +455,86 @@ public final class RetoldArmadilloDefenseEvents {
                 armadillo,
                 RetoldAiControlOwner.ARMADILLO_DEFENSE
         );
+    }
+
+    private static boolean tryStartOrContinueGrubForaging(
+            ServerLevel level,
+            PathfinderMob armadillo,
+            long gameTime
+    ) {
+        RetoldMobState state = RetoldMobStates.getOrCreate(armadillo, gameTime);
+
+        if (!RetoldMobRules.hasEatDrive(armadillo, state)
+                || state.lastAteAt() > 0L
+                && gameTime - state.lastAteAt() < GRUB_DIG_COOLDOWN_TICKS) {
+            if (RetoldAiControl.isControlledBy(armadillo, RetoldAiControlOwner.ARMADILLO_FORAGER)) {
+                RetoldBehaviorMovement.stopOwnedMovement(
+                        armadillo,
+                        RetoldAiControlOwner.ARMADILLO_FORAGER
+                );
+            }
+            return false;
+        }
+
+        BlockPos grubSoil = RetoldBlockTargetSearch.findArmadilloGrubSoil(
+                level,
+                armadillo,
+                GRUB_SEARCH_HORIZONTAL_RADIUS,
+                GRUB_SEARCH_VERTICAL_RADIUS,
+                gameTime,
+                GRUB_BLOCK_SEARCH_CACHE_TICKS
+        );
+
+        if (grubSoil == null) {
+            return false;
+        }
+
+        if (armadillo.distanceToSqr(Vec3.atCenterOf(grubSoil)) <= GRUB_REACHED_SQUARED) {
+            return tryDigGrubs(level, armadillo, grubSoil, state, gameTime);
+        }
+
+        return RetoldBehaviorMovement.claimAndMoveToBlock(
+                armadillo,
+                grubSoil.above(),
+                RetoldAiControlMode.FEED,
+                RetoldAiControlOwner.ARMADILLO_FORAGER,
+                GRUB_PRIORITY,
+                "armadillo_grub_forage",
+                gameTime,
+                GRUB_CONTROL_TICKS,
+                ARMADILLO_FORAGE_SPEED,
+                false
+        );
+    }
+
+    private static boolean tryDigGrubs(
+            ServerLevel level,
+            PathfinderMob armadillo,
+            BlockPos grubSoil,
+            RetoldMobState state,
+            long gameTime
+    ) {
+        BlockState soilState = level.getBlockState(grubSoil);
+
+        if (!level.getBlockState(grubSoil.above()).isAir()
+                || !RetoldMobRules.canDigForGrubs(soilState)) {
+            return false;
+        }
+
+        state.addHunger(-GRUB_HUNGER_RELIEF);
+        state.markFed(gameTime);
+        level.levelEvent(2001, grubSoil, Block.getId(soilState));
+        RetoldFeedingAnimations.play(armadillo);
+        RetoldBehaviorMovement.stopOwnedMovement(
+                armadillo,
+                RetoldAiControlOwner.ARMADILLO_FORAGER
+        );
+        RetoldFeedingPose.begin(
+                armadillo,
+                Vec3.atCenterOf(grubSoil),
+                gameTime
+        );
+        return true;
     }
 
     private static BlockPos findNearestScrubRange(

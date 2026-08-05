@@ -58,8 +58,8 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        RetoldFaction victimFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(victim);
-        RetoldFaction attackerFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(attacker);
+        RetoldFaction victimFaction = RetoldFactionMembers.getActiveCombatFaction(victim);
+        RetoldFaction attackerFaction = RetoldFactionMembers.getActiveCombatFaction(attacker);
 
         if (victimFaction != null && victimFaction != attackerFaction) {
             if (attackerFaction != null) {
@@ -98,7 +98,7 @@ public final class RetoldFactionAssistEvents {
         }
 
         ServerLevel level = (ServerLevel) mob.level();
-        RetoldFaction mobFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(mob);
+        RetoldFaction mobFaction = RetoldFactionMembers.getActiveCombatFaction(mob);
 
         if (mobFaction == null) {
             clearAnnouncements(mob);
@@ -112,7 +112,7 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        RetoldFaction targetFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(target);
+        RetoldFaction targetFaction = RetoldFactionMembers.getActiveCombatFaction(target);
 
         if (targetFaction == mobFaction) {
             clearAnnouncements(mob);
@@ -160,17 +160,18 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!RetoldFactionMembers.isAlignedWith(caller, callerFaction)) {
+        if (!RetoldFactionMembers.isCombatAlignedWith(caller, callerFaction)) {
             return;
         }
 
-        RetoldFaction targetFaction = RetoldFactionMembers.getFactionOrLooseAllyFaction(target);
+        RetoldFaction targetFaction = RetoldFactionMembers.getActiveCombatFaction(target);
 
         if (targetFaction != null && targetFaction != callerFaction) {
             callForFactionHelpAgainstFaction(level, caller, targetFaction, callerFaction);
             return;
         }
 
+        /* Inactive loose allies remain neutral even though they cannot answer help calls. */
         if (RetoldFactionMembers.isAlignedWith(target, callerFaction)) {
             return;
         }
@@ -195,7 +196,7 @@ public final class RetoldFactionAssistEvents {
             return;
         }
 
-        if (!RetoldFactionMembers.isAlignedWith(caller, callerFaction)) {
+        if (!RetoldFactionMembers.isCombatAlignedWith(caller, callerFaction)) {
             return;
         }
 
@@ -345,7 +346,11 @@ public final class RetoldFactionAssistEvents {
             RetoldFaction callerFaction
     ) {
         return RetoldAiTargets.isAliveInSameLevel(caller, ally)
-                && RetoldFactionMembers.isAlignedWith(ally, callerFaction);
+                && RetoldFactionMembers.areCooperatingAllies(
+                caller,
+                ally,
+                callerFaction
+        );
     }
 
     private static boolean isValidEnemyFactionMember(
@@ -358,7 +363,7 @@ public final class RetoldFactionAssistEvents {
         }
 
         return RetoldAiTargets.isAliveInSameLevel(observer, enemy)
-                && RetoldFactionMembers.isAlignedWith(enemy, enemyFaction);
+                && RetoldFactionMembers.isCombatAlignedWith(enemy, enemyFaction);
     }
 
     private static boolean canDetectEnemy(PathfinderMob ally, LivingEntity enemy) {

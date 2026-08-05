@@ -3,7 +3,7 @@ package cz.xefensor.retold.behavior.food;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.animal.camel.Camel;
 import net.minecraft.world.entity.animal.dolphin.Dolphin;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
@@ -21,7 +21,7 @@ public final class RetoldFeedingAnimations {
     private RetoldFeedingAnimations() {
     }
 
-    public static void play(PathfinderMob mob) {
+    public static void play(Mob mob) {
         if (!(mob.level() instanceof ServerLevel level)) {
             return;
         }
@@ -109,7 +109,7 @@ public final class RetoldFeedingAnimations {
 
     private static void playNeutralEatSound(
             ServerLevel level,
-            PathfinderMob mob,
+            Mob mob,
             net.minecraft.sounds.SoundEvent sound
     ) {
         level.playSound(

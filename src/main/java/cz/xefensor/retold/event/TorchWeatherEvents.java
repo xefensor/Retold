@@ -9,6 +9,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
@@ -27,6 +28,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 
 public final class TorchWeatherEvents {
     private static final int CHECK_INTERVAL_TICKS = 60;
@@ -36,6 +38,7 @@ public final class TorchWeatherEvents {
     private static final RandomSource RANDOM = RandomSource.create();
 
     private static final Map<ResourceKey<Level>, Long2ObjectOpenHashMap<LongOpenHashSet>> TRACKED_TORCHES = new HashMap<>();
+    private static final Map<ResourceKey<Level>, Long2ObjectOpenHashMap<LongOpenHashSet>> TRACKED_EXTINGUISHED_TORCHES = new HashMap<>();
     private static final Map<ResourceKey<Level>, LongOpenHashSet> PENDING_CHUNK_INDEXES = new HashMap<>();
 
     private TorchWeatherEvents() {
@@ -80,6 +83,16 @@ public final class TorchWeatherEvents {
             }
         }
 
+        Long2ObjectOpenHashMap<LongOpenHashSet> extinguishedByChunk =
+                TRACKED_EXTINGUISHED_TORCHES.get(dimension);
+        if (extinguishedByChunk != null) {
+            extinguishedByChunk.remove(chunkKey);
+
+            if (extinguishedByChunk.isEmpty()) {
+                TRACKED_EXTINGUISHED_TORCHES.remove(dimension);
+            }
+        }
+
         LongOpenHashSet pending = PENDING_CHUNK_INDEXES.get(dimension);
         if (pending != null) {
             pending.remove(chunkKey);
@@ -104,6 +117,8 @@ public final class TorchWeatherEvents {
 
         if (isLitTorch(state)) {
             trackTorch(level, event.getPos(), state);
+        } else if (isExtinguishedTorch(state)) {
+            trackExtinguishedTorch(level, event.getPos(), state);
         }
     }
 
@@ -133,6 +148,7 @@ public final class TorchWeatherEvents {
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
         TRACKED_TORCHES.clear();
+        TRACKED_EXTINGUISHED_TORCHES.clear();
         PENDING_CHUNK_INDEXES.clear();
     }
 
@@ -191,6 +207,220 @@ public final class TorchWeatherEvents {
         }
     }
 
+    public static void trackExtinguishedTorch(
+            Level level,
+            BlockPos pos,
+            BlockState state
+    ) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || isAender(serverLevel)
+                || !isExtinguishedTorch(state)) {
+            return;
+        }
+
+        TRACKED_EXTINGUISHED_TORCHES
+                .computeIfAbsent(
+                        serverLevel.dimension(),
+                        ignored -> new Long2ObjectOpenHashMap<>()
+                )
+                .computeIfAbsent(
+                        chunkKey(pos),
+                        ignored -> new LongOpenHashSet()
+                )
+                .add(pos.asLong());
+    }
+
+    public static void untrackExtinguishedTorch(Level level, BlockPos pos) {
+        if (!(level instanceof ServerLevel serverLevel)
+                || isAender(serverLevel)) {
+            return;
+        }
+
+        removeTrackedPosition(
+                TRACKED_EXTINGUISHED_TORCHES,
+                serverLevel.dimension(),
+                pos
+        );
+    }
+
+    public static boolean hasTrackedExtinguishedTorches(ServerLevel level) {
+        if (level == null || isAender(level)) {
+            return false;
+        }
+
+        Long2ObjectOpenHashMap<LongOpenHashSet> tracked =
+                TRACKED_EXTINGUISHED_TORCHES.get(level.dimension());
+        return tracked != null && !tracked.isEmpty();
+    }
+
+    public static BlockPos findNearestExtinguishedTorch(
+            ServerLevel level,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius,
+            Predicate<BlockPos> positionFilter
+    ) {
+        if (level == null
+                || center == null
+                || horizontalRadius < 0
+                || verticalRadius < 0
+                || isAender(level)) {
+            return null;
+        }
+
+        Long2ObjectOpenHashMap<LongOpenHashSet> trackedByChunk =
+                TRACKED_EXTINGUISHED_TORCHES.get(level.dimension());
+
+        if (trackedByChunk == null || trackedByChunk.isEmpty()) {
+            return null;
+        }
+
+        BlockPos best = null;
+        double bestDistanceSquared = Double.MAX_VALUE;
+        int minChunkX = Math.floorDiv(center.getX() - horizontalRadius, 16);
+        int maxChunkX = Math.floorDiv(center.getX() + horizontalRadius, 16);
+        int minChunkZ = Math.floorDiv(center.getZ() - horizontalRadius, 16);
+        int maxChunkZ = Math.floorDiv(center.getZ() + horizontalRadius, 16);
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                LongOpenHashSet positions = trackedByChunk.get(
+                        ChunkPos.pack(chunkX, chunkZ)
+                );
+
+                if (positions == null || positions.isEmpty()) {
+                    continue;
+                }
+
+                LongIterator iterator = positions.iterator();
+
+                while (iterator.hasNext()) {
+                    BlockPos candidate = BlockPos.of(iterator.nextLong());
+
+                    if (!level.hasChunkAt(candidate)
+                            || !isExtinguishedTorch(
+                            level.getBlockState(candidate)
+                    )) {
+                        iterator.remove();
+                        continue;
+                    }
+
+                    int dx = Math.abs(candidate.getX() - center.getX());
+                    int dy = Math.abs(candidate.getY() - center.getY());
+                    int dz = Math.abs(candidate.getZ() - center.getZ());
+
+                    if (dx * dx + dz * dz
+                            > horizontalRadius * horizontalRadius
+                            || dy > verticalRadius
+                            || (positionFilter != null
+                            && !positionFilter.test(candidate))) {
+                        continue;
+                    }
+
+                    double distanceSquared = center.distSqr(candidate);
+
+                    if (distanceSquared < bestDistanceSquared) {
+                        bestDistanceSquared = distanceSquared;
+                        best = candidate.immutable();
+                    }
+                }
+
+                if (positions.isEmpty()) {
+                    trackedByChunk.remove(ChunkPos.pack(chunkX, chunkZ));
+                }
+            }
+        }
+
+        if (trackedByChunk.isEmpty()) {
+            TRACKED_EXTINGUISHED_TORCHES.remove(level.dimension());
+        }
+
+        return best;
+    }
+
+    public static boolean relightMagically(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        return relight(
+                level,
+                pos,
+                SoundEvents.ENCHANTMENT_TABLE_USE,
+                0.7F,
+                1.5F,
+                true
+        );
+    }
+
+    public static boolean relightWithFlintAndSteel(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        return relight(
+                level,
+                pos,
+                SoundEvents.FLINTANDSTEEL_USE,
+                1.0F,
+                1.0F,
+                false
+        );
+    }
+
+    private static boolean relight(
+            ServerLevel level,
+            BlockPos pos,
+            SoundEvent sound,
+            float volume,
+            float pitch,
+            boolean magical
+    ) {
+        if (level == null || pos == null || isPrecipitatingAt(level, pos)) {
+            return false;
+        }
+
+        BlockState litState = getLitState(level.getBlockState(pos));
+
+        if (litState == null || !level.setBlock(pos, litState, Block.UPDATE_ALL)) {
+            return false;
+        }
+
+        untrackExtinguishedTorch(level, pos);
+        trackTorch(level, pos, litState);
+        level.playSound(
+                null,
+                pos,
+                sound,
+                SoundSource.BLOCKS,
+                volume,
+                pitch
+        );
+        level.sendParticles(
+                ParticleTypes.FLAME,
+                pos.getX() + 0.5D,
+                pos.getY() + 0.7D,
+                pos.getZ() + 0.5D,
+                8,
+                0.15D,
+                0.18D,
+                0.15D,
+                0.01D
+        );
+        if (magical) {
+            level.sendParticles(
+                    ParticleTypes.HAPPY_VILLAGER,
+                    pos.getX() + 0.5D,
+                    pos.getY() + 0.7D,
+                    pos.getZ() + 0.5D,
+                    5,
+                    0.2D,
+                    0.25D,
+                    0.2D,
+                    0.01D
+            );
+        }
+        return true;
+    }
+
     private static void indexPendingChunks(ServerLevel level) {
         ResourceKey<Level> dimension = level.dimension();
 
@@ -244,6 +474,12 @@ public final class TorchWeatherEvents {
 
                     if (isLitTorch(state)) {
                         trackTorch(level, pos.immutable(), state);
+                    } else if (isExtinguishedTorch(state)) {
+                        trackExtinguishedTorch(
+                                level,
+                                pos.immutable(),
+                                state
+                        );
                     }
                 }
             }
@@ -322,13 +558,17 @@ public final class TorchWeatherEvents {
             }
 
             level.setBlock(pos, extinguishedState, Block.UPDATE_ALL);
+            trackExtinguishedTorch(level, pos, extinguishedState);
             playExtinguishEffects(level, pos);
 
             torchIterator.remove();
         }
     }
 
-    private static boolean isPrecipitatingAt(ServerLevel level, BlockPos torchPos) {
+    public static boolean isPrecipitatingAt(
+            ServerLevel level,
+            BlockPos torchPos
+    ) {
         if (!level.isRaining()) {
             return false;
         }
@@ -355,6 +595,56 @@ public final class TorchWeatherEvents {
                 || state.is(Blocks.SOUL_WALL_TORCH)
                 || state.is(Blocks.COPPER_TORCH)
                 || state.is(Blocks.COPPER_WALL_TORCH);
+    }
+
+    public static boolean isExtinguishedTorch(BlockState state) {
+        return state.is(RetoldBlocks.EXTINGUISHED_TORCH.get())
+                || state.is(RetoldBlocks.EXTINGUISHED_WALL_TORCH.get())
+                || state.is(RetoldBlocks.EXTINGUISHED_SOUL_TORCH.get())
+                || state.is(RetoldBlocks.EXTINGUISHED_SOUL_WALL_TORCH.get())
+                || state.is(RetoldBlocks.EXTINGUISHED_COPPER_TORCH.get())
+                || state.is(
+                RetoldBlocks.EXTINGUISHED_COPPER_WALL_TORCH.get()
+        );
+    }
+
+    private static BlockState getLitState(BlockState state) {
+        if (state.is(RetoldBlocks.EXTINGUISHED_TORCH.get())) {
+            return Blocks.TORCH.defaultBlockState();
+        }
+
+        if (state.is(RetoldBlocks.EXTINGUISHED_SOUL_TORCH.get())) {
+            return Blocks.SOUL_TORCH.defaultBlockState();
+        }
+
+        if (state.is(RetoldBlocks.EXTINGUISHED_COPPER_TORCH.get())) {
+            return Blocks.COPPER_TORCH.defaultBlockState();
+        }
+
+        if (state.is(RetoldBlocks.EXTINGUISHED_WALL_TORCH.get())) {
+            return Blocks.WALL_TORCH.defaultBlockState().setValue(
+                    WallTorchBlock.FACING,
+                    state.getValue(WallTorchBlock.FACING)
+            );
+        }
+
+        if (state.is(RetoldBlocks.EXTINGUISHED_SOUL_WALL_TORCH.get())) {
+            return Blocks.SOUL_WALL_TORCH.defaultBlockState().setValue(
+                    WallTorchBlock.FACING,
+                    state.getValue(WallTorchBlock.FACING)
+            );
+        }
+
+        if (state.is(
+                RetoldBlocks.EXTINGUISHED_COPPER_WALL_TORCH.get()
+        )) {
+            return Blocks.COPPER_WALL_TORCH.defaultBlockState().setValue(
+                    WallTorchBlock.FACING,
+                    state.getValue(WallTorchBlock.FACING)
+            );
+        }
+
+        return null;
     }
 
     private static BlockState getExtinguishedState(BlockState state) {
@@ -420,6 +710,35 @@ public final class TorchWeatherEvents {
 
     private static long chunkKey(ChunkPos chunkPos) {
         return ChunkPos.pack(chunkPos.x(), chunkPos.z());
+    }
+
+    private static void removeTrackedPosition(
+            Map<ResourceKey<Level>, Long2ObjectOpenHashMap<LongOpenHashSet>> index,
+            ResourceKey<Level> dimension,
+            BlockPos pos
+    ) {
+        Long2ObjectOpenHashMap<LongOpenHashSet> trackedByChunk =
+                index.get(dimension);
+
+        if (trackedByChunk == null) {
+            return;
+        }
+
+        LongOpenHashSet positions = trackedByChunk.get(chunkKey(pos));
+
+        if (positions == null) {
+            return;
+        }
+
+        positions.remove(pos.asLong());
+
+        if (positions.isEmpty()) {
+            trackedByChunk.remove(chunkKey(pos));
+        }
+
+        if (trackedByChunk.isEmpty()) {
+            index.remove(dimension);
+        }
     }
 
     private static boolean isAender(ServerLevel level) {

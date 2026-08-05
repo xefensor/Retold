@@ -11,6 +11,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.home.RetoldAnimalDailyRhythm;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -21,6 +22,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.cubemob.AbstractCubeMob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -86,7 +88,7 @@ public final class RetoldSwarmScavengerEvents {
         }
 
         if (isSpiderSwarmPredator(mob)) {
-            handleSpiderSwarm(
+            tickSpiderSwarm(
                     level,
                     mob,
                     gameTime
@@ -143,11 +145,15 @@ public final class RetoldSwarmScavengerEvents {
                 || isSmallArthropodSwarm(mob);
     }
 
-    private static void handleSpiderSwarm(
+    static void tickSpiderSwarm(
             ServerLevel level,
             PathfinderMob spider,
             long gameTime
     ) {
+        if (!RetoldAnimalDailyRhythm.isNight(level)) {
+            return;
+        }
+
         LivingEntity target = spider.getTarget();
 
         if (!isValidSpiderFoodTarget(spider, target, gameTime)) {
@@ -395,6 +401,16 @@ public final class RetoldSwarmScavengerEvents {
             PathfinderMob slime,
             long gameTime
     ) {
+        clearSlimeCombatWhenFed(
+                slime,
+                gameTime
+        );
+
+        if (slime instanceof AbstractCubeMob mergingCubeMob
+                && RetoldSlimeMergeBehavior.tryMerge(level, mergingCubeMob, gameTime)) {
+            return;
+        }
+
         LivingEntity target = slime.getTarget();
 
         if (isValidSlimeTarget(slime, target)) {
@@ -421,18 +437,66 @@ public final class RetoldSwarmScavengerEvents {
             return;
         }
 
-        ItemEntity food = findBestOrganicScrap(
+        LivingEntity localPrey = findLocalSlimePrey(level, slime);
+
+        if (localPrey != null && canJoinSlimeSwarm(slime)) {
+            joinSlimeAttack(
+                    slime,
+                    localPrey,
+                    gameTime
+            );
+            return;
+        }
+
+        ItemEntity food = findBestDroppedItem(
                 level,
                 slime
         );
 
         if (food != null && canScavenge(slime, gameTime)) {
-            moveToOrganicScrap(
+            moveToDroppedItem(
                     slime,
                     food,
                     gameTime
             );
         }
+    }
+
+    private static LivingEntity findLocalSlimePrey(
+            ServerLevel level,
+            PathfinderMob slime
+    ) {
+        LivingEntity best = null;
+        double bestScore = Double.MAX_VALUE;
+
+        for (LivingEntity candidate : RetoldAiScanCache.nearby(
+                level,
+                slime,
+                LivingEntity.class,
+                SLIME_SWARM_RADIUS_BLOCKS,
+                level.getGameTime(),
+                SWARM_SCAN_CACHE_TICKS
+        )) {
+            if (candidate == slime
+                    || RetoldMobRules.isSlimeHungry(candidate)
+                    || RetoldMobRules.isEntityPath(candidate, "creeper")
+                    || !isValidSlimeTarget(slime, candidate)) {
+                continue;
+            }
+
+            double score = slime.distanceToSqr(candidate);
+
+            if (RetoldAiSightCache.canSee(slime, candidate, level.getGameTime())) {
+                score -= 12.0D;
+            }
+
+            if (score < bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        return best;
     }
 
     private static LivingEntity findSharedSlimeTarget(
@@ -557,6 +621,13 @@ public final class RetoldSwarmScavengerEvents {
             return false;
         }
 
+        if (!RetoldSlimeHungerCombat.hasHuntDrive(
+                slime,
+                slime.level().getGameTime()
+        )) {
+            return false;
+        }
+
         return RetoldBehaviorCombat.canUseAttackControl(
                 slime,
                 RetoldAiControlOwner.SWARM
@@ -567,12 +638,45 @@ public final class RetoldSwarmScavengerEvents {
             PathfinderMob slime,
             LivingEntity target
     ) {
+        if (!RetoldSlimeHungerCombat.hasHuntDrive(
+                slime,
+                slime.level().getGameTime()
+        )) {
+            return false;
+        }
+
         return RetoldBehaviorCombat.isValidEnemyTarget(
                 slime,
                 target,
                 Double.MAX_VALUE,
                 false
         );
+    }
+
+    static boolean clearSlimeCombatWhenFed(
+            PathfinderMob slime,
+            long gameTime
+    ) {
+        if (slime == null || RetoldSlimeHungerCombat.hasHuntDrive(slime, gameTime)) {
+            return false;
+        }
+
+        LivingEntity target = slime.getTarget();
+
+        if (target != null) {
+            RetoldBehaviorTargets.clearTargetAndAggression(
+                    slime,
+                    target,
+                    true
+            );
+        }
+
+        RetoldAiControl.clearIfOwnedBy(
+                slime,
+                RetoldAiControlOwner.SWARM
+        );
+
+        return target != null;
     }
 
     private static void joinSlimeAttack(
@@ -610,7 +714,7 @@ public final class RetoldSwarmScavengerEvents {
         );
     }
 
-    private static ItemEntity findBestOrganicScrap(
+    private static ItemEntity findBestDroppedItem(
             ServerLevel level,
             PathfinderMob slime
     ) {
@@ -627,7 +731,7 @@ public final class RetoldSwarmScavengerEvents {
         double bestScore = Double.MAX_VALUE;
 
         for (ItemEntity item : items) {
-            if (!isValidOrganicScrap(slime, item)) {
+            if (!isValidDroppedItem(slime, item)) {
                 continue;
             }
 
@@ -652,7 +756,7 @@ public final class RetoldSwarmScavengerEvents {
         return best;
     }
 
-    private static boolean isValidOrganicScrap(
+    private static boolean isValidDroppedItem(
             PathfinderMob slime,
             ItemEntity item
     ) {
@@ -703,13 +807,13 @@ public final class RetoldSwarmScavengerEvents {
                 gameTime
         );
 
-        return RetoldMobRules.hasEatDrive(
+        return RetoldMobRules.wantsDroppedFood(
                 slime,
                 state
         );
     }
 
-    private static void moveToOrganicScrap(
+    private static void moveToDroppedItem(
             PathfinderMob slime,
             ItemEntity food,
             long gameTime
@@ -847,6 +951,10 @@ public final class RetoldSwarmScavengerEvents {
             return false;
         }
 
+        if (!canShareSmallArthropodSwarm(arthropod, source)) {
+            return false;
+        }
+
         if (!RetoldBehaviorCoordinator.isAliveInSameLevel(arthropod, source)) {
             return false;
         }
@@ -873,6 +981,10 @@ public final class RetoldSwarmScavengerEvents {
             return false;
         }
 
+        if (!canShareSmallArthropodSwarm(source, recruit)) {
+            return false;
+        }
+
         if (!RetoldBehaviorCoordinator.isAliveInSameLevel(source, recruit)) {
             return false;
         }
@@ -882,6 +994,17 @@ public final class RetoldSwarmScavengerEvents {
         }
 
         return canJoinSmallArthropodSwarm(recruit);
+    }
+
+    public static boolean canShareSmallArthropodSwarm(
+            PathfinderMob first,
+            PathfinderMob second
+    ) {
+        return first != null
+                && second != null
+                && isSmallArthropodSwarm(first)
+                && isSmallArthropodSwarm(second)
+                && first.getType() == second.getType();
     }
 
     private static boolean canJoinSmallArthropodSwarm(PathfinderMob arthropod) {

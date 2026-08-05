@@ -2,15 +2,25 @@ package cz.xefensor.retold.behavior.hunting;
 
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
+import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
+import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
+import cz.xefensor.retold.behavior.home.RetoldAnimalDailyRhythm;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.behavior.species.RetoldAmphibianForagerEvents;
+import cz.xefensor.retold.behavior.species.RetoldAxolotlHelperEvents;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.faction.RetoldFactionMembers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -87,6 +97,7 @@ public final class RetoldControlledHuntingEvents {
 
     private static final double SPIDER_HUNT_SPEED = 1.18D;
     private static final double DOLPHIN_HUNT_SPEED = 1.40D;
+    private static final double NAUTILUS_HUNT_SPEED = 1.25D;
 
     private static final double MIN_HUNT_SPEED = 0.95D;
     private static final double MAX_HUNT_SPEED = 1.85D;
@@ -106,7 +117,7 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(hunter)) {
+        if (!RetoldMobRules.canUseNaturalPreyHuntingSystems(hunter)) {
             clearHuntMemory(hunter);
             RetoldPredatorStrike.clear(hunter);
             return;
@@ -128,6 +139,14 @@ public final class RetoldControlledHuntingEvents {
         }
 
         if (RetoldAiControl.isControlledAs(hunter, RetoldAiControlMode.HUNT)) {
+            if (endSatisfiedHuntIfNeeded(hunter, gameTime)) {
+                return;
+            }
+
+            if (endTimeRestrictedHuntIfNeeded(level, hunter)) {
+                return;
+            }
+
             stabilizeHuntMotion(
                     hunter
             );
@@ -155,10 +174,25 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
+        tryStartHunt(level, hunter, gameTime);
+    }
+
+    public static boolean tryStartHunt(
+            ServerLevel level,
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        if (level == null
+                || hunter == null
+                || hunter.level() != level
+                || !RetoldMobRules.canUseNaturalPreyHuntingSystems(hunter)) {
+            return false;
+        }
+
         if (!shouldStartHunt(level, hunter, gameTime)) {
             clearHuntMemory(hunter);
             RetoldPredatorStrike.clear(hunter);
-            return;
+            return false;
         }
 
         LivingEntity prey = findBestPrey(
@@ -168,7 +202,7 @@ public final class RetoldControlledHuntingEvents {
         );
 
         if (prey == null) {
-            return;
+            return false;
         }
 
         beginHunt(
@@ -176,6 +210,64 @@ public final class RetoldControlledHuntingEvents {
                 prey,
                 gameTime
         );
+
+        return hunter.getTarget() == prey
+                && RetoldAiControl.isControlledAs(
+                hunter,
+                RetoldAiControlMode.HUNT
+        );
+    }
+
+    public static boolean endSatisfiedHuntIfNeeded(
+            PathfinderMob hunter,
+            long gameTime
+    ) {
+        if (hunter == null
+                || !RetoldAiControl.isControlledAs(
+                hunter,
+                RetoldAiControlMode.HUNT
+        )) {
+            return false;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                hunter,
+                gameTime
+        );
+
+        LivingEntity target = hunter.getTarget();
+
+        if (RetoldMobRules.hasHuntDrive(hunter, state)
+                || target != null && RetoldFactionTargetMemory.isOwnedByAny(
+                hunter,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.TERRITORY_ATTACK
+        )) {
+            return false;
+        }
+
+        endHuntForInactivePeriod(hunter);
+        return true;
+    }
+
+    public static boolean endTimeRestrictedHuntIfNeeded(
+            ServerLevel level,
+            PathfinderMob hunter
+    ) {
+        if (level == null
+                || hunter == null
+                || hunter.level() != level
+                || !RetoldAiControl.isControlledAs(
+                hunter,
+                RetoldAiControlMode.HUNT
+        )
+                || canHuntAtCurrentTime(level, hunter)) {
+            return false;
+        }
+
+        endHuntForInactivePeriod(hunter);
+        return true;
     }
 
     @SubscribeEvent
@@ -192,13 +284,10 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(killer)) {
-            return;
-        }
-
         long gameTime = level.getGameTime();
 
-        if (!RetoldPreyTargeting.isValidMobRulePrey(
+        if (RetoldAxolotlHelperEvents.recordKilledPrey(
+                level,
                 killer,
                 killed,
                 gameTime
@@ -206,10 +295,37 @@ public final class RetoldControlledHuntingEvents {
             return;
         }
 
-        RetoldMobStates.getOrCreate(
+        if (RetoldAmphibianForagerEvents.recordKilledPrey(
+                level,
+                killer,
+                killed,
+                gameTime
+        )) {
+            return;
+        }
+
+        if (tryRecordSpecialKilledMeal(killer, killed, gameTime)) {
+            return;
+        }
+
+        if (!RetoldMobRules.canUseNaturalPreyHuntingSystems(killer)) {
+            return;
+        }
+
+        if (!RetoldPreyTargeting.isEligibleKilledMobRulePrey(
+                killer,
+                killed
+        )) {
+            return;
+        }
+
+        RetoldMobState state = RetoldMobStates.getOrCreate(
                 killer,
                 gameTime
-        ).markSuccessfulHunt(gameTime);
+        );
+        state.addHunger(-RetoldMobRules.preyRelief(killer, killed));
+        state.markFed(gameTime);
+        state.markSuccessfulHunt(gameTime);
 
         clearHuntMemory(killer);
         RetoldPredatorStrike.clear(killer);
@@ -225,6 +341,66 @@ public final class RetoldControlledHuntingEvents {
 
         killer.setSprinting(false);
         killer.getNavigation().stop();
+        RetoldFeedingPose.begin(killer, killed.position(), gameTime);
+    }
+
+    private static boolean tryRecordSpecialKilledMeal(
+            PathfinderMob killer,
+            LivingEntity killed,
+            long gameTime
+    ) {
+        RetoldMobState state = RetoldMobStates.getOrCreate(killer, gameTime);
+
+        if (!RetoldMobRules.hasEatDrive(killer, state)
+                || !isSpecialNaturalMeal(killer, killed)) {
+            return false;
+        }
+
+        state.addHunger(-RetoldMobRules.preyRelief(killer, killed));
+        state.markFed(gameTime);
+        state.markSuccessfulHunt(gameTime);
+        RetoldFeedingAnimations.play(killer);
+
+        if (RetoldAiControl.tryClaim(
+                killer,
+                RetoldAiControlMode.FEED,
+                RetoldAiControlOwner.FOOD,
+                RetoldAiPriorities.FEED,
+                "killed_prey_meal",
+                gameTime,
+                FEED_LOCK_AFTER_KILL_TICKS
+        )) {
+            clearHuntMemory(killer);
+            RetoldPredatorStrike.clear(killer);
+            RetoldBehaviorTargets.setTargetAndAggression(killer, null, false);
+            killer.setSprinting(false);
+            killer.getNavigation().stop();
+            RetoldFeedingPose.begin(killer, killed.position(), gameTime);
+        }
+
+        return true;
+    }
+
+    private static boolean isSpecialNaturalMeal(
+            PathfinderMob killer,
+            LivingEntity killed
+    ) {
+        String killerPath = RetoldMobRules.getEntityTypePath(killer.getType());
+        String killedPath = RetoldMobRules.getEntityTypePath(killed.getType());
+
+        if (killedPath.equals("creeper")) {
+            return false;
+        }
+
+        if (RetoldMobRules.isUndeadHungry(killer)) {
+            return !RetoldFactionMembers.isUndead(killed);
+        }
+
+        if (RetoldMobRules.isSlimeHungry(killer)) {
+            return !RetoldMobRules.isSlimeHungry(killed);
+        }
+
+        return killerPath.equals("piglin") && killedPath.equals("hoglin");
     }
 
     private static boolean shouldThink(
@@ -256,6 +432,10 @@ public final class RetoldControlledHuntingEvents {
         }
 
         if (RetoldBehaviorCoordinator.hasLiveTarget(hunter)) {
+            return false;
+        }
+
+        if (!canHuntAtCurrentTime(level, hunter)) {
             return false;
         }
 
@@ -800,7 +980,7 @@ public final class RetoldControlledHuntingEvents {
                 gameTime
         );
 
-        if (!RetoldMobRules.hasEatDrive(
+        if (!RetoldMobRules.wantsDroppedFood(
                 hunter,
                 state
         )) {
@@ -901,6 +1081,23 @@ public final class RetoldControlledHuntingEvents {
         hunter.getNavigation().stop();
     }
 
+    private static void endHuntForInactivePeriod(PathfinderMob hunter) {
+        clearHuntMemory(hunter);
+        RetoldPredatorStrike.clear(hunter);
+        RetoldAiControl.clearIfControlledAs(hunter, RetoldAiControlMode.HUNT);
+        RetoldBehaviorTargets.setTargetAndAggression(hunter, null, false);
+        hunter.setSprinting(false);
+        hunter.getNavigation().stop();
+    }
+
+    private static boolean canHuntAtCurrentTime(
+            ServerLevel level,
+            PathfinderMob hunter
+    ) {
+        return !RetoldMobRules.isHungrySwarmPredator(hunter)
+                || RetoldAnimalDailyRhythm.isNight(level);
+    }
+
     private static void clearHuntMemory(PathfinderMob hunter) {
         HUNT_MEMORIES.remove(hunter);
     }
@@ -925,6 +1122,8 @@ public final class RetoldControlledHuntingEvents {
             baseSpeed = SPIDER_HUNT_SPEED;
         } else if (path.equals("dolphin")) {
             baseSpeed = DOLPHIN_HUNT_SPEED;
+        } else if (path.equals("nautilus")) {
+            baseSpeed = NAUTILUS_HUNT_SPEED;
         }
 
         /*

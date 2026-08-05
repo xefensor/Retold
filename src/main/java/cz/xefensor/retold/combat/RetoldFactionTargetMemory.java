@@ -29,6 +29,14 @@ public final class RetoldFactionTargetMemory {
             return false;
         }
 
+        if (RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
+                mob,
+                target,
+                source
+        )) {
+            return false;
+        }
+
         if (!RetoldAiTargets.isValidAssignmentTarget(mob, target)) {
             return false;
         }
@@ -38,14 +46,20 @@ public final class RetoldFactionTargetMemory {
             return false;
         }
 
-        RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, target);
+        RetoldFactionTargetGuards.setTargetIgnoringGuard(
+                mob,
+                target,
+                source
+        );
+        RetoldAiTargets.setRetoldBrainTargetIfNeeded(mob, target);
 
         if (mob.getTarget() != target) {
+            RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
+            RetoldAiTargets.clearRetoldBrainTargetIfPresent(mob, target);
             return false;
         }
 
         TARGET_OWNERS.put(mob, new TargetOwnership(target, source));
-        RetoldAiTargets.setPiglinBrainTargetIfNeeded(mob, target);
 
         return true;
     }
@@ -124,6 +138,23 @@ public final class RetoldFactionTargetMemory {
         return Arrays.asList(sources).contains(ownership.source);
     }
 
+    public static RetoldTargetSource getSource(
+            Mob mob,
+            LivingEntity target
+    ) {
+        if (mob == null || target == null) {
+            return null;
+        }
+
+        TargetOwnership ownership = TARGET_OWNERS.get(mob);
+
+        if (ownership == null || ownership.target != target) {
+            return null;
+        }
+
+        return ownership.source;
+    }
+
     public static String debugOwnershipText(Mob mob) {
         TargetOwnership ownership = TARGET_OWNERS.get(mob);
 
@@ -160,7 +191,7 @@ public final class RetoldFactionTargetMemory {
             return;
         }
 
-        RetoldAiTargets.clearPiglinBrainTargetIfPresent(mob, ownership.target);
+        RetoldAiTargets.clearRetoldBrainTargetIfPresent(mob, ownership.target);
         TARGET_OWNERS.remove(mob);
 
         clearIdleIllagerAggression(mob);
@@ -195,7 +226,7 @@ public final class RetoldFactionTargetMemory {
             RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
         }
 
-        RetoldAiTargets.clearPiglinBrainTargetIfPresent(mob, target);
+        RetoldAiTargets.clearRetoldBrainTargetIfPresent(mob, target);
         clearIdleIllagerAggression(mob);
     }
 

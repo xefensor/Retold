@@ -42,7 +42,6 @@ public final class RetoldAiScanCache {
             return List.of();
         }
 
-        AABB area = center.getBoundingBox().inflate(radius);
         List<ScanEntry> entries = SCANS.computeIfAbsent(
                 center,
                 ignored -> new ArrayList<>()
@@ -62,6 +61,7 @@ public final class RetoldAiScanCache {
             }
         }
 
+        AABB area = center.getBoundingBox().inflate(radius);
         int adjustedCacheTicks = RetoldAiLod.cacheTicks(center, cacheTicks);
         List<T> results = scanNearbyShared(
                 level,

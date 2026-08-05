@@ -92,7 +92,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `stage` | world stage saved data and runtime sync |
 | `territory` | territory warning/reputation system with an explicit `INACTIVE → OBSERVING → WARNING → FINAL_WARNING → ATTACKING → COOLDOWN` state machine |
 | `undead` | undead helper behavior |
-| `villager` | villager teaching system |
+| `villager` | villager teaching, trade refresh, communal food/supply, livestock tending, property reputation, golem construction, and torch maintenance |
 | `worldgen` | worldgen registry and structure tags |
 | `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
@@ -102,7 +102,7 @@ The mob AI package is split by behavior ownership:
 | Behavior package | Purpose |
 | --- | --- |
 | `behavior/control` | AI ownership, priorities, and vanilla control suppression |
-| `behavior/core` | dispatcher and shared movement, combat, targeting, and timing primitives |
+| `behavior/core` | dispatcher and shared movement, combat, targeting, timing, and mob-griefing primitives |
 | `behavior/debug` | behavior diagnostics and debug commands |
 | `behavior/flee` | controlled flee lifecycle |
 | `behavior/food` | food discovery, foraging, consumption, and feedback |
@@ -142,6 +142,7 @@ Technical owners:
 - `RetoldStageRuntime`
 - `RetoldStageRuntimeEvents`
 - `RetoldStageSyncPayload`
+- `RetoldRaidProgression`
 - `RetoldClientStage`
 
 Saved data:
@@ -164,6 +165,9 @@ Stage transitions:
 - Stage 2 -> Stage 3 happens when the dragon egg ritual completes.
 - Setting Stage 2 queues known delayed structures for retrogen.
 - Setting Stage 3 ejects players from the vanilla End and redirects later End portal access to Aender.
+- Vanilla raids can start only in Stage 3. `BadOmenMobEffectMixin` retains Bad Omen before that
+  point, while `RaidsMixin` guards every caller of the vanilla raid-creation entry point. The gate
+  does not stop raids that already exist.
 
 Developer command:
 
@@ -255,7 +259,7 @@ Gale Core state:
 - Phase 2 keeps distance, prefers higher positions, avoids arena edges, and avoids clipping into blocks.
 - If the boss or target leaves the combat area, the boss clears aggro and returns to its stored tower-top home.
 - Gale Core-owned wind-charge impacts do not deal health damage, but they crack and eventually break nearby breakable blocks.
-- The block-breaking splash skips air, fluids, block entities, unbreakable blocks, and very hard blocks, and breaks blocks without drops.
+- The block-breaking splash skips air, fluids, block entities, unbreakable blocks, and very hard blocks, breaks blocks without drops, and obeys `mobGriefing` through `RetoldMobGriefing`.
 - GameTests cover the cartographer trade's stage gate, exact marker, cost, and duplicate prevention, plus activation eligibility, damage-triggered aggro, the one-way Phase 2 transition, disengagement and reactivation, state serialization, and duplicate-spawn repair.
 
 Current limitation:
@@ -415,6 +419,7 @@ Chronolith state is runtime-only and must stop cleanly on logout/server stop/blo
 Technical owner:
 
 - `RetoldBlocks`
+- `RetoldBlockEntities`
 - `RetoldAenderWood`
 - `RetoldCreativeModeTabs`
 
@@ -438,6 +443,7 @@ Registered items/blocks include:
 - `aender_stabilizer`
 - `aender_chronolith`
 - extinguished torch variants
+- `animal_feeder`, a one-slot persistent wooden trough block entity
 
 Extinguished torch variants include:
 
@@ -457,6 +463,9 @@ Assets:
 
 Creative inventory integration follows vanilla placement: construction blocks are in Building Blocks; terrain, ores, and renewable tree blocks are in Natural Blocks; signs, the stabilizer, and the Chronolith are in ordinary Functional Blocks; boats are in Tools & Utilities; raw/refined materials and elemental progression items are in Ingredients; and custom mob eggs are in Spawn Eggs. Only the explicitly named development portal-frame item requires permission and appears in Operator Utilities. Retold does not register a separate creative tab. Modern client-item definitions cover every registered Retold item.
 
+The Animal Feeder also appears in Functional Blocks. Its original code-native trough model references
+`minecraft:block/oak_planks`; no new raster asset or external asset credit is introduced.
+
 Data:
 
 - block loot tables under `data/retold/loot_table/blocks`
@@ -475,21 +484,33 @@ Technical owners:
 - `TorchWeatherEvents`
 - `ExtinguishedTorchBlock`
 - `ExtinguishedWallTorchBlock`
+- `RetoldVillagerTorchRelighting`
 - `RetoldTags.TORCH_IGNITERS`
 
 Behavior:
 
-- Chunks are indexed gradually for lit torches.
-- Lit torches are tracked by dimension and chunk.
+- Chunks are indexed gradually for lit and extinguished torches.
+- Lit and extinguished torches are tracked separately by dimension and chunk.
 - Rain checks tracked torches periodically.
 - Some lit torches convert to extinguished variants.
 - Extinguished torches can be relit with firestarter actions or items in `retold:torch_igniters`.
+- In every world stage, an adult Villager with village context can relight the nearest dry weather-
+  extinguished torch within eight horizontal and five vertical blocks. The torch must remain within
+  32 blocks of the Villager's village anchor. Most professions stop, face it, and use a one-second
+  ranged cast. Nitwits instead path to a supported adjacent cell and display a temporary fake Flint
+  and Steel for the close interaction. Both preserve normal/soul/copper and floor/wall state.
+- Villager maintenance requires `mobGriefing`, uses low-priority central AI ownership, and yields to
+  hunger, danger, sleep, trading, targets, other activities, and higher-priority Villager work.
 - Aender is excluded.
 
 Performance rules:
 
 - Chunk indexing is deferred and capped per tick.
 - Tracked torches are removed on chunk unload.
+- Villagers query the chunk index instead of scanning blocks, use the shared block-search/path
+  budgets, and apply LOD-scaled empty/success cooldowns. Nitwit routes have a bounded timeout. Only
+  an active Nitwit close-use animation receives per-tick dispatcher updates so its fake held tool
+  remains visible; idle discovery and routing retain the ordinary Villager cadence.
 - Runtime maps are cleared on server stop.
 
 ## Game Rules And Sleep
@@ -559,6 +580,23 @@ Technical owners:
 - `RetoldVillagerTeaching`
 - `RetoldVillagerTeachingEntry`
 - `RetoldVillagerTeachingReloadListener`
+- `RetoldVillagerTradeRefresh`
+- `RetoldVillagerCommunalFood`
+- `RetoldVillagerCommunalFoodSearch`
+- `RetoldVillagerCommunalSupply`
+- `RetoldVillageContainerOwnership`
+- `RetoldVillageContainerOwnershipData`
+- `RetoldVillageCropOwnership`
+- `RetoldVillageCropOwnershipData`
+- `RetoldVillageAnimalOwnership`
+- `RetoldVillageAnimalEvents`
+- `RetoldVillageReputationEvents`
+- `RetoldVillageReputationStatus`
+- `RetoldVillageWitnessReputation`
+- `RetoldVillagerGolemConstruction`
+- `RetoldVillagerAnimalTending`
+- `RetoldVillagerTorchRelighting`
+- `RetoldGolemAnimation`
 - `RetoldTeachingSlotMenu`
 - `RetoldTeachingGui`
 - `RetoldTeachingPreviewClient`
@@ -567,6 +605,9 @@ Technical owners:
 - `MerchantMenuTeachingSlotMixin`
 - `MerchantScreenMixin`
 - `VillagerInvoker`
+- `VillagerGolemConstructionMixin`
+- `BlockItemGolemCostMixin`
+- `SummonedEntityTriggerMixin`
 
 Data:
 
@@ -588,10 +629,128 @@ Behavior:
 - Recipe is marked known and unlocked.
 - Villager gets XP reward.
 - Preview/status/cost are synced to client.
+- Professional adult villagers receive a guaranteed stock refresh when the Overworld day advances.
+  The refresh retains the existing offer list and synchronizes an open trading menu; it does not
+  reroll professions, teaching entries, or special offers. Wandering Traders are excluded.
+- Hungry loaded Villagers search accessible chests and barrels in their remembered village through
+  the central behavior dispatcher. The search inspects loaded chunk block entities, uses shared AI
+  cache/LOD/work-budget policy, and moves through ordinary `FOOD`/`FEED` ownership. A hungry
+  Villager consumes its highest-value carried food before searching. When personally empty, it
+  transfers up to 12 food points from storage, consumes one item, and retains the remainder. Only
+  the accepted count is removed from the container. Villager hunger and inventory persist on the
+  entity and exact container contents persist through the vanilla block entity; there is no offline
+  elapsed-time simulation.
+- Adult loaded Farmers continue using vanilla crop harvesting, replanting, and wheat-to-Bread
+  production. When they hold more than a 24-food-point personal reserve, they use the same storage
+  search to deliver surplus Bread, Carrots, Potatoes, or Beetroot through low-priority
+  `VILLAGER_COMMUNAL`/`SEARCH` ownership. Transfers conserve the exact accepted item count, preserve
+  seeds and unrelated inventory, and yield to hunger, danger, sleep, and trading. Chests and barrels
+  save their contents normally; no separate producer state or unloaded catch-up is introduced.
+- `RetoldVillageContainerOwnership` protects exact quantities originating from an unopened
+  `chests/village/*` loot table or a future Villager-controlled deposit. The server-global
+  `RetoldVillageContainerOwnershipData` ledger stores the dimension, physical chest/barrel
+  position, exact item/components, and owned count without modifying vanilla stacks. Player
+  additions never increase that count; when matching quantities merge, player/unowned items are
+  removed before village-owned items. Villager food withdrawal and golem-currency use reconcile
+  the ledger with the physical inventory. Already-opened ambiguous existing-world contents remain
+  unowned rather than being guessed retroactively.
+- Server menu transactions detect protected withdrawals from chests and barrels. A nearby living
+  Villager must have village context near the container and line of sight to the Survival player
+  before adding vanilla minor-negative gossip and unhappy feedback. Breaking a container with
+  protected contents clears its ledger and applies major-negative gossip sufficient for vanilla
+  Iron Golem hostility. Creative and Spectator players are excluded. Crop provenance is owned
+  separately below, and persisted livestock provenance is described below.
+- `/retold village status` is an operator/debug query for the executing player. It summarizes the
+  individual vanilla gossip reputations of loaded living Villagers within 32 blocks whose village
+  anchor is also within 32 blocks. The result reports the standing category, Villager count,
+  rounded average, worst and best reputation, negative count, and whether any Villager is at the
+  vanilla `-100` golem-hostility threshold. It does not create or alter reputation.
+- `HarvestFarmlandMixin` snapshots only the crop position vanilla is actively working. A successful
+  Farmer plant or replant marks that position in `RetoldVillageCropOwnershipData`; natural growth
+  retains ownership, Farmer removal clears it, and player planting clears it so player crops are
+  never claimed merely for being inside a village. Existing ambiguous crops are not backfilled.
+- A witnessed Survival harvest of a mature owned crop applies the same minor theft gossip as taking
+  village storage. Breaking an immature owned crop or trampling its farmland applies stronger
+  `MAJOR_NEGATIVE` vandalism worth `-50` reputation, below the immediate `-100` storage-breaking
+  response. The shared `RetoldVillageWitnessReputation` owner keeps the 16-block sight and
+  32-block village-context boundary consistent across these offenses. Creative and Spectator
+  actions can clear obsolete ownership but never add gossip.
+- Shepherds tend Sheep and Goats, Leatherworkers tend Cows and Mooshrooms, and Butchers tend Pigs,
+  Chickens, and Rabbits. On the normal 20-tick Villager cadence, the tender uses the shared bounded
+  entity scan, village storage search, LOD/work budgets, and low-priority
+  `VILLAGER_ANIMAL_TENDING` control. It retrieves exactly two Wheat, Carrots, or Wheat Seeds into
+  its real inventory, approaches a nearby valid same-type adult pair, consumes both items, and
+  relieves both animals' hunger. Hunger, danger, sleep, trading, targets, incompatible
+  activities, and higher control ownership interrupt the task; already-retrieved items remain
+  conserved in the Villager inventory.
+- Successfully fed adults receive persisted entity ownership, and offspring inherit it when both
+  parents are village-owned. Player interaction marks previously unowned supported livestock as
+  player-associated, and an automatic offspring of a player-associated unowned parent inherits
+  that protection; this keeps player-fed, leashed/handled, tamed, and unsupported animals outside initial
+  village ownership. A nearby sighted village-context witness applies `MAJOR_NEGATIVE` gossip worth
+  `-50` for a direct Survival player kill. Monster and environmental deaths and Creative/Spectator
+  players are excluded.
+- `RetoldAnimalBreeding` replaces direct item-triggered love mode for every entity type in the
+  `retold:automatic_breeders` tag. A living adult must remain in the `FULL` hunger stage without
+  panic, damage, or an active target for 6,000 loaded ticks. A bounded cached scan then looks for a
+  compatible equally ready adult within eight blocks; unsuccessful searches wait one minute before
+  retrying. The pair is armed into vanilla love mode with no player cause so vanilla still owns
+  mate movement, mixed Horse/Donkey compatibility, offspring/genetics, tame ownership, Turtle eggs,
+  Frog pregnancy, and species-specific birth behavior. A completed birth adds 40 hunger to each
+  parent and keeps vanilla's five-minute age cooldown.
+- `AnimalBreedingMixin` preserves the client interaction packet but redirects a server-side player
+  breeding-food attempt into normal Retold hunger relief instead of love mode. Accumulated loaded
+  satisfaction ticks plus retry and armed state live in versioned `RetoldMobState` entity data and
+  survive save/load; each dispatcher update is capped to its current loaded interval so elapsed
+  unloaded time cannot advance satisfaction. Armadillo, Turtle, Strider,
+  and Nautilus have positive hunger intervals so all current vanilla breeders can participate.
+- At Stage 2+, `VillagerGolemConstructionMixin` preserves vanilla's wanting, five-Villager
+  agreement, and local recent-golem checks, then replaces only the eligible instant spawn with a
+  persisted visible build when the builder is a Cleric, Librarian, Armorer, Toolsmith, or
+  Weaponsmith. Nitwits and all other professions are rejected both when starting and resuming.
+  The builder takes one emerald from a Villager inventory or accessible village chest/barrel,
+  follows a reachable path, places four magical iron blocks and a regular pumpkin in timed steps,
+  displays the emerald, and invokes vanilla animation. There is no Retold numeric cap or daily
+  cooldown. Construction requires `mobGriefing`, yields to higher-priority Villager state, and
+  creates a non-player-made golem. The synchronous animation is marked so
+  `SummonedEntityTriggerMixin` suppresses “Hired Help” for only that Villager-built Iron Golem;
+  ordinary player-built golems retain vanilla advancement behavior.
+- `BlockItemGolemCostMixin` charges a non-Creative player five experience levels only after a valid
+  player-built Iron Golem structure successfully places its pumpkin. Insufficient levels reject the
+  valid animation without consuming the pumpkin; invalid or obstructed iron frames and Snow/Copper
+  Golems are unaffected.
+- Loaded adult Villagers in every stage perform low-priority torch maintenance. They use remembered
+  HOME, MEETING_POINT, or JOB_SITE context (or a live nearby village) and select one dry
+  extinguished torch within eight blocks. Most professions stop, face it, and cast from range;
+  Nitwits instead path to a supported adjacent cell and display a temporary Flint and Steel for the
+  full close-use interaction. The visual hand stack is reasserted if vanilla clears it, but never
+  enters inventory or loses durability. Both restore the exact torch
+  family and wall facing. Rain exposure, hunger, danger, sleep, trading, targets, incompatible
+  activities, higher AI ownership, or disabled `mobGriefing` block or interrupt the action.
 
 Design rule:
 
-Teaching data is resource-driven by profession. Add or tune teaching through `villager_teaching` JSON before changing code.
+Teaching data is resource-driven by profession. Add or tune teaching through `villager_teaching`
+JSON before changing code. Daily stock refresh is routed through the central entity dispatcher
+and stored per villager rather than implemented as another always-on event subscriber. Communal
+consumption and Farmer supply share that dispatcher and one storage-discovery owner instead of
+adding parallel scans or a second persistence format. Golem construction owns its saved state on
+the builder, reuses that storage discovery and central AI budgets, and intercepts vanilla's spawn
+decision rather than introducing a parallel village-cap system.
+Container provenance is a transaction-time persisted ledger shared by loot unpacking, Villager
+transfers, menu clicks, and block breaking. Do not infer ownership from current location or claim
+all matching contents after a reload; preserve the distinction between village output and player
+deposits.
+Crop provenance is position-based because vanilla crop growth replaces block states in place. Mark
+only actual Farmer planting/replanting and explicitly clear player planting; do not infer ownership
+from farmland location or retroactively claim ambiguous crops.
+Livestock provenance is entity-based. Mark only adults a valid profession actually feeds and
+offspring whose parent provenance qualifies; never infer village ownership from an animal merely
+being inside village bounds. Keep player-associated protection and village ownership in persistent
+entity data, and let automatic offspring inherit the appropriate one from their parents.
+Torch maintenance shares the weather-owned loaded-chunk index and the Villager dispatcher rather
+than adding a Villager block scan or an independent tick event. The dispatcher bypasses its normal
+20-tick Villager cadence only while a Nitwit is actively displaying the fake Flint and Steel.
 
 ## Worldgen And Delayed Structures
 
@@ -631,6 +790,14 @@ Behavior:
 - Failed retrogen attempts can retry later.
 - Structure mob spawns can be suppressed while a structure is delayed.
 - Some spawn/structure behavior changes at Stage 3.
+- The warm-ocean-ruin archaeology override preserves normal ruin rewards but removes the Sniffer
+  Egg, which is the sole vanilla survival entry point for Sniffers. Command/Creative Sniffers and
+  their existing AI remain available.
+- `RetoldMobAvailability` rejects Endermite spawn-position checks unless the reason preserves an
+  explicitly obtained entity: command, spawn-item use, dispenser use, save loading, or dimension
+  travel. `ThrownEnderpearlMixin` separately filters the vanilla pearl-impact creation call because
+  that direct `addFreshEntity` path does not fire the normal position check. The entity type,
+  existing Endermites, Creative access, and Retold AI remain available.
 
 Performance rules:
 
@@ -656,11 +823,30 @@ Primary packages:
 High-level systems:
 
 - profile-based mob life behavior
-- faction relationships
+- faction relationships, including separate permanent identity, active combat alignment, and
+  same-context cooperation for conditional allies such as raiding witches
+- separate neutral Silverfish and Endermite identities, with same-entity-type enforcement in the
+  small-arthropod swarm owner so their shared profile cannot create cross-species coordination
+- owned Polar Bear cub defense with a cancellable standing/sound warning before proactive attack
+- night-only hunger-driven Spider/Cave Spider adult-animal hunts with cached cross-type swarm
+  recruitment, daylight disengagement, and retaliation that remains available at any time
+- persisted shared Spider/Cave Spider webbed lairs with bounded dark cobweb placement, daylight
+  return ownership, and shared mob-griefing enforcement
+- confirmed land social identities for shared bovine, equine, and llama ranges; other ordinary
+  land herds remain species-specific
+- centrally dispatched exact-species Cod, Salmon, Tropical Fish, and Pufferfish school cohesion
+  through cached scans, owned regrouping, and aquatic navigation
+- exact-species Squid and Glow Squid danger groups, with a bounded cached broadcast on successful
+  damage and receiver-side panic fallback
+- persisted broad Bat roost identity with upward personal ceiling-slot searches and staggered
+  settling, plus dropped Spider Eye preference, night-only five-member directional hunting parties,
+  shared arthropod detection, separated attack flight, fearless arthropod-combat dodges, and cached
+  selective delayed panic
 - territory warning and reputation
 - target ownership
 - invalid player target cleanup
 - AI performance scheduling, caches, LOD, and budgets
+- hunger-driven weak-barrier breaching through a data tag, shared griefing policy, and AI ownership
 
 Territory escalation is an explicit state machine owned by `RetoldTerritoryStateMachine`:
 
@@ -680,6 +866,35 @@ boundary alone must not clear aggression. State lifecycle side effects belong in
 Important design rule:
 
 Mob behavior should be routed through profiles, Retold control ownership, and target helpers. Avoid new always-on entity tick subscribers for normal AI.
+Mob-owned block changes should route through `RetoldMobGriefing`, which delegates to NeoForge's
+entity-griefing hook and resolves projectile owners. Dropped-item consumption is not a block change.
+`RetoldWeakBarrierBehavior` is dispatched through the ordinary profile pipeline rather than its own
+tick subscriber. It uses `RetoldBlockTargetSearch`, yields to higher-priority purposes, and rechecks
+both the barrier tag and griefing permission immediately before producing normal block drops.
+`RetoldSpiderLairEvents` follows the same pipeline and budgeted block-search policy for actual
+cobweb placement. It persists lair identity through the existing animal-home attachment and uses
+named low-priority control ownership for daylight return rather than adding a separate tick subscriber.
+`RetoldFeedingPose` is the shared post-consumption presentation owner. The central dispatcher reapplies
+its bounded 40-tick stop-and-face state for pathfinding mobs, Bats, and Cube Mobs, while ordinary
+control priority allows danger, defense, combat, faction pressure, and territory work to interrupt it.
+`RetoldBatColonyEvents` is the corresponding non-pathfinding adapter: the central dispatcher invokes
+it on a bounded cadence, the existing scan/block-search budgets cover colony work, and `BatAiMixin`
+only replaces the vanilla flight step while Retold owns a hard destination. Colony return and every
+hard feeding, search, hunt, dodge, or panic destination use a bounded `FlyingPathNavigation` route;
+the Bat's native flight physics follows the next safe node. During daylight, a budgeted upward-only
+search selects a personal supported ceiling cell within the colony region. The saved colony anchor
+must also remain a loaded dark supported ceiling cell; legacy ground anchors and broken supports are
+repaired upward around the previous position. The 32-block vertical range supports tall caves and
+cannot select air beneath the floor. Column-ordered early exit, stable explicit-center caching, and
+five-second route ownership keep that tall search out of the ordinary travel hot path. Once travel
+finishes, Retold may set resting only after the Bat remains beneath valid dark support for its own
+short randomized delay. At night, compatible hungry Bats form parties of at most five. One party-wide
+decision every eight ticks retains a shared direction for about 20 seconds, uses loose lateral lanes,
+and shares detected arthropod prey; recruitment, separation, and unchanged path work are cached or
+rate-limited independently. A dedicated 64-Bat GameTest covers 100 daylight and 100 nighttime server
+ticks, requires every home to remain ceiling-backed, and fails above the 50 ms/tick 20-TPS budget;
+the latest focused run reported 10.658 ms/tick. Vanilla remains responsible for support-loss,
+player-proximity, and damage wake-up behavior, hanging alignment, and ordinary unowned flight.
 
 ## Enderman Changes
 
@@ -687,6 +902,7 @@ Technical owners:
 
 - `RetoldEndermanEvents`
 - `RetoldEndermanBehavior`
+- `RetoldEndermanDefense`
 - `EndermanRendererMixin`
 - `EndermanParticleMixin`
 - `LivingEntityTeleportParticleMixin`
@@ -696,6 +912,11 @@ Technical owners:
 Behavior:
 
 - In Stage 2 and Stage 3, Endermen have eye-contact aggro/freeze goals removed.
+- An attack by any valid living entity gives the victim a retaliation-owned target in every stage.
+  Only Stage 3 recruits nearby idle Endermen through the cached 32-block assist radius; recruited
+  targets use faction-assist ownership. The central Creeper and invalid-player target guards still
+  apply. Dragon attacks follow this same defensive rule, but Endermen have no proactive
+  Dragon-hostility relationship.
 - Client assets/rendering provide custom Enderman appearance and particle behavior.
 
 Design rule:
@@ -712,6 +933,8 @@ Technical owners:
 - `RetoldUndeadSunFear`
 - `RetoldPiglinEvents`
 - `RetoldGolemEvents`
+- `RetoldSnowballEvents`
+- `RetoldVexEvents`
 - `RetoldFactionCombatEvents`
 - `RetoldFactionAssistEvents`
 
@@ -720,6 +943,9 @@ Behavior:
 - Undead helper functions and event behavior support Retold hostility/fear rules.
 - Piglins are integrated with Retold stage/faction/territory behavior.
 - Golems integrate with defender behavior.
+- All snowballs deal one point of incoming damage, including hits against Creepers, while
+  preserving vanilla Blaze damage.
+- Direct Vex strikes are reduced to half of their otherwise calculated incoming damage.
 - Faction combat and assist are centralized so target ownership and warning rules are not bypassed.
 
 Design rule:
@@ -737,6 +963,8 @@ Technical owners:
 - `RetoldGuardianAlertController`
 - `RetoldGuardianDefenseAssist`
 - `RetoldOceanMonumentSupport`
+- `RetoldAxolotlGuardianCombatEvents`
+- `RetoldAxolotlHelperEvents`
 - `ElderGuardianMixin`
 - `ElderGuardianInvulnerableHitMixin`
 
@@ -749,6 +977,9 @@ Behavior:
 - Elder guardians guarantee a `water_element` drop if one is not already dropping.
 - Guardians pressure players mining protected monument blocks.
 - Guardian beam pressure can block mining and alert nearby guardians.
+- Ordinary Guardians are not Axolotl prey. A Guardian attack may create a retaliation-owned target
+  for the victim and faction-assist targets for nearby witnessing Axolotls; these assignments use
+  the Axolotl brain's attack-target memory and do not reward hunger.
 
 Design rule:
 
@@ -887,10 +1118,10 @@ Main mixin groups:
 | Area | Mixins |
 | --- | --- |
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
-| Villager teaching UI | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker` |
+| Villager teaching/storage/reputation | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker`, `AbstractContainerMenuMixin`, `RandomizableContainerMixin`, `CompoundContainerAccessor`, `HarvestFarmlandMixin` |
 | World/stage/worldgen | `DelayedStructurePlacementMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
 | Aender physics/rendering | `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
-| Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin` |
+| Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin`, `AbstractCubeMobPushMixin` |
 | Guardian behavior | `ElderGuardianMixin`, `ElderGuardianInvulnerableHitMixin` |
 | Enderman/client visuals | `EndermanRendererMixin`, `EndermanParticleMixin`, `LivingEntityTeleportParticleMixin`, `PortalParticleMixin` |
 | Sleep | `BedBlockMixin`, `ServerLevelSleepMixin` |
@@ -934,8 +1165,11 @@ Persistence and state owners:
 | `AenderStabilityData` | stable Aender chunk counts |
 | `AenderPortalWarmup` | transient per-player destination preparation queues, cleared on completed travel, reality reset, or server stop |
 | `RetoldMobState` / `RetoldMobStates` | mob hunger/stress/confidence and home memory, cached in a weak map and saved to entity persistent NBT |
+| `AnimalFeederBlockEntity` | exact one-slot feeder stack, serialized with the vanilla `ItemStack` codec |
 | `RetoldTerritoryMobState` / `RetoldTerritoryMobStates` | runtime territory warning posture/debug state, cached in a weak map |
 | `RetoldTerritoryReputationData` | server-owned, versioned per-player territory suspicion/reputation entries with legacy JSON migration |
+| `RetoldVillageContainerOwnershipData` | server-global, versioned per-dimension/block-position exact-stack village-owned quantities for chests and barrels |
+| `RetoldVillageCropOwnershipData` | server-global, versioned per-dimension/block-position ownership for crops actually planted or replanted by Farmers |
 | `RetoldChunkStructureData` | delayed structure/retrogen chunk metadata |
 
 Design rule:
