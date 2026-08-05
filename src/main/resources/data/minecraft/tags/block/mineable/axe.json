@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
+    "retold:animal_feeder",
     "#retold:aender_logs",
     "retold:aender_planks",
     "retold:aender_stairs",

@@ -9,6 +9,8 @@ public enum RetoldFaction {
     AQUATIC_HOSTILES,
     CREEPERS,
     ARTHROPODS,
+    SILVERFISH,
+    ENDERMITES,
     NETHER_BEASTS,
     BREEZES,
     WARDENS,

@@ -21,8 +21,10 @@ import java.util.WeakHashMap;
 public final class RetoldForageBlockSearch {
     private static final double MAX_CENTER_DRIFT_SQUARED = 5.0D * 5.0D;
     private static final int MIN_FORAGE_TARGET_CACHE_TICKS = 40;
+    private static final int ENVIRONMENTAL_FORAGE_MISS_CACHE_TICKS = 8;
 
     private static final Map<PathfinderMob, List<ForageTargetEntry>> TARGETS = new WeakHashMap<>();
+    private static final Map<PathfinderMob, Boolean> DEFERRED_SEARCHES = new WeakHashMap<>();
 
     private RetoldForageBlockSearch() {
     }
@@ -102,17 +104,20 @@ public final class RetoldForageBlockSearch {
                             && center.distSqr(entry.center) <= MAX_CENTER_DRIFT_SQUARED
                             && isCachedTargetStillValid(level, mob, entry.target)
             ) {
+                DEFERRED_SEARCHES.remove(mob);
                 RetoldBehaviorPerf.recordBlockSearchCache(true);
                 return entry.target;
             }
         }
 
-        if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
+        if (!RetoldAiWorkBudget.tryUseFairBlockSearch(mob, gameTime)) {
+            DEFERRED_SEARCHES.put(mob, Boolean.TRUE);
             RetoldBehaviorPerf.recordBlockSearchCache(false);
             RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
             return null;
         }
 
+        DEFERRED_SEARCHES.remove(mob);
         RetoldBehaviorPerf.recordBlockSearchCache(false);
 
         BlockPos target = scanForageBlock(
@@ -139,11 +144,30 @@ public final class RetoldForageBlockSearch {
                 horizontalRadius,
                 verticalRadius,
                 maxDistanceSquared,
-                gameTime + Math.max(MIN_FORAGE_TARGET_CACHE_TICKS, RetoldAiLod.cacheTicks(mob, cacheTicks)),
+                gameTime + cacheLifetimeTicks(mob, target, cacheTicks),
                 target
         ));
 
         return target;
+    }
+
+    public static synchronized boolean isSearchDeferred(PathfinderMob mob) {
+        return mob != null && DEFERRED_SEARCHES.containsKey(mob);
+    }
+
+    private static int cacheLifetimeTicks(
+            PathfinderMob mob,
+            BlockPos target,
+            int cacheTicks
+    ) {
+        if (target == null && RetoldMobRules.usesRenewableEnvironmentalForage(mob)) {
+            return ENVIRONMENTAL_FORAGE_MISS_CACHE_TICKS;
+        }
+
+        return Math.max(
+                MIN_FORAGE_TARGET_CACHE_TICKS,
+                RetoldAiLod.cacheTicks(mob, cacheTicks)
+        );
     }
 
     private static BlockPos scanForageBlock(

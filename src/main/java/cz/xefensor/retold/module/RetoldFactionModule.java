@@ -2,7 +2,7 @@ package cz.xefensor.retold.module;
 
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.event.RetoldFactionCombatEvents;
-import cz.xefensor.retold.event.RetoldInvalidPlayerTargetEvents;
+import cz.xefensor.retold.event.RetoldInvalidTargetEvents;
 import net.neoforged.bus.api.IEventBus;
 
 public final class RetoldFactionModule {
@@ -10,7 +10,7 @@ public final class RetoldFactionModule {
     }
 
     public static void registerGameBus(IEventBus gameEventBus) {
-        gameEventBus.register(RetoldInvalidPlayerTargetEvents.class);
+        gameEventBus.register(RetoldInvalidTargetEvents.class);
         gameEventBus.register(RetoldFactionCombatEvents.class);
         gameEventBus.register(RetoldFactionAssistEvents.class);
     }

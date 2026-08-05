@@ -18,6 +18,9 @@ Technical implementation material lives under [`internal/`](internal/):
 - [`internal/README.md`](internal/README.md) — technical index and documentation roles
 - [`internal/retold_mod_system.md`](internal/retold_mod_system.md) — system architecture
 - [`internal/retold_mob_ai_system.md`](internal/retold_mob_ai_system.md) — mob behavior architecture
+- [`internal/mob_ai_work_report_2026-08-03.md`](internal/mob_ai_work_report_2026-08-03.md) — consolidated mob/faction implementation record
+- [`internal/mob_ai_handoff_prompt.md`](internal/mob_ai_handoff_prompt.md) — copy-paste continuation prompt
+- [`internal/mob_tps_benchmark.md`](internal/mob_tps_benchmark.md) — per-species performance baseline
 - [`internal/design_implementation_status.md`](internal/design_implementation_status.md) — implementation tracker
 - [`internal/retold_roadmap.md`](internal/retold_roadmap.md) — detailed working roadmap
 - [`internal/retold_design_risks.md`](internal/retold_design_risks.md) — risks and unresolved decisions

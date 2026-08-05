@@ -1522,6 +1522,8 @@ public final class RetoldBehaviorDebugEvents {
             case TURTLE_BEACH -> "beach memory";
             case AMPHIBIAN_WETLAND -> "wetland range";
             case AXOLOTL_WATER_RANGE -> "water range";
+            case SPIDER_LAIR -> "webbed lair";
+            case BAT_ROOST -> "bat roost";
             case NONE -> "home";
         };
     }

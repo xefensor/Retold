@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.PathfinderMob;
 
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -58,13 +57,16 @@ public final class RetoldAiLod {
             lod = RetoldAiLodLevel.BACKGROUND;
         }
 
-        LOD_MEMORY.put(
-                mob,
-                new LodMemory(
-                        lod,
-                        gameTime + LOD_CACHE_TICKS
-                )
-        );
+        long expiresAt = gameTime + LOD_CACHE_TICKS;
+
+        if (memory == null) {
+            LOD_MEMORY.put(
+                    mob,
+                    new LodMemory(lod, expiresAt)
+            );
+        } else {
+            memory.refresh(lod, expiresAt);
+        }
 
         return lod;
     }
@@ -110,7 +112,7 @@ public final class RetoldAiLod {
     }
 
     public static boolean canStartPath(
-            PathfinderMob mob,
+            Mob mob,
             long gameTime
     ) {
         RetoldAiLodLevel lod = levelFor(mob);
@@ -135,14 +137,10 @@ public final class RetoldAiLod {
             return true;
         }
 
-        if (mob instanceof PathfinderMob pathfinderMob) {
-            RetoldMobState state = RetoldMobStates.get(pathfinderMob);
+        RetoldMobState state = RetoldMobStates.get(mob);
 
-            return state != null
-                    && gameTime - state.lastDangerAt() <= RECENT_DANGER_FULL_TICKS;
-        }
-
-        return false;
+        return state != null
+                && gameTime - state.lastDangerAt() <= RECENT_DANGER_FULL_TICKS;
     }
 
     private static boolean shouldRunOnCadence(
@@ -179,9 +177,23 @@ public final class RetoldAiLod {
         return best;
     }
 
-    private record LodMemory(
-            RetoldAiLodLevel level,
-            long expiresAt
-    ) {
+    private static final class LodMemory {
+        private RetoldAiLodLevel level;
+        private long expiresAt;
+
+        private LodMemory(
+                RetoldAiLodLevel level,
+                long expiresAt
+        ) {
+            refresh(level, expiresAt);
+        }
+
+        private void refresh(
+                RetoldAiLodLevel refreshedLevel,
+                long refreshedExpiresAt
+        ) {
+            level = refreshedLevel;
+            expiresAt = refreshedExpiresAt;
+        }
     }
 }

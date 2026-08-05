@@ -78,6 +78,7 @@ public class ExtinguishedTorchBlock extends TorchBlock {
         }
 
         level.setBlock(pos, litState, Block.UPDATE_ALL);
+        TorchWeatherEvents.untrackExtinguishedTorch(level, pos);
         TorchWeatherEvents.trackTorch(level, pos, litState);
         level.playSound(null, pos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
 

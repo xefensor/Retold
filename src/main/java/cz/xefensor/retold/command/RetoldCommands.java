@@ -7,10 +7,12 @@ import cz.xefensor.retold.sky.RetoldEndSkyData;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
+import cz.xefensor.retold.villager.RetoldVillageReputationStatus;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public final class RetoldCommands {
@@ -40,6 +42,13 @@ public final class RetoldCommands {
                                 )
                                 .then(Commands.literal("randomize")
                                         .executes(context -> randomizeEndSkySeed(context.getSource()))
+                                )
+                        )
+                        .then(Commands.literal("village")
+                                .then(Commands.literal("status")
+                                        .executes(context -> getVillageStatus(
+                                                context.getSource()
+                                        ))
                                 )
                         )
         );
@@ -102,6 +111,54 @@ public final class RetoldCommands {
         );
 
         return 1;
+    }
+
+    private static int getVillageStatus(CommandSourceStack source) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(
+                    Component.literal(
+                            "This command must be run by a player."
+                    )
+            );
+            return 0;
+        }
+
+        RetoldVillageReputationStatus.Snapshot status =
+                RetoldVillageReputationStatus.inspect(
+                        source.getLevel(),
+                        player
+                );
+
+        if (!status.hasVillage()) {
+            source.sendSuccess(
+                    () -> Component.literal(
+                            "No loaded village-context Villagers found within "
+                                    + RetoldVillageReputationStatus.QUERY_RADIUS
+                                    + " blocks."
+                    ),
+                    false
+            );
+            return 0;
+        }
+
+        source.sendSuccess(
+                () -> Component.literal(
+                        "Village standing: "
+                                + status.standing().displayName()
+                                + "; villagers=" + status.villagerCount()
+                                + ", reputation average="
+                                + status.averageReputation()
+                                + ", worst=" + status.worstReputation()
+                                + ", best=" + status.bestReputation()
+                                + ", negative=" + status.negativeVillagers()
+                                + ", golem hostility="
+                                + (status.hasGolemHostilityRisk()
+                                ? "possible" : "no")
+                ),
+                false
+        );
+
+        return status.villagerCount();
     }
 
 }

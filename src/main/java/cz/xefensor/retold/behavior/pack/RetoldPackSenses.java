@@ -90,6 +90,13 @@ final class RetoldPackSenses {
             return null;
         }
 
+        if (!RetoldPackHunger.isHungryEnoughToContinueParty(
+                sensor,
+                gameTime
+        )) {
+            return null;
+        }
+
         RetoldAiControlMode mode = RetoldAiControl.getMode(sensor);
 
         if (
@@ -149,7 +156,10 @@ final class RetoldPackSenses {
             LivingEntity prey,
             long gameTime
     ) {
-        return RetoldPreyTargeting.isValidMobRulePrey(
+        return RetoldPackHunger.isHungryEnoughToContinueParty(
+                predator,
+                gameTime
+        ) && RetoldPreyTargeting.isValidMobRulePrey(
                 predator,
                 prey,
                 gameTime

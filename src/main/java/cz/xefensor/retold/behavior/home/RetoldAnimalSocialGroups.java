@@ -40,6 +40,24 @@ public final class RetoldAnimalSocialGroups {
         );
     }
 
+    public static boolean canSchoolWith(
+            PathfinderMob first,
+            PathfinderMob second
+    ) {
+        if (!basicCompatible(first, second)) {
+            return false;
+        }
+
+        if (!RetoldMobRules.isAquaticSchool(first)
+                || !RetoldMobRules.isAquaticSchool(second)) {
+            return false;
+        }
+
+        return RetoldMobRules.getEntityTypePath(first.getType()).equals(
+                RetoldMobRules.getEntityTypePath(second.getType())
+        );
+    }
+
     public static boolean isSocialRecoveryMob(PathfinderMob mob) {
         return RetoldMobRules.canUseOrdinaryLifeSystems(mob)
                 && (
@@ -78,6 +96,7 @@ public final class RetoldAnimalSocialGroups {
             case "sniffer" -> 3;
             case "armadillo" -> 4;
             case "fox", "cat", "ocelot" -> 1;
+            case "spider", "cave_spider" -> 6;
             default -> DEFAULT_HOME_GROUP_SIZE;
         };
     }
@@ -110,6 +129,7 @@ public final class RetoldAnimalSocialGroups {
             case "fox" -> 28.0D;
             case "cat" -> 18.0D;
             case "ocelot" -> 24.0D;
+            case "spider", "cave_spider" -> 24.0D;
             default -> 18.0D;
         };
     }
@@ -118,6 +138,13 @@ public final class RetoldAnimalSocialGroups {
         String path = RetoldMobRules.getEntityTypePath(
                 mob.getType()
         );
+
+        if (
+                path.equals("cow")
+                        || path.equals("mooshroom")
+        ) {
+            return "bovine";
+        }
 
         if (
                 path.equals("horse")
@@ -132,6 +159,10 @@ public final class RetoldAnimalSocialGroups {
                         || path.equals("trader_llama")
         ) {
             return "llama";
+        }
+
+        if (path.equals("spider") || path.equals("cave_spider")) {
+            return "spider";
         }
 
         return path;

@@ -1,0 +1,68 @@
+{
+  "textures": {
+    "particle": "minecraft:block/oak_planks",
+    "wood": "minecraft:block/oak_planks"
+  },
+  "elements": [
+    {
+      "from": [1, 0, 3],
+      "to": [15, 4, 13],
+      "faces": {
+        "down": { "texture": "#wood" },
+        "up": { "texture": "#wood" },
+        "north": { "texture": "#wood" },
+        "south": { "texture": "#wood" },
+        "west": { "texture": "#wood" },
+        "east": { "texture": "#wood" }
+      }
+    },
+    {
+      "from": [1, 4, 3],
+      "to": [15, 10, 5],
+      "faces": {
+        "down": { "texture": "#wood" },
+        "up": { "texture": "#wood" },
+        "north": { "texture": "#wood" },
+        "south": { "texture": "#wood" },
+        "west": { "texture": "#wood" },
+        "east": { "texture": "#wood" }
+      }
+    },
+    {
+      "from": [1, 4, 11],
+      "to": [15, 10, 13],
+      "faces": {
+        "down": { "texture": "#wood" },
+        "up": { "texture": "#wood" },
+        "north": { "texture": "#wood" },
+        "south": { "texture": "#wood" },
+        "west": { "texture": "#wood" },
+        "east": { "texture": "#wood" }
+      }
+    },
+    {
+      "from": [1, 4, 5],
+      "to": [3, 10, 11],
+      "faces": {
+        "down": { "texture": "#wood" },
+        "up": { "texture": "#wood" },
+        "north": { "texture": "#wood" },
+        "south": { "texture": "#wood" },
+        "west": { "texture": "#wood" },
+        "east": { "texture": "#wood" }
+      }
+    },
+    {
+      "from": [13, 4, 5],
+      "to": [15, 10, 11],
+      "faces": {
+        "down": { "texture": "#wood" },
+        "up": { "texture": "#wood" },
+        "north": { "texture": "#wood" },
+        "south": { "texture": "#wood" },
+        "west": { "texture": "#wood" },
+        "east": { "texture": "#wood" }
+      }
+    }
+  ]
+}

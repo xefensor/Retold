@@ -1,5 +1,6 @@
 package cz.xefensor.retold.worldgen.air;
 
+import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -127,14 +128,16 @@ public final class GaleCoreAttackEvents {
 
             CrackState crack = entry.getValue();
 
-            if (level.getGameTime() - crack.lastHitTick() > CRACK_DECAY_TICKS || !canCrackBlock(level, key.pos())) {
+            if (!RetoldMobGriefing.isEnabled(level)
+                    || level.getGameTime() - crack.lastHitTick() > CRACK_DECAY_TICKS
+                    || !canCrackBlock(level, key.pos())) {
                 level.destroyBlockProgress(breakerId(key), key.pos(), -1);
                 iterator.remove();
             }
         }
     }
 
-    private static void crackSplash(
+    static void crackSplash(
             ServerLevel level,
             Vec3 center,
             Entity breaker,
@@ -142,6 +145,14 @@ public final class GaleCoreAttackEvents {
             int maxBlocks,
             int progressBonus
     ) {
+        if (!RetoldMobGriefing.canModifyBlocks(level, breaker)) {
+            if (!RetoldMobGriefing.isEnabled(level)) {
+                clearCracks(level);
+            }
+
+            return;
+        }
+
         BlockPos origin = BlockPos.containing(center);
         List<BlockImpact> impacts = new ArrayList<>();
         int blockRadius = (int) Math.ceil(radius);
@@ -168,6 +179,22 @@ public final class GaleCoreAttackEvents {
             if (++affected >= maxBlocks) {
                 return;
             }
+        }
+    }
+
+    static void clearCracks(ServerLevel level) {
+        Iterator<Map.Entry<CrackKey, CrackState>> iterator = CRACKS.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<CrackKey, CrackState> entry = iterator.next();
+            CrackKey key = entry.getKey();
+
+            if (!key.dimension().equals(level.dimension())) {
+                continue;
+            }
+
+            level.destroyBlockProgress(breakerId(key), key.pos(), -1);
+            iterator.remove();
         }
     }
 

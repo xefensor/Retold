@@ -2,6 +2,7 @@ package cz.xefensor.retold.territory;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldMobTargetPolicy;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -99,6 +100,11 @@ public final class RetoldTerritoryBrainGuards {
 
         if (target == null) {
             return false;
+        }
+
+        if (RetoldMobTargetPolicy.shouldBlockDeliberateHostility(mob, target)) {
+            clearInvalidAttackState(mob, target);
+            return true;
         }
 
         if (RetoldAiTargets.isInvalidPlayerTarget(target)) {

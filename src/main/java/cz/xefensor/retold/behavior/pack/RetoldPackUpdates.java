@@ -2,6 +2,8 @@ package cz.xefensor.retold.behavior.pack;
 
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
+import cz.xefensor.retold.behavior.hunting.RetoldPredatorStrike;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import net.minecraft.server.level.ServerLevel;
@@ -47,6 +49,15 @@ final class RetoldPackUpdates {
                 party,
                 gameTime
         );
+
+        if (transferSatisfiedLeadership(
+                level,
+                leader,
+                party,
+                gameTime
+        )) {
+            return;
+        }
 
         RetoldAiControlMode leaderMode = RetoldAiControl.getMode(leader);
 
@@ -152,6 +163,78 @@ final class RetoldPackUpdates {
                 party,
                 gameTime
         );
+    }
+
+    private static boolean transferSatisfiedLeadership(
+            ServerLevel level,
+            PathfinderMob leader,
+            RetoldPackParty party,
+            long gameTime
+    ) {
+        RetoldAiControlMode leaderMode = RetoldAiControl.getMode(leader);
+
+        if ((leaderMode != RetoldAiControlMode.HUNT
+                && leaderMode != RetoldAiControlMode.SEARCH)
+                || RetoldPackHunger.isHungryEnoughToContinueParty(
+                leader,
+                gameTime
+        )) {
+            return false;
+        }
+
+        PathfinderMob hungryLeader = RetoldPackHunger.findHungryAvailablePartyLeader(
+                leader,
+                party,
+                gameTime
+        );
+
+        if (hungryLeader == null || hungryLeader == leader) {
+            return false;
+        }
+
+        releaseSatisfiedLeader(leader);
+        RetoldPackLifecycle.transferLeadership(
+                leader,
+                hungryLeader,
+                party
+        );
+
+        RetoldPackParty transferredParty = RetoldPackParties.partyOf(hungryLeader);
+
+        if (transferredParty != null) {
+            RetoldPackMovement.startLeaderSearch(
+                    hungryLeader,
+                    transferredParty,
+                    gameTime
+            );
+            updateLeaderParty(
+                    level,
+                    hungryLeader,
+                    transferredParty,
+                    gameTime
+            );
+        }
+
+        return true;
+    }
+
+    private static void releaseSatisfiedLeader(PathfinderMob leader) {
+        RetoldAiControl.clearIfControlledAs(
+                leader,
+                RetoldAiControlMode.HUNT
+        );
+        RetoldAiControl.clearIfControlledAs(
+                leader,
+                RetoldAiControlMode.SEARCH
+        );
+        RetoldBehaviorTargets.setTargetAndAggression(
+                leader,
+                null,
+                false
+        );
+        RetoldPredatorStrike.clear(leader);
+        leader.setSprinting(false);
+        leader.getNavigation().stop();
     }
 
     static void updateMember(

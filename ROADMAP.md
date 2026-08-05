@@ -19,7 +19,7 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Later
 
-- Village reputation and consequences for stealing, crop destruction, and animal killing.
+- Naturally verify the completed village-property reputation loop, including tended livestock, trade-price effects, witnesses, and Iron Golem hostility in multiplayer and existing villages.
 - Tool, armor, ore, station, enchanting, and combat progression reworks.
 - Stage 3 piglin or pigman cooperation.
 - Nether portal environmental effects and broader world-reactivity work.

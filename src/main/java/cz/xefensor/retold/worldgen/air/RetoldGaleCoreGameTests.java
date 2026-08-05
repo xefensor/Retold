@@ -3,6 +3,7 @@ package cz.xefensor.retold.worldgen.air;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindSource;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -22,7 +23,9 @@ import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -80,6 +83,12 @@ public final class RetoldGaleCoreGameTests {
                 environment,
                 "gale_core_spawner_repairs_duplicates",
                 RetoldGaleCoreGameTests::spawnerRepairsDuplicates
+        );
+        registerTest(
+                event,
+                environment,
+                "gale_core_block_damage_respects_mob_griefing",
+                RetoldGaleCoreGameTests::blockDamageRespectsMobGriefing
         );
     }
 
@@ -372,6 +381,61 @@ public final class RetoldGaleCoreGameTests {
             }
             keeper.discard();
             duplicate.discard();
+        }
+    }
+
+    private static void blockDamageRespectsMobGriefing(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        boolean originalMobGriefing = level.getGameRules().get(GameRules.MOB_GRIEFING);
+        BlockPos relativePos = new BlockPos(2, 2, 2);
+        BlockPos blockPos = helper.absolutePos(relativePos);
+        GaleCore boss = createBoss(
+                level,
+                helper.absoluteVec(new Vec3(4.5D, 3.0D, 4.5D)),
+                helper.getBounds()
+        );
+
+        try {
+            helper.setBlock(relativePos, Blocks.COBBLESTONE);
+            level.getGameRules().set(
+                    GameRules.MOB_GRIEFING,
+                    false,
+                    level.getServer()
+            );
+
+            GaleCoreAttackEvents.crackSplash(
+                    level,
+                    Vec3.atCenterOf(blockPos),
+                    boss,
+                    0.25D,
+                    1,
+                    48
+            );
+            helper.assertBlockPresent(Blocks.COBBLESTONE, relativePos);
+
+            level.getGameRules().set(
+                    GameRules.MOB_GRIEFING,
+                    true,
+                    level.getServer()
+            );
+            GaleCoreAttackEvents.crackSplash(
+                    level,
+                    Vec3.atCenterOf(blockPos),
+                    boss,
+                    0.25D,
+                    1,
+                    48
+            );
+            helper.assertBlockNotPresent(Blocks.COBBLESTONE, relativePos);
+            helper.succeed();
+        } finally {
+            GaleCoreAttackEvents.clearCracks(level);
+            level.getGameRules().set(
+                    GameRules.MOB_GRIEFING,
+                    originalMobGriefing,
+                    level.getServer()
+            );
+            boss.discard();
         }
     }
 

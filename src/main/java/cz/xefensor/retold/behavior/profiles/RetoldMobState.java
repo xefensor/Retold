@@ -3,7 +3,7 @@ package cz.xefensor.retold.behavior.profiles;
 import net.minecraft.nbt.CompoundTag;
 
 public final class RetoldMobState {
-    private static final int SAVE_VERSION = 1;
+    private static final int SAVE_VERSION = 3;
 
     private int hunger;
     private int stress;
@@ -16,6 +16,10 @@ public final class RetoldMobState {
     private long lastFleeEndedAt;
     private long lastSuccessfulHuntAt;
     private long lastFailedHuntAt;
+    private long breedingSatisfiedTicks;
+    private long lastBreedingProgressAt;
+    private long automaticBreedingArmedAt;
+    private long nextBreedingAttemptAt;
 
     private Runnable saveCallback;
 
@@ -137,6 +141,89 @@ public final class RetoldMobState {
         markChanged();
     }
 
+    public long breedingSatisfiedTicks() {
+        return breedingSatisfiedTicks;
+    }
+
+    public void setBreedingSatisfiedTicks(long ticks) {
+        long updated = Math.max(0L, ticks);
+
+        if (breedingSatisfiedTicks == updated) {
+            return;
+        }
+
+        breedingSatisfiedTicks = updated;
+        markChanged();
+    }
+
+    public void advanceBreedingSatisfaction(
+            long gameTime,
+            int maximumLoadedTicks
+    ) {
+        long updatedAt = Math.max(0L, gameTime);
+        long gained = lastBreedingProgressAt > 0L
+                && updatedAt > lastBreedingProgressAt
+                ? Math.min(
+                        Math.max(0, maximumLoadedTicks),
+                        updatedAt - lastBreedingProgressAt
+                )
+                : 0L;
+
+        breedingSatisfiedTicks += gained;
+        lastBreedingProgressAt = updatedAt;
+        markChanged();
+    }
+
+    public void clearBreedingSatisfaction() {
+        if (breedingSatisfiedTicks == 0L
+                && lastBreedingProgressAt == 0L) {
+            return;
+        }
+
+        breedingSatisfiedTicks = 0L;
+        lastBreedingProgressAt = 0L;
+        markChanged();
+    }
+
+    public long automaticBreedingArmedAt() {
+        return automaticBreedingArmedAt;
+    }
+
+    public void markAutomaticBreedingArmed(long gameTime) {
+        long updated = Math.max(1L, gameTime);
+
+        if (automaticBreedingArmedAt == updated) {
+            return;
+        }
+
+        automaticBreedingArmedAt = updated;
+        markChanged();
+    }
+
+    public void clearAutomaticBreedingArmed() {
+        if (automaticBreedingArmedAt == 0L) {
+            return;
+        }
+
+        automaticBreedingArmedAt = 0L;
+        markChanged();
+    }
+
+    public long nextBreedingAttemptAt() {
+        return nextBreedingAttemptAt;
+    }
+
+    public void scheduleNextBreedingAttempt(long gameTime) {
+        long updated = Math.max(0L, gameTime);
+
+        if (nextBreedingAttemptAt == updated) {
+            return;
+        }
+
+        nextBreedingAttemptAt = updated;
+        markChanged();
+    }
+
     CompoundTag save() {
         CompoundTag tag = new CompoundTag();
 
@@ -150,6 +237,10 @@ public final class RetoldMobState {
         tag.putLong("lastFleeEndedAt", lastFleeEndedAt);
         tag.putLong("lastSuccessfulHuntAt", lastSuccessfulHuntAt);
         tag.putLong("lastFailedHuntAt", lastFailedHuntAt);
+        tag.putLong("breedingSatisfiedTicks", breedingSatisfiedTicks);
+        tag.putLong("lastBreedingProgressAt", lastBreedingProgressAt);
+        tag.putLong("automaticBreedingArmedAt", automaticBreedingArmedAt);
+        tag.putLong("nextBreedingAttemptAt", nextBreedingAttemptAt);
 
         return tag;
     }
@@ -170,6 +261,18 @@ public final class RetoldMobState {
         state.lastFleeEndedAt = tag.getLong("lastFleeEndedAt").orElse(0L);
         state.lastSuccessfulHuntAt = tag.getLong("lastSuccessfulHuntAt").orElse(0L);
         state.lastFailedHuntAt = tag.getLong("lastFailedHuntAt").orElse(0L);
+        state.breedingSatisfiedTicks = tag.getLong(
+                "breedingSatisfiedTicks"
+        ).orElse(0L);
+        state.lastBreedingProgressAt = tag.getLong(
+                "lastBreedingProgressAt"
+        ).orElse(0L);
+        state.automaticBreedingArmedAt = tag.getLong(
+                "automaticBreedingArmedAt"
+        ).orElse(0L);
+        state.nextBreedingAttemptAt = tag.getLong(
+                "nextBreedingAttemptAt"
+        ).orElse(0L);
 
         return state;
     }

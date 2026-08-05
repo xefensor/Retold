@@ -16,6 +16,9 @@ public final class RetoldFactionTargetGuards {
     private static final ThreadLocal<Boolean> IGNORE_TARGET_GUARD =
             ThreadLocal.withInitial(() -> false);
 
+    private static final ThreadLocal<Boolean> SOURCE_VALIDATED_TARGET =
+            ThreadLocal.withInitial(() -> false);
+
     private static final ThreadLocal<Boolean> IGNORE_AGGRESSIVE_GUARD =
             ThreadLocal.withInitial(() -> false);
 
@@ -28,6 +31,14 @@ public final class RetoldFactionTargetGuards {
     ) {
         if (mob == null || target == null) {
             return false;
+        }
+
+        if (!SOURCE_VALIDATED_TARGET.get()
+                && RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
+                mob,
+                target
+        )) {
+            return true;
         }
 
         if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
@@ -66,17 +77,34 @@ public final class RetoldFactionTargetGuards {
             Mob mob,
             LivingEntity target
     ) {
+        setTargetIgnoringGuard(mob, target, null);
+    }
+
+    public static void setTargetIgnoringGuard(
+            Mob mob,
+            LivingEntity target,
+            RetoldTargetSource source
+    ) {
         if (mob == null) {
             return;
         }
 
         boolean previous = IGNORE_TARGET_GUARD.get();
+        boolean previousSourceValidation = SOURCE_VALIDATED_TARGET.get();
+        boolean sourceValidated = source != null
+                && !RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
+                mob,
+                target,
+                source
+        );
         IGNORE_TARGET_GUARD.set(true);
+        SOURCE_VALIDATED_TARGET.set(sourceValidated);
 
         try {
             mob.setTarget(target);
         } finally {
             IGNORE_TARGET_GUARD.set(previous);
+            SOURCE_VALIDATED_TARGET.set(previousSourceValidation);
         }
     }
 

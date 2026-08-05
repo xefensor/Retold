@@ -13,6 +13,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -23,6 +24,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -60,7 +62,7 @@ public final class RetoldSnifferForagerEvents {
     private static final double RANGE_REACHED_SQUARED =
             RANGE_REACHED_BLOCKS * RANGE_REACHED_BLOCKS;
 
-    private static final double FORAGE_POINT_REACHED_BLOCKS = 3.0D;
+    private static final double FORAGE_POINT_REACHED_BLOCKS = 4.0D;
     private static final double FORAGE_POINT_REACHED_SQUARED =
             FORAGE_POINT_REACHED_BLOCKS * FORAGE_POINT_REACHED_BLOCKS;
 
@@ -382,7 +384,7 @@ public final class RetoldSnifferForagerEvents {
 
         RetoldBehaviorMovement.claimAndMoveToBlock(
                 sniffer,
-                target,
+                target.above(),
                 RetoldAiControlMode.SEARCH,
                 RetoldAiControlOwner.SNIFFER_FORAGER,
                 SEARCH_PRIORITY,
@@ -399,6 +401,7 @@ public final class RetoldSnifferForagerEvents {
             SnifferMemory memory,
             long gameTime
     ) {
+        BlockPos foodSource = memory.target;
         memory.lastForageAt = gameTime;
         memory.target = null;
 
@@ -413,6 +416,11 @@ public final class RetoldSnifferForagerEvents {
         state.addConfidence(1);
 
         stopControl(sniffer);
+        RetoldFeedingPose.begin(
+                sniffer,
+                foodSource == null ? sniffer.position() : Vec3.atCenterOf(foodSource),
+                gameTime
+        );
     }
 
     private static void returnToRange(

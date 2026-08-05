@@ -69,7 +69,7 @@ final class RetoldPackHunger {
         return false;
     }
 
-    private static boolean isHungryEnoughToContinueParty(
+    static boolean isHungryEnoughToContinueParty(
             PathfinderMob member,
             long gameTime
     ) {

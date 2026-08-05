@@ -29,6 +29,19 @@ public final class RetoldPreyTargeting {
         );
     }
 
+    public static boolean isEligibleKilledMobRulePrey(
+            PathfinderMob hunter,
+            LivingEntity prey
+    ) {
+        return hunter != null
+                && prey != null
+                && hunter != prey
+                && hunter.level() == prey.level()
+                && !(prey instanceof Player)
+                && !isBlockedByFactionRelationship(hunter, prey)
+                && RetoldMobRules.isNaturalPreyType(hunter, prey);
+    }
+
     public static String shortMobRulePreyDecision(
             PathfinderMob hunter,
             LivingEntity prey,

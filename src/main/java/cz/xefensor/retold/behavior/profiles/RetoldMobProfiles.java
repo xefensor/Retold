@@ -20,7 +20,11 @@ public final class RetoldMobProfiles {
             36
     );
 
-    private static volatile Map<Identifier, RetoldMobProfile> profiles = Map.of();
+    /*
+     * Replacing both views together keeps datapack reloads atomic while making
+     * the hot entity lookup independent of registry-key conversion.
+     */
+    private static volatile ProfileIndex profileIndex = ProfileIndex.EMPTY;
 
     private RetoldMobProfiles() {
     }
@@ -38,7 +42,7 @@ public final class RetoldMobProfiles {
             return NONE;
         }
 
-        return get(BuiltInRegistries.ENTITY_TYPE.getKey(entityType));
+        return profileIndex.byType.getOrDefault(entityType, NONE);
     }
 
     public static RetoldMobProfile get(Identifier entityId) {
@@ -46,7 +50,7 @@ public final class RetoldMobProfiles {
             return NONE;
         }
 
-        return profiles.getOrDefault(entityId, NONE);
+        return profileIndex.byId.getOrDefault(entityId, NONE);
     }
 
     public static RetoldMobProfile get(String entityPath) {
@@ -78,7 +82,7 @@ public final class RetoldMobProfiles {
     }
 
     public static int loadedProfileCount() {
-        return profiles.size();
+        return profileIndex.byId.size();
     }
 
     static int replace(Map<Identifier, RetoldMobProfileDefinition> definitions) {
@@ -87,6 +91,7 @@ public final class RetoldMobProfiles {
         }
 
         Map<Identifier, RetoldMobProfile> nextProfiles = new HashMap<>();
+        Map<EntityType<?>, RetoldMobProfile> nextProfilesByType = new HashMap<>();
         Map<Identifier, Identifier> sourcesByEntity = new HashMap<>();
 
         for (Map.Entry<Identifier, RetoldMobProfileDefinition> entry : definitions.entrySet()) {
@@ -108,10 +113,28 @@ public final class RetoldMobProfiles {
                 );
             }
 
-            nextProfiles.put(entityId, definition.profile());
+            RetoldMobProfile profile = definition.profile();
+            nextProfiles.put(entityId, profile);
+            nextProfilesByType.put(
+                    BuiltInRegistries.ENTITY_TYPE.getValue(entityId),
+                    profile
+            );
         }
 
-        profiles = Map.copyOf(nextProfiles);
-        return profiles.size();
+        profileIndex = new ProfileIndex(
+                Map.copyOf(nextProfiles),
+                Map.copyOf(nextProfilesByType)
+        );
+        return profileIndex.byId.size();
+    }
+
+    private record ProfileIndex(
+            Map<Identifier, RetoldMobProfile> byId,
+            Map<EntityType<?>, RetoldMobProfile> byType
+    ) {
+        private static final ProfileIndex EMPTY = new ProfileIndex(
+                Map.of(),
+                Map.of()
+        );
     }
 }

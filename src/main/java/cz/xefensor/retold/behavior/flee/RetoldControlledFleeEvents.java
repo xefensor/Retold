@@ -17,11 +17,14 @@ import cz.xefensor.retold.behavior.hunting.RetoldPreyTargeting;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
@@ -122,6 +125,77 @@ public final class RetoldControlledFleeEvents {
     private static final double AUDIBLE_MOVEMENT_THRESHOLD_SQUARED = 0.0016D;
 
     private RetoldControlledFleeEvents() {
+    }
+
+    public static boolean usesSharedFleeBehavior(PathfinderMob mob) {
+        return mob != null && isFleeingPrey(mob);
+    }
+
+    public static void onLivingDamage(LivingDamageEvent.Post event) {
+        if (event.getHealthDamage() <= 0.0F
+                || !(event.getEntity() instanceof PathfinderMob prey)
+                || !(prey.level() instanceof ServerLevel level)
+                || !usesSharedFleeBehavior(prey)) {
+            return;
+        }
+
+        long gameTime = level.getGameTime();
+        rememberThreat(
+                prey,
+                getDamageOrigin(prey, event.getSource()),
+                gameTime
+        );
+
+        FleeMemory memory = getActiveFleeMemory(prey, gameTime);
+
+        if (memory != null) {
+            fleeFromMemory(prey, memory, gameTime);
+        }
+
+        spreadLooseAquaticPanicOnDamage(
+                level,
+                prey,
+                gameTime
+        );
+    }
+
+    private static void spreadLooseAquaticPanicOnDamage(
+            ServerLevel level,
+            PathfinderMob panicSource,
+            long gameTime
+    ) {
+        if (!RetoldMobRules.isLooseAquaticGroup(panicSource)) {
+            return;
+        }
+
+        /*
+         * Damage is rare compared with entity ticks, so one bounded cached scan
+         * lets loose aquatic groups react before BACKGROUND LOD members drift
+         * outside the receiver-side panic radius. The ordinary pull scan remains
+         * as a budget-skip fallback.
+         */
+        List<PathfinderMob> candidates = RetoldAiScanCache.nearby(
+                level,
+                panicSource,
+                PathfinderMob.class,
+                HERD_PANIC_RADIUS_BLOCKS,
+                gameTime,
+                FLEE_SCAN_CACHE_TICKS
+        );
+
+        for (PathfinderMob candidate : candidates) {
+            if (getActiveFleeMemory(candidate, gameTime) != null
+                    || !isValidHerdPanicSource(candidate, panicSource, gameTime)) {
+                continue;
+            }
+
+            rememberHerdPanic(candidate, panicSource, gameTime);
+            FleeMemory copiedMemory = getActiveFleeMemory(candidate, gameTime);
+
+            if (copiedMemory != null) {
+                fleeFromMemory(candidate, copiedMemory, gameTime);
+            }
+        }
     }
 
     @SubscribeEvent
@@ -522,11 +596,16 @@ public final class RetoldControlledFleeEvents {
         String sourcePath = getPath(panicSource);
 
         /*
-         * Fish panic with fish, land animals panic with land animals.
-         * This prevents weird cases like a cow reacting to a salmon.
+         * Fish may share panic across species. Squid use loose danger groups,
+         * but only with their exact species. Land animals remain separate from
+         * both aquatic groups.
          */
         if (isFishPath(preyPath) || isFishPath(sourcePath)) {
             return isFishPath(preyPath) && isFishPath(sourcePath);
+        }
+
+        if (isSquidPath(preyPath) || isSquidPath(sourcePath)) {
+            return preyPath.equals(sourcePath) && isSquidPath(preyPath);
         }
 
         return isLandPreyPath(preyPath) && isLandPreyPath(sourcePath);
@@ -546,6 +625,18 @@ public final class RetoldControlledFleeEvents {
             LivingEntity threat,
             long gameTime
     ) {
+        rememberThreat(
+                prey,
+                threat.position(),
+                gameTime
+        );
+    }
+
+    private static void rememberThreat(
+            PathfinderMob prey,
+            Vec3 threatPosition,
+            long gameTime
+    ) {
         markDanger(
                 prey,
                 gameTime,
@@ -553,9 +644,9 @@ public final class RetoldControlledFleeEvents {
         );
 
         Vec3 away = new Vec3(
-                prey.getX() - threat.getX(),
+                prey.getX() - threatPosition.x,
                 0.0D,
-                prey.getZ() - threat.getZ()
+                prey.getZ() - threatPosition.z
         );
 
         if (away.lengthSqr() <= 0.0001D) {
@@ -567,13 +658,34 @@ public final class RetoldControlledFleeEvents {
         FLEE_MEMORIES.put(
                 prey,
                 new FleeMemory(
-                        threat.blockPosition().immutable(),
+                        BlockPos.containing(threatPosition).immutable(),
                         away,
                         gameTime,
                         gameTime + FLEE_MEMORY_TICKS,
                         false
                 )
         );
+    }
+
+    private static Vec3 getDamageOrigin(
+            PathfinderMob prey,
+            DamageSource source
+    ) {
+        Entity causingEntity = source.getEntity();
+
+        if (causingEntity != null && causingEntity != prey) {
+            return causingEntity.position();
+        }
+
+        Vec3 sourcePosition = source.getSourcePosition();
+
+        if (sourcePosition != null) {
+            return sourcePosition;
+        }
+
+        Vec3 randomDirection = randomHorizontalDirection(prey);
+
+        return prey.position().subtract(randomDirection);
     }
 
     private static void rememberHerdPanic(
@@ -1106,7 +1218,9 @@ public final class RetoldControlledFleeEvents {
                 || path.equals("cod")
                 || path.equals("salmon")
                 || path.equals("tropical_fish")
-                || path.equals("pufferfish");
+                || path.equals("pufferfish")
+                || path.equals("squid")
+                || path.equals("glow_squid");
     }
 
     private static boolean isLandPreyPath(String path) {
@@ -1130,6 +1244,10 @@ public final class RetoldControlledFleeEvents {
                 || path.equals("salmon")
                 || path.equals("tropical_fish")
                 || path.equals("pufferfish");
+    }
+
+    private static boolean isSquidPath(String path) {
+        return path.equals("squid") || path.equals("glow_squid");
     }
 
     private static boolean isAudible(LivingEntity entity) {

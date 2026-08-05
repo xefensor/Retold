@@ -31,6 +31,7 @@ public final class RetoldBehaviorPerf {
     private static final LongAdder BLOCK_SEARCH_REQUESTS = new LongAdder();
     private static final LongAdder BLOCK_SEARCH_CACHE_HITS = new LongAdder();
     private static final LongAdder BLOCK_SEARCH_BUDGET_SKIPS = new LongAdder();
+    private static final LongAdder BLOCK_TARGET_POSITIONS_CHECKED = new LongAdder();
 
     private RetoldBehaviorPerf() {
     }
@@ -140,6 +141,38 @@ public final class RetoldBehaviorPerf {
         BLOCK_SEARCH_BUDGET_SKIPS.increment();
     }
 
+    public static AiWorkSnapshot aiWorkSnapshot() {
+        return new AiWorkSnapshot(
+                TIMING_CHECKS.sum(),
+                LOD_FULL.sum(),
+                LOD_FULL.sum() + LOD_NEAR.sum() + LOD_FAR.sum() + LOD_BACKGROUND.sum(),
+                AI_SCAN_REQUESTS.sum(),
+                AI_SCAN_CACHE_HITS.sum(),
+                AI_SCAN_BUDGET_SKIPS.sum(),
+                AI_POSITION_SCAN_REQUESTS.sum(),
+                AI_POSITION_SCAN_CACHE_HITS.sum(),
+                AI_POSITION_SCAN_BUDGET_SKIPS.sum(),
+                PATH_REQUESTS.sum(),
+                PATH_SKIPS.sum(),
+                SIGHT_REQUESTS.sum(),
+                SIGHT_CACHE_HITS.sum(),
+                SIGHT_BUDGET_SKIPS.sum(),
+                BLOCK_SEARCH_REQUESTS.sum(),
+                BLOCK_SEARCH_CACHE_HITS.sum(),
+                BLOCK_SEARCH_BUDGET_SKIPS.sum()
+        );
+    }
+
+    public static void recordBlockTargetPositionsChecked(long count) {
+        if (count > 0L) {
+            BLOCK_TARGET_POSITIONS_CHECKED.add(count);
+        }
+    }
+
+    public static long blockTargetPositionsChecked() {
+        return BLOCK_TARGET_POSITIONS_CHECKED.sum();
+    }
+
     public static void reset() {
         TIMING_CHECKS.reset();
         TIMING_PASSES.reset();
@@ -168,6 +201,7 @@ public final class RetoldBehaviorPerf {
         BLOCK_SEARCH_REQUESTS.reset();
         BLOCK_SEARCH_CACHE_HITS.reset();
         BLOCK_SEARCH_BUDGET_SKIPS.reset();
+        BLOCK_TARGET_POSITIONS_CHECKED.reset();
     }
 
     public static String debugText() {
@@ -198,6 +232,7 @@ public final class RetoldBehaviorPerf {
         long blockSearchRequests = BLOCK_SEARCH_REQUESTS.sum();
         long blockSearchCacheHits = BLOCK_SEARCH_CACHE_HITS.sum();
         long blockSearchBudgetSkips = BLOCK_SEARCH_BUDGET_SKIPS.sum();
+        long blockTargetPositionsChecked = BLOCK_TARGET_POSITIONS_CHECKED.sum();
 
         return "Retold behavior perf"
                 + "\nTiming checks: " + timingChecks
@@ -234,7 +269,8 @@ public final class RetoldBehaviorPerf {
                 + "\nBlock search requests: " + blockSearchRequests
                 + "\nBlock search cache hits: " + blockSearchCacheHits
                 + " (" + percentText(blockSearchCacheHits, blockSearchRequests) + ")"
-                + "\nBlock search budget skips: " + blockSearchBudgetSkips;
+                + "\nBlock search budget skips: " + blockSearchBudgetSkips
+                + "\nBlock target positions checked: " + blockTargetPositionsChecked;
     }
 
     private static String percentText(
@@ -250,5 +286,65 @@ public final class RetoldBehaviorPerf {
                 "%.1f%%",
                 value * 100.0D / total
         );
+    }
+
+    public record AiWorkSnapshot(
+            long timingChecks,
+            long lodFullSamples,
+            long lodSamples,
+            long entityScanRequests,
+            long entityScanCacheHits,
+            long entityScanBudgetSkips,
+            long positionScanRequests,
+            long positionScanCacheHits,
+            long positionScanBudgetSkips,
+            long pathRequests,
+            long pathSkips,
+            long sightRequests,
+            long sightCacheHits,
+            long sightBudgetSkips,
+            long blockSearchRequests,
+            long blockSearchCacheHits,
+            long blockSearchBudgetSkips
+    ) {
+        public long successfulEntityScans() {
+            return successfulWork(
+                    entityScanRequests,
+                    entityScanCacheHits,
+                    entityScanBudgetSkips
+            );
+        }
+
+        public long successfulPositionScans() {
+            return successfulWork(
+                    positionScanRequests,
+                    positionScanCacheHits,
+                    positionScanBudgetSkips
+            );
+        }
+
+        public long successfulSightRaycasts() {
+            return successfulWork(
+                    sightRequests,
+                    sightCacheHits,
+                    sightBudgetSkips
+            );
+        }
+
+        public long successfulBlockSearches() {
+            return successfulWork(
+                    blockSearchRequests,
+                    blockSearchCacheHits,
+                    blockSearchBudgetSkips
+            );
+        }
+
+        private static long successfulWork(
+                long requests,
+                long cacheHits,
+                long budgetSkips
+        ) {
+            return Math.max(0L, requests - cacheHits - budgetSkips);
+        }
     }
 }

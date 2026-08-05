@@ -12,8 +12,10 @@ import cz.xefensor.retold.behavior.home.RetoldAnimalSocialGroups;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
 import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
+import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -23,6 +25,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -139,7 +142,7 @@ public final class RetoldPandaBambooEvents {
             return;
         }
 
-        if (shouldSeekBamboo(panda, gameTime)) {
+        if (shouldSeekBamboo(level, panda, gameTime)) {
             BlockPos bamboo = findNearestBamboo(
                     level,
                     panda
@@ -293,10 +296,12 @@ public final class RetoldPandaBambooEvents {
     }
 
     private static boolean shouldSeekBamboo(
+            ServerLevel level,
             PathfinderMob panda,
             long gameTime
     ) {
-        if (RetoldAiControl.isControlled(panda)) {
+        if (RetoldAiControl.isControlled(panda)
+                || !RetoldMobGriefing.canModifyBlocks(level, panda)) {
             return false;
         }
 
@@ -327,10 +332,14 @@ public final class RetoldPandaBambooEvents {
         }
 
         if (panda.blockPosition().distSqr(bamboo) <= BAMBOO_EAT_DISTANCE_SQUARED) {
-            nibbleBamboo(
+            if (!tryNibbleBamboo(
+                    level,
                     panda,
+                    bamboo,
                     gameTime
-            );
+            )) {
+                stopControl(panda);
+            }
             return;
         }
 
@@ -360,10 +369,18 @@ public final class RetoldPandaBambooEvents {
         );
     }
 
-    private static void nibbleBamboo(
+    static boolean tryNibbleBamboo(
+            ServerLevel level,
             PathfinderMob panda,
+            BlockPos foodSource,
             long gameTime
     ) {
+        if (!isBamboo(level, foodSource)
+                || !RetoldMobGriefing.canModifyBlocks(level, panda)
+                || !level.destroyBlock(foodSource, false, panda)) {
+            return false;
+        }
+
         RetoldMobState state = RetoldMobStates.getOrCreate(
                 panda,
                 gameTime
@@ -374,6 +391,12 @@ public final class RetoldPandaBambooEvents {
 
         RetoldFeedingAnimations.play(panda);
         stopControl(panda);
+        RetoldFeedingPose.begin(
+                panda,
+                Vec3.atCenterOf(foodSource),
+                gameTime
+        );
+        return true;
     }
 
     private static boolean shouldReturnToGrove(

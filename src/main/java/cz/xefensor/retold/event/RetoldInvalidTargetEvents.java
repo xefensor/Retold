@@ -1,10 +1,10 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
-
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldMobTargetPolicy;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,8 +14,8 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-public final class RetoldInvalidPlayerTargetEvents {
-    private RetoldInvalidPlayerTargetEvents() {
+public final class RetoldInvalidTargetEvents {
+    private RetoldInvalidTargetEvents() {
     }
 
     @SubscribeEvent
@@ -48,7 +48,7 @@ public final class RetoldInvalidPlayerTargetEvents {
     private static boolean clearInvalidMobTarget(Mob mob) {
         LivingEntity target = mob.getTarget();
 
-        if (!RetoldAiTargets.isInvalidPlayerTarget(target)) {
+        if (!isInvalidHostilityTarget(mob, target)) {
             return false;
         }
 
@@ -67,7 +67,7 @@ public final class RetoldInvalidPlayerTargetEvents {
     ) {
         LivingEntity attackTarget = RetoldAiTargets.getBrainAttackTargetSafely(mob);
 
-        if (RetoldAiTargets.isInvalidPlayerTarget(attackTarget)) {
+        if (isInvalidHostilityTarget(mob, attackTarget)) {
             RetoldCombatTargets.clearTargetReferencesAndAggression(
                     mob,
                     attackTarget,
@@ -86,7 +86,7 @@ public final class RetoldInvalidPlayerTargetEvents {
 
         Entity angryEntity = RetoldAiTargets.resolveAngryAt(level, mob);
 
-        if (!RetoldAiTargets.isInvalidPlayerTarget(angryEntity)) {
+        if (!isInvalidHostilityTarget(mob, angryEntity)) {
             return false;
         }
 
@@ -95,5 +95,19 @@ public final class RetoldInvalidPlayerTargetEvents {
                 MemoryModuleType.ANGRY_AT
         );
         return true;
+    }
+
+    private static boolean isInvalidHostilityTarget(
+            Mob mob,
+            Entity target
+    ) {
+        return RetoldAiTargets.isInvalidPlayerTarget(target)
+                || RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
+                mob,
+                target,
+                target instanceof LivingEntity livingTarget
+                        ? RetoldFactionTargetMemory.getSource(mob, livingTarget)
+                        : null
+        );
     }
 }

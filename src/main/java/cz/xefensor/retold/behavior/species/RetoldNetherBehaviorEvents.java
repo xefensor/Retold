@@ -270,6 +270,10 @@ public final class RetoldNetherBehaviorEvents {
             PathfinderMob mob,
             long gameTime
     ) {
+        if (RetoldStriderLavaSustenance.tick(level, mob, gameTime)) {
+            return;
+        }
+
         if (!canSearchForNetherFood(mob, gameTime)) {
             return;
         }

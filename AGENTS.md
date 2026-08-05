@@ -29,6 +29,7 @@ Do not silently resolve a design conflict in code. Explain the conflict and ask 
 
 | Task | Read first |
 | --- | --- |
+| Choosing validation for any change | [`testing_strategy.md`](docs/internal/testing_strategy.md) |
 | Any gameplay or architecture change | [`retold_mod_system.md`](docs/internal/retold_mod_system.md) |
 | Mob behavior, factions, territory, targeting, or AI performance | [`retold_mob_ai_system.md`](docs/internal/retold_mob_ai_system.md) |
 | New feature or progression work | [`retold_roadmap.md`](docs/internal/retold_roadmap.md), [`design_implementation_status.md`](docs/internal/design_implementation_status.md) |
@@ -91,11 +92,15 @@ Registration is composed through `RetoldSubsystems` and the classes under `modul
 
 ## Validation
 
-Run the smallest useful checks while developing, then the complete checks required by the change.
+Follow [`docs/internal/testing_strategy.md`](docs/internal/testing_strategy.md). Identify the changed
+subsystem and plausible regressions, then run the narrowest relevant selector. Do not run the
+complete GameTest suite or complete per-mob TPS matrix as a default completion ritual. Each broad
+suite requires a documented shared-system, isolation, performance-baseline, release/milestone, or
+explicit-developer reason.
 
 ```bash
 ./gradlew build
-./gradlew runGameTestServer
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<focused-selector>"
 ```
 
 Other useful commands:
@@ -110,8 +115,8 @@ Other useful commands:
 | --- | --- |
 | Documentation only | Check links, headings, claims, and formatting against current code |
 | Pure logic or state transition | Add/update JUnit tests and run `./gradlew build` |
-| Gameplay behavior | Add/update a GameTest when practical; run build, GameTests, and focused in-game checks |
-| Mob AI | Test ownership, target clearing, difficulty, player modes, performance budgets, and relevant debug counters |
+| Gameplay behavior | Add/update a GameTest when practical; run the focused selector, build once before handoff, and perform only relevant in-game checks |
+| Mob AI | Run focused behavior tests; test ownership, target clearing, difficulty, player modes, and relevant debug counters; add affected-species TPS only when hot-path cost can change |
 | Worldgen or structures | Test multiple seeds and chunk borders in fresh worlds; check existing-world behavior when applicable |
 | Dimension, portal, or progression | Test both directions, repeated travel, death/reconnect, fresh and existing worlds, and relevant stages |
 | Networking | Test a dedicated server with a separate client; include multiple players when state can diverge |

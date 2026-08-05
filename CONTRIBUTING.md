@@ -34,7 +34,14 @@ Small changes are easier to verify. A technically sound proposal may still be de
 
 ## Validation
 
-Every code contribution should run `./gradlew build`, which includes unit tests and PMD static analysis. Run `./gradlew runGameTestServer` when relevant. Test risks where they exist:
+Use the risk-based selector rules in
+[`docs/internal/testing_strategy.md`](docs/internal/testing_strategy.md). Start with the narrowest
+JUnit or `retold:` GameTest selector that covers the changed contract. Do not run the complete
+GameTest suite or complete per-mob TPS matrix by default; broad runs need a shared-system,
+test-isolation, performance-baseline, release/milestone, or explicit developer reason.
+
+Every code contribution should run `./gradlew build` once before handoff, which includes unit tests
+and PMD static analysis but not NeoForge GameTests. Test only the relevant risks where they exist:
 
 - gameplay and progression in a fresh survival world
 - world generation across seeds, chunk borders, and existing worlds

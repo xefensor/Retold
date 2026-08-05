@@ -77,6 +77,7 @@ public final class RetoldCreativeModeTabs {
     }
 
     private static void addFunctionalBlocks(BuildCreativeModeTabContentsEvent event) {
+        insertAfter(event, Items.COMPOSTER, RetoldBlocks.ANIMAL_FEEDER_ITEM.get());
         insertAfter(
                 event,
                 Items.WARPED_HANGING_SIGN,
