@@ -89,8 +89,7 @@ When all checks pass, the workflow publishes:
 
 - `retold-<version>.jar` to Modrinth and CurseForge
 - the same JAR plus its `.sha256` checksum to GitHub Releases
-- the matching `CHANGELOG.md` section as the changelog on every platform
-- an HTML-rendered copy of those notes on CurseForge to preserve headings, lists, and inline code
+- the matching `CHANGELOG.md` section as a Markdown changelog on every platform
 - NeoForge, Minecraft 26.2, Java 25, and client-and-server metadata
 
 Retold currently publishes every version as **alpha** on Modrinth and CurseForge, and as a prerelease on GitHub. This is intentional even when the version is a plain number such as `0.2.1`. When Retold is ready to move to beta or stable, update the explicit `release_type` assignment in both publishing workflows.
@@ -100,5 +99,3 @@ Retold currently publishes every version as **alpha** on Modrinth and CurseForge
 The workflow can also be started from **Actions → Release → Run workflow**. Enter the version without the `v` prefix. The entered version must still match `mod_version`, and every normal validation and publishing step still runs.
 
 Use manual publishing only when the release tag workflow did not start. If a run partially publishes, first inspect GitHub, Modrinth, and CurseForge. Either upload the missing platform manually, or delete every version and GitHub release created by the failed run before retrying. The existing Git tag can remain in place.
-
-If the CurseForge upload succeeds but its final formatted-changelog update fails, run **Backfill Existing Release** with Modrinth disabled, CurseForge enabled, and the existing CurseForge file ID from the failed release log. This updates that file's metadata without publishing a duplicate. Changelog updates retry transient CurseForge server errors.
