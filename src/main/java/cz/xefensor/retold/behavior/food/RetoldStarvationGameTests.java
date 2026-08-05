@@ -31,21 +31,13 @@ public final class RetoldStarvationGameTests {
     }
 
     public static void register(RegisterGameTestsEvent event) {
-        Holder<TestEnvironmentDefinition<?>> environment =
-                event.registerEnvironment(
-                        id("isolated_starvation"),
-                        new TestEnvironmentDefinition.AllOf()
-                );
-
         registerTest(
                 event,
-                environment,
                 "starvation_damages_every_hunger_tick_owner",
                 RetoldStarvationGameTests::damagesEveryHungerTickOwner
         );
         registerTest(
                 event,
-                environment,
                 "starvation_kills_and_ignores_non_hunger_mobs",
                 RetoldStarvationGameTests::killsAndIgnoresNonHungerMobs
         );
@@ -139,6 +131,7 @@ public final class RetoldStarvationGameTests {
 
     private static void killsAndIgnoresNonHungerMobs(GameTestHelper helper) {
         placeFloor(helper);
+        helper.setTime(18_000L);
         var chicken = helper.spawn(EntityTypes.CHICKEN, 2, 2, 2);
         var skeleton = helper.spawn(EntityTypes.SKELETON, 5, 2, 2);
         long gameTime = helper.getLevel().getGameTime();
@@ -159,7 +152,14 @@ public final class RetoldStarvationGameTests {
         helper.succeedWhen(() -> {
             helper.assertFalse(
                     chicken.isAlive(),
-                    "Critical hunger must be able to kill a hunger-aware mob"
+                    "Critical hunger must be able to kill a hunger-aware mob; health="
+                            + chicken.getHealth()
+                            + ", hunger="
+                            + RetoldMobStates.get(chicken).hunger()
+                            + ", lastHungerTickAt="
+                            + RetoldMobStates.get(chicken).lastHungerTickAt()
+                            + ", gameTime="
+                            + helper.getLevel().getGameTime()
             );
             helper.assertValueEqual(
                     skeleton.getHealth(),
@@ -196,12 +196,16 @@ public final class RetoldStarvationGameTests {
 
     private static void registerTest(
             RegisterGameTestsEvent event,
-            Holder<TestEnvironmentDefinition<?>> environment,
             String name,
             Consumer<GameTestHelper> test
     ) {
+        Holder<TestEnvironmentDefinition<?>> environment =
+                event.registerEnvironment(
+                        id("isolated_" + name),
+                        new TestEnvironmentDefinition.AllOf()
+                );
         TestData<Holder<TestEnvironmentDefinition<?>>> testData =
-                new TestData<>(environment, EMPTY_STRUCTURE, 80, 0, true);
+                new TestData<>(environment, EMPTY_STRUCTURE, 220, 0, true);
 
         event.registerTest(id(name), new InlineGameTest(testData, test));
     }

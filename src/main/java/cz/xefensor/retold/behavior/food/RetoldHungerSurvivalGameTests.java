@@ -8,6 +8,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.villager.RetoldVillagerCommunalFood;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -214,6 +215,21 @@ public final class RetoldHungerSurvivalGameTests {
 
         placeFoodSource(helper, survivalCase, subject, fixtures);
 
+        if (subject instanceof Villager villager) {
+            /*
+             * Vanilla may discard an artificial HOME memory before the first
+             * staggered Retold food tick. Keep the test village anchor valid so
+             * this case measures communal-food acquisition rather than POI
+             * validation timing.
+             */
+            helper.onEachTick(() -> setVillageHome(helper, villager));
+            RetoldVillagerCommunalFood.tick(
+                    helper.getLevel(),
+                    villager,
+                    startedAt
+            );
+        }
+
         if (survivalCase.foodSource == FoodSource.LIVE_PREY
                 && subject instanceof net.minecraft.world.entity.PathfinderMob hunter
                 && RetoldMobRules.canUseNaturalPreyHuntingSystems(hunter)) {
@@ -418,10 +434,7 @@ public final class RetoldHungerSurvivalGameTests {
             }
             case GRUB_SOIL -> fillGroundPatch(helper, Blocks.DIRT);
             case GRUB_BADLANDS -> fillGroundPatch(helper, Blocks.RED_SAND);
-            case DESERT_BROWSE -> {
-                helper.setBlock(5, 1, 5, Blocks.SAND);
-                helper.setBlock(5, 2, 5, Blocks.DEAD_BUSH);
-            }
+            case DESERT_BROWSE -> fillDesertBrowsePatch(helper);
             case ALPINE_FORAGE -> fillGroundPatch(helper, Blocks.SNOW_BLOCK);
             case MYCELIUM -> fillGroundPatch(helper, Blocks.MYCELIUM);
             case NETHER_MUSHROOM -> {
@@ -458,6 +471,15 @@ public final class RetoldHungerSurvivalGameTests {
             for (int z = 4; z <= 7; z++) {
                 helper.setBlock(x, 1, z, Blocks.DIRT);
                 helper.setBlock(x, 2, z, Blocks.DANDELION);
+            }
+        }
+    }
+
+    private static void fillDesertBrowsePatch(GameTestHelper helper) {
+        for (int x = 2; x <= 12; x++) {
+            for (int z = 2; z <= 8; z++) {
+                helper.setBlock(x, 1, z, Blocks.SAND);
+                helper.setBlock(x, 2, z, Blocks.DEAD_BUSH);
             }
         }
     }
@@ -589,6 +611,19 @@ public final class RetoldHungerSurvivalGameTests {
                 GlobalPos.of(
                         helper.getLevel().dimension(),
                         helper.absolutePos(home)
+                )
+        );
+    }
+
+    private static void setVillageHome(
+            GameTestHelper helper,
+            Villager villager
+    ) {
+        villager.getBrain().setMemory(
+                MemoryModuleType.HOME,
+                GlobalPos.of(
+                        helper.getLevel().dimension(),
+                        helper.absolutePos(new BlockPos(3, 2, 5))
                 )
         );
     }

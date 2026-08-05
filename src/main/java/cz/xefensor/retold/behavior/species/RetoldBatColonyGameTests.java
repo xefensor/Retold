@@ -684,42 +684,106 @@ public final class RetoldBatColonyGameTests {
                 RetoldMobStates.getOrCreate(
                         bats[index],
                         gameTime
-                ).setHunger(100);
+                ).setHunger(80);
+                RetoldMobStates.getOrCreate(
+                        bats[index],
+                        gameTime
+                ).markFed(gameTime);
             }
 
             long nightTime = gameTime + 100L;
+
+            for (Bat bat : bats) {
+                RetoldMobStates.getOrCreate(bat, nightTime).markFed(nightTime);
+            }
+
             RetoldBatColonyEvents.tick(level, bats[0], nightTime);
             long firstPartyThinkAt = RetoldBatColonyEvents.huntingPartyNextThinkAt(
                     bats[0]
             );
-            RetoldBatColonyEvents.tick(level, bats[1], nightTime + 1L);
+            Bat sharedPartyMember = null;
+            Bat singletonCandidate = null;
+
+            for (int index = 1; index < bats.length; index++) {
+                int partySize = RetoldBatColonyEvents.huntingPartySize(
+                        bats[index]
+                );
+
+                if (partySize == 5 && sharedPartyMember == null) {
+                    sharedPartyMember = bats[index];
+                } else if (partySize == 0) {
+                    singletonCandidate = bats[index];
+                }
+            }
+
+            helper.assertTrue(
+                    sharedPartyMember != null && singletonCandidate != null,
+                    "The first hunting decision must create one five-Bat party and one singleton"
+            );
+            RetoldBatColonyEvents.tick(
+                    level,
+                    sharedPartyMember,
+                    nightTime + 1L
+            );
             helper.assertTrue(
                     RetoldBatColonyEvents.huntingPartyNextThinkAt(bats[0])
                             == firstPartyThinkAt,
                     "A second party member must reuse the shared decision instead of repeating party-wide work"
             );
-            RetoldBatColonyEvents.tick(level, bats[5], nightTime + 2L);
-
-            Vec3 partyDirection = RetoldBatColonyEvents.huntingPartyDirection(bats[0]);
-
-            helper.assertTrue(
-                    RetoldBatColonyEvents.huntingPartySize(bats[0]) == 5
-                            && RetoldBatColonyEvents.huntingPartySize(bats[4]) == 5
-                            && RetoldBatColonyEvents.huntingPartySize(bats[5]) == 1
-                            && partyDirection != null,
-                    "Nearby hungry Bats must split into directional hunting parties capped at five"
+            RetoldBatColonyEvents.tick(
+                    level,
+                    singletonCandidate,
+                    nightTime + 2L
             );
 
-            for (int index = 0; index < 5; index++) {
-                Vec3 destination = RetoldBatColonyEvents.flightDestination(bats[index]);
+            Vec3 partyDirection = RetoldBatColonyEvents.huntingPartyDirection(bats[0]);
+            int fiveMemberPartyCount = 0;
+            int singletonCount = 0;
+
+            for (Bat bat : bats) {
+                int partySize = RetoldBatColonyEvents.huntingPartySize(bat);
+
+                if (partySize == 5) {
+                    fiveMemberPartyCount++;
+                } else if (partySize == 1) {
+                    singletonCount++;
+                }
+            }
+
+            helper.assertTrue(
+                    fiveMemberPartyCount == 5
+                            && singletonCount == 1
+                            && partyDirection != null,
+                    "Nearby hungry Bats must split into directional hunting parties capped at five; sizes="
+                            + RetoldBatColonyEvents.huntingPartySize(bats[0])
+                            + ","
+                            + RetoldBatColonyEvents.huntingPartySize(bats[1])
+                            + ","
+                            + RetoldBatColonyEvents.huntingPartySize(bats[2])
+                            + ","
+                            + RetoldBatColonyEvents.huntingPartySize(bats[3])
+                            + ","
+                            + RetoldBatColonyEvents.huntingPartySize(bats[4])
+                            + ","
+                            + RetoldBatColonyEvents.huntingPartySize(bats[5])
+                            + ", direction="
+                            + partyDirection
+            );
+
+            for (Bat bat : bats) {
+                if (RetoldBatColonyEvents.huntingPartySize(bat) != 5) {
+                    continue;
+                }
+
+                Vec3 destination = RetoldBatColonyEvents.flightDestination(bat);
 
                 helper.assertTrue(
                         destination != null
                                 && RetoldBatColonyEvents.huntingPartyDirection(
-                                bats[index]
+                                bat
                         ).dot(partyDirection) > 0.999D
                                 && destination.subtract(
-                                bats[index].position()
+                                bat.position()
                         ).dot(partyDirection) > 0.0D,
                         "Every member of a five-Bat party must search forward along its shared heading"
                 );
@@ -738,7 +802,22 @@ public final class RetoldBatColonyGameTests {
             helper.assertTrue(
                     changedDirection != null
                             && changedDirection.dot(partyDirection) < 0.5D,
-                    "After its search period, a Bat hunting party must choose a substantially different direction"
+                    "After its search period, a Bat hunting party must choose a substantially different direction; initial="
+                            + partyDirection
+                            + ", changed="
+                            + changedDirection
+                            + ", dot="
+                            + (changedDirection == null
+                            ? "none"
+                            : changedDirection.dot(partyDirection))
+                            + ", mode="
+                            + RetoldAiControl.getMode(bats[0])
+                            + ", owner="
+                            + RetoldAiControl.getOwner(bats[0])
+                            + ", reason="
+                            + RetoldAiControl.getReason(bats[0])
+                            + ", target="
+                            + bats[0].getTarget()
             );
             helper.succeed();
         } finally {
@@ -1071,6 +1150,7 @@ public final class RetoldBatColonyGameTests {
             searcher = helper.spawn(EntityTypes.BAT, 36, 3, 12);
             searcher.setResting(false);
             RetoldMobStates.getOrCreate(searcher, gameTime).setHunger(100);
+            RetoldMobStates.getOrCreate(searcher, gameTime).markFed(gameTime);
             RetoldBatColonyEvents.tick(level, searcher, gameTime + 13L);
             helper.assertTrue(
                     searcher.getTarget() == null
@@ -1082,6 +1162,10 @@ public final class RetoldBatColonyGameTests {
                             && RetoldBehaviorMovement.hasFlyingPath(searcher),
                     "A hungry nighttime Bat without nearby food must actively search along a flying path; mode="
                             + RetoldAiControl.getMode(searcher)
+                            + ", owner="
+                            + RetoldAiControl.getOwner(searcher)
+                            + ", reason="
+                            + RetoldAiControl.getReason(searcher)
                             + ", target="
                             + searcher.getTarget()
                             + ", hasPath="

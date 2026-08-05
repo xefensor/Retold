@@ -453,7 +453,7 @@ public final class RetoldGameTests {
     private static void mobProfilesLoadFromDatapack(GameTestHelper helper) {
         helper.assertValueEqual(
                 RetoldMobProfiles.loadedProfileCount(),
-                75,
+                77,
                 "Every bundled mob profile must load"
         );
 
