@@ -17,6 +17,10 @@ on:
         required: true
         default: true
         type: boolean
+      existing_curseforge_file_id:
+        description: 'Existing CurseForge file ID to update instead of publishing a duplicate'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -40,6 +44,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           PUBLISH_MODRINTH: ${{ inputs.publish_modrinth }}
           PUBLISH_CURSEFORGE: ${{ inputs.publish_curseforge }}
+          EXISTING_CURSEFORGE_FILE_ID: ${{ inputs.existing_curseforge_file_id }}
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
@@ -50,6 +55,16 @@ jobs:
 
           if [[ "$PUBLISH_MODRINTH" != "true" && "$PUBLISH_CURSEFORGE" != "true" ]]; then
             echo "Select at least one publishing destination" >&2
+            exit 1
+          fi
+
+          if [[ -n "$EXISTING_CURSEFORGE_FILE_ID" && ! "$EXISTING_CURSEFORGE_FILE_ID" =~ ^[0-9]+$ ]]; then
+            echo "Existing CurseForge file ID must be numeric" >&2
+            exit 1
+          fi
+
+          if [[ -n "$EXISTING_CURSEFORGE_FILE_ID" && "$PUBLISH_CURSEFORGE" != "true" ]]; then
+            echo "Select CurseForge when updating an existing CurseForge file" >&2
             exit 1
           fi
 
@@ -181,7 +196,7 @@ jobs:
           fail-mode: fail
 
       - name: Publish existing release to CurseForge
-        if: ${{ inputs.publish_curseforge }}
+        if: ${{ inputs.publish_curseforge && inputs.existing_curseforge_file_id == '' }}
         id: publish_curseforge
         uses: Kira-NT/mc-publish@v3.3.1
         with:
@@ -207,9 +222,12 @@ jobs:
         env:
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
           CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          CURSEFORGE_FILE_ID: ${{ steps.publish_curseforge.outputs.curseforge-version }}
+          PUBLISHED_CURSEFORGE_FILE_ID: ${{ steps.publish_curseforge.outputs.curseforge-version }}
+          EXISTING_CURSEFORGE_FILE_ID: ${{ inputs.existing_curseforge_file_id }}
         shell: bash
         run: |
+          CURSEFORGE_FILE_ID="${EXISTING_CURSEFORGE_FILE_ID:-$PUBLISHED_CURSEFORGE_FILE_ID}"
+
           if [[ ! "$CURSEFORGE_FILE_ID" =~ ^[0-9]+$ ]]; then
             echo "Publisher did not return a valid CurseForge file ID: $CURSEFORGE_FILE_ID" >&2
             exit 1
@@ -222,6 +240,9 @@ jobs:
             > curseforge-update.json
 
           response="$(curl --fail-with-body --silent --show-error \
+            --retry 4 \
+            --retry-delay 5 \
+            --retry-all-errors \
             --request POST \
             --header "X-Api-Token: $CURSEFORGE_TOKEN" \
             --form "metadata=<curseforge-update.json;type=application/json" \
