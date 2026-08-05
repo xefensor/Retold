@@ -423,6 +423,10 @@ public final class RetoldHiveColonyEvents {
             BlockPos flowerPos,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(bee)) {
+            return;
+        }
+
         BlockState state = level.getBlockState(flowerPos);
 
         if (!RetoldMobRules.isFlowerBlock(state)) {

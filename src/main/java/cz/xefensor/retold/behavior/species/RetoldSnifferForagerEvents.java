@@ -401,6 +401,10 @@ public final class RetoldSnifferForagerEvents {
             SnifferMemory memory,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(sniffer)) {
+            return;
+        }
+
         BlockPos foodSource = memory.target;
         memory.lastForageAt = gameTime;
         memory.target = null;

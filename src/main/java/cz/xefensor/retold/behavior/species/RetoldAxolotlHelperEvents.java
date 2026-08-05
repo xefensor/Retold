@@ -564,6 +564,10 @@ public final class RetoldAxolotlHelperEvents {
             LivingEntity prey,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(axolotl)) {
+            return;
+        }
+
         boolean hurt = prey.hurtServer(
                 level,
                 axolotl.damageSources().mobAttack(axolotl),
@@ -611,7 +615,8 @@ public final class RetoldAxolotlHelperEvents {
                 || !RetoldMobRules.isAquaticHelperPredator(axolotl)
                 || !(RetoldPreyTargeting.isFishPrey(prey)
                 || RetoldPreyTargeting.isSquidPrey(prey)
-                || RetoldPreyTargeting.isDrownedPrey(prey))) {
+                || RetoldPreyTargeting.isDrownedPrey(prey))
+                || !RetoldBehaviorCoordinator.canCompleteMeal(axolotl)) {
             return false;
         }
 

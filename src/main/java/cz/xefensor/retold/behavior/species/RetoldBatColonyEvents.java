@@ -5,6 +5,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.food.RetoldFeedingAnimations;
 import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.food.RetoldStarvationBehavior;
@@ -1256,7 +1257,8 @@ public final class RetoldBatColonyEvents {
             RetoldMobState state,
             long gameTime
     ) {
-        if (!RetoldMobRules.hasEatDrive(bat, state)
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(bat)
+                || !RetoldMobRules.hasEatDrive(bat, state)
                 || state.lastAteAt() > 0L
                 && gameTime - state.lastAteAt() < AMBIENT_INSECT_INTERVAL_TICKS) {
             return false;
@@ -1902,6 +1904,10 @@ public final class RetoldBatColonyEvents {
             ItemEntity food,
             long gameTime
     ) {
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(bat)) {
+            return;
+        }
+
         Vec3 foodSource = food.position();
         ItemStack stack = food.getItem();
         String itemPath = RetoldMobRules.getItemPath(stack);
@@ -1971,7 +1977,8 @@ public final class RetoldBatColonyEvents {
             RetoldMobState state,
             long gameTime
     ) {
-        if (bat.distanceToSqr(prey) > BITE_RADIUS_SQUARED
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(bat)
+                || bat.distanceToSqr(prey) > BITE_RADIUS_SQUARED
                 || gameTime < NEXT_BITE_AT.getOrDefault(bat, 0L)) {
             return;
         }

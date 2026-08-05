@@ -5,6 +5,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.core.RetoldCubeMobMovement;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
@@ -32,7 +33,8 @@ public final class RetoldFeedingPose {
             Vec3 foodSource,
             long gameTime
     ) {
-        if (mob == null || foodSource == null || !mob.isAlive() || mob.isRemoved()) {
+        if (foodSource == null
+                || !RetoldBehaviorCoordinator.canCompleteMeal(mob)) {
             return false;
         }
 

@@ -375,7 +375,8 @@ public final class RetoldPandaBambooEvents {
             BlockPos foodSource,
             long gameTime
     ) {
-        if (!isBamboo(level, foodSource)
+        if (!RetoldBehaviorCoordinator.canCompleteMeal(panda)
+                || !isBamboo(level, foodSource)
                 || !RetoldMobGriefing.canModifyBlocks(level, panda)
                 || !level.destroyBlock(foodSource, false, panda)) {
             return false;

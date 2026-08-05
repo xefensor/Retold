@@ -4,6 +4,7 @@ import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
+import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -26,6 +27,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.goal.EatBlockGoal;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.animal.sheep.Sheep;
@@ -93,6 +95,114 @@ public final class RetoldAnimalFeederGameTests {
                 120,
                 RetoldAnimalFeederGameTests::feedingPoseStopsAndFacesFoodSources
         );
+        registerTest(
+                event,
+                environment,
+                "fleeing_sheep_cannot_eat_until_danger_ends",
+                80,
+                RetoldAnimalFeederGameTests::fleeingSheepCannotEatUntilDangerEnds
+        );
+    }
+
+    private static void fleeingSheepCannotEatUntilDangerEnds(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        Sheep sheep = helper.spawn(EntityTypes.SHEEP, 3, 3, 3);
+        long gameTime = level.getGameTime();
+        RetoldMobState state = RetoldMobStates.getOrCreate(sheep, gameTime);
+        BlockPos grassPos = sheep.blockPosition();
+        ItemEntity wheat = new ItemEntity(
+                level,
+                sheep.getX(),
+                sheep.getY(),
+                sheep.getZ(),
+                new ItemStack(Items.WHEAT, 2)
+        );
+
+        state.setHunger(100);
+        level.setBlockAndUpdate(grassPos, Blocks.SHORT_GRASS.defaultBlockState());
+        level.addFreshEntity(wheat);
+
+        EatBlockGoal vanillaGrazing = sheep.goalSelector.getAvailableGoals()
+                .stream()
+                .map(goal -> goal.getGoal())
+                .filter(EatBlockGoal.class::isInstance)
+                .map(EatBlockGoal.class::cast)
+                .findFirst()
+                .orElseThrow();
+
+        vanillaGrazing.start();
+        helper.assertTrue(
+                RetoldAiControl.tryClaim(
+                        sheep,
+                        RetoldAiControlMode.FLEE,
+                        RetoldAiControlOwner.FLEEING,
+                        RetoldAiPriorities.FLEE,
+                        "test_predator_flight",
+                        gameTime,
+                        60
+                ),
+                "The fixture must give urgent flight control to the Sheep"
+        );
+
+        helper.assertFalse(
+                vanillaGrazing.canContinueToUse(),
+                "Urgent flight must immediately interrupt an active vanilla grazing goal"
+        );
+
+        for (int tick = 0; tick < 45; tick++) {
+            vanillaGrazing.tick();
+        }
+
+        helper.assertTrue(
+                level.getBlockState(grassPos).is(Blocks.SHORT_GRASS),
+                "An interrupted grazing goal must not consume its block later"
+        );
+        helper.assertFalse(
+                RetoldFoodBehaviorEvents.tryConsumeForageBlock(
+                        level,
+                        sheep,
+                        grassPos,
+                        gameTime
+                ),
+                "Retold forage must not complete while the Sheep is fleeing"
+        );
+        helper.assertFalse(
+                RetoldFoodBehaviorEvents.tryConsumeDroppedFood(
+                        sheep,
+                        wheat,
+                        gameTime
+                ),
+                "Dropped food must not be consumed while the Sheep is fleeing"
+        );
+        helper.assertTrue(
+                state.hunger() == 100
+                        && wheat.getItem().getCount() == 2,
+                "Flight must preserve hunger and every food source"
+        );
+
+        RetoldAiControl.clearIfControlledAs(sheep, RetoldAiControlMode.FLEE);
+
+        helper.assertTrue(
+                RetoldFoodBehaviorEvents.tryConsumeDroppedFood(
+                        sheep,
+                        wheat,
+                        gameTime
+                ),
+                "The same Sheep must be able to resume eating after danger ends"
+        );
+        helper.assertTrue(
+                state.hunger() < 100
+                        && wheat.getItem().getCount() == 1,
+                "Resumed feeding must consume exactly one item and relieve hunger"
+        );
+
+        RetoldFeedingPose.finish(sheep);
+        RetoldMobStates.remove(sheep);
+        sheep.discard();
+        wheat.discard();
+        helper.succeed();
     }
 
     private static void animalFeederStoresRetrievesAndPersistsOneStack(
