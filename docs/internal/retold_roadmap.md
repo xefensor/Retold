@@ -193,6 +193,85 @@ Retold does not need to preserve the intended balance of mods that deliberately 
 - [ ] Test dedicated server and multiplayer behavior for integrations that affect world mutation, recipes, factions, or player knowledge.
 - [ ] Keep compatibility fixes regression-tested when practical, especially for generic APIs that many mods can rely on.
 
+## Native Retold Systems Vs External Companion Mods
+
+Retold should not depend on another mod for a feature that is important to Retold's own simulation, progression, lore, or persistent world state when a focused native implementation is practical. External companion mods are best reserved for specialist rendering, performance, audio, and presentation work that does not define Retold's gameplay rules.
+
+Decision rule:
+
+> If removing a feature would materially change the simulation or the decisions the player makes, Retold should probably own that feature. If removing it would mostly make the game look, sound, or run worse, an external companion mod is usually appropriate.
+
+This is also a maintenance rule. Native Retold systems move forward with Retold's Minecraft/NeoForge updates instead of being blocked by an abandoned dependency, while large specialist projects should not be reimplemented merely to avoid dependencies.
+
+### Prefer native Retold implementations for world simulation
+
+- [ ] Evaluate a native path wear/road-formation system inspired by the useful idea behind The Roads More Travelled rather than depending on it permanently.
+  - Repeated travel should be able to leave persistent physical traces in the world.
+  - Consider contributions from players, villagers, patrols, hired allies, or other meaningful traffic instead of only the player.
+  - Allow unused paths to recover naturally where appropriate.
+  - If villages maintain roads in the future, connect that to actual village activity rather than generating decorative roads with no simulated cause.
+  - Exact design, block transitions, rates, and whether this becomes a confirmed Retold feature remain undecided until a focused design pass.
+
+- [ ] Keep Nether portal environmental corruption/spread native to Retold.
+  - It is part of Retold's energy/dimension lore rather than a generic visual effect.
+  - Let Retold control affected blocks, spread rate, portal-use influence, world-stage interaction, reversibility, and performance limits.
+
+- [ ] Prefer native Retold logic for environmental changes that interact with world state or society.
+  - candidate examples: limited block aging/weathering, vegetation reclaiming abandoned areas, village maintenance/repair, persistent animal traces, dens/nests, and meaningful snow accumulation
+  - only implement the subset that supports Retold's design; do not recreate a large general-purpose weathering mod feature-for-feature
+
+- [ ] If seasons become part of Retold, design them as a Retold-owned world system rather than inheriting another mod's complete gameplay model.
+  - Seasons would need deliberate interaction with world stages, farming, animals, weather, daylight, and unloaded-world simulation.
+  - The decision to add seasons at all remains separate from this ownership rule.
+
+- [ ] Keep gameplay-level sound perception native when it affects AI or discovery.
+  - Example: if the C418/music-disc creature or another mob tracks propagated sound, Retold should own the gameplay query/model.
+  - A sound-rendering mod may still provide reverb/occlusion for the player independently.
+
+### Prefer external specialist companion mods
+
+Do not spend Retold development time recreating mature specialist systems unless Retold later needs behavior they fundamentally cannot provide.
+
+- Distant Horizons/Voxy or other LOD rendering
+- Sodium and other rendering/performance optimizations
+- shader loaders and shader rendering infrastructure
+- Sound Physics-style acoustic rendering when it is only presentation
+- ambient-audio systems
+- dynamic-light rendering
+- purely cosmetic effects such as falling leaves
+
+For these, prefer optional integration, Retold-specific presets, or seamless configuration/UI integration over forks. Fork only when a required Retold behavior cannot be achieved through configuration, API hooks, or a reasonable upstream contribution.
+
+### Implementation philosophy for ideas borrowed from other mods
+
+- [ ] Do not clone another mod wholesale merely because one of its ideas fits Retold.
+- [ ] Identify the smallest underlying design idea that supports Retold, then implement a Retold-specific version integrated with existing systems.
+- [ ] Avoid inheriting unrelated features, configuration complexity, or design assumptions from the inspiration mod.
+- [ ] Keep native systems data-driven/configurable where that improves community compatibility without weakening Retold's intended defaults.
+- [ ] Where feasible, expose the resulting native system through Retold's public API/tags so compatibility addons can participate without patching internals.
+
+Examples of the intended distinction:
+
+| Feature | Preferred ownership |
+| --- | --- |
+| Path formation / route wear | Retold-native candidate |
+| Village road maintenance | Retold-native candidate |
+| Nether portal corruption | Retold-native |
+| Animals eating crops / ecosystem interactions | Retold-native |
+| Animal tracks, dens, nests | Retold-native if added |
+| Vegetation reclaim | Retold-native if added |
+| Limited block aging/weathering | Retold-native if added |
+| Snow accumulation with gameplay/world-state consequences | Retold-native if added |
+| Seasons | Retold-native if adopted |
+| Gameplay sound propagation used by AI | Retold-native |
+| Dynamic lights | External companion |
+| Falling leaves | External companion |
+| Acoustic reverb/occlusion rendering | External companion |
+| Ambient audio | External companion |
+| Distant terrain LOD | External companion |
+| General rendering/performance optimization | External companion |
+| Shader infrastructure | External companion |
+
 ## Enough For Now
 
 These areas are not finished forever, but the current direction is acceptable for now:
@@ -223,7 +302,7 @@ Do not implement these without asking the developer first:
 - Nether dragon role in the ending
 - Aender dragon role in the ending
 - New Game+ / world ending ideas
-- travel-road style features
+- exact path/road formation design and whether it becomes a confirmed Retold gameplay feature
 - exact Nether Remnant armor requirement (one qualifying piece or a full set)
 - exact time cap and calculation granularity for unloaded-ecosystem catch-up
 - whether feeding a Slime to the maximum supported size should transform it into or summon a
