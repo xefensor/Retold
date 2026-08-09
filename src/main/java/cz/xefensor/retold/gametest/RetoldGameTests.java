@@ -58,6 +58,7 @@ import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.territory.RetoldTerritoryGameTests;
 import cz.xefensor.retold.villager.RetoldVillagerTradeRefreshGameTests;
+import cz.xefensor.retold.villager.RetoldVillagerTeachingGameTests;
 import cz.xefensor.retold.villager.RetoldVillagerCommunalFoodGameTests;
 import cz.xefensor.retold.villager.RetoldVillagerGolemConstructionGameTests;
 import cz.xefensor.retold.villager.RetoldVillagerTorchRelightingGameTests;
@@ -263,6 +264,7 @@ public final class RetoldGameTests {
         RetoldVillageCropReputationGameTests.register(event);
         RetoldVillageAnimalReputationGameTests.register(event);
         RetoldVillagerTradeRefreshGameTests.register(event, environment);
+        RetoldVillagerTeachingGameTests.register(event, environment);
         RetoldAirTempleDiscoveryGameTests.register(event, environment);
         RetoldGaleCoreGameTests.register(event, environment);
     }

@@ -20,7 +20,7 @@ public final class RetoldNetworking {
     }
 
     public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        PayloadRegistrar registrar = event.registrar("2");
 
         registrar.playToClient(
                 RetoldStageSyncPayload.TYPE,
@@ -126,7 +126,8 @@ public final class RetoldNetworking {
                             payload.buttonLabel(),
                             payload.status(),
                             payload.cost(),
-                            payload.tooltip()
+                            payload.tooltip(),
+                            payload.feedback()
                     );
                 }
         );

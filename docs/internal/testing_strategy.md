@@ -58,6 +58,8 @@ Use the exact `retold:` test ID for the changed contract. For example:
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:enchanting_menu_casts_update_synchronized_slots"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:enchanting_cast_payload_round_trips"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:known_enchanting_options_follow_inserted_item"
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:villager_teaching_transactions_are_atomic"
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:villager_teaching_preview_payload_round_trips"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:animal_feeder_uses_paths_without_mob_griefing"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:starvation_kills_and_ignores_non_hunger_mobs"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:hunger_survival_panda"
