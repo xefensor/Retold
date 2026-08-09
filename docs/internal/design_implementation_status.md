@@ -208,6 +208,7 @@ Largest missing or partial design areas:
 | Trial Chambers removed | Not implemented / unclear | Still planned. No direct removal found in checked Retold tags. |
 | End Cities removed | Implemented / needs worldgen verification | `data/minecraft/tags/worldgen/biome/has_structure/end_city.json` replaces the tag with an empty list. Existing worlds and generated chunks still need testing. |
 | End gateways removed/reworked | Implemented | `EndGatewayGenerationMixin` cancels both random and position-based gateway spawning. |
+| Ruined Nether portal chests removed | Implemented / needs worldgen verification | `RetoldRuinedPortalChests` and `RuinedPortalPieceMixin` omit chest blocks from newly placed ruined-portal templates without changing unrelated containers. Existing generated portals are unchanged. A focused GameTest covers the processor boundary; verify fresh structures across Overworld and Nether seeds. |
 | Ocean ruins/shipwrecks/buried treasure lore changes | Not implemented / unclear |
 | Ocean ruins only near shore | Not implemented |
 | Strongholds kept to 3 | Not implemented / unclear | Still planned. |

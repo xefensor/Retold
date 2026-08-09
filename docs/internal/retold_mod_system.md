@@ -868,6 +868,7 @@ Technical owners:
 
 - `RetoldWorldgenRegistries`
 - `RetoldStructureTags`
+- `RetoldRuinedPortalChests`
 - `RetoldCentralEndIslandMaskDensityFunction`
 - `RetoldWorldSpawnCache`
 - `RetoldDelayedStructureRetrogen`
@@ -881,6 +882,7 @@ Technical owners:
 - `RetoldRetrogenDropBlocker`
 - `RetoldClientChunkTracker`
 - `DelayedStructurePlacementMixin`
+- `RuinedPortalPieceMixin`
 - `NoVillageNearWorldSpawnMixin`
 
 Data:
@@ -898,6 +900,8 @@ Behavior:
 - Failed retrogen attempts can retry later.
 - Structure mob spawns can be suppressed while a structure is delayed.
 - Some spawn/structure behavior changes at Stage 3.
+- Ruined Nether portal placement omits template chests while leaving all other structures and
+  ordinary player-placed containers unchanged.
 - The warm-ocean-ruin archaeology override preserves normal ruin rewards but removes the Sniffer
   Egg, which is the sole vanilla survival entry point for Sniffers. Command/Creative Sniffers and
   their existing AI remain available.
@@ -1232,7 +1236,7 @@ Main mixin groups:
 | --- | --- |
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
 | Villager teaching/storage/reputation | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker`, `AbstractContainerMenuMixin`, `RandomizableContainerMixin`, `CompoundContainerAccessor`, `HarvestFarmlandMixin` |
-| World/stage/worldgen | `DelayedStructurePlacementMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
+| World/stage/worldgen | `DelayedStructurePlacementMixin`, `RuinedPortalPieceMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
 | Aender physics/rendering | `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
 | Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin`, `AbstractCubeMobPushMixin` |
 | Guardian behavior | `ElderGuardianMixin`, `ElderGuardianInvulnerableHitMixin` |
