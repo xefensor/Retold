@@ -1,6 +1,6 @@
 # Retold Enchanting Design
 
-> Developer-confirmed design direction. This document records the current intended player-facing enchanting model. It does not claim implementation, and exact symbols, costs, thresholds, enchant compatibility, UI layout, clue placement, and balancing remain future work.
+> Developer-confirmed design direction. This document records the current intended player-facing enchanting model. It does not claim implementation, and exact symbols, costs, thresholds, enchant compatibility, UI layout, loot distribution, and balancing remain future work.
 
 ## Core Role In Progression
 
@@ -15,21 +15,22 @@ Current direction:
 
 ## Existing Lore Basis
 
-Retold's established enchanting lore remains the foundation:
+Retold's enchanting lore remains the foundation:
 
 - experience/XP is usable magical energy
 - obsidian in the enchanting table directs/bends that energy into the item
 - lapis lazuli is the physical medium used to write the enchantment onto the item
 - the writing uses the Standard Galactic Alphabet (SGA)
-- bookshelves provide magical knowledge to the enchanting setup
 
-The rework should make those ideas mechanically meaningful rather than leaving the SGA text as decorative nonsense.
+Bookshelves are **not** required around the enchanting table in the current design. The old idea that surrounding bookshelves provide the table with enchantment power/knowledge is superseded by the player-learning system described below.
+
+The rework should make the SGA writing and magical-energy lore mechanically meaningful rather than leaving enchanting as a random roll with decorative text.
 
 ## Player Learns A Magical Language
 
 Enchanting should be a discovery/learning system, not primarily a random-roll system or a list of recipes handed to the player.
 
-The player manually enters short SGA words at the enchanting table. At first the glyphs are not explained. The player learns their meanings by experimenting, observing successful enchantments, comparing repeated patterns, and collecting examples from the world.
+The player manually enters short SGA words at the enchanting table. At first the glyphs are not explained. The player learns their meanings by using enchanted items/books, observing results, comparing repeated patterns, and experimenting with combinations.
 
 The system should be simple enough to learn naturally and not become a linguistics simulator.
 
@@ -124,48 +125,73 @@ These are semantic examples only. The final SGA glyph assignments are not chosen
 
 The exact mapping can change if a cleaner shared vocabulary is found. The important rule is that the words should be semi-compositional rather than arbitrary passwords.
 
-## Enchanted Books Are The Main Language Examples
+## Unknown Enchantments And Item Tooltips
 
-Vanilla-style enchanted books should remain lootable exploration rewards. Retold adds another purpose to them: each enchanted book provides a labelled example of the magical language.
+The readable enchantment name should depend on whether that player knows the spell.
 
-An enchanted book shows:
+An enchanted item always physically carries its SGA inscription, so the glyphs are visible even when the enchantment is unknown. An unknown enchantment should **not** expose its ordinary human-readable name in the tooltip.
 
-- the ordinary readable enchantment name
-- its ordinary enchantment level
-- the three SGA glyphs that form that enchantment's word
-
-The book does **not** explain the meaning of any individual glyph.
-
-Conceptually, a player might collect books that show:
+Conceptually, an unknown enchanted item shows:
 
 ```text
-Sharpness            [A] [B] [C]
-Smite                [A] [B] [D]
-Bane of Arthropods   [A] [B] [E]
-Fire Aspect          [A] [F] [G]
-Protection           [H] [I] [C]
-Fire Protection      [H] [I] [F]
+Iron Sword
+[SGA GLYPH] [SGA GLYPH] [SGA GLYPH] III
 ```
 
-`[A]`, `[B]`, etc. are placeholders here for actual SGA glyphs.
+Once that player knows the spell, the same enchantment is shown as:
 
-By comparing named enchantments and repeated glyph positions, the player can work backward and infer likely semantic meanings. For example:
+```text
+Iron Sword
+Sharpness III
+[SGA GLYPH] [SGA GLYPH] [SGA GLYPH]
+```
 
-- Sharpness, Smite, and Bane share the same first two glyphs, suggesting a shared weapon/damage structure.
-- Fire Aspect and Fire Protection share a glyph while otherwise belonging to different spell families, giving evidence for the fire concept.
-- Protection and Fire Protection share their first two glyphs, suggesting armor/protection concepts while the modifier changes.
+The same rule applies to enchanted books.
 
-No game UI should confirm the player's deduction of an individual glyph. The satisfaction comes from the player understanding the pattern himself.
+Unknown book:
 
-Enchanted books can still retain their ordinary practical purpose as physical enchanted items that can be applied through the appropriate item-upgrade system. Their language-example role is additional rather than a replacement for their usefulness.
+```text
+Enchanted Book
+[SGA GLYPH] [SGA GLYPH] [SGA GLYPH] IV
+```
 
-The enchantment level printed on a found book does not change its SGA word. The word identifies the enchantment concept; level is separate.
+Known book:
+
+```text
+Enchanted Book
+Fire Protection IV
+[SGA GLYPH] [SGA GLYPH] [SGA GLYPH]
+```
+
+If an item contains multiple enchantments, known and unknown enchantments may appear together. Each enchantment is identified independently according to that player's knowledge.
+
+An unknown enchanted item still functions normally. The magic already written on the item does not require the player to understand it. Knowledge matters for identifying and intentionally reproducing the enchantment, not for activating an already-enchanted item.
+
+The tooltip must never translate individual glyphs into their semantic concepts. It shows only the complete SGA word and, once known, the ordinary enchantment name.
+
+## Enchanted Books As Loot And Language Evidence
+
+Vanilla-style enchanted books remain lootable exploration rewards and retain their normal practical role: they contain a pre-written enchantment that can be transferred to compatible equipment through an anvil.
+
+Before the spell is known, the book exposes its SGA word and level but not its readable enchantment name. The player can still preserve, compare, and experiment with unknown books.
+
+Applying an enchanted book to a compatible item through an anvil is a major discovery route. When the player successfully transfers that enchantment, he experiences what the magic actually does and the spell becomes known to him.
+
+At that moment:
+
+- the enchantment's readable name becomes available to that player
+- the complete three-glyph word is recorded as a known enchantment/recipe for the enchanting table
+- future items/books carrying the same spell can show the readable name as well as the SGA word
+
+The level on the enchanted book does not become part of the learned recipe. A Smite I book and a Smite V book contain the same SGA word; only the amount/strength of energy already bound into that physical book differs.
+
+Finding or merely holding a book does **not** unlock its readable name or recipe. The player has to actually use the enchantment successfully through the anvil, or independently discover/cast it at the enchanting table.
 
 ## Learning Through Repeated Patterns
 
-A major goal is that players can infer meanings from repeated symbols.
+Once the player has identified several enchantments, the known names and persistent SGA words give enough evidence to reverse-engineer the language.
 
-For example, after obtaining or discovering semantic equivalents of:
+For example, after learning the semantic equivalents of:
 
 ```text
 weapon + damage + general   -> Sharpness
@@ -173,7 +199,7 @@ weapon + damage + undead    -> Smite
 weapon + damage + arthropod -> Bane of Arthropods
 ```
 
-the player can notice that the first two glyphs remain identical while the third changes. From this they can begin to infer the language without the game explicitly providing a translation table.
+the player can notice that the first two glyphs remain identical while the third changes. From this he can begin to infer the language without the game explicitly providing a translation table.
 
 Likewise:
 
@@ -184,22 +210,27 @@ armor + protect + explosion  -> Blast Protection
 armor + protect + projectile -> Projectile Protection
 ```
 
-A knowledgeable player should eventually be able to predict some valid enchantment words they have never successfully cast before by combining concepts they have inferred from enchanted books, successful casts, and other examples.
+Cross-family repetition can provide stronger clues. If the same unknown glyph appears in Fire Aspect and Fire Protection after both spells have been identified, the player has good evidence that the shared glyph represents the fire concept.
 
-This should reward understanding rather than brute-force memorization.
+No game UI should confirm the player's deduction of an individual glyph. The satisfaction comes from the human player understanding the pattern himself.
 
-## Two Routes To Discovering A Spell
+## Two Routes To Learning A Spell
 
-A spell does not require the player to have previously found its exact enchanted book.
+There are two intended routes by which a spell becomes known and receives a convenient enchanting-table recipe entry.
 
-Two intended discovery routes coexist:
+### 1. Anvil Learning
 
-1. **Reproduction**: the player finds an enchanted book, sees the named enchantment beside its SGA word, and later reproduces that word at an enchanting table.
-2. **Deduction**: after collecting enough examples to infer individual concepts, the player constructs a valid three-glyph word for an enchantment whose complete word he has never seen before.
+The player obtains an enchanted book and successfully combines it with a compatible item in an anvil.
 
-For example, a player who has independently inferred the glyphs for `armor`, `protect`, and `fire` may try that combination and discover Fire Protection without ever finding a Fire Protection book.
+The transfer reveals/teaches the spell and records its SGA word for future intentional enchanting.
 
-The second route is the long-term payoff of the language system: understanding the language lets the player genuinely work out new magic rather than only copying discovered recipes.
+### 2. Language Deduction
+
+The player manually enters a valid three-glyph word at an enchanting table and successfully performs the enchantment, even if he has never identified or used a book containing that complete spell.
+
+For example, a player who has personally inferred the glyphs corresponding to `armor`, `protect`, and `fire` may try that combination and discover Fire Protection without ever having previously identified a Fire Protection book.
+
+The second route is the long-term payoff of the language system: understanding the language lets the player genuinely work out new magic rather than only copying recipes already revealed by loot.
 
 ## Enchantment Level Comes From Energy
 
@@ -219,11 +250,11 @@ Exact energy thresholds are future balancing work.
 
 This keeps the language small: the player learns one semantic word for Sharpness rather than separate passwords for Sharpness I through V.
 
-## Successful Enchantments Become Known
+## Known Enchantments In The Enchanting Table
 
-Retold should record only enchantments the player has successfully performed/discovered at the enchanting table.
+Once a spell becomes known through anvil use or a successful manual cast, it is saved as a known enchantment for that player.
 
-After successful discovery, the player's knowledge UI should show the ordinary readable enchantment name alongside the same SGA word used to cast it.
+The enchanting-table interface can then show the ordinary readable name alongside the same SGA word used to cast it.
 
 Conceptually:
 
@@ -233,13 +264,21 @@ Fire Protection  [SGA: armor]  [SGA: protect] [SGA: fire]
 Efficiency       [SGA: tool]   [SGA: work]    [SGA: general]
 ```
 
-The discovered entry represents knowledge of the enchantment itself, not a specific level. Level remains an energy decision at the moment of enchanting.
+The known entry represents knowledge of the enchantment itself, not a specific level. Level remains an energy decision at the moment of enchanting.
 
-Finding an enchanted book is evidence/clue material and does not by itself add that enchantment to the player's known-enchantment list. The player must successfully perform the enchantment to record it there.
+Once an enchantment is known, Retold should avoid forcing the human player to manually memorize and re-enter the word forever. The known-enchantment interface may provide a convenience action such as selecting/filling an already-known word. Exact UI behavior remains to be designed.
 
-Once an enchantment has been discovered, Retold should avoid forcing the human player to manually memorize and re-enter the word forever. The known-enchantment interface may provide a convenience action such as selecting/filling an already-known word. Exact UI behavior remains to be designed.
+The knowledge UI records complete spells only. It should **not** maintain or reveal a dictionary of individual glyph meanings.
 
-The knowledge UI records complete discovered spells only. It should **not** maintain or reveal a dictionary of individual glyph meanings.
+## Enchanting Table Independence
+
+The enchanting table no longer needs surrounding bookshelves to function or to gain enchantment power.
+
+The table's role is to let the player intentionally write an SGA spell onto an item using lapis and sacrificed XP/energy. What the player can conveniently reproduce comes from his learned spells, not from nearby bookshelf count.
+
+This removes the old bookshelf-ring progression and makes enchanted books, actual use, experimentation, and language deduction the sources of magical knowledge instead.
+
+Bookshelves remain ordinary world/library blocks and may still matter to Librarians or other systems, but they are not an enchanting-table requirement unless a future design decision explicitly adds a new separate purpose.
 
 ## Failed Experiments Should Give Useful Feedback
 
@@ -247,30 +286,12 @@ Experimentation should not be blind. The table should distinguish at least conce
 
 - a meaningless/invalid three-symbol combination
 - a valid magical word that does not apply to the current item
-- a valid compatible word but insufficient energy/setup
+- a valid compatible word but insufficient energy/resources
 - a successful enchantment
 
 Prefer visual/audio/item reactions over explicit technical error text where practical.
 
-The feedback should let the player form hypotheses without directly translating unknown glyphs for them.
-
-## Bookshelves And Knowledge
-
-Bookshelves remain part of the enchanting setup because established Retold lore says the table receives knowledge from surrounding books.
-
-Exact bookshelf mechanics are not settled yet.
-
-The intended separation is:
-
-- **human player understanding**: inferred meanings of individual SGA glyphs; never directly translated by the UI
-- **player-character known spells**: complete enchantments successfully performed and recorded for convenience
-- **enchanted books**: labelled examples pairing an enchantment's normal name/level with its three-glyph SGA word, useful for reverse-engineering the language
-- **table/bookshelf knowledge**: magical knowledge the physical enchanting setup has access to; exact restrictions remain undecided
-- **energy/XP**: power sacrificed to perform the enchantment and determine its strength
-- **lapis**: physical writing medium for the SGA inscription
-- **obsidian**: material that directs the energy into the item
-
-Do not reduce player learning to collecting enough books to automatically unlock a dictionary. Books provide examples; the player still has to notice the language structure, reproduce words, or deduce new ones.
+The feedback should let the player form hypotheses without directly translating unknown glyphs for him.
 
 ## SGA Presentation
 
@@ -286,9 +307,13 @@ The final vocabulary should remain small enough for a player to start recognizin
 - Do not make each enchantment an arbitrary unrelated three-symbol password; reuse semantic components.
 - Do not encode enchantment levels as additional language complexity; levels come from sacrificed energy.
 - Do not reveal individual glyph translations in UI, tooltips, progress screens, or automatic knowledge entries.
-- Keep vanilla-style enchanted books as important loot and use them as named examples of SGA words rather than automatic glyph unlocks.
-- Finding a book does not automatically mark its enchantment as a successfully known/cast spell.
-- Do not reveal unknown spells in the known-enchantment list before the player successfully performs them.
+- Do not show an unknown enchantment's ordinary readable name on item/book tooltips before that player has learned it.
+- Always keep the SGA inscription visible on enchanted items/books so unknown magic can be inspected and compared.
+- Unknown enchanted items still work normally.
+- Finding or holding an enchanted book does not automatically teach its enchantment.
+- Successfully applying a book through an anvil teaches the complete spell and records its enchanting-table recipe.
+- Successfully deducing and casting a valid word at the enchanting table also teaches the spell.
+- Do not require bookshelves around the enchanting table.
 - Do not require external documentation/wiki knowledge for mandatory enchanting progression.
 - Do not require the human player to remember every discovered sequence forever; discovery should be meaningful once, while repeated use can become convenient.
 - Keep the language compact enough that pattern recognition is rewarding instead of annoying.
@@ -299,7 +324,8 @@ The final vocabulary should remain small enough for a player to start recognizin
 - exact list and number of domain/effect/modifier concepts
 - exact XP/energy thresholds for enchantment levels
 - lapis costs and whether they change with strength
-- exact bookshelf/setup requirements for each enchantment or complexity class
 - exact distribution/balance of enchanted-book loot and any additional environmental language clues
-- exact enchanting-table UI and input method
+- exact enchanting-table UI and glyph input method
+- exact visual styling/order of SGA and readable-name tooltip lines
+- whether applying multi-enchantment books teaches all successfully transferred spells or needs any special handling
 - exact compatibility/stacking rules for enchantments after the wider enchantment audit
