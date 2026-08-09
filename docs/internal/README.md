@@ -26,6 +26,7 @@ Use the files this way:
 | [`retold_roadmap.md`](retold_roadmap.md) | active developer direction, priorities, undecided items, and not-planned items |
 | [`design_principles.md`](design_principles.md) | developer-confirmed high-level design rules used to judge future Retold systems |
 | [`living_world_and_settlements.md`](living_world_and_settlements.md) | confirmed design for roads, environmental reclaiming/weathering, village generation/growth, professions, logistics, trade, magic/energy, and player-village reputation |
+| [`enchanting_design.md`](enchanting_design.md) | confirmed enchanting direction: player-learned SGA language, domain/effect/modifier words, energy-based levels, discovery, and known-enchantment recording |
 | [`design_implementation_status.md`](design_implementation_status.md) | original design compared with current implementation status |
 | [`retold_mod_system.md`](retold_mod_system.md) | whole-mod architecture and subsystem ownership |
 | [`retold_mob_ai_system.md`](retold_mob_ai_system.md) | mob AI architecture, implementation rules, and completion checklist |
@@ -45,6 +46,7 @@ Current internal docs:
 - [`retold_roadmap.md`](retold_roadmap.md)
 - [`design_principles.md`](design_principles.md)
 - [`living_world_and_settlements.md`](living_world_and_settlements.md)
+- [`enchanting_design.md`](enchanting_design.md)
 - [`design_implementation_status.md`](design_implementation_status.md)
 - [`retold_mod_system.md`](retold_mod_system.md)
 - [`retold_mob_ai_system.md`](retold_mob_ai_system.md)
