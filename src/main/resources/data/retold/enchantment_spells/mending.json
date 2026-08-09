@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:mending",
+  "word": {
+    "domain": "retold:item",
+    "effect": "retold:restore",
+    "modifier": "retold:general"
+  }
+}

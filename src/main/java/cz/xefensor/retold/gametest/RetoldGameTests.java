@@ -42,6 +42,7 @@ import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.enderman.RetoldEndermanDefense;
+import cz.xefensor.retold.enchanting.RetoldEnchantingGameTests;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
@@ -253,6 +254,7 @@ public final class RetoldGameTests {
         RetoldSlimeMergeGameTests.register(event);
         RetoldVexGameTests.register(event, environment);
         RetoldSnowballGameTests.register(event, environment);
+        RetoldEnchantingGameTests.register(event, environment);
         RetoldTerritoryGameTests.register(event, environment);
         RetoldVillagerCommunalFoodGameTests.register(event);
         RetoldVillagerGolemConstructionGameTests.register(event);

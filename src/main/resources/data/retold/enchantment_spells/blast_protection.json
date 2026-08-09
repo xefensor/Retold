@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:blast_protection",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:protect",
+    "modifier": "retold:explosion"
+  }
+}

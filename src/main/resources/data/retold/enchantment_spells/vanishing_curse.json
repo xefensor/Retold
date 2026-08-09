@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:vanishing_curse",
+  "word": {
+    "domain": "retold:item",
+    "effect": "retold:bind",
+    "modifier": "retold:undead"
+  }
+}

@@ -2,6 +2,9 @@ package cz.xefensor.retold.client;
 
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
+import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentCatalog;
+import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
+import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
@@ -23,6 +26,7 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -53,6 +57,13 @@ public final class RetoldClientEvents {
         modEventBus.addListener(RetoldClientEvents::registerSpriteSources);
         RetoldChronolithBeamClient.register(modEventBus);
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientTick);
+        NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientLogout);
+        NeoForge.EVENT_BUS.addListener(RetoldEnchantmentTooltip::onItemTooltip);
+    }
+
+    private static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
+        RetoldClientEnchantmentCatalog.clear();
+        RetoldClientEnchantmentKnowledge.clear();
     }
 
     private static void registerSpriteSources(RegisterSpriteSourcesEvent event) {

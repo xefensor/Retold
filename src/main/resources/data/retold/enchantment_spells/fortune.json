@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:fortune",
+  "word": {
+    "domain": "retold:tool",
+    "effect": "retold:yield",
+    "modifier": "retold:more"
+  }
+}

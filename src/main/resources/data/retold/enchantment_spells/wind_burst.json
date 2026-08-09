@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:wind_burst",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:push",
+    "modifier": "retold:fall"
+  }
+}

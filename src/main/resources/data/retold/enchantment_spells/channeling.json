@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:channeling",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:fire",
+    "modifier": "retold:projectile"
+  }
+}

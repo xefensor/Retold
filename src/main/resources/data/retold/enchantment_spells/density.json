@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:density",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:fall"
+  }
+}

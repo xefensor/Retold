@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:sweeping_edge",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:multiple"
+  }
+}

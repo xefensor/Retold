@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:aqua_affinity",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:work",
+    "modifier": "retold:water"
+  }
+}

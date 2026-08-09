@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:loyalty",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:move",
+    "modifier": "retold:self"
+  }
+}

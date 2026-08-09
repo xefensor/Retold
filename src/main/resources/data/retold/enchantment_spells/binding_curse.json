@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:binding_curse",
+  "word": {
+    "domain": "retold:item",
+    "effect": "retold:bind",
+    "modifier": "retold:armor"
+  }
+}

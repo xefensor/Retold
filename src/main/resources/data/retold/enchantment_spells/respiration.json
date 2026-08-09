@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:respiration",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:protect",
+    "modifier": "retold:water"
+  }
+}

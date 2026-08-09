@@ -40,7 +40,7 @@ These are the strongest next design-aligned areas:
 These are still planned but need feature-specific design before implementation:
 
 - full tools, armor, ores, and station progression rework beyond the initial Aenderite material foundation
-- enchanting rework
+- enchanting rework beyond the implemented complete 43-spell SGA catalog, knowledge persistence/sync, anvil-learning route, knowledge-aware tooltips, and deterministic glyph-entry table; next verify/refine the composed client layout and dedicated multiplayer synchronization, then perform the wider enchantment audit
 - mending removal
 - sword/shield combat rework
 - Stage 3 piglin/pigman hiring or follower behavior

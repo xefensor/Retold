@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:breach",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:armor"
+  }
+}

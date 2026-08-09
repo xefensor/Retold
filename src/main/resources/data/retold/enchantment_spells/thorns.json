@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:thorns",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:damage",
+    "modifier": "retold:self"
+  }
+}

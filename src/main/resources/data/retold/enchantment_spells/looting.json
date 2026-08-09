@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:looting",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:yield",
+    "modifier": "retold:more"
+  }
+}

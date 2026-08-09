@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:impaling",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:water"
+  }
+}

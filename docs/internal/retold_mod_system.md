@@ -56,7 +56,7 @@ Startup responsibilities:
 - register entity attributes/spawn placement
 - register client-only hooks
 - register gameplay event handlers
-- register villager teaching reload listener
+- register enchantment spell and villager teaching reload listeners
 
 The main event registration is intentionally explicit. When adding a new system, add its event class here unless it is client-only or registered through a subsystem.
 
@@ -73,12 +73,14 @@ The main event registration is intentionally explicit. When adding a new system,
 | `block` | custom blocks and block interaction behavior |
 | `chronolith` | Aender chronolith time-acceleration system |
 | `client` | client event registration and UI helpers |
+| `client/enchanting` | synchronized client-side spell catalog and known-spell snapshot |
 | `client/render` | entity/beam/enderman rendering hooks |
 | `client/sky` | End/Aender sky seed and generated sky texture |
 | `client/stage` | client-side current world stage |
 | `combat` | Retold-owned target source/memory helpers |
 | `command` | `/retold` command tree |
 | `effect` | ritual visual/audio effects |
+| `enchanting` | semantic spell catalog and server-authoritative player knowledge |
 | `enderman` | enderman behavior changes |
 | `event` | gameplay event systems and progression glue |
 | `faction` | faction identities and relationships |
@@ -538,6 +540,101 @@ Behavior:
 Design rule:
 
 Sleep behavior should respect the game rule, not hard-code night skipping assumptions.
+
+## Enchantment Knowledge Foundation
+
+Retold has the foundation and first learning route for the confirmed SGA language design in
+[`enchanting_design.md`](enchanting_design.md).
+
+Technical owners:
+
+- `RetoldEnchantmentWord`
+- `RetoldEnchantmentGlyphVocabulary`
+- `RetoldEnchantmentSpellDefinition`
+- `RetoldEnchantmentCatalogSnapshot`
+- `RetoldEnchantmentCatalog`
+- `RetoldEnchantmentReloadListener`
+- `RetoldEnchantmentCatalogSyncEvents`
+- `RetoldEnchantingCosts`
+- `RetoldEnchantingCastService`
+- `RetoldEnchantingMenuActions`
+- `RetoldEnchantingCastPayload`
+- `EnchantmentMenuMixin`
+- `EnchantmentScreenMixin`
+- `RetoldEnchantingScreenState`
+- `RetoldAnvilLearningEvents`
+- `RetoldEnchantmentKnowledge`
+- `RetoldEnchantmentKnowledgeData`
+- `RetoldClientEnchantmentCatalog`
+- `RetoldClientEnchantmentKnowledge`
+- `RetoldEnchantmentTooltip`
+
+Data:
+
+- spell definitions load from `data/<namespace>/enchantment_spells/*.json`
+- definitions map an enchantment id to semantic `domain`, `effect`, and `modifier` identifiers
+- 43 definitions cover every currently registered vanilla enchantment, including Mending while its
+  separately planned removal remains unimplemented
+- the fixed 26-concept vocabulary maps one semantic concept to each built-in SGA A-Z glyph;
+  definitions using unknown concepts are rejected with the rest of an invalid reload
+
+Saved and synchronized state:
+
+- versioned server-global `SavedData` stores known enchantment ids per player UUID
+- the server sends its validated immutable catalog on player join and resends it to all affected
+  players after a datapack reload through `OnDatapackSyncEvent`
+- login, respawn, and dimension changes synchronize only that player's known ids
+- `RetoldEnchantmentKnowledge.markKnown` is the server-authoritative learning entry point
+- the successful server-side anvil completion event compares the original item, enchanted book,
+  and completed output, then teaches every book spell whose output level increased
+- multi-enchantment books are recorded as one persisted and synchronized knowledge transaction;
+  incompatible or unchanged spells are excluded
+- client catalog and knowledge snapshots are presentation state only, cannot grant knowledge, and
+  clear on disconnect so state cannot leak between servers
+- the client item-tooltip event replaces each mapped unknown name with its SGA word and level;
+  known entries retain the vanilla name line and gain an SGA line immediately below
+- unmapped third-party enchantments retain vanilla presentation rather than disappearing
+
+Deterministic casting backend:
+
+- `RetoldEnchantingCastService.tryCast` is the single server-authoritative validation and commit
+  boundary for a manually assembled word and requested level
+- the word must resolve in the active validated catalog, the enchantment must retain vanilla
+  enchanting-table eligibility, the target must support it, and all existing enchantments must pass
+  vanilla compatibility checks
+- plain books preserve vanilla table behavior and transform into enchanted books
+- a successful three-glyph cast costs exactly three lapis and five experience levels per requested
+  enchantment level; Creative players with infinite materials bypass both costs
+- the service prepares and verifies the output before charging either resource, so invalid,
+  conflicting, non-upgrading, or unaffordable casts are atomic no-ops
+- a successful manual cast records the spell through the same server-authoritative knowledge owner
+
+Menu and screen integration:
+
+- the vanilla `EnchantmentMenu` remains the owner of its item, lapis, and player-inventory slots,
+  while `EnchantmentMenuMixin` cancels random offer recomputation and rejects its three vanilla
+  offer buttons; bookshelves therefore provide no enchanting power
+- `EnchantmentScreenMixin` overlays three editable SGA slots, five level buttons, a 26-glyph
+  keyboard, exact cost presentation, and a four-row paginated known-spell list
+- physical A-Z, Backspace, number-row/keypad 1-5, and Enter controls mirror the clickable editor;
+  one pending-request flag prevents repeat-key or rapid-click duplicate submissions
+- presentation-only client filtering limits the known list to table-eligible spells and, while an
+  item is inserted, removes inapplicable, conflicting, and already-maxed spells; entries show their
+  registered maximum level
+- selecting a known spell refills its complete word, clamps the selected level, and disables excess
+  level buttons without exposing its individual semantic concepts; manually entered unknown words
+  retain generic controls and receive no validity preview
+- `RetoldEnchantingCastPayload` carries only the current menu id, semantic word, and level
+- the server rejects a stale/forged menu id, then `RetoldEnchantingMenuActions` reads the real menu
+  slots, invokes the atomic cast service, commits the verified output, and synchronizes both slots
+- `RetoldEnchantingCastResultPayload` returns only the menu id and success flag: success clears the
+  client inscription and briefly highlights the target slot in green, while every failure preserves
+  the word and produces the same low-note/red-highlight cue without exposing a reason
+
+The first player-facing deterministic table slice is implemented. Anvil results and costs remain
+vanilla. The developer accepted the current panel geometry and spacing on 2026-08-09. The new
+item-aware known-list filtering, level limits, success clearing, and highlight still need an in-game
+pass.
 
 ## Recipe Knowledge System
 
@@ -1013,6 +1110,7 @@ Technical owners:
 
 - `RetoldClientEvents`
 - `RetoldClientStage`
+- `RetoldClientEnchantmentKnowledge`
 - `RetoldTeachingPreviewClient`
 - `RetoldTeachingPreviewScreen`
 - `RetoldChronolithBeamClient`
@@ -1076,6 +1174,10 @@ Payloads:
 | --- | --- | --- |
 | `RetoldStageSyncPayload` | server -> client | sync world stage |
 | `RetoldEndSkySeedSyncPayload` | server -> client | sync End sky seed |
+| `RetoldEnchantmentCatalogSyncPayload` | server -> client | sync the active datapack spell catalog on join and reload |
+| `RetoldEnchantmentKnowledgeSyncPayload` | server -> client | sync the receiving player's known enchantment ids |
+| `RetoldEnchantingCastPayload` | client -> server | request one word/level cast through the currently open enchanting menu |
+| `RetoldEnchantingCastResultPayload` | server -> client | report only cast success/failure for generic screen feedback without exposing a rejection reason |
 | `RetoldLearnRecipePayload` | client -> server | request villager recipe learning |
 | `RetoldRequestTeachingPreviewPayload` | client -> server | request teaching preview refresh |
 | `RetoldTeachingPreviewPayload` | server -> client | update teaching UI state |

@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:piercing",
+  "word": {
+    "domain": "retold:bow",
+    "effect": "retold:damage",
+    "modifier": "retold:item"
+  }
+}

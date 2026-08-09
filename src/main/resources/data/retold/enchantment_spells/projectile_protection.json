@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:projectile_protection",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:protect",
+    "modifier": "retold:projectile"
+  }
+}

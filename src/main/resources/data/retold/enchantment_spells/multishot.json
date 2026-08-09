@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:multishot",
+  "word": {
+    "domain": "retold:bow",
+    "effect": "retold:damage",
+    "modifier": "retold:multiple"
+  }
+}

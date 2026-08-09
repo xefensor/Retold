@@ -1,6 +1,9 @@
 package cz.xefensor.retold.module;
 
 import cz.xefensor.retold.client.RetoldClientEvents;
+import cz.xefensor.retold.enchanting.RetoldAnvilLearningEvents;
+import cz.xefensor.retold.enchanting.RetoldEnchantmentCatalogSyncEvents;
+import cz.xefensor.retold.enchanting.RetoldEnchantmentReloadListener;
 import cz.xefensor.retold.event.RetoldCommandEvents;
 import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
 import cz.xefensor.retold.event.RetoldSleepEvents;
@@ -39,6 +42,8 @@ public final class RetoldFoundationModule {
     }
 
     public static void registerGameBus(IEventBus gameEventBus) {
+        gameEventBus.register(RetoldAnvilLearningEvents.class);
+        gameEventBus.register(RetoldEnchantmentCatalogSyncEvents.class);
         gameEventBus.register(RetoldCommandEvents.class);
         gameEventBus.register(RetoldPlayerSyncEvents.class);
         gameEventBus.register(RetoldSleepEvents.class);
@@ -47,6 +52,10 @@ public final class RetoldFoundationModule {
     }
 
     private static void addServerReloadListeners(AddServerReloadListenersEvent event) {
+        event.addListener(
+                RetoldEnchantmentReloadListener.ID,
+                new RetoldEnchantmentReloadListener()
+        );
         event.addListener(
                 RetoldVillagerTeachingReloadListener.ID,
                 new RetoldVillagerTeachingReloadListener()

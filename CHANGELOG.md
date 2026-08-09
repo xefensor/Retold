@@ -11,7 +11,12 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- Unknown enchantments on items and enchanted books now show only their three-glyph SGA inscription and level. After a player learns a spell by successfully transferring it from a book, its ordinary readable name returns and the SGA word remains directly below it. Multi-enchanted items reveal each spell independently.
+- The enchanting table now replaces random bookshelf-powered offers with deterministic spell writing. Insert an item and three lapis, enter three SGA glyphs, choose level I-V, and write the enchantment for five experience levels per requested enchantment level. The editor supports physical A-Z, Backspace, number-row/keypad 1-5, and Enter controls, with duplicate submission blocked while a cast is pending. Invalid or incompatible attempts consume nothing and share one low-note/red-highlight rejection cue without revealing why they failed. Learned table-eligible spells appear in a paginated item-aware list with maximum levels, can refill their glyph word, and disable unsupported levels. A successful cast clears the inscription and briefly highlights the changed item; successfully deducing a new valid word teaches it.
+
 ### Technical
+
+- Added the first Retold enchanting-learning route: completing an anvil operation with an enchanted book now records every book enchantment that actually transferred to or improved the output. Multi-enchantment books update persisted per-player knowledge in one synchronized transaction; incompatible and unchanged enchantments remain unknown. All 43 currently registered enchantments now have unique three-concept words drawn from a fixed 26-concept SGA vocabulary. The validated datapack spell catalog synchronizes to clients on join and reload, while both client catalog and knowledge snapshots clear on disconnect. A client tooltip transformer preserves unrelated and unmapped lines while applying knowledge-aware SGA presentation. Added a server-authoritative table request/menu transaction with active-container validation, atomic costs, vanilla enchantment eligibility/compatibility, plain-book conversion, synchronized item/lapis slots, and successful-cast learning. Vanilla random offer buttons and bookshelf power are disabled; anvil results and costs remain unchanged.
 
 ## 0.4.0 - 2026-08-05
 

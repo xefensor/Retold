@@ -28,6 +28,7 @@ Use the files this way:
 | [`living_world_and_settlements.md`](living_world_and_settlements.md) | confirmed design for roads, environmental reclaiming/weathering, village generation/growth, professions, logistics, trade, magic/energy, and player-village reputation |
 | [`golem_equipment_design.md`](golem_equipment_design.md) | confirmed design for pacifist-villager metalworking, oversized Iron Golem armor/weapons, block-scale material costs, and settlement defense investment |
 | [`enchanting_design.md`](enchanting_design.md) | confirmed enchanting direction: player-learned SGA language, domain/effect/modifier words, energy-based levels, discovery, and known-enchantment recording |
+| [`enchanting_test_guide.md`](enchanting_test_guide.md) | spoiler-heavy developer checklist with every spell word, maximum level, compatible test item, cost, and expected success/failure behavior |
 | [`design_implementation_status.md`](design_implementation_status.md) | original design compared with current implementation status |
 | [`retold_mod_system.md`](retold_mod_system.md) | whole-mod architecture and subsystem ownership |
 | [`retold_mob_ai_system.md`](retold_mob_ai_system.md) | mob AI architecture, implementation rules, and completion checklist |
@@ -49,6 +50,7 @@ Current internal docs:
 - [`living_world_and_settlements.md`](living_world_and_settlements.md)
 - [`golem_equipment_design.md`](golem_equipment_design.md)
 - [`enchanting_design.md`](enchanting_design.md)
+- [`enchanting_test_guide.md`](enchanting_test_guide.md)
 - [`design_implementation_status.md`](design_implementation_status.md)
 - [`retold_mod_system.md`](retold_mod_system.md)
 - [`retold_mob_ai_system.md`](retold_mob_ai_system.md)
