@@ -103,6 +103,14 @@ public abstract class MerchantMenuTeachingSlotMixin extends AbstractContainerMen
 
     @Inject(method = "removed", at = @At("HEAD"), require = 0)
     private void retold$returnTeachingSlotItem(Player player, CallbackInfo ci) {
+        if (player instanceof ServerPlayer serverPlayer
+                && serverPlayer.connection == null) {
+            ItemStack teachingItem = this.retold$teachingContainer.removeItemNoUpdate(0);
+            if (!teachingItem.isEmpty()) {
+                player.getInventory().add(teachingItem);
+            }
+            return;
+        }
         this.clearContainer(player, this.retold$teachingContainer);
     }
 
