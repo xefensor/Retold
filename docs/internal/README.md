@@ -26,6 +26,7 @@ Use the files this way:
 | [`retold_roadmap.md`](retold_roadmap.md) | active developer direction, priorities, undecided items, and not-planned items |
 | [`design_principles.md`](design_principles.md) | developer-confirmed high-level design rules used to judge future Retold systems |
 | [`living_world_and_settlements.md`](living_world_and_settlements.md) | confirmed design for roads, environmental reclaiming/weathering, village generation/growth, professions, logistics, trade, magic/energy, and player-village reputation |
+| [`golem_equipment_design.md`](golem_equipment_design.md) | confirmed design for pacifist-villager metalworking, oversized Iron Golem armor/weapons, block-scale material costs, and settlement defense investment |
 | [`enchanting_design.md`](enchanting_design.md) | confirmed enchanting direction: player-learned SGA language, domain/effect/modifier words, energy-based levels, discovery, and known-enchantment recording |
 | [`design_implementation_status.md`](design_implementation_status.md) | original design compared with current implementation status |
 | [`retold_mod_system.md`](retold_mod_system.md) | whole-mod architecture and subsystem ownership |
@@ -46,6 +47,7 @@ Current internal docs:
 - [`retold_roadmap.md`](retold_roadmap.md)
 - [`design_principles.md`](design_principles.md)
 - [`living_world_and_settlements.md`](living_world_and_settlements.md)
+- [`golem_equipment_design.md`](golem_equipment_design.md)
 - [`enchanting_design.md`](enchanting_design.md)
 - [`design_implementation_status.md`](design_implementation_status.md)
 - [`retold_mod_system.md`](retold_mod_system.md)
