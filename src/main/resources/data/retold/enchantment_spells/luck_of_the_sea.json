@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:luck_of_the_sea",
+  "word": {
+    "domain": "retold:fishing",
+    "effect": "retold:yield",
+    "modifier": "retold:general"
+  }
+}

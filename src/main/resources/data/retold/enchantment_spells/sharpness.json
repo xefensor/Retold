@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:sharpness",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:general"
+  }
+}

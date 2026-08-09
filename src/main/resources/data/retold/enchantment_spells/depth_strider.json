@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:depth_strider",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:move",
+    "modifier": "retold:water"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:efficiency",
+  "word": {
+    "domain": "retold:tool",
+    "effect": "retold:work",
+    "modifier": "retold:general"
+  }
+}

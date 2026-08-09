@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:fire_aspect",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:fire",
+    "modifier": "retold:item"
+  }
+}

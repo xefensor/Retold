@@ -1,5 +1,6 @@
 package cz.xefensor.retold.event;
 
+import cz.xefensor.retold.enchanting.RetoldEnchantmentKnowledge;
 import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 import cz.xefensor.retold.network.RetoldStageSyncPayload;
 import cz.xefensor.retold.sky.RetoldEndSkyData;
@@ -60,6 +61,7 @@ public final class RetoldPlayerSyncEvents {
                 new RetoldEndSkySeedSyncPayload(endSkyData.getSeed())
         );
 
+        RetoldEnchantmentKnowledge.syncToPlayer(serverPlayer);
         AenderChronolithEvents.syncToPlayer(serverPlayer);
     }
 }

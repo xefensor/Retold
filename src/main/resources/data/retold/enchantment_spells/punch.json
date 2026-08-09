@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:punch",
+  "word": {
+    "domain": "retold:bow",
+    "effect": "retold:push",
+    "modifier": "retold:projectile"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:unbreaking",
+  "word": {
+    "domain": "retold:item",
+    "effect": "retold:protect",
+    "modifier": "retold:general"
+  }
+}

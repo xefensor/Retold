@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:riptide",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:move",
+    "modifier": "retold:water"
+  }
+}

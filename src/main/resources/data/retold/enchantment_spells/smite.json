@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:smite",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:undead"
+  }
+}

@@ -1,6 +1,6 @@
 # Retold Enchanting Design
 
-> Developer-confirmed design direction. This document records the current intended player-facing enchanting model. It does not claim implementation. Exact glyph assignments, XP thresholds, lapis quantities, UI styling, loot distribution, and balance remain future work unless explicitly stated otherwise.
+> Developer-confirmed design direction. This document records the current intended player-facing enchanting model. The complete 43-enchantment semantic catalog, fixed 26-concept SGA vocabulary and client synchronization, per-player knowledge persistence and synchronization, successful-anvil-application learning route, knowledge-aware item/book tooltips, server-authoritative deterministic casting transaction, and first player-facing enchanting-table interface are implemented. Final visual styling, loot distribution, balance beyond the confirmed casting costs, and the wider enchantment audit remain future work unless explicitly stated otherwise.
 
 ## Core Role In Progression
 
@@ -44,76 +44,103 @@ Each enchantment is expressed as a three-symbol semantic word:
 
 The player sees three actual SGA glyphs. Internally those glyphs represent reusable concepts.
 
-### Domain
+The grammar uses six broad domain concepts (`armor`, `bow`, `fishing`, `item`, `tool`, and
+`weapon`), nine effect concepts (`bind`, `damage`, `fire`, `move`, `protect`, `push`, `restore`,
+`work`, and `yield`), and reusable modifier concepts. A concept may appear in more than one grammar
+position when its meaning genuinely applies there, such as `armor`, `fire`, or `item`.
 
-The first glyph describes the broad item/action domain. Possible concepts include:
+## Fixed SGA Vocabulary
 
-- weapon
-- armor
-- tool
-- bow/projectile weapon
-- boots
-- helmet
+Retold assigns exactly 26 semantic concepts to Minecraft's built-in `minecraft:alt` SGA glyphs.
+The Latin glyph codes below are implementation/debug notation only; normal player-facing rendering
+uses their SGA shapes and never exposes the concept translations.
 
-### Effect
+| Glyph code | Semantic concept | Typical grammar use |
+| --- | --- | --- |
+| A | armor | domain or modifier |
+| B | arthropod | modifier |
+| C | bind | effect |
+| D | bow | domain |
+| E | damage | effect |
+| F | explosion | modifier |
+| G | fall | modifier |
+| H | fire | effect or modifier |
+| I | fishing | domain |
+| J | general | modifier |
+| K | ice | modifier |
+| L | item | domain or modifier |
+| M | more | modifier |
+| N | move | effect |
+| O | multiple | modifier |
+| P | projectile | modifier |
+| Q | protect | effect |
+| R | push | effect |
+| S | restore | effect |
+| T | self | modifier |
+| U | tool | domain |
+| V | undead | modifier |
+| W | water | modifier |
+| X | weapon | domain |
+| Y | work | effect |
+| Z | yield | effect |
 
-The second glyph describes the main magical action. Possible concepts include:
+## Complete Enchantment Words
 
-- damage
-- protect
-- fire
-- push
-- move
-- drop/yield
-- work/speed
-- breathe
-- freeze
+For a spoiler-heavy test matrix with maximum levels, representative items, table availability,
+costs, and failure cases, use [`enchanting_test_guide.md`](enchanting_test_guide.md).
 
-### Modifier
+Crossbows use the `bow` domain; tridents, maces, and swords use `weapon`; all armor slots use
+`armor`. This keeps the vocabulary small enough for the 26-glyph alphabet while preserving shared
+patterns that players can deduce.
 
-The third glyph specializes the effect. Possible concepts include:
+| Enchantment | Domain | Effect | Modifier | Glyph word |
+| --- | --- | --- | --- | --- |
+| Protection | armor | protect | general | AQJ |
+| Fire Protection | armor | protect | fire | AQH |
+| Feather Falling | armor | protect | fall | AQG |
+| Blast Protection | armor | protect | explosion | AQF |
+| Projectile Protection | armor | protect | projectile | AQP |
+| Respiration | armor | protect | water | AQW |
+| Aqua Affinity | armor | work | water | AYW |
+| Thorns | armor | damage | self | AET |
+| Depth Strider | armor | move | water | ANW |
+| Frost Walker | armor | move | ice | ANK |
+| Curse of Binding | item | bind | armor | LCA |
+| Soul Speed | armor | move | undead | ANV |
+| Swift Sneak | armor | move | self | ANT |
+| Sharpness | weapon | damage | general | XEJ |
+| Smite | weapon | damage | undead | XEV |
+| Bane of Arthropods | weapon | damage | arthropod | XEB |
+| Knockback | weapon | push | item | XRL |
+| Fire Aspect | weapon | fire | item | XHL |
+| Looting | weapon | yield | more | XZM |
+| Sweeping Edge | weapon | damage | multiple | XEO |
+| Efficiency | tool | work | general | UYJ |
+| Silk Touch | tool | yield | self | UZT |
+| Unbreaking | item | protect | general | LQJ |
+| Fortune | tool | yield | more | UZM |
+| Power | bow | damage | projectile | DEP |
+| Punch | bow | push | projectile | DRP |
+| Flame | bow | fire | projectile | DHP |
+| Infinity | bow | yield | more | DZM |
+| Luck of the Sea | fishing | yield | general | IZJ |
+| Lure | fishing | move | item | INL |
+| Loyalty | weapon | move | self | XNT |
+| Impaling | weapon | damage | water | XEW |
+| Riptide | weapon | move | water | XNW |
+| Channeling | weapon | fire | projectile | XHP |
+| Multishot | bow | damage | multiple | DEO |
+| Quick Charge | bow | work | general | DYJ |
+| Piercing | bow | damage | item | DEL |
+| Density | weapon | damage | fall | XEG |
+| Breach | weapon | damage | armor | XEA |
+| Wind Burst | weapon | push | fall | XRG |
+| Lunge | weapon | move | item | XNL |
+| Mending | item | restore | general | LSJ |
+| Curse of Vanishing | item | bind | undead | LCV |
 
-- general
-- undead
-- arthropod
-- target
-- more
-- original block
-- fire
-- explosion
-- projectile
-- fall
-- water
-
-Exact vocabulary and glyph assignments remain to be finalized. Reuse concepts wherever possible.
-
-## Example Enchantment Meanings
-
-These are semantic examples only; final SGA glyph assignments are not chosen yet.
-
-| Enchantment | Domain | Effect | Modifier |
-| --- | --- | --- | --- |
-| Sharpness | weapon | damage | general |
-| Smite | weapon | damage | undead |
-| Bane of Arthropods | weapon | damage | arthropod |
-| Fire Aspect | weapon | fire | target |
-| Knockback | weapon | push | target |
-| Looting | weapon | drop | more |
-| Efficiency | tool | work/speed | general |
-| Fortune | tool | drop | more |
-| Silk Touch | tool | drop | original |
-| Protection | armor | protect | general |
-| Fire Protection | armor | protect | fire |
-| Blast Protection | armor | protect | explosion |
-| Projectile Protection | armor | protect | projectile |
-| Feather Falling | boots | protect | fall |
-| Respiration | helmet | breathe | water |
-| Aqua Affinity | helmet | work | water |
-| Depth Strider | boots | move | water |
-| Frost Walker | boots | freeze | water |
-| Power | bow | damage | projectile |
-| Punch | bow | push | projectile |
-| Flame | bow | fire | projectile |
+Mending remains mapped while it is registered. Its separate planned removal will remove the spell
+definition at the same time rather than leaving an unrenderable registry entry.
 
 The important rule is that enchantments are semi-compositional. Shared meanings should produce shared glyphs instead of every enchantment being an unrelated code.
 
@@ -144,6 +171,18 @@ Unknown enchanted items still function normally. The existing inscription alread
 
 Tooltips never translate individual glyphs into semantic concepts.
 
+The current implementation uses a deliberately minimal presentation:
+
+- an unknown mapped enchantment replaces its vanilla name line with one dark-purple SGA word and
+  its ordinary Roman-numeral level
+- a known mapped enchantment retains the ordinary vanilla name-and-level line and adds its SGA word
+  immediately below
+- each enchantment on a multi-enchanted item or book is handled independently
+- unmapped third-party enchantments retain their original tooltip line instead of becoming blank
+
+The glyphs use Minecraft's built-in `minecraft:alt` font. Exact colors and final line layout may be
+refined with the enchanting-table UI, but the known/unknown information boundary is implemented.
+
 ## Enchanted Books As Loot And Language Evidence
 
 Vanilla-style enchanted books remain lootable exploration rewards and retain their practical role as pre-written enchantments that can be transferred to compatible equipment through an anvil.
@@ -157,6 +196,10 @@ Successfully combining the enchanted book with a compatible item in an anvil tea
 - the readable enchantment name becomes known to that player
 - the three-glyph word becomes a known enchanting-table recipe
 - future items/books carrying that spell can show the readable name
+
+When one book carries multiple enchantments, the completed anvil operation teaches every spell
+that actually transferred to or improved the output item. Incompatible or unchanged enchantments
+that did not transfer remain unknown.
 
 The level on a found book is not part of the learned spell. Every level of one enchantment uses the same three-glyph word.
 
@@ -213,20 +256,40 @@ The player clicks glyphs to assemble the three-symbol enchantment word in order:
 [DOMAIN] [EFFECT] [MODIFIER]
 ```
 
-The interface should make assembling and correcting the current three-glyph sequence straightforward. Exact visual layout is future UI work.
+The implemented compact interface places the three inscription slots and level buttons above the
+ordinary item/lapis inventory slots. A 26-glyph SGA keyboard fills the adjacent panel. Glyphs append
+from left to right; clicking an inscription slot removes that glyph and every glyph after it, while
+a Clear button resets the whole word. Physical `A-Z` keys enter the corresponding glyphs,
+`Backspace` removes the last glyph, number-row or keypad `1-5` chooses strength, and `Enter` writes.
+Control- and Alt-modified shortcuts remain available to the underlying screen. A pending request
+temporarily disables Write so key repeat or rapid clicking cannot submit the same cast twice.
 
 ### Energy / Enchantment Strength
 
 The player explicitly chooses the desired enchantment strength using a simple control, conceptually a small set of levels such as `1-5`.
 
-A button row, slider, or similarly simple control is acceptable. The important behavior is:
+The implemented control is a five-button `I-V` row. The important behavior is:
 
 - the chosen strength determines how much XP/energy is sacrificed
 - the SGA word determines the enchantment itself
 - enchantment level is never encoded by additional glyphs
 - an enchantment cannot exceed its own supported maximum level even if the generic UI can represent a wider range
 
-Exact XP costs/thresholds remain balancing work.
+When the current word is already known, the screen shows that enchantment's registered maximum and
+disables levels above it. A manually entered unknown word retains the generic `I-V` controls so the
+client does not reveal whether the attempted word resolves or why it might fail.
+
+Each cast sacrifices exactly five experience levels per requested enchantment level:
+
+| Enchantment level | Experience-level cost |
+| --- | --- |
+| I | 5 |
+| II | 10 |
+| III | 15 |
+| IV | 20 |
+| V | 25 |
+
+An enchantment cannot be requested above its own registered maximum level.
 
 ### Lapis Cost
 
@@ -236,7 +299,8 @@ Therefore lapis cost is tied to the amount of writing rather than enchantment st
 
 > more symbols written -> more lapis required
 
-The current standard enchantment word contains three glyphs, so normal three-glyph spells have the same basic writing length. The exact amount of lapis consumed per glyph remains to be balanced.
+The current standard enchantment word contains three glyphs. Each glyph consumes one lapis lazuli,
+so a valid standard cast consumes exactly three lapis regardless of enchantment level.
 
 If Retold later introduces magical inscriptions with a different number of glyphs, their lapis cost should naturally reflect that additional or reduced writing.
 
@@ -247,6 +311,12 @@ Enchanting never fails randomly.
 If the entered word is valid for the item and the required XP/energy and lapis are available, the enchantment succeeds every time.
 
 There are no random rolls for whether the chosen enchantment works.
+
+The current server transaction preserves vanilla enchanting-table eligibility, item applicability,
+and enchantment compatibility. Enchantments excluded from the vanilla enchanting table, such as
+Mending, cannot be cast there even though they retain language words for found-item and book
+identification. A plain book retains vanilla table behavior and becomes an enchanted book after a
+successful cast. Creative players with infinite materials are not charged.
 
 ### Invalid Or Incompatible Words
 
@@ -260,13 +330,27 @@ Do not provide separate diagnostic feedback revealing whether:
 
 This avoids the enchanting table itself becoming an automatic language-decoding tool. The player learns by finding examples, comparing known spells, and testing hypotheses.
 
-Resource consumption for a no-op attempt should not create a punitive guessing tax; exact implementation handling can be chosen accordingly.
+Invalid, unavailable, incompatible, conflicting, non-upgrading, or unaffordable attempts consume
+neither lapis nor experience and do not alter the input item. The transaction prepares and verifies
+the complete output before committing any cost. Internal failure states exist for server validation,
+but the player-facing interface collapses them into the same generic rejection. A successful
+server-authoritative cast clears the inscription and briefly highlights the changed target slot in
+green. Every rejected cast preserves the inscription and gives the same quiet low note and brief red
+slot highlight, without identifying the failure category.
 
 ### Known-Enchantment Recipe Panel
 
-Once a spell is known, the enchanting table provides a recipe-book-like list of known enchantments.
+Once a spell is known, the enchanting table provides a paginated recipe-book-like list of readable
+enchantment names and maximum levels. With no target inserted it contains every known spell eligible
+for the enchanting table. With a target inserted it shows only known spells that can currently be
+written onto that item, excluding non-table spells, incompatible/conflicting spells, and spells
+already present at their maximum. Selecting one refills all three glyph slots while retaining or
+clamping the currently chosen level. The list never includes unknown spells and never exposes
+individual concept translations.
 
-A known entry shows the readable enchantment name together with its complete SGA word. Selecting a known enchantment should conveniently fill its glyph sequence into the input rather than requiring the human player to memorize and retype it forever.
+A known entry shows the readable enchantment name and maximum level. Selecting it conveniently fills
+the complete SGA sequence into the inscription rather than requiring the human player to memorize and
+retype it forever.
 
 The player then chooses the desired energy/strength and performs the enchantment normally.
 
@@ -305,7 +389,8 @@ Retold does not need every SGA glyph to retain its Latin-letter meaning. A delib
 - Enchanting is deterministic, not a random reroll system.
 - Every enchantment is a reusable semantic `domain + effect + modifier` word rather than an arbitrary password.
 - Enchantment level comes from sacrificed XP/energy, not additional glyphs.
-- Lapis represents the physical writing and therefore scales with the amount of glyph writing.
+- Each requested enchantment level costs five experience levels.
+- Lapis represents the physical writing; one lapis per glyph makes a standard cast cost three.
 - The enchanting table uses a clickable SGA keyboard/sheet for manual word assembly.
 - Known spells appear in a recipe-book-like interface and can conveniently refill their glyph sequence.
 - Invalid/incompatible attempts do not reveal diagnostic information that would automatically decode the language.
@@ -314,6 +399,8 @@ Retold does not need every SGA glyph to retain its Latin-letter meaning. A delib
 - Unknown enchanted items still function normally.
 - Finding or holding an enchanted book does not automatically teach its enchantment.
 - Successfully applying an enchanted book through an anvil teaches the complete spell.
+- A multi-enchantment book teaches every spell actually transferred to or improved on the output;
+  incompatible or unchanged spells remain unknown.
 - Successfully deducing and casting a valid spell manually also teaches it.
 - Do not require bookshelves around the enchanting table.
 - Do not require external wiki knowledge for mandatory progression.
@@ -321,13 +408,7 @@ Retold does not need every SGA glyph to retain its Latin-letter meaning. A delib
 
 ## Still Undecided
 
-- exact SGA glyph-to-concept assignments
-- exact list and number of domain/effect/modifier concepts
-- exact XP/energy costs for each enchantment strength/level
-- whether the strength control is buttons, a slider, or another compact control
-- exact lapis consumed per written glyph
 - exact distribution/balance of enchanted-book loot and any additional environmental language clues
-- exact enchanting-table UI layout and visual styling
+- final enchanting-table visual styling and responsive layout refinement
 - exact visual styling/order of SGA and readable-name tooltip lines
-- whether applying multi-enchantment books teaches all successfully transferred spells or needs special handling
 - exact compatibility/stacking rules after the wider enchantment audit

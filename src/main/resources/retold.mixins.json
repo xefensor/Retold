@@ -12,6 +12,7 @@
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
     "MerchantMenuTeachingSlotMixin",
+    "EnchantmentMenuMixin",
     "AbstractContainerMenuMixin",
     "CompoundContainerAccessor",
     "HarvestFarmlandMixin",
@@ -54,6 +55,7 @@
     "EndermanParticleMixin",
     "LivingEntityTeleportParticleMixin",
     "MerchantScreenMixin",
+    "EnchantmentScreenMixin",
     "PortalParticleMixin"
   ],
   "injectors": {

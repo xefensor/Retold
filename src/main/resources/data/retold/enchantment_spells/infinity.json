@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:infinity",
+  "word": {
+    "domain": "retold:bow",
+    "effect": "retold:yield",
+    "modifier": "retold:more"
+  }
+}

@@ -1,5 +1,13 @@
 {
   "message.retold.iron_golem_requires_levels": "Animating an Iron Golem requires %s experience levels.",
+  "container.retold.enchant.write": "Write",
+  "container.retold.enchant.clear": "Clear",
+  "container.retold.enchant.edit_word": "Remove this glyph and those after it",
+  "container.retold.enchant.glyphs": "Glyphs",
+  "container.retold.enchant.known": "Known spells",
+  "container.retold.enchant.cost": "%s lapis · %s levels",
+  "container.retold.enchant.page": "%s / %s",
+  "container.retold.enchant.maximum_level": "Maximum level: %s",
   "message.retold.teaching.learned": "Learned recipe.",
   "container.retold.teaching.title": "Recipe teaching",
   "container.retold.teaching.learn": "Learn",

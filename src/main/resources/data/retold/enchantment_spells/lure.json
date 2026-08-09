@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:lure",
+  "word": {
+    "domain": "retold:fishing",
+    "effect": "retold:move",
+    "modifier": "retold:item"
+  }
+}

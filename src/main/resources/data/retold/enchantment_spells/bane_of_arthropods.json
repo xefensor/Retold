@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:bane_of_arthropods",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:damage",
+    "modifier": "retold:arthropod"
+  }
+}

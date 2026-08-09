@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:swift_sneak",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:move",
+    "modifier": "retold:self"
+  }
+}

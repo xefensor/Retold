@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:feather_falling",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:protect",
+    "modifier": "retold:fall"
+  }
+}

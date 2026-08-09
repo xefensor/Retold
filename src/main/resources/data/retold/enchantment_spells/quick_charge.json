@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:quick_charge",
+  "word": {
+    "domain": "retold:bow",
+    "effect": "retold:work",
+    "modifier": "retold:general"
+  }
+}

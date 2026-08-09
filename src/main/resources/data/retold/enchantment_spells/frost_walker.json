@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:frost_walker",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:move",
+    "modifier": "retold:ice"
+  }
+}

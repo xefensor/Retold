@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:soul_speed",
+  "word": {
+    "domain": "retold:armor",
+    "effect": "retold:move",
+    "modifier": "retold:undead"
+  }
+}

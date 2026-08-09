@@ -1,0 +1,8 @@
+{
+  "enchantment": "minecraft:knockback",
+  "word": {
+    "domain": "retold:weapon",
+    "effect": "retold:push",
+    "modifier": "retold:item"
+  }
+}
