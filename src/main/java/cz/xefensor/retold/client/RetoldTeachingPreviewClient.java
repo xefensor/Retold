@@ -1,27 +1,42 @@
 package cz.xefensor.retold.client;
 
+import cz.xefensor.retold.network.RetoldTeachingPreviewPayload;
+import net.minecraft.network.chat.Component;
+
 public final class RetoldTeachingPreviewClient {
     private static boolean active = false;
-    private static String buttonLabel = "Learn";
-    private static String status = "Status: Place item into slot";
-    private static String cost = "Cost: -";
-    private static String tooltip = "Place an item into the teaching slot.";
+    private static Component buttonLabel = Component.translatable(
+            "container.retold.teaching.learn"
+    );
+    private static Component status = Component.translatable(
+            "container.retold.teaching.status.place_item"
+    );
+    private static Component cost = Component.translatable(
+            "container.retold.teaching.cost.none"
+    );
+    private static Component tooltip = Component.translatable(
+            "container.retold.teaching.tooltip.place_item"
+    );
+    private static RetoldTeachingPreviewPayload.Feedback feedback =
+            RetoldTeachingPreviewPayload.Feedback.NONE;
     private static Runnable refreshCallback;
     private RetoldTeachingPreviewClient() {
     }
 
     public static void set(
             boolean newActive,
-            String newButtonLabel,
-            String newStatus,
-            String newCost,
-            String newTooltip
+            Component newButtonLabel,
+            Component newStatus,
+            Component newCost,
+            Component newTooltip,
+            RetoldTeachingPreviewPayload.Feedback newFeedback
     ) {
         active = newActive;
         buttonLabel = newButtonLabel;
         status = newStatus;
         cost = newCost;
         tooltip = newTooltip;
+        feedback = newFeedback;
 
         if (refreshCallback != null) {
             refreshCallback.run();
@@ -32,20 +47,26 @@ public final class RetoldTeachingPreviewClient {
         return active;
     }
 
-    public static String buttonLabel() {
+    public static Component buttonLabel() {
         return buttonLabel;
     }
 
-    public static String status() {
+    public static Component status() {
         return status;
     }
 
-    public static String cost() {
+    public static Component cost() {
         return cost;
     }
 
-    public static String tooltip() {
+    public static Component tooltip() {
         return tooltip;
+    }
+
+    public static RetoldTeachingPreviewPayload.Feedback takeFeedback() {
+        RetoldTeachingPreviewPayload.Feedback current = feedback;
+        feedback = RetoldTeachingPreviewPayload.Feedback.NONE;
+        return current;
     }
 
     public static void setRefreshCallback(Runnable newRefreshCallback) {
@@ -58,9 +79,10 @@ public final class RetoldTeachingPreviewClient {
 
     public static void reset() {
         active = false;
-        buttonLabel = "Learn";
-        status = "Status: Place item into slot";
-        cost = "Cost: -";
-        tooltip = "Place an item into the teaching slot.";
+        buttonLabel = Component.translatable("container.retold.teaching.learn");
+        status = Component.translatable("container.retold.teaching.status.place_item");
+        cost = Component.translatable("container.retold.teaching.cost.none");
+        tooltip = Component.translatable("container.retold.teaching.tooltip.place_item");
+        feedback = RetoldTeachingPreviewPayload.Feedback.NONE;
     }
 }

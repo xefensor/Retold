@@ -197,6 +197,13 @@ public final class RetoldRecipeBookEvents {
             return;
         }
 
+        // GameTest mock players have no packet connection. Retain the
+        // authoritative known-recipe state without invoking vanilla's sync path.
+        if (player.connection == null) {
+            player.getRecipeBook().add(recipe.id());
+            return;
+        }
+
         RetoldRecipeUnlockContext.beginInternalUnlock();
 
         try {

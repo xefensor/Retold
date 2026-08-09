@@ -623,11 +623,22 @@ Behavior:
 
 - Player opens villager trading UI.
 - Custom teaching slot shows an item whose recipe the player wants to learn.
+- The client renders teaching as an emerald-toned bordered side panel using the deterministic
+  enchanting controls' spacing rhythm while keeping a distinct villager identity. Status and
+  guidance can wrap without crossing the panel edge, and a bright green slot outline indicates
+  that the current lesson is ready.
+- Preview labels, costs, status, and guidance cross the network as translatable components. Enter
+  and keypad Enter activate an available lesson. The server's explicit success/rejection outcome
+  produces a brief green/red slot outline and matching Villager confirmation/refusal sound.
+- A pending-request guard disables the Learn button until the server returns the next authoritative
+  preview, preventing rapid clicks from submitting the same lesson more than once.
 - Server checks the villager profession teaching entry.
 - Recipe can be matched by configured id/result.
 - Player pays emeralds.
 - Recipe is marked known and unlocked.
 - Villager gets XP reward.
+- Repeated, unaffordable, unsupported-item, and unsupported-profession requests consume no emeralds
+  and grant no recipe or Villager XP. Closing the menu returns the teaching-slot item.
 - Preview/status/cost are synced to client.
 - Professional adult villagers receive a guaranteed stock refresh when the Overworld day advances.
   The refresh retains the existing offer list and synchronizes an open trading menu; it does not

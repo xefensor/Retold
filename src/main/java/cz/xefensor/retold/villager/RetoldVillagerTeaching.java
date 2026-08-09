@@ -29,12 +29,18 @@ public final class RetoldVillagerTeaching {
     }
 
     public static void tryTeachHeldItemRecipe(ServerPlayer player) {
+        RetoldTeachingPreviewPayload.Feedback feedback = teachHeldItemRecipe(player);
+        sendPreviewToClient(player, feedback);
+    }
+
+    static RetoldTeachingPreviewPayload.Feedback teachHeldItemRecipe(
+            ServerPlayer player
+    ) {
         TeachingPreview preview = createTeachingPreview(player);
 
         if (!preview.active()) {
             actionBar(player, preview.tooltip());
-            sendPreviewToClient(player);
-            return;
+            return RetoldTeachingPreviewPayload.Feedback.REJECTED;
         }
 
         takeEmeralds(player, preview.emeraldCost());
@@ -45,11 +51,22 @@ public final class RetoldVillagerTeaching {
             syncOpenMerchantMenu(player, preview.villager());
         }
 
-        actionBar(player, "Learned recipe.");
-        sendPreviewToClient(player);
+        actionBar(player, Component.translatable("message.retold.teaching.learned"));
+        return RetoldTeachingPreviewPayload.Feedback.SUCCESS;
     }
 
     public static void sendPreviewToClient(ServerPlayer player) {
+        sendPreviewToClient(player, RetoldTeachingPreviewPayload.Feedback.NONE);
+    }
+
+    private static void sendPreviewToClient(
+            ServerPlayer player,
+            RetoldTeachingPreviewPayload.Feedback feedback
+    ) {
+        if (player.connection == null) {
+            return;
+        }
+
         TeachingPreview preview = createTeachingPreview(player);
 
         PacketDistributor.sendToPlayer(
@@ -59,27 +76,28 @@ public final class RetoldVillagerTeaching {
                         preview.buttonLabel(),
                         preview.status(),
                         preview.cost(),
-                        preview.tooltip()
+                        preview.tooltip(),
+                        feedback
                 )
         );
     }
 
-    private static TeachingPreview createTeachingPreview(ServerPlayer player) {
+    static TeachingPreview createTeachingPreview(ServerPlayer player) {
         if (!(player.containerMenu instanceof MerchantMenu merchantMenu)) {
             return preview(
                     false,
-                    "Status: Talk to a villager",
-                    "Cost: -",
-                    "You need to talk to a villager."
+                    Component.translatable("container.retold.teaching.status.talk_to_villager"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.talk_to_villager")
             );
         }
 
         if (!(player.level() instanceof ServerLevel serverLevel)) {
             return preview(
                     false,
-                    "Status: Server only",
-                    "Cost: -",
-                    "This can only be used on the server."
+                    Component.translatable("container.retold.teaching.status.server_only"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.server_only")
             );
         }
 
@@ -88,9 +106,9 @@ public final class RetoldVillagerTeaching {
         if (!(merchant instanceof Villager villager)) {
             return preview(
                     false,
-                    "Status: Not a villager",
-                    "Cost: -",
-                    "Only villagers can teach recipes."
+                    Component.translatable("container.retold.teaching.status.not_villager"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.not_villager")
             );
         }
 
@@ -99,9 +117,9 @@ public final class RetoldVillagerTeaching {
         if (shownItem.isEmpty()) {
             return preview(
                     false,
-                    "Status: Place item into slot",
-                    "Cost: -",
-                    "Place the item you want to learn a recipe for into the teaching slot."
+                    Component.translatable("container.retold.teaching.status.place_item"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.place_item")
             );
         }
 
@@ -113,9 +131,9 @@ public final class RetoldVillagerTeaching {
         if (professionId == null) {
             return preview(
                     false,
-                    "Status: Unknown profession",
-                    "Cost: -",
-                    "This villager has no known profession."
+                    Component.translatable("container.retold.teaching.status.unknown_profession"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.unknown_profession")
             );
         }
 
@@ -125,9 +143,9 @@ public final class RetoldVillagerTeaching {
         if (teachingEntryOptional.isEmpty()) {
             return preview(
                     false,
-                    "Status: Cannot teach recipes",
-                    "Cost: -",
-                    "This villager cannot teach recipes."
+                    Component.translatable("container.retold.teaching.status.cannot_teach"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.cannot_teach")
             );
         }
 
@@ -142,9 +160,9 @@ public final class RetoldVillagerTeaching {
         if (recipeOptional.isEmpty()) {
             return preview(
                     false,
-                    "Status: Villager does not know this",
-                    "Cost: -",
-                    "This villager does not know this recipe."
+                    Component.translatable("container.retold.teaching.status.does_not_know"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.does_not_know")
             );
         }
 
@@ -156,9 +174,9 @@ public final class RetoldVillagerTeaching {
         if (emeraldCost < 0) {
             return preview(
                     false,
-                    "Status: Villager does not know this",
-                    "Cost: -",
-                    "This villager does not know this recipe."
+                    Component.translatable("container.retold.teaching.status.does_not_know"),
+                    Component.translatable("container.retold.teaching.cost.none"),
+                    Component.translatable("container.retold.teaching.tooltip.does_not_know")
             );
         }
 
@@ -169,10 +187,10 @@ public final class RetoldVillagerTeaching {
         if (data.hasKnown(player, recipe.id())) {
             return new TeachingPreview(
                     false,
-                    "Learn",
-                    "Status: Already known",
-                    "Cost: " + emeraldText(emeraldCost),
-                    "You already know this recipe.",
+                    Component.translatable("container.retold.teaching.learn"),
+                    Component.translatable("container.retold.teaching.status.already_known"),
+                    costText(emeraldCost),
+                    Component.translatable("container.retold.teaching.tooltip.already_known"),
                     recipe,
                     emeraldCost,
                     villager,
@@ -183,10 +201,13 @@ public final class RetoldVillagerTeaching {
         if (!hasEmeralds(player, emeraldCost)) {
             return new TeachingPreview(
                     false,
-                    "Learn",
-                    "Status: Not enough emeralds",
-                    "Cost: " + emeraldText(emeraldCost),
-                    "You need " + emeraldText(emeraldCost) + ".",
+                    Component.translatable("container.retold.teaching.learn"),
+                    Component.translatable("container.retold.teaching.status.not_enough_emeralds"),
+                    costText(emeraldCost),
+                    Component.translatable(
+                            "container.retold.teaching.tooltip.not_enough_emeralds",
+                            emeraldText(emeraldCost)
+                    ),
                     recipe,
                     emeraldCost,
                     villager,
@@ -196,10 +217,16 @@ public final class RetoldVillagerTeaching {
 
         return new TeachingPreview(
                 true,
-                "Learn",
-                "Status: Can learn " + shownItem.getHoverName().getString(),
-                "Cost: " + emeraldText(emeraldCost),
-                "Pay " + emeraldText(emeraldCost) + " to learn this recipe.",
+                Component.translatable("container.retold.teaching.learn"),
+                Component.translatable(
+                        "container.retold.teaching.status.can_learn",
+                        shownItem.getHoverName()
+                ),
+                costText(emeraldCost),
+                Component.translatable(
+                        "container.retold.teaching.tooltip.pay",
+                        emeraldText(emeraldCost)
+                ),
                 recipe,
                 emeraldCost,
                 villager,
@@ -209,13 +236,13 @@ public final class RetoldVillagerTeaching {
 
     private static TeachingPreview preview(
             boolean active,
-            String status,
-            String cost,
-            String tooltip
+            Component status,
+            Component cost,
+            Component tooltip
     ) {
         return new TeachingPreview(
                 active,
-                "Learn",
+                Component.translatable("container.retold.teaching.learn"),
                 status,
                 cost,
                 tooltip,
@@ -339,12 +366,27 @@ public final class RetoldVillagerTeaching {
         }
     }
 
-    private static String emeraldText(int amount) {
-        return amount == 1 ? "1 emerald" : amount + " emeralds";
+    private static Component costText(int amount) {
+        return Component.translatable(
+                "container.retold.teaching.cost",
+                emeraldText(amount)
+        );
     }
 
-    private static void actionBar(ServerPlayer player, String message) {
-        player.sendSystemMessage(Component.literal(message), true);
+    private static Component emeraldText(int amount) {
+        if (amount == 1) {
+            return Component.translatable("container.retold.teaching.emerald.one");
+        }
+        return Component.translatable(
+                "container.retold.teaching.emerald.many",
+                amount
+        );
+    }
+
+    private static void actionBar(ServerPlayer player, Component message) {
+        if (player.connection != null) {
+            player.sendSystemMessage(message, true);
+        }
     }
 
     private static void rewardVillagerTeachingXp(ServerLevel serverLevel, Villager villager, int amount) {
@@ -383,24 +425,26 @@ public final class RetoldVillagerTeaching {
 
         int villagerLevel = villager.getVillagerData().level();
 
-        player.connection.send(new ClientboundMerchantOffersPacket(
-                merchantMenu.containerId,
-                villager.getOffers(),
-                villagerLevel,
-                villager.getVillagerXp(),
-                VillagerData.canLevelUp(villagerLevel),
-                true
-        ));
+        if (player.connection != null) {
+            player.connection.send(new ClientboundMerchantOffersPacket(
+                    merchantMenu.containerId,
+                    villager.getOffers(),
+                    villagerLevel,
+                    villager.getVillagerXp(),
+                    VillagerData.canLevelUp(villagerLevel),
+                    true
+            ));
+        }
 
         merchantMenu.broadcastChanges();
     }
 
-    private record TeachingPreview(
+    record TeachingPreview(
             boolean active,
-            String buttonLabel,
-            String status,
-            String cost,
-            String tooltip,
+            Component buttonLabel,
+            Component status,
+            Component cost,
+            Component tooltip,
             RecipeHolder<?> recipe,
             int emeraldCost,
             Villager villager,

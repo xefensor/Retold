@@ -11,7 +11,11 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- Refined the villager recipe-teaching interface with a dedicated emerald-toned panel, consistent spacing, a centered teaching slot, wrapped status and guidance text, aligned cost and action controls, and clear ready/success/rejection highlights. Enter or keypad Enter can activate an available lesson, successful teaching plays a Villager confirmation sound, and rejected stale requests play the Villager refusal sound.
+
 ### Technical
+
+- Replaced the teaching panel's disabled-button backdrop with code-rendered panel and slot surfaces. Preview text now remains as translatable components across the version-2 network protocol, and explicit server outcomes drive client feedback. Client and server duplicate guards prevent repeated payment, learning, or Villager XP from rapid requests; focused GameTests cover transaction edge cases and payload round trips. Fixed a client crash caused by trying to inject into `MerchantScreen`'s inherited `containerTick` method; the feedback timer now uses a valid override.
 
 ## 0.4.0 - 2026-08-05
 
