@@ -868,6 +868,7 @@ Technical owners:
 
 - `RetoldWorldgenRegistries`
 - `RetoldStructureTags`
+- `RetoldRuinedPortalChests`
 - `RetoldCentralEndIslandMaskDensityFunction`
 - `RetoldWorldSpawnCache`
 - `RetoldDelayedStructureRetrogen`
@@ -881,6 +882,7 @@ Technical owners:
 - `RetoldRetrogenDropBlocker`
 - `RetoldClientChunkTracker`
 - `DelayedStructurePlacementMixin`
+- `RuinedPortalPieceMixin`
 - `NoVillageNearWorldSpawnMixin`
 
 Data:
@@ -898,9 +900,18 @@ Behavior:
 - Failed retrogen attempts can retry later.
 - Structure mob spawns can be suppressed while a structure is delayed.
 - Some spawn/structure behavior changes at Stage 3.
+- Ruined Nether portal placement omits template chests while leaving all other structures and
+  ordinary player-placed containers unchanged.
 - The warm-ocean-ruin archaeology override preserves normal ruin rewards but removes the Sniffer
   Egg, which is the sole vanilla survival entry point for Sniffers. Command/Creative Sniffers and
   their existing AI remain available.
+- `data/minecraft/tags/worldgen/biome/has_structure/trial_chambers.json` replaces the vanilla biome
+  tag with an empty list. Trial Chambers therefore cannot start in newly generated terrain, while
+  their structure registration, blocks, items, mobs, and already-generated chambers remain intact.
+- `data/minecraft/tags/worldgen/biome/has_structure/ancient_city.json` applies the same boundary to
+  Ancient Cities. `OverworldBiomeBuilderMixin` omits only the Deep Dark climate mapping from the
+  default Overworld preset. The biome, Warden, structures, blocks, items, and existing generated
+  content remain registered and intact for commands, custom worlds, datapacks, and existing chunks.
 - `RetoldMobAvailability` rejects Endermite spawn-position checks unless the reason preserves an
   explicitly obtained entity: command, spawn-item use, dispenser use, save loading, or dimension
   travel. `ThrownEnderpearlMixin` separately filters the vanilla pearl-impact creation call because
@@ -1128,6 +1139,7 @@ Technical owners:
 - `RetoldClientEndSky`
 - `RetoldEndSkyPatcher`
 - `RetoldGeneratedEndSkyTexture`
+- `ClientLevelEndFlashMixin`
 - `RetoldAenderEyeRenderer`
 - `RetoldEndermanEyesLayer`
 
@@ -1138,6 +1150,7 @@ Client responsibilities:
 - track client-side current stage
 - render chronolith beams
 - sync/render End sky seed and generated sky texture
+- suppress the vanilla End's periodic visual, lightmap, and sound flashes
 - render Aender eye
 - patch Enderman visuals
 
@@ -1168,6 +1181,9 @@ Behavior:
 - Command can randomize the seed.
 - Seed sync payload updates clients.
 - Client sky code generates/patches the visible sky texture.
+- `ClientLevelEndFlashMixin` clears the vanilla End's `EndFlashState` after client-level
+  construction. This prevents the flash quad, lightmap pulse, and delayed weather sound while
+  preserving the End skybox and leaving other dimensions with End-style skyboxes unchanged.
 
 Design rule:
 
@@ -1232,7 +1248,7 @@ Main mixin groups:
 | --- | --- |
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
 | Villager teaching/storage/reputation | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker`, `AbstractContainerMenuMixin`, `RandomizableContainerMixin`, `CompoundContainerAccessor`, `HarvestFarmlandMixin` |
-| World/stage/worldgen | `DelayedStructurePlacementMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
+| World/stage/worldgen | `DelayedStructurePlacementMixin`, `RuinedPortalPieceMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
 | Aender physics/rendering | `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
 | Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin`, `AbstractCubeMobPushMixin` |
 | Guardian behavior | `ElderGuardianMixin`, `ElderGuardianInvulnerableHitMixin` |

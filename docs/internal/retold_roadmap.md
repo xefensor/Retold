@@ -26,7 +26,7 @@ These are the strongest next design-aligned areas:
 3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 4. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
 5. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
-6. Audit and enforce survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, Trial Chambers, trail ruins, and fossils; keep the implemented Sniffer and Endermite removals regression-tested.
+6. Audit and verify survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, and Trial Chambers; keep Trail Ruins and fossils, and keep the implemented Sniffer and Endermite removals regression-tested.
 7. Naturally verify the implemented village-reputation loop: generated/Villager-produced storage,
    Farmer-planted crops, profession-tended livestock, witness sight, trade prices, and Iron Golem
    hostility in ordinary, multiplayer, dedicated-server, and existing villages.
@@ -315,6 +315,8 @@ Do not add these unless the developer changes direction:
 - gamerule to restore the normal recipe book
 - complete removal of elytra as an item
 - complete code/entity removal of sniffers or endermites just because survival spawning is removed
+- removal of Trail Ruins; they should remain part of normal world generation
+- removal of fossils; they should remain part of normal world generation
 
 ## Roadmap Maintenance
 

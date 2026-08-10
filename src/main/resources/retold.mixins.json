@@ -8,6 +8,7 @@
     "RaidsMixin",
     "AdvancementVisibilityEvaluatorMixin",
     "NoVillageNearWorldSpawnMixin",
+    "OverworldBiomeBuilderMixin",
     "EndDragonFightMixin",
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
@@ -20,6 +21,7 @@
     "VillagerInvoker",
     "VillagerGolemConstructionMixin",
     "DelayedStructurePlacementMixin",
+    "RuinedPortalPieceMixin",
     "AbstractFurnaceBlockEntityMixin",
     "EndPortalBlockMixin",
     "AenderBucketItemMixin",
@@ -51,6 +53,7 @@
   "client": [
     "AenderEntityLightingMixin",
     "AenderRenderSectionRegionLightingMixin",
+    "ClientLevelEndFlashMixin",
     "EndermanRendererMixin",
     "EndermanParticleMixin",
     "LivingEntityTeleportParticleMixin",
