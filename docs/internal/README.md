@@ -12,8 +12,8 @@ Some sections are written as implementation guidance or refactor rules. Treat th
 ## Accuracy Notes
 
 Last targeted audit: 2026-08-03.
-Last developer design clarification pass: 2026-08-09.
-Last documentation consolidation pass: 2026-08-09.
+Last developer design clarification pass: 2026-08-10.
+Last documentation consolidation pass: 2026-08-10.
 
 These docs are checked against code and resource files, but they are still working documentation. When a row says `needs verification`, it means code/data exists but the final in-game behavior should still be tested before treating it as complete.
 
@@ -26,6 +26,7 @@ Use the files this way:
 | [`retold_roadmap.md`](retold_roadmap.md) | active developer direction, priorities, undecided items, and not-planned items |
 | [`design_principles.md`](design_principles.md) | developer-confirmed high-level design rules used to judge future Retold systems |
 | [`living_world_and_settlements.md`](living_world_and_settlements.md) | confirmed design for roads, environmental reclaiming/weathering, village generation/growth, professions, logistics, trade, magic/energy, and player-village reputation |
+| [`tool_armor_ore_progression.md`](tool_armor_ore_progression.md) | confirmed material/tool/armor/station progression: Flint Multi-tool opening, Clay Furnace/Copper, Furnace/Iron, Blast Furnace/Steel, Diamond enchanting, Netherite, and Aenderite direction |
 | [`golem_equipment_design.md`](golem_equipment_design.md) | confirmed design for pacifist-villager metalworking, oversized Iron Golem armor/weapons, block-scale material costs, and settlement defense investment |
 | [`enchanting_design.md`](enchanting_design.md) | confirmed enchanting direction: player-learned SGA language, domain/effect/modifier words, energy-based levels, discovery, and known-enchantment recording |
 | [`enchanting_test_guide.md`](enchanting_test_guide.md) | spoiler-heavy developer checklist with every spell word, maximum level, compatible test item, cost, and expected success/failure behavior |
@@ -48,6 +49,7 @@ Current internal docs:
 - [`retold_roadmap.md`](retold_roadmap.md)
 - [`design_principles.md`](design_principles.md)
 - [`living_world_and_settlements.md`](living_world_and_settlements.md)
+- [`tool_armor_ore_progression.md`](tool_armor_ore_progression.md)
 - [`golem_equipment_design.md`](golem_equipment_design.md)
 - [`enchanting_design.md`](enchanting_design.md)
 - [`enchanting_test_guide.md`](enchanting_test_guide.md)
