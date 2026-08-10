@@ -8,6 +8,7 @@
     "RaidsMixin",
     "AdvancementVisibilityEvaluatorMixin",
     "NoVillageNearWorldSpawnMixin",
+    "OverworldBiomeBuilderMixin",
     "EndDragonFightMixin",
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
@@ -52,6 +53,7 @@
   "client": [
     "AenderEntityLightingMixin",
     "AenderRenderSectionRegionLightingMixin",
+    "ClientLevelEndFlashMixin",
     "EndermanRendererMixin",
     "EndermanParticleMixin",
     "LivingEntityTeleportParticleMixin",

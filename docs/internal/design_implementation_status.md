@@ -204,8 +204,8 @@ Largest missing or partial design areas:
 | Mansions delayed to Stage 2 | Implemented / needs verification | `delayed_until_stage_2` includes `minecraft:mansion`. |
 | Pillager outposts delayed to Stage 2 | Implemented / needs verification | Tag includes `minecraft:pillager_outpost`. |
 | Mansion size/light redesign | Not implemented |
-| Ancient Cities removed | Not implemented / unclear | Still planned. No direct removal found in checked Retold tags. |
-| Trial Chambers removed | Not implemented / unclear | Still planned. No direct removal found in checked Retold tags. |
+| Ancient Cities removed | Implemented / needs worldgen verification | `data/minecraft/tags/worldgen/biome/has_structure/ancient_city.json` replaces the biome tag with an empty list, preventing new generation without removing the structure or its content. Focused GameTest coverage confirms the structure remains registered with no eligible generation biomes; fresh-world multi-seed verification remains. |
+| Trial Chambers removed | Implemented / needs worldgen verification | `data/minecraft/tags/worldgen/biome/has_structure/trial_chambers.json` replaces the biome tag with an empty list, preventing new generation without removing the structure, blocks, items, mobs, or already-generated chambers. Focused GameTest coverage confirms the structure remains registered with no eligible generation biomes; fresh-world multi-seed verification remains. |
 | End Cities removed | Implemented / needs worldgen verification | `data/minecraft/tags/worldgen/biome/has_structure/end_city.json` replaces the tag with an empty list. Existing worlds and generated chunks still need testing. |
 | End gateways removed/reworked | Implemented | `EndGatewayGenerationMixin` cancels both random and position-based gateway spawning. |
 | Ruined Nether portal chests removed | Implemented / needs worldgen verification | `RetoldRuinedPortalChests` and `RuinedPortalPieceMixin` omit chest blocks from newly placed ruined-portal templates without changing unrelated containers. Existing generated portals are unchanged. A focused GameTest covers the processor boundary; verify fresh structures across Overworld and Nether seeds. |
@@ -301,9 +301,9 @@ Largest missing or partial design areas:
 
 | Design item | Status | Current implementation |
 | --- | --- | --- |
-| Scratch modern End update | Partial | Aender redirects late End access; End gateways are blocked, End City structure biome tags are emptied, and outer End density is masked. Existing-world behavior still needs testing. Vanilla End remains command-accessible by design. |
+| Scratch modern End update | Partial / needs visual verification | Aender redirects late End access; End gateways are blocked, End City structure biome tags are emptied, outer End density is masked, and the vanilla End's periodic visual/lightmap/sound flashes are disabled client-side. Existing-world and client behavior still needs testing. Vanilla End remains command-accessible by design. |
 | No End Cities / no End islands / no survival elytra | Partial / needs worldgen verification | End City biome tag is empty, gateway spawning is cancelled, and `end/sloped_cheese` uses `retold:central_end_island_mask` outside radius 512. Elytra item should remain, but should not be obtainable in survival because End Cities do not generate. |
-| End sky randomly generated | Implemented / partial | `RetoldEndSkyData`, `/retold sky randomize`, client generated sky texture. |
+| End sky randomly generated | Implemented / needs visual verification | `RetoldEndSkyData`, `/retold sky randomize`, and the client-generated sky texture are implemented. `ClientLevelEndFlashMixin` removes the vanilla End flash image, brightness pulse, and sound without disabling the End skybox. |
 | Aender Eye / Eye of Ender symbiosis | Partial | `AenderEye` entity exists. Full lore/gameplay relation to ender pearls/eyes not implemented. |
 | Ender pearl shell destroyed with blaze powder to retrieve eye | Not implemented |
 
@@ -339,7 +339,7 @@ Largest missing or partial design areas:
 | --- | --- | --- |
 | Remove endermites from survival spawning | Implemented / developer-verified | Normal spawn-position paths reject Endermites and the direct Ender Pearl source is intercepted separately. Commands, Creative usage, saved entities, dimension travel, and Endermite AI remain supported; the developer confirmed the behavior in-game on 2026-08-02. |
 | Keep/adjust ocean monuments | Partial | Guardian/elder guardian rework exists. |
-| Remove fossils | Not implemented / unclear | Still planned. |
+| Keep fossils | Confirmed retained | Fossils remain part of normal world generation; no removal hook should be added. |
 | Rework shulker boxes/storage | Not implemented |
 | Totems drain XP or fail without XP | Not implemented |
 | Remove recipe book | Partial | Recipe knowledge/teaching direction stays. No restoration gamerule is planned. |
@@ -348,9 +348,9 @@ Largest missing or partial design areas:
 | Tridents less OP/craftable | Not implemented |
 | Ocean ruins/shipwrecks lore pass | Not implemented |
 | Keep programmer-art-like visuals | Partial | Some custom/overridden textures exist; no full texture pack decision in code. |
-| Remove Deep Dark/Ancient Cities/Warden | Not implemented / unclear | Still planned. |
-| Remove trail ruins | Not implemented / unclear | Still planned. |
-| Remove Trial Chambers | Not implemented / unclear | Still planned. |
+| Remove Deep Dark/Ancient Cities/Warden from survival worldgen | Implemented / needs worldgen verification | `OverworldBiomeBuilderMixin` omits the Deep Dark mapping from the default Overworld climate preset, and the Ancient City biome tag is empty. The biome, structure, Warden, blocks, items, and existing generated content remain registered and intact. Focused GameTests cover both registry boundaries; fresh-world multi-seed verification remains. |
+| Keep trail ruins | Confirmed retained | Trail Ruins remain part of normal world generation; no removal hook should be added. |
+| Remove Trial Chambers from survival worldgen | Implemented / needs worldgen verification | The vanilla Trial Chamber structure remains registered, but its replaced biome tag is empty so it cannot generate in new terrain. |
 | Chase the Skies ghast idea rejected | Not implemented / design note only |
 | Baby mobs scaled-down adults can stay | Design only |
 

@@ -66,6 +66,7 @@ import cz.xefensor.retold.villager.RetoldVillageContainerOwnershipGameTests;
 import cz.xefensor.retold.villager.RetoldVillageCropReputationGameTests;
 import cz.xefensor.retold.villager.RetoldVillageAnimalReputationGameTests;
 import cz.xefensor.retold.worldgen.RetoldRuinedPortalGameTests;
+import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
 import net.minecraft.core.BlockPos;
@@ -269,6 +270,7 @@ public final class RetoldGameTests {
         RetoldAirTempleDiscoveryGameTests.register(event, environment);
         RetoldGaleCoreGameTests.register(event, environment);
         RetoldRuinedPortalGameTests.register(event, environment);
+        RetoldStructureRemovalGameTests.register(event, environment);
     }
 
     private static void registerTest(
