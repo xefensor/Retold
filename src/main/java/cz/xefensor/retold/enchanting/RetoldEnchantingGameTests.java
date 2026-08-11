@@ -8,9 +8,11 @@ import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.network.RetoldEnchantmentCatalogSyncPayload;
 import cz.xefensor.retold.network.RetoldEnchantingCastPayload;
 import cz.xefensor.retold.network.RetoldEnchantingCastResultPayload;
+import cz.xefensor.retold.registry.RetoldTags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -23,18 +25,22 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.EnchantmentMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class RetoldEnchantingGameTests {
     private static final Identifier EMPTY_STRUCTURE =
@@ -110,6 +116,13 @@ public final class RetoldEnchantingGameTests {
                 new InlineGameTest(
                         testData,
                         RetoldEnchantingGameTests::knownEnchantingOptionsFollowInsertedItem
+                )
+        );
+        event.registerTest(
+                id("animal_armor_supports_chestplate_enchantments"),
+                new InlineGameTest(
+                        testData,
+                        RetoldEnchantingGameTests::animalArmorSupportsChestplateEnchantments
                 )
         );
     }
@@ -702,6 +715,70 @@ public final class RetoldEnchantingGameTests {
                 "The client option must expose the registered maximum level"
         );
         helper.succeed();
+    }
+
+    private static void animalArmorSupportsChestplateEnchantments(
+            GameTestHelper helper
+    ) {
+        Map<Item, Integer> animalArmorEnchantability = Map.ofEntries(
+                Map.entry(Items.WOLF_ARMOR, 10),
+                Map.entry(Items.LEATHER_HORSE_ARMOR, 15),
+                Map.entry(Items.COPPER_HORSE_ARMOR, 8),
+                Map.entry(Items.IRON_HORSE_ARMOR, 9),
+                Map.entry(Items.GOLDEN_HORSE_ARMOR, 25),
+                Map.entry(Items.DIAMOND_HORSE_ARMOR, 10),
+                Map.entry(Items.NETHERITE_HORSE_ARMOR, 15),
+                Map.entry(Items.COPPER_NAUTILUS_ARMOR, 8),
+                Map.entry(Items.IRON_NAUTILUS_ARMOR, 9),
+                Map.entry(Items.GOLDEN_NAUTILUS_ARMOR, 25),
+                Map.entry(Items.DIAMOND_NAUTILUS_ARMOR, 10),
+                Map.entry(Items.NETHERITE_NAUTILUS_ARMOR, 15)
+        );
+        Set<Identifier> chestplateEnchantments = supportedEnchantments(
+                helper,
+                new ItemStack(Items.DIAMOND_CHESTPLATE)
+        );
+
+        for (Map.Entry<Item, Integer> entry
+                : animalArmorEnchantability.entrySet()) {
+            ItemStack animalArmor = new ItemStack(entry.getKey());
+            helper.assertTrue(
+                    animalArmor.is(RetoldTags.ANIMAL_ARMOR),
+                    animalArmor.getItem() + " must be tagged as animal armor"
+            );
+            helper.assertValueEqual(
+                    animalArmor.get(DataComponents.ENCHANTABLE),
+                    new Enchantable(entry.getValue()),
+                    animalArmor.getItem()
+                            + " must use its armor material's enchantability"
+            );
+            helper.assertTrue(
+                    animalArmor.isEnchantable(),
+                    animalArmor.getItem()
+                            + " must be accepted by enchanting interfaces"
+            );
+            helper.assertValueEqual(
+                    supportedEnchantments(helper, animalArmor),
+                    chestplateEnchantments,
+                    animalArmor.getItem()
+                            + " must support exactly the Diamond Chestplate enchantments"
+            );
+        }
+
+        helper.succeed();
+    }
+
+    private static Set<Identifier> supportedEnchantments(
+            GameTestHelper helper,
+            ItemStack stack
+    ) {
+        return helper.getLevel()
+                .registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .listElements()
+                .filter(stack::supportsEnchantment)
+                .map(enchantment -> enchantment.key().identifier())
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private static boolean containsEnchantment(

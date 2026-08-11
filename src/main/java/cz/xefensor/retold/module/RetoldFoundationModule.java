@@ -2,6 +2,7 @@ package cz.xefensor.retold.module;
 
 import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.enchanting.RetoldAnvilLearningEvents;
+import cz.xefensor.retold.enchanting.RetoldAnimalArmorEnchanting;
 import cz.xefensor.retold.enchanting.RetoldEnchantmentCatalogSyncEvents;
 import cz.xefensor.retold.enchanting.RetoldEnchantmentReloadListener;
 import cz.xefensor.retold.event.RetoldCommandEvents;
@@ -36,6 +37,9 @@ public final class RetoldFoundationModule {
         RetoldGameRules.register(modEventBus);
 
         modEventBus.addListener(RetoldNetworking::registerPayloads);
+        modEventBus.addListener(
+                RetoldAnimalArmorEnchanting::modifyDefaultComponents
+        );
         modEventBus.addListener(RetoldEntityEvents::registerAttributes);
         modEventBus.addListener(RetoldEntityEvents::registerSpawnPlacements);
         modEventBus.addListener(RetoldGameTests::register);

@@ -163,6 +163,12 @@ enchantments restores fragility. Raw damage is read directly from the component 
 re-enter itself; an over-cap stripped item receives an effective `damage + 1` maximum and one final
 use.
 
+`RetoldAnimalArmorEnchanting` adds material-matched enchantability components to Wolf Armor and
+every Horse and Nautilus Armor variant during default-component initialization. The
+`retold:animal_armor` item tag is included in the vanilla Chestplate, durability, and equippable
+enchantment families, giving those twelve items the same supported enchantment set as a player
+Chestplate without including them in Retold's fragile Diamond player-armor tag.
+
 ## World Stage System
 
 World stages are the backbone of Retold progression.

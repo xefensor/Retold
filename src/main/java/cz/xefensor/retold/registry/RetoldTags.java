@@ -13,6 +13,10 @@ public final class RetoldTags {
             Registries.ITEM,
             Identifier.fromNamespaceAndPath(Retold.MODID, "torch_igniters")
     );
+    public static final TagKey<Item> ANIMAL_ARMOR = TagKey.create(
+            Registries.ITEM,
+            Identifier.fromNamespaceAndPath(Retold.MODID, "animal_armor")
+    );
     public static final TagKey<Item> FLINT_MULTI_TOOL_REPAIR_MATERIALS =
             TagKey.create(
                     Registries.ITEM,

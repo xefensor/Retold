@@ -491,6 +491,11 @@ Copper and Steel receive full armor sets.
 
 Diamond armor follows the same low-unenchanted-durability rule as Diamond tools.
 
+Wolf Armor and all Horse and Nautilus Armor materials support the same enchantment compatibility
+set as a player Chestplate. Each animal armor uses its matching material's enchantability value;
+Wolf Armor uses the Armadillo Scute material value. Animal armor remains excluded from Diamond's
+fragile-until-enchanted durability rule.
+
 Netherite upgrades Diamond gear.
 
 Aenderite armor behavior remains TBD and should be designed around Aender-specific utility rather than only defense inflation.
