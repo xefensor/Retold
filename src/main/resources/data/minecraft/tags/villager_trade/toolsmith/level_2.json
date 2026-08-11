@@ -1,0 +1,10 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_2",
+    "retold:progression/copper_axe",
+    "retold:progression/copper_hoe",
+    "retold:progression/copper_pickaxe",
+    "retold:progression/copper_shovel"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_5",
+    "retold:progression/diamond_axe",
+    "retold:progression/diamond_hoe",
+    "retold:progression/diamond_pickaxe",
+    "retold:progression/diamond_shovel",
+    "retold:progression/enchanted_diamond_axe",
+    "retold:progression/enchanted_diamond_pickaxe"
+  ]
+}

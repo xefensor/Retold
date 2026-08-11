@@ -139,8 +139,9 @@ patterns that players can deduce.
 | Mending | item | restore | general | LSJ |
 | Curse of Vanishing | item | bind | undead | LCV |
 
-Mending remains mapped while it is registered. Its separate planned removal will remove the spell
-definition at the same time rather than leaving an unrenderable registry entry.
+Mending remains mapped because the enchantment stays registered for existing items, commands, and
+Creative testing. Retold removes it only from new random-loot and Librarian-trade selection, so an
+existing Mending item remains renderable and functional.
 
 The important rule is that enchantments are semi-compositional. Shared meanings should produce shared glyphs instead of every enchantment being an unrelated code.
 

@@ -81,6 +81,14 @@ public final class RetoldTags {
                             "steel_tier_blocks"
                     )
             );
+    public static final TagKey<Block> STICK_DROPPING_LIVING_BUSHES =
+            TagKey.create(
+                    Registries.BLOCK,
+                    Identifier.fromNamespaceAndPath(
+                            Retold.MODID,
+                            "stick_dropping_living_bushes"
+                    )
+            );
     public static final TagKey<Block> WEAK_MOB_BARRIERS = TagKey.create(
             Registries.BLOCK,
             Identifier.fromNamespaceAndPath(Retold.MODID, "weak_mob_barriers")

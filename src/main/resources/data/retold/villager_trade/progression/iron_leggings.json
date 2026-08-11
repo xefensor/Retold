@@ -1,0 +1,12 @@
+{
+  "gives": {
+    "id": "minecraft:iron_leggings"
+  },
+  "max_uses": 3,
+  "reputation_discount": 0.2,
+  "wants": {
+    "count": 30,
+    "id": "minecraft:emerald"
+  },
+  "xp": 15
+}

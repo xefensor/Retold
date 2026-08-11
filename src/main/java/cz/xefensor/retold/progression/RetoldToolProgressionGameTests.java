@@ -93,6 +93,7 @@ public final class RetoldToolProgressionGameTests {
     );
     private static final List<String> STEEL_EQUIPMENT_RECIPE_IDS = List.of(
             "steel_sword",
+            "steel_spear",
             "steel_shovel",
             "steel_pickaxe",
             "steel_axe",
@@ -103,6 +104,7 @@ public final class RetoldToolProgressionGameTests {
             "steel_boots"
     );
     private static final int LEAF_LOOT_SAMPLE_COUNT = 512;
+    private static final int BUSH_LOOT_SAMPLE_COUNT = 128;
 
     private RetoldToolProgressionGameTests() {
     }
@@ -402,8 +404,9 @@ public final class RetoldToolProgressionGameTests {
     }
 
     private static void leavesSupplySticks(GameTestHelper helper) {
-        int unenchantedSticks = countOakLeafSticks(
+        int unenchantedSticks = countBlockSticks(
                 helper,
+                Blocks.OAK_LEAVES.defaultBlockState(),
                 ItemStack.EMPTY,
                 LEAF_LOOT_SAMPLE_COUNT
         );
@@ -420,8 +423,9 @@ public final class RetoldToolProgressionGameTests {
                 enchantments.getOrThrow(Enchantments.FORTUNE),
                 3
         );
-        int fortuneSticks = countOakLeafSticks(
+        int fortuneSticks = countBlockSticks(
                 helper,
+                Blocks.OAK_LEAVES.defaultBlockState(),
                 fortuneTool,
                 LEAF_LOOT_SAMPLE_COUNT
         );
@@ -431,8 +435,9 @@ public final class RetoldToolProgressionGameTests {
         );
 
         helper.assertTrue(
-                countOakLeafSticks(
+                countBlockSticks(
                         helper,
+                        Blocks.OAK_LEAVES.defaultBlockState(),
                         new ItemStack(Items.SHEARS),
                         LEAF_LOOT_SAMPLE_COUNT
                 ) == 0,
@@ -445,8 +450,9 @@ public final class RetoldToolProgressionGameTests {
                 1
         );
         helper.assertTrue(
-                countOakLeafSticks(
+                countBlockSticks(
                         helper,
+                        Blocks.OAK_LEAVES.defaultBlockState(),
                         silkTouchTool,
                         LEAF_LOOT_SAMPLE_COUNT
                 ) == 0,
@@ -461,11 +467,61 @@ public final class RetoldToolProgressionGameTests {
                 "Leaf Stick chances must remain 20% base and 35% at Fortune III"
         );
 
+        int deadBushSticks = countBlockSticks(
+                helper,
+                Blocks.DEAD_BUSH.defaultBlockState(),
+                ItemStack.EMPTY,
+                BUSH_LOOT_SAMPLE_COUNT
+        );
+        helper.assertTrue(
+                deadBushSticks >= BUSH_LOOT_SAMPLE_COUNT * 2
+                        && deadBushSticks <= BUSH_LOOT_SAMPLE_COUNT * 4,
+                "Dead Bushes must drop two to four Sticks"
+        );
+
+        helper.assertTrue(
+                Blocks.BUSH.defaultBlockState().is(
+                        RetoldTags.STICK_DROPPING_LIVING_BUSHES
+                )
+                        && Blocks.FIREFLY_BUSH.defaultBlockState().is(
+                        RetoldTags.STICK_DROPPING_LIVING_BUSHES
+                )
+                        && Blocks.ROSE_BUSH.defaultBlockState().is(
+                        RetoldTags.STICK_DROPPING_LIVING_BUSHES
+                )
+                        && Blocks.SWEET_BERRY_BUSH.defaultBlockState().is(
+                        RetoldTags.STICK_DROPPING_LIVING_BUSHES
+                ),
+                "Every woody vanilla bush must use the living-bush Stick policy"
+        );
+        int livingBushSticks = countBlockSticks(
+                helper,
+                Blocks.BUSH.defaultBlockState(),
+                ItemStack.EMPTY,
+                BUSH_LOOT_SAMPLE_COUNT
+        );
+        helper.assertTrue(
+                livingBushSticks >= 4 && livingBushSticks <= 25,
+                "Living bushes must occasionally drop one Stick; sampled "
+                        + livingBushSticks
+        );
+        helper.assertValueEqual(
+                countBlockSticks(
+                        helper,
+                        Blocks.BUSH.defaultBlockState(),
+                        new ItemStack(Items.SHEARS),
+                        BUSH_LOOT_SAMPLE_COUNT
+                ),
+                0,
+                "Shears must preserve living bushes without extra Sticks"
+        );
+
         helper.succeed();
     }
 
-    private static int countOakLeafSticks(
+    private static int countBlockSticks(
             GameTestHelper helper,
+            BlockState state,
             ItemStack tool,
             int samples
     ) {
@@ -477,19 +533,19 @@ public final class RetoldToolProgressionGameTests {
                 )
                 .withParameter(
                         LootContextParams.BLOCK_STATE,
-                        Blocks.OAK_LEAVES.defaultBlockState()
+                        state
                 )
                 .withParameter(LootContextParams.TOOL, tool)
                 .create(LootContextParamSets.BLOCK);
         LootTable lootTable = level.getServer()
                 .reloadableRegistries()
                 .getLootTable(
-                        Blocks.OAK_LEAVES.getLootTable().orElseThrow()
+                        state.getBlock().getLootTable().orElseThrow()
                 );
         int sticks = 0;
 
-        for (long seed = 1L; seed <= samples; seed++) {
-            for (ItemStack stack : lootTable.getRandomItems(params, seed)) {
+        for (int sample = 0; sample < samples; sample++) {
+            for (ItemStack stack : lootTable.getRandomItems(params)) {
                 if (stack.is(Items.STICK)) {
                     sticks += stack.getCount();
                 }
@@ -771,6 +827,21 @@ public final class RetoldToolProgressionGameTests {
                         .is(RetoldBlocks.FLINT_MULTI_TOOL.get()),
                 "The opening recipe must produce the Flint Multi-tool"
         );
+        assertSpearRecipe(
+                helper,
+                recipes,
+                Items.FLINT,
+                RetoldBlocks.FLINT_SPEAR.get(),
+                "Flint"
+        );
+        helper.assertTrue(
+                RetoldBlocks.FLINT_SPEAR.get().getDefaultInstance()
+                        .is(ItemTags.SPEARS)
+                        && RetoldBlocks.FLINT_SPEAR.get()
+                        .getDefaultInstance()
+                        .getMaxDamage() == 48,
+                "The Flint Spear must join the Spear family at Flint durability"
+        );
 
         CraftingInput unfueledCampfireInput = campfireInput(ItemStack.EMPTY);
         RecipeHolder<?> loadedCampfireRecipe = recipes.byKey(
@@ -879,6 +950,21 @@ public final class RetoldToolProgressionGameTests {
                     "Steel equipment recipe must load: " + steelRecipeId
             );
         }
+        assertSpearRecipe(
+                helper,
+                recipes,
+                RetoldBlocks.STEEL_INGOT.get(),
+                RetoldBlocks.STEEL_SPEAR.get(),
+                "Steel"
+        );
+        helper.assertTrue(
+                RetoldBlocks.STEEL_SPEAR.get().getDefaultInstance()
+                        .is(ItemTags.SPEARS)
+                        && RetoldBlocks.STEEL_SPEAR.get()
+                        .getDefaultInstance()
+                        .getMaxDamage() == 750,
+                "The Steel Spear must join the Spear family at Steel durability"
+        );
 
         CraftingInput steelPickaxeInput = CraftingInput.of(
                 3,
@@ -914,6 +1000,41 @@ public final class RetoldToolProgressionGameTests {
                 "The normal Furnace recipe must remain available after Copper"
         );
         helper.succeed();
+    }
+
+    private static void assertSpearRecipe(
+            GameTestHelper helper,
+            RecipeManager recipes,
+            Item point,
+            Item expectedResult,
+            String tier
+    ) {
+        CraftingInput input = CraftingInput.of(
+                3,
+                3,
+                List.of(
+                        ItemStack.EMPTY,
+                        ItemStack.EMPTY,
+                        point.getDefaultInstance(),
+                        ItemStack.EMPTY,
+                        Items.STICK.getDefaultInstance(),
+                        ItemStack.EMPTY,
+                        Items.STICK.getDefaultInstance(),
+                        ItemStack.EMPTY,
+                        ItemStack.EMPTY
+                )
+        );
+        RecipeHolder<CraftingRecipe> recipe = recipes.getRecipeFor(
+                RecipeType.CRAFTING,
+                input,
+                helper.getLevel()
+        ).orElseThrow(() -> helper.assertionException(
+                tier + " must use the standard diagonal Spear recipe"
+        ));
+        helper.assertTrue(
+                recipe.value().assemble(input).is(expectedResult),
+                tier + " Spear recipe must produce the registered Spear"
+        );
     }
 
     private static void assertSmokingResult(

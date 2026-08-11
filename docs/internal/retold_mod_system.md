@@ -140,8 +140,9 @@ the Copper Pickaxe receives a Stone-specific speed penalty, Copper and Iron Pick
 Steel-tier Deepslate penalty, and exact vanilla Wooden/Stone tool recipes are removed during recipe
 JSON modification. `RetoldLeafStickLootModifier`, registered through `RetoldLootModifiers`, gives
 every `minecraft:leaves` block a supplemental 20% roll for 1–2 Sticks, increasing five percentage
-points per Fortune level and excluding shears and Silk Touch. `RetoldBlocks` registers the Flint
-Multi-tool and provisional Steel tool/armor materials, while block/item tags own mining, repair,
+points per Fortune level. It also normalizes Dead Bushes to 2–4 Sticks and gives tagged living
+bushes a 10% one-Stick roll, while excluding shears and Silk Touch. `RetoldBlocks` registers the
+Flint Multi-tool, Flint Spear, Steel Spear, and provisional Steel tool/armor materials, while block/item tags own mining, repair,
 enchantment-family, and equipment boundaries. Vanilla placed-feature overrides reduce ordinary
 and Dripstone Copper from sixteen to six attempts per chunk while retaining vanilla vein sizes and
 height distribution; only newly generated chunks receive the reduced distribution.
@@ -153,7 +154,11 @@ the three-Stick/three-Log Campfire, fire Clay Balls into Bricks through campfire
 the vanilla Smoker as the eight-Brick Brick Furnace, add its Copper/Charcoal processing, blast Iron
 Ingots directly into Steel, and craft the full standard Steel tool and armor sets. These rules are
 server-owned; client resources provide names and deliberately reference vanilla Flint/Iron models
-until final art is approved.
+until final art is approved. Vanilla chest, Villager-trade, and enchantment-tag overrides define
+the same alternative-acquisition rules for every player: bonus chests stop at Flint, safe Village
+smith chests stop at Copper gear, smith equipment tiers follow Villager mastery and expensive
+Emerald ranges, and Mending is excluded from new random loot and Librarian selection. Existing
+saved offers and existing Mending items are deliberately not rewritten.
 
 `RetoldDiamondDurability` owns the selected dynamic Diamond rule. `ItemStackDiamondDurabilityMixin`
 is only the return-value hook for `ItemStack.getMaxDamage`; separate item tags identify affected
@@ -618,8 +623,8 @@ Data:
 
 - spell definitions load from `data/<namespace>/enchantment_spells/*.json`
 - definitions map an enchantment id to semantic `domain`, `effect`, and `modifier` identifiers
-- 43 definitions cover every currently registered vanilla enchantment, including Mending while its
-  separately planned removal remains unimplemented
+- 43 definitions cover every currently registered vanilla enchantment, including Mending because
+  it remains usable on existing and command/Creative-created items even though new acquisition is removed
 - the fixed 26-concept vocabulary maps one semantic concept to each built-in SGA A-Z glyph;
   definitions using unknown concepts are rejected with the rest of an invalid reload
 

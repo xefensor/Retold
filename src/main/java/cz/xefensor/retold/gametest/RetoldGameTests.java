@@ -50,6 +50,7 @@ import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
 import cz.xefensor.retold.event.RetoldSnowballGameTests;
 import cz.xefensor.retold.event.RetoldVexGameTests;
 import cz.xefensor.retold.progression.RetoldToolProgressionGameTests;
+import cz.xefensor.retold.progression.RetoldProgressionAcquisitionGameTests;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldRaidProgression;
@@ -260,6 +261,7 @@ public final class RetoldGameTests {
         RetoldSnowballGameTests.register(event, environment);
         RetoldEnchantingGameTests.register(event, environment);
         RetoldToolProgressionGameTests.register(event, environment);
+        RetoldProgressionAcquisitionGameTests.register(event, environment);
         RetoldTerritoryGameTests.register(event, environment);
         RetoldVillagerCommunalFoodGameTests.register(event);
         RetoldVillagerGolemConstructionGameTests.register(event);

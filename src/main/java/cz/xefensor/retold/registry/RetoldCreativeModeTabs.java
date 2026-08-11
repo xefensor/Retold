@@ -98,7 +98,8 @@ public final class RetoldCreativeModeTabs {
         insertAfter(
                 event,
                 Items.FLINT_AND_STEEL,
-                RetoldBlocks.FLINT_MULTI_TOOL.get()
+                RetoldBlocks.FLINT_MULTI_TOOL.get(),
+                RetoldBlocks.FLINT_SPEAR.get()
         );
         insertAfter(
                 event,
@@ -114,6 +115,7 @@ public final class RetoldCreativeModeTabs {
 
     private static void addCombat(BuildCreativeModeTabContentsEvent event) {
         insertAfter(event, Items.IRON_SWORD, RetoldBlocks.STEEL_SWORD.get());
+        insertAfter(event, Items.IRON_SPEAR, RetoldBlocks.STEEL_SPEAR.get());
         insertAfter(event, Items.IRON_AXE, RetoldBlocks.STEEL_AXE.get());
         insertAfter(event, Items.IRON_HELMET, RetoldBlocks.STEEL_HELMET.get());
         insertAfter(

@@ -305,8 +305,9 @@ Steel receives a full normal tool and armor set.
 It should be the strongest conventional Overworld workhorse material before Diamond becomes a magical progression step.
 
 The provisional tool material uses 750 durability, mining speed 7.0, attack bonus 2.5, and
-enchantability 12. The implemented set contains Pickaxe, Axe, Shovel, Hoe, and Sword; nonstandard
-weapons such as the Spear remain part of the later combat/tool audit.
+enchantability 12. The implemented set contains Pickaxe, Axe, Shovel, Hoe, Sword, and Spear. The
+Steel Spear follows an interpolated Iron-to-Diamond attack curve and temporarily references the
+vanilla Iron Spear visuals.
 
 The provisional armor material uses durability multiplier 25, enchantability 12, toughness 1,
 and defenses of 3 Helmet, 7 Chestplate, 6 Leggings, and 3 Boots. Until a Steel art direction is
@@ -534,6 +535,9 @@ Copper rate again only from concrete natural-world results.
 - The Flint Multi-tool is the primitive combined axe/shovel/pick-like starter tool.
 - The Flint Multi-tool recipe is exactly two Flint across the top and one Stick below the right-hand Flint in the 2x2 inventory grid.
 - Vanilla Wooden and Stone axe, hoe, pickaxe, shovel, spear, and sword recipes are removed so they cannot bypass Copper progression.
+- Spears follow Flint, Copper, Iron, Steel, and Diamond; Gold remains an optional fast, fragile side grade.
+- Bonus chests provide one Flint Multi-tool, safe Village smith chests stop at Copper equipment and at most two Iron Ingots, and no player-specific progression state controls shared loot.
+- Smith equipment trades unlock Copper at Apprentice for 8–12 Emeralds, Iron at Expert for 24–32, and unenchanted plus rarer enchanted Diamond at Master for 48–64. The Wandering Trader may sell its rare enchanted Iron Pickaxe for roughly 48 Emeralds after its enchantment surcharge.
 - Campfires use three Sticks and three Logs without Coal or Flint, begin unlit, and can be lit by consuming bare Flint or by using Flint and Steel durability.
 - Campfire cooking fires Clay Balls into Bricks.
 - Brick Furnace fills the Smoker role, smelts Copper, and is crafted from eight Bricks in a ring.
@@ -542,6 +546,7 @@ Copper rate again only from concrete natural-world results.
 - Iron makes Stone mining practical.
 - Steel is produced by blasting Iron Ingots; Charcoal is an ordinary valid fuel rather than a required second ingredient.
 - Steel makes Deepslate practical and thereby opens deep Diamond progression.
+- Ancient Debris remains in the Diamond harvest tier.
 - Copper and Steel receive full tool and armor sets.
 - Standard tool families follow the same tier ladder from Copper onward.
 - Diamond equipment has very low durability until enchanted.
@@ -550,6 +555,7 @@ Copper rate again only from concrete natural-world results.
 - Aenderite is the final exotic tier but must have an identity beyond bigger stats.
 - Keep vanilla Iron and Diamond generation; Copper is the confirmed exception at six vein attempts per chunk with vanilla vein sizes.
 - Gold is intentionally deferred to a separate design pass.
+- Mending is excluded from new random loot and Librarian trades, but remains registered and functional on existing or command/Creative-created items.
 
 ## Still Undecided
 
@@ -557,8 +563,7 @@ Copper rate again only from concrete natural-world results.
 - final tool mining speeds and durability per tier beyond the provisional Flint, Copper, Steel, and unenchanted Diamond values
 - final armor/combat stats beyond the provisional Steel and unenchanted Diamond values
 - exact block/tag harvest lists beyond the implemented Flint and Steel-tier opening boundaries
-- exact handling of Ancient Debris harvest level
 - exact role and progression position of Gold
 - whether Smithing Table remains or Netherite upgrade functionality moves into the Anvil
 - exact Aenderite crafting/upgrading method and special abilities
-- whether any nonstandard tools/weapons follow different material rules after the future combat/tool audit
+- whether later nonstandard tools/weapons follow different material rules after the future combat/tool audit

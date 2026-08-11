@@ -94,6 +94,22 @@ public final class RetoldBlocks {
                     0.0F
             )
     );
+    public static final DeferredItem<Item> FLINT_SPEAR = ITEMS.registerItem(
+            "flint_spear",
+            Item::new,
+            properties -> properties.spear(
+                    FLINT_MULTI_TOOL_MATERIAL,
+                    0.75F,
+                    0.82F,
+                    0.70F,
+                    4.5F,
+                    13.0F,
+                    9.0F,
+                    5.1F,
+                    13.75F,
+                    4.6F
+            )
+    );
     public static final DeferredItem<Item> STEEL_INGOT = ITEMS.registerSimpleItem(
             "steel_ingot"
     );
@@ -104,6 +120,22 @@ public final class RetoldBlocks {
                     STEEL_TOOL_MATERIAL,
                     3.0F,
                     -2.4F
+            )
+    );
+    public static final DeferredItem<Item> STEEL_SPEAR = ITEMS.registerItem(
+            "steel_spear",
+            Item::new,
+            properties -> properties.spear(
+                    STEEL_TOOL_MATERIAL,
+                    1.0F,
+                    1.0F,
+                    0.55F,
+                    2.75F,
+                    10.5F,
+                    6.625F,
+                    5.1F,
+                    10.625F,
+                    4.6F
             )
     );
     public static final DeferredItem<ShovelItem> STEEL_SHOVEL = ITEMS.registerItem(
