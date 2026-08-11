@@ -350,6 +350,8 @@ The developer chose dynamic durability on 2026-08-11:
 - unenchanted Diamond Sword, Shovel, Pickaxe, Axe, Hoe, and Spear have 64 maximum durability
 - unenchanted Diamond player armor uses durability multiplier 6: Helmet 66, Chestplate 96,
   Leggings 90, and Boots 78
+- unenchanted Diamond Horse and Nautilus Armor use the BODY/Chestplate value of 96 durability;
+  enchanting either restores its full 528 durability
 - while any enchantment is present, the item immediately uses its full vanilla Diamond durability
 - removing every enchantment, including through a Grindstone, immediately restores the fragile
   maximum
@@ -357,8 +359,9 @@ The developer chose dynamic durability on 2026-08-11:
   temporarily `damage + 1`, leaving one final use instead of creating an already-broken stack
 - re-enchanting the item restores the full maximum again without changing its preserved damage
 
-This rule is data-driven through separate Retold Diamond tool and player-armor tags. Horse and
-Nautilus armor are not included.
+This rule is data-driven through separate Retold Diamond tool and armor tags. The armor tag covers
+player armor plus Diamond Horse and Nautilus Armor, which Retold makes damageable because vanilla
+animal armor does not otherwise have durability.
 
 The intended relationship is:
 
@@ -493,14 +496,14 @@ Diamond armor follows the same low-unenchanted-durability rule as Diamond tools.
 
 Wolf Armor and all Horse and Nautilus Armor materials support the same enchantment compatibility
 set as a player Chestplate. Each animal armor uses its matching material's enchantability value;
-Wolf Armor uses the Armadillo Scute material value. Animal armor remains excluded from Diamond's
-fragile-until-enchanted durability rule. Protection-family enchantments affect equipped animal
+Wolf Armor uses the Armadillo Scute material value. Diamond Horse and Nautilus Armor follow
+Diamond's fragile-until-enchanted durability rule at 96/528 durability and receive BODY-slot wear
+from non-armor-bypassing hits. Protection-family enchantments affect equipped animal
 armor: the normal living-entity pipeline handles Horse and Nautilus health damage, while Retold
 applies the same vanilla enchantment calculation before Wolf Armor converts a protected hit into
 durability loss. Fire Protection reduces matching damage and burning duration; like a player
-Chestplate, it does not make the animal visually fireproof. Horse and Nautilus armor remain
-vanilla-indestructible, so durability-only enchantments have no durability pool to modify on those
-items.
+Chestplate, it does not make the animal visually fireproof. Non-Diamond Horse and Nautilus armor
+retains vanilla's indestructible behavior.
 
 Netherite upgrades Diamond gear.
 
@@ -542,7 +545,7 @@ Copper rate again only from concrete natural-world results.
 - Copper and Steel receive full tool and armor sets.
 - Standard tool families follow the same tier ladder from Copper onward.
 - Diamond equipment has very low durability until enchanted.
-- Diamond durability is dynamic: removing every enchantment makes tagged Diamond tools and player armor fragile again.
+- Diamond durability is dynamic: removing every enchantment makes tagged Diamond tools, player armor, Horse Armor, and Nautilus Armor fragile again.
 - Netherite sits between Diamond and Aenderite and upgrades Diamond equipment.
 - Aenderite is the final exotic tier but must have an identity beyond bigger stats.
 - Keep vanilla Iron and Diamond generation; Copper is the confirmed exception at six vein attempts per chunk with vanilla vein sizes.

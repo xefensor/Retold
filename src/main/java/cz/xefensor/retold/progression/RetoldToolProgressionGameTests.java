@@ -1,10 +1,12 @@
 package cz.xefensor.retold.progression;
 
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -18,6 +20,8 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -56,7 +60,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class RetoldToolProgressionGameTests {
     private static final Identifier EMPTY_STRUCTURE =
@@ -135,6 +141,115 @@ public final class RetoldToolProgressionGameTests {
                 "tool_progression_copper_generation_is_reduced",
                 RetoldToolProgressionGameTests::copperGenerationIsReduced
         );
+        registerTest(
+                event,
+                environment,
+                "tool_progression_all_diamond_items_require_enchanting_for_durability",
+                RetoldToolProgressionGameTests
+                        ::allDiamondItemsRequireEnchantingForDurability
+        );
+    }
+
+    private static void allDiamondItemsRequireEnchantingForDurability(
+            GameTestHelper helper
+    ) {
+        Set<Item> expectedDiamondEquipment = Set.of(
+                Items.DIAMOND_SWORD,
+                Items.DIAMOND_SHOVEL,
+                Items.DIAMOND_PICKAXE,
+                Items.DIAMOND_AXE,
+                Items.DIAMOND_HOE,
+                Items.DIAMOND_SPEAR,
+                Items.DIAMOND_HELMET,
+                Items.DIAMOND_CHESTPLATE,
+                Items.DIAMOND_LEGGINGS,
+                Items.DIAMOND_BOOTS,
+                Items.DIAMOND_HORSE_ARMOR,
+                Items.DIAMOND_NAUTILUS_ARMOR
+        );
+        Set<Item> enchantableDiamondItems = BuiltInRegistries.ITEM.stream()
+                .filter(item -> {
+                    Identifier id = BuiltInRegistries.ITEM.getKey(item);
+                    return id.getNamespace().equals("minecraft")
+                            && id.getPath().startsWith("diamond_")
+                            && item.getDefaultInstance().isEnchantable();
+                })
+                .collect(Collectors.toUnmodifiableSet());
+        helper.assertValueEqual(
+                enchantableDiamondItems,
+                expectedDiamondEquipment,
+                "The durability policy must enumerate every enchantable Diamond item"
+        );
+
+        Holder<net.minecraft.world.item.enchantment.Enchantment> unbreaking =
+                helper.getLevel()
+                        .registryAccess()
+                        .lookupOrThrow(Registries.ENCHANTMENT)
+                        .getOrThrow(Enchantments.UNBREAKING);
+        for (Item item : expectedDiamondEquipment) {
+            ItemStack stack = item.getDefaultInstance();
+            int fullDurability = stack.getOrDefault(
+                    DataComponents.MAX_DAMAGE,
+                    0
+            );
+            helper.assertTrue(
+                    fullDurability > 0,
+                    item + " must have a full durability component"
+            );
+
+            int fragileDurability = stack.is(
+                    RetoldTags.FRAGILE_UNENCHANTED_DIAMOND_TOOLS
+            )
+                    ? RetoldDiamondDurability.UNENCHANTED_TOOL_DURABILITY
+                    : RetoldDiamondDurability.fragileArmorDurability(
+                            fullDurability
+                    );
+            helper.assertValueEqual(
+                    stack.getMaxDamage(),
+                    fragileDurability,
+                    item + " must begin with fragile unenchanted durability"
+            );
+
+            stack.enchant(unbreaking, 1);
+            helper.assertValueEqual(
+                    stack.getMaxDamage(),
+                    fullDurability,
+                    item + " must regain full durability when enchanted"
+            );
+            stack.set(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            helper.assertValueEqual(
+                    stack.getMaxDamage(),
+                    fragileDurability,
+                    item + " must become fragile after removing enchantments"
+            );
+        }
+
+        var attacker = helper.spawn(EntityTypes.ZOMBIE, 1, 2, 1);
+        attacker.setNoAi(true);
+        var horse = helper.spawn(EntityTypes.HORSE, 2, 2, 1);
+        var nautilus = helper.spawn(EntityTypes.NAUTILUS, 3, 2, 1);
+        horse.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.DIAMOND_HORSE_ARMOR)
+        );
+        nautilus.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.DIAMOND_NAUTILUS_ARMOR)
+        );
+
+        var damageSource = helper.getLevel().damageSources().mobAttack(attacker);
+        horse.hurtServer(helper.getLevel(), damageSource, 8.0F);
+        nautilus.hurtServer(helper.getLevel(), damageSource, 8.0F);
+        helper.assertTrue(
+                horse.getItemBySlot(EquipmentSlot.BODY).getDamageValue() > 0,
+                "Diamond Horse Armor must lose durability from protected hits"
+        );
+        helper.assertTrue(
+                nautilus.getItemBySlot(EquipmentSlot.BODY).getDamageValue() > 0,
+                "Diamond Nautilus Armor must lose durability from protected hits"
+        );
+
+        helper.succeed();
     }
 
     private static void copperGenerationIsReduced(GameTestHelper helper) {

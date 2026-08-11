@@ -157,24 +157,25 @@ until final art is approved.
 
 `RetoldDiamondDurability` owns the selected dynamic Diamond rule. `ItemStackDiamondDurabilityMixin`
 is only the return-value hook for `ItemStack.getMaxDamage`; separate item tags identify affected
-Diamond tools/Spear and player armor. Unenchanted tools use 64 durability and armor scales from
-vanilla's 33x to 6x. Any enchantment restores the underlying vanilla maximum, while removing all
+Diamond tools/Spear and armor. Unenchanted tools use 64 durability and armor scales from vanilla's
+33x to 6x. Diamond Horse and Nautilus Armor receive the BODY/Chestplate base of 528, producing 96
+unenchanted durability. Any enchantment restores the underlying full maximum, while removing all
 enchantments restores fragility. Raw damage is read directly from the component so the hook cannot
 re-enter itself; an over-cap stripped item receives an effective `damage + 1` maximum and one final
-use.
+use. A `LivingDamageEvent.Pre` handler gives those two BODY-slot items normal armor wear after a
+non-armor-bypassing hit; `ItemStack.hurtAndBreak` retains Unbreaking and break behavior.
 
 `RetoldAnimalArmorEnchanting` adds material-matched enchantability components to Wolf Armor and
 every Horse and Nautilus Armor variant during default-component initialization. The
 `retold:animal_armor` item tag is included in the vanilla Chestplate, durability, and equippable
 enchantment families, giving those twelve items the same supported enchantment set as a player
-Chestplate without including them in Retold's fragile Diamond player-armor tag. Horse and Nautilus
+Chestplate. Diamond Horse and Nautilus Armor also join Retold's fragile Diamond armor tag. Horse and Nautilus
 damage follows the ordinary `LivingEntity` enchantment pipeline. Wolf Armor instead absorbs most
 hits directly into item durability before that pipeline runs, so the same owner listens for
 incoming Wolf damage and applies vanilla `EnchantmentHelper` protection exactly once before the
 absorption branch. Damage that bypasses Wolf Armor or enchantments is excluded from this bridge.
 Fire Protection continues to reduce fire damage and burning duration rather than granting visual
-fire immunity. Vanilla Horse and Nautilus armor remains indestructible, so durability-only
-enchantments have no durability value to alter on those items.
+fire immunity. Non-Diamond Horse and Nautilus armor retains vanilla's indestructible behavior.
 
 ## World Stage System
 
