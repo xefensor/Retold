@@ -18,7 +18,9 @@ Leather -> Copper -> Iron -> Steel -> Diamond -> Netherite -> Aenderite
 
 Copper and Steel both receive full normal tool and armor sets. Standard tool families from Copper onward should follow the same familiar material ladder for simplicity, including pickaxe, axe, shovel, hoe, and sword unless a later feature-specific redesign says otherwise.
 
-Gold is deliberately outside this progression for now and will receive a separate design pass because of its Nether/Pigman/lore role.
+Gold remains outside the required progression as an optional post-Iron sidegrade. It keeps its
+vanilla identity: exceptionally fast but fragile tools, high enchantability, and armor utility for
+Piglin interaction. Gold does not gate Steel or Diamond.
 
 ## Design Goal
 
@@ -113,7 +115,9 @@ but the recipe does not require it specifically or consume it at a fixed 1:1 rat
 normally power a Blast Furnace remain valid. This intentionally accepts vanilla's fuel efficiency
 instead of adding custom fuel-slot logic.
 
-Blast Furnace construction should broadly preserve the old Retold direction of requiring advanced masonry/metal materials such as bricks and iron, while staying visually/readably close to normal Minecraft crafting. Exact recipe remains to be finalized.
+The Blast Furnace keeps its vanilla crafting recipe: five Iron Ingots, one Furnace, and three
+Smooth Stone. Requiring both the Furnace and Furnace-made Smooth Stone preserves the station
+progression without adding another custom recipe.
 
 ### Enchanting Table
 
@@ -316,14 +320,16 @@ copying or modifying Minecraft textures.
 
 ### Steel mining identity
 
-Steel is the tier that makes **Deepslate** practically mineable and opens the deepest Overworld geology.
+Steel is the tier that unlocks **Deepslate** harvesting and opens the deepest Overworld geology.
 
-Copper and Iron Pickaxes can still harvest applicable Deepslate-family blocks, but do so at 25%
-of their otherwise calculated speed. The data-driven Steel-tier list contains natural Deepslate,
-its construction variants, and Deepslate ores. Steel mines them at its full speed, can harvest
-Deepslate Diamond Ore, and still cannot harvest Obsidian, preserving Diamond's next access step.
+Copper and Iron Pickaxes break Deepslate-family blocks at 25% of their otherwise calculated speed
+but receive no drops. Wooden, Stone, Gold, Copper, Iron, and Flint tools all treat the data-driven
+Steel-tier list as incorrect for drops. That list contains natural Deepslate, its construction
+variants, and Deepslate ores. Steel mines and harvests them at its full speed, can harvest Deepslate
+Diamond Ore, and still cannot harvest Obsidian, preserving Diamond's next access step. Diamond and
+Netherite retain Deepslate harvesting after Steel.
 
-This naturally gates practical Diamond access behind Steel because modern vanilla Diamond generation strongly favors deep/deepslate regions.
+This hard-gates deep Diamond access behind Steel.
 
 Keep vanilla Diamond generation initially; let geological access provide the progression gate.
 
@@ -337,7 +343,7 @@ Diamond equipment is a high-end magical material and is intentionally dependent 
 
 ```text
 Steel
--> practical Deepslate mining
+-> unlock Deepslate harvesting
 -> reach Diamond-rich deep layers
 -> mine Diamond
 ```
@@ -443,7 +449,7 @@ Iron Ingot + ordinary Blast Furnace fuel
 -> Blast Furnace
 -> Steel Ingot
 -> Steel tools/armor
--> Deepslate becomes practical
+-> Deepslate harvesting unlocks
 
 Deep mining
 -> Diamond
@@ -545,7 +551,7 @@ Copper rate again only from concrete natural-world results.
 - Copper Pickaxe can mine Stone and obtain Cobblestone, but does so slowly.
 - Iron makes Stone mining practical.
 - Steel is produced by blasting Iron Ingots; Charcoal is an ordinary valid fuel rather than a required second ingredient.
-- Steel makes Deepslate practical and thereby opens deep Diamond progression.
+- Pre-Steel tools cannot harvest Deepslate-family blocks or ores; Steel unlocks them and thereby opens deep Diamond progression.
 - Ancient Debris remains in the Diamond harvest tier.
 - Copper and Steel receive full tool and armor sets.
 - Standard tool families follow the same tier ladder from Copper onward.
@@ -554,16 +560,14 @@ Copper rate again only from concrete natural-world results.
 - Netherite sits between Diamond and Aenderite and upgrades Diamond equipment.
 - Aenderite is the final exotic tier but must have an identity beyond bigger stats.
 - Keep vanilla Iron and Diamond generation; Copper is the confirmed exception at six vein attempts per chunk with vanilla vein sizes.
-- Gold is intentionally deferred to a separate design pass.
+- Gold is an optional post-Iron sidegrade and does not gate Steel or Diamond.
 - Mending is excluded from new random loot and Librarian trades, but remains registered and functional on existing or command/Creative-created items.
 
 ## Still Undecided
 
-- exact Blast Furnace crafting recipe if Retold changes vanilla's recipe
 - final tool mining speeds and durability per tier beyond the provisional Flint, Copper, Steel, and unenchanted Diamond values
 - final armor/combat stats beyond the provisional Steel and unenchanted Diamond values
 - exact block/tag harvest lists beyond the implemented Flint and Steel-tier opening boundaries
-- exact role and progression position of Gold
 - whether Smithing Table remains or Netherite upgrade functionality moves into the Anvil
 - exact Aenderite crafting/upgrading method and special abilities
 - whether later nonstandard tools/weapons follow different material rules after the future combat/tool audit

@@ -1,5 +1,6 @@
 {
   "values": [
+    "#retold:steel_tier_blocks",
     "#minecraft:needs_iron_tool",
     "#minecraft:needs_diamond_tool"
   ]

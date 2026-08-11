@@ -138,7 +138,9 @@ order is dependency-aware: faction precedes territory, and territory precedes be
 `RetoldToolProgressionEvents` owns the non-data opening rules: logs require a correct held tool,
 the Copper Pickaxe receives a Stone-specific speed penalty, Copper and Iron Pickaxes receive the
 Steel-tier Deepslate penalty, and exact vanilla Wooden/Stone tool recipes are removed during recipe
-JSON modification. `RetoldLeafStickLootModifier`, registered through `RetoldLootModifiers`, gives
+JSON modification. Tool-material correctness tags deny Deepslate-family drops to every pre-Steel
+material while allowing Steel and later tiers to harvest them. `RetoldLeafStickLootModifier`,
+registered through `RetoldLootModifiers`, gives
 every `minecraft:leaves` block a supplemental 20% roll for 1–2 Sticks, increasing five percentage
 points per Fortune level. It also normalizes Dead Bushes to 2–4 Sticks and gives tagged living
 bushes a 10% one-Stick roll, while excluding shears and Silk Touch. `RetoldBlocks` registers the

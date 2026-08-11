@@ -667,6 +667,54 @@ public final class RetoldToolProgressionGameTests {
                 ironDeepslateSpeed.getNewSpeed() == 1.5F,
                 "Iron must mine Deepslate at 25% speed before Steel"
         );
+        helper.assertFalse(
+                flintMultiTool.isCorrectToolForDrops(
+                        Blocks.DEEPSLATE.defaultBlockState()
+                ),
+                "Flint must not harvest Deepslate"
+        );
+        helper.assertFalse(
+                Items.WOODEN_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE.defaultBlockState()
+                        ),
+                "Wood must not harvest Deepslate"
+        );
+        helper.assertFalse(
+                Items.STONE_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE.defaultBlockState()
+                        ),
+                "Stone must not harvest Deepslate"
+        );
+        helper.assertFalse(
+                Items.COPPER_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE.defaultBlockState()
+                        ),
+                "Copper must not harvest Deepslate"
+        );
+        helper.assertFalse(
+                Items.IRON_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE_IRON_ORE.defaultBlockState()
+                        ),
+                "Iron must not harvest Deepslate ores"
+        );
+        helper.assertFalse(
+                Items.GOLDEN_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE.defaultBlockState()
+                ),
+                "Gold must remain a sidegrade and not bypass Steel"
+        );
+        helper.assertFalse(
+                Items.IRON_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE_TILE_STAIRS.defaultBlockState()
+                        ),
+                "Iron must not harvest constructed Deepslate variants"
+        );
 
         ItemStack steelPickaxe = new ItemStack(
                 RetoldBlocks.STEEL_PICKAXE.get()
@@ -686,9 +734,22 @@ public final class RetoldToolProgressionGameTests {
         );
         helper.assertTrue(
                 steelPickaxe.isCorrectToolForDrops(
+                        Blocks.DEEPSLATE.defaultBlockState()
+                ),
+                "Steel must unlock Deepslate harvesting"
+        );
+        helper.assertTrue(
+                steelPickaxe.isCorrectToolForDrops(
                         Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()
                 ),
                 "Steel must harvest deep Diamond ore"
+        );
+        helper.assertTrue(
+                Items.DIAMOND_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DEEPSLATE.defaultBlockState()
+                        ),
+                "Diamond must retain Deepslate harvesting after Steel"
         );
         helper.assertFalse(
                 steelPickaxe.isCorrectToolForDrops(
