@@ -10,6 +10,9 @@ import cz.xefensor.retold.event.RetoldSleepEvents;
 import cz.xefensor.retold.event.TorchWeatherEvents;
 import cz.xefensor.retold.gametest.RetoldGameTests;
 import cz.xefensor.retold.network.RetoldNetworking;
+import cz.xefensor.retold.progression.RetoldCampfireProgressionEvents;
+import cz.xefensor.retold.progression.RetoldLootModifiers;
+import cz.xefensor.retold.progression.RetoldToolProgressionEvents;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.registry.RetoldBlockEntities;
 import cz.xefensor.retold.registry.RetoldEntityEvents;
@@ -27,6 +30,7 @@ public final class RetoldFoundationModule {
 
     public static void registerModBus(IEventBus modEventBus) {
         RetoldBlocks.register(modEventBus);
+        RetoldLootModifiers.register(modEventBus);
         RetoldBlockEntities.register(modEventBus);
         RetoldEntityTypes.register(modEventBus);
         RetoldGameRules.register(modEventBus);
@@ -47,6 +51,8 @@ public final class RetoldFoundationModule {
         gameEventBus.register(RetoldCommandEvents.class);
         gameEventBus.register(RetoldPlayerSyncEvents.class);
         gameEventBus.register(RetoldSleepEvents.class);
+        gameEventBus.register(RetoldCampfireProgressionEvents.class);
+        gameEventBus.register(RetoldToolProgressionEvents.class);
         gameEventBus.register(TorchWeatherEvents.class);
         gameEventBus.addListener(RetoldFoundationModule::addServerReloadListeners);
     }

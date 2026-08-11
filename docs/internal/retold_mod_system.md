@@ -88,6 +88,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `mixin` | vanilla behavior hooks and accessors |
 | `module` | subsystem composition and NeoForge bus registration ownership |
 | `network` | custom payload registration and handlers |
+| `progression` | opening tool harvest rules, Copper-on-Stone pacing, vanilla tool-recipe removal, and focused progression GameTests |
 | `recipe` | known recipe storage and recipe unlock control |
 | `registry` | blocks, items, entities, tags, game rules |
 | `sky` | saved End sky seed data |
@@ -120,7 +121,7 @@ split into these modules:
 
 | Module | Registration ownership |
 | --- | --- |
-| `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, reload listeners, and GameTests |
+| `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, opening tool progression, reload listeners, and GameTests |
 | `RetoldStageModule` | stage runtime, End progression, recipe gating, and stage-gated patrols |
 | `RetoldMobModule` | undead, piglin, golem, enderman, and elder guardian events |
 | `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, and delayed structures |
@@ -131,6 +132,36 @@ split into these modules:
 
 `RetoldSubsystems` registers every mod-bus contribution before game-bus handlers. The module
 order is dependency-aware: faction precedes territory, and territory precedes behavior.
+
+## Tool And Station Progression
+
+`RetoldToolProgressionEvents` owns the non-data opening rules: logs require a correct held tool,
+the Copper Pickaxe receives a Stone-specific speed penalty, Copper and Iron Pickaxes receive the
+Steel-tier Deepslate penalty, and exact vanilla Wooden/Stone tool recipes are removed during recipe
+JSON modification. `RetoldLeafStickLootModifier`, registered through `RetoldLootModifiers`, gives
+every `minecraft:leaves` block a supplemental 20% roll for 1–2 Sticks, increasing five percentage
+points per Fortune level and excluding shears and Silk Touch. `RetoldBlocks` registers the Flint
+Multi-tool and provisional Steel tool/armor materials, while block/item tags own mining, repair,
+enchantment-family, and equipment boundaries. Vanilla placed-feature overrides reduce ordinary
+and Dripstone Copper from sixteen to six attempts per chunk while retaining vanilla vein sizes and
+height distribution; only newly generated chunks receive the reduced distribution.
+`CampfirePlacementMixin` is a narrow initial-state hook that delegates to
+`RetoldCampfireProgressionEvents`, making Campfires unlit on both logical sides before placement can
+render. The event class owns consumable bare-Flint ignition, while vanilla Flint and Steel remains
+the durable alternative. Recipes remove Coal from
+the three-Stick/three-Log Campfire, fire Clay Balls into Bricks through campfire cooking, repurpose
+the vanilla Smoker as the eight-Brick Brick Furnace, add its Copper/Charcoal processing, blast Iron
+Ingots directly into Steel, and craft the full standard Steel tool and armor sets. These rules are
+server-owned; client resources provide names and deliberately reference vanilla Flint/Iron models
+until final art is approved.
+
+`RetoldDiamondDurability` owns the selected dynamic Diamond rule. `ItemStackDiamondDurabilityMixin`
+is only the return-value hook for `ItemStack.getMaxDamage`; separate item tags identify affected
+Diamond tools/Spear and player armor. Unenchanted tools use 64 durability and armor scales from
+vanilla's 33x to 6x. Any enchantment restores the underlying vanilla maximum, while removing all
+enchantments restores fragility. Raw damage is read directly from the component so the hook cannot
+re-enter itself; an over-cap stripped item receives an effective `damage + 1` maximum and one final
+use.
 
 ## World Stage System
 

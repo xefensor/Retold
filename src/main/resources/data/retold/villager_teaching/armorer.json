@@ -18,6 +18,22 @@
       "id": "minecraft:iron_boots"
     },
     {
+      "id": "retold:steel_helmet",
+      "emerald_cost": 7
+    },
+    {
+      "id": "retold:steel_chestplate",
+      "emerald_cost": 9
+    },
+    {
+      "id": "retold:steel_leggings",
+      "emerald_cost": 9
+    },
+    {
+      "id": "retold:steel_boots",
+      "emerald_cost": 7
+    },
+    {
       "id": "minecraft:golden_helmet",
       "emerald_cost": 5
     },

@@ -39,7 +39,7 @@ These are the strongest next design-aligned areas:
 
 These are still planned but need feature-specific design before implementation:
 
-- full tools, armor, ores, and station progression rework beyond the initial Aenderite material foundation
+- tool, armor, ore, and station progression beyond the implemented Flint-through-Diamond spine, six-attempt-per-chunk Copper frequency adjustment, and initial Aenderite material foundation; next naturally verify Copper density and the dynamic Diamond rule, then design remaining Netherite/Aenderite equipment boundaries
 - enchanting rework beyond the implemented complete 43-spell SGA catalog, knowledge persistence/sync, anvil-learning route, knowledge-aware tooltips, and deterministic glyph-entry table; next verify/refine the composed client layout and dedicated multiplayer synchronization, then perform the wider enchantment audit
 - mending removal
 - sword/shield combat rework

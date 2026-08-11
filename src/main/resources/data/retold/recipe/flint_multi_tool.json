@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "F": "minecraft:flint",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "FF",
+    " S"
+  ],
+  "result": {
+    "id": "retold:flint_multi_tool"
+  }
+}

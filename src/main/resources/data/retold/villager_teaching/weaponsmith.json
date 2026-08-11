@@ -4,14 +4,18 @@
   "default_villager_xp_reward": 2,
   "recipes": [
     {
-      "id": "minecraft:wooden_sword"
+      "id": "minecraft:copper_sword"
     },
     {
-      "id": "minecraft:stone_sword"
+      "id": "minecraft:copper_axe"
     },
     {
       "id": "minecraft:iron_sword",
       "emerald_cost": 5
+    },
+    {
+      "id": "retold:steel_sword",
+      "emerald_cost": 8
     },
     {
       "id": "minecraft:golden_sword",
@@ -23,14 +27,12 @@
       "villager_xp_reward": 5
     },
     {
-      "id": "minecraft:wooden_axe"
-    },
-    {
-      "id": "minecraft:stone_axe"
-    },
-    {
       "id": "minecraft:iron_axe",
       "emerald_cost": 5
+    },
+    {
+      "id": "retold:steel_axe",
+      "emerald_cost": 8
     },
     {
       "id": "minecraft:golden_axe",
