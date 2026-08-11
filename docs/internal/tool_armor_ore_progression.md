@@ -494,7 +494,13 @@ Diamond armor follows the same low-unenchanted-durability rule as Diamond tools.
 Wolf Armor and all Horse and Nautilus Armor materials support the same enchantment compatibility
 set as a player Chestplate. Each animal armor uses its matching material's enchantability value;
 Wolf Armor uses the Armadillo Scute material value. Animal armor remains excluded from Diamond's
-fragile-until-enchanted durability rule.
+fragile-until-enchanted durability rule. Protection-family enchantments affect equipped animal
+armor: the normal living-entity pipeline handles Horse and Nautilus health damage, while Retold
+applies the same vanilla enchantment calculation before Wolf Armor converts a protected hit into
+durability loss. Fire Protection reduces matching damage and burning duration; like a player
+Chestplate, it does not make the animal visually fireproof. Horse and Nautilus armor remain
+vanilla-indestructible, so durability-only enchantments have no durability pool to modify on those
+items.
 
 Netherite upgrades Diamond gear.
 

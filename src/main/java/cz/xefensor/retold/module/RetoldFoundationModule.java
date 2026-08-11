@@ -51,6 +51,7 @@ public final class RetoldFoundationModule {
 
     public static void registerGameBus(IEventBus gameEventBus) {
         gameEventBus.register(RetoldAnvilLearningEvents.class);
+        gameEventBus.register(RetoldAnimalArmorEnchanting.class);
         gameEventBus.register(RetoldEnchantmentCatalogSyncEvents.class);
         gameEventBus.register(RetoldCommandEvents.class);
         gameEventBus.register(RetoldPlayerSyncEvents.class);

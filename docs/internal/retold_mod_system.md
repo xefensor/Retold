@@ -167,7 +167,14 @@ use.
 every Horse and Nautilus Armor variant during default-component initialization. The
 `retold:animal_armor` item tag is included in the vanilla Chestplate, durability, and equippable
 enchantment families, giving those twelve items the same supported enchantment set as a player
-Chestplate without including them in Retold's fragile Diamond player-armor tag.
+Chestplate without including them in Retold's fragile Diamond player-armor tag. Horse and Nautilus
+damage follows the ordinary `LivingEntity` enchantment pipeline. Wolf Armor instead absorbs most
+hits directly into item durability before that pipeline runs, so the same owner listens for
+incoming Wolf damage and applies vanilla `EnchantmentHelper` protection exactly once before the
+absorption branch. Damage that bypasses Wolf Armor or enchantments is excluded from this bridge.
+Fire Protection continues to reduce fire damage and burning duration rather than granting visual
+fire immunity. Vanilla Horse and Nautilus armor remains indestructible, so durability-only
+enchantments have no durability value to alter on those items.
 
 ## World Stage System
 
