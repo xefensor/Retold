@@ -129,7 +129,10 @@ The currently implemented deterministic SGA enchanting system governs its behavi
 
 Netherite should remain an upgrade to Diamond equipment rather than a separately crafted normal tool tier.
 
-The exact station ownership between Smithing Table and Anvil can be revisited later because an older Retold note proposed folding Smithing Table functionality into the Anvil. Do not treat that old note as confirmed yet.
+For the current progression, Netherite keeps vanilla's Smithing Table and Netherite Upgrade Smithing
+Template workflow. An older Retold note proposed folding Smithing Table functionality into the
+Anvil, but that is not part of the current implementation direction and may only be reconsidered
+in a later station-design pass.
 
 ## Opening Progression
 
@@ -560,6 +563,7 @@ Copper rate again only from concrete natural-world results.
 - Curses count as enchantments for Diamond durability, including curse-only equipment.
 - Diamond durability is dynamic: removing every enchantment makes tagged Diamond tools, player armor, Horse Armor, and Nautilus Armor fragile again.
 - Netherite sits between Diamond and Aenderite and upgrades Diamond equipment.
+- Netherite currently keeps the vanilla Smithing Table and upgrade-template workflow.
 - Aenderite is the final exotic tier but must have an identity beyond bigger stats.
 - Keep vanilla Iron and Diamond generation; Copper is the confirmed exception at six vein attempts per chunk with vanilla vein sizes.
 - Gold is an optional post-Iron sidegrade and does not gate Steel or Diamond.
@@ -570,6 +574,5 @@ Copper rate again only from concrete natural-world results.
 - final tool mining speeds and durability per tier beyond the provisional Flint, Copper, Steel, and unenchanted Diamond values
 - final armor/combat stats beyond the provisional Steel and unenchanted Diamond values
 - exact block/tag harvest lists beyond the implemented Flint and Steel-tier opening boundaries
-- whether Smithing Table remains or Netherite upgrade functionality moves into the Anvil
 - exact Aenderite crafting/upgrading method and special abilities
 - whether later nonstandard tools/weapons follow different material rules after the future combat/tool audit

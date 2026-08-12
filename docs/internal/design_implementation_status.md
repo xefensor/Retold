@@ -181,7 +181,7 @@ Largest missing or partial design areas:
 | Sword sweep on right-click | Not implemented |
 | XP/energy affects damage/defense | Not implemented |
 | Remove new Mending acquisition | Implemented / needs natural verification | Mending is excluded from `minecraft:tradeable` and `minecraft:on_random_loot`, removing new Librarian and random-loot generation. It remains registered for commands/Creative and continues functioning on existing items. Focused registry-tag coverage passes; naturally verify fishing, structure loot, Librarians, existing worlds, and datapack compatibility. |
-| Smithing table removed/merged with anvil | Not implemented |
+| Smithing Table removed/merged with Anvil | Deferred / vanilla retained | Netherite currently keeps the vanilla Smithing Table and Netherite Upgrade Smithing Template workflow. The older merge concept may be reconsidered only in a later station-design pass. |
 
 ## Recipe Discovery And Villagers
 
