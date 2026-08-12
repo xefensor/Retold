@@ -359,7 +359,8 @@ The developer chose dynamic durability on 2026-08-11:
   Leggings 90, and Boots 78
 - unenchanted Diamond Horse and Nautilus Armor use the BODY/Chestplate value of 96 durability;
   enchanting either restores its full 528 durability
-- while any enchantment is present, the item immediately uses its full vanilla Diamond durability
+- while any enchantment is present, including a curse as the only enchantment, the item immediately
+  uses its full vanilla Diamond durability
 - removing every enchantment, including through a Grindstone, immediately restores the fragile
   maximum
 - if the preserved damage value already exceeds that fragile maximum, the effective maximum is
@@ -556,6 +557,7 @@ Copper rate again only from concrete natural-world results.
 - Copper and Steel receive full tool and armor sets.
 - Standard tool families follow the same tier ladder from Copper onward.
 - Diamond equipment has very low durability until enchanted.
+- Curses count as enchantments for Diamond durability, including curse-only equipment.
 - Diamond durability is dynamic: removing every enchantment makes tagged Diamond tools, player armor, Horse Armor, and Nautilus Armor fragile again.
 - Netherite sits between Diamond and Aenderite and upgrades Diamond equipment.
 - Aenderite is the final exotic tier but must have an identity beyond bigger stats.

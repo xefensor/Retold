@@ -806,6 +806,18 @@ public final class RetoldToolProgressionGameTests {
                 diamondPickaxe.getMaxDamage() == 64,
                 "Removing all enchantments must restore fragile durability"
         );
+        diamondPickaxe.enchant(
+                enchantments.getOrThrow(Enchantments.VANISHING_CURSE),
+                1
+        );
+        helper.assertTrue(
+                diamondPickaxe.getMaxDamage() == 1561,
+                "A curse alone must count as an enchantment and restore full Diamond durability"
+        );
+        diamondPickaxe.set(
+                DataComponents.ENCHANTMENTS,
+                ItemEnchantments.EMPTY
+        );
 
         diamondPickaxe.enchant(
                 enchantments.getOrThrow(Enchantments.EFFICIENCY),

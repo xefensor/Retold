@@ -166,8 +166,8 @@ saved offers and existing Mending items are deliberately not rewritten.
 is only the return-value hook for `ItemStack.getMaxDamage`; separate item tags identify affected
 Diamond tools/Spear and armor. Unenchanted tools use 64 durability and armor scales from vanilla's
 33x to 6x. Diamond Horse and Nautilus Armor receive the BODY/Chestplate base of 528, producing 96
-unenchanted durability. Any enchantment restores the underlying full maximum, while removing all
-enchantments restores fragility. Raw damage is read directly from the component so the hook cannot
+unenchanted durability. Any enchantment, including a curse by itself, restores the underlying full
+maximum, while removing all enchantments restores fragility. Raw damage is read directly from the component so the hook cannot
 re-enter itself; an over-cap stripped item receives an effective `damage + 1` maximum and one final
 use. A `LivingDamageEvent.Pre` handler gives those two BODY-slot items normal armor wear after a
 non-armor-bypassing hit; `ItemStack.hurtAndBreak` retains Unbreaking and break behavior.
