@@ -188,7 +188,8 @@ The first implemented balance uses 48 durability, mining speed 2.0, attack damag
 speed -2.8. Its data-driven mining list combines normal axe and shovel blocks with ordinary Copper
 Ore, Sandstone variants, Tuff, and Calcite. It cannot harvest normal Stone, Deepslate Copper Ore,
 or blocks that require Iron or Diamond. These values and the exact soft-block list are provisional
-until the natural opening loop is playtested.
+until the natural opening loop is playtested. This current list is the retained working baseline;
+do not add or remove blocks without concrete survival-play evidence.
 
 Once the player can obtain logs:
 
@@ -578,6 +579,6 @@ Copper rate again only from concrete natural-world results.
 
 - natural-play validation and any evidence-based tuning of the retained provisional Flint, Copper, Steel, and unenchanted Diamond tool values
 - natural-play validation and any evidence-based tuning of the retained provisional Steel and unenchanted Diamond armor/combat values
-- exact block/tag harvest lists beyond the implemented Flint and Steel-tier opening boundaries
+- natural-play validation and any evidence-based tuning of the retained Flint and Steel-tier harvest lists
 - exact Aenderite crafting/upgrading method and special abilities
 - whether later nonstandard tools/weapons follow different material rules after the future combat/tool audit
