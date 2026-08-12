@@ -327,12 +327,13 @@ Steel is the tier that unlocks **Deepslate** harvesting and opens the deepest Ov
 
 Copper and Iron Pickaxes break Deepslate-family blocks at 25% of their otherwise calculated speed
 but receive no drops. Wooden, Stone, Gold, Copper, Iron, and Flint tools all treat the data-driven
-Steel-tier list as incorrect for drops. That list contains natural Deepslate, its construction
-variants, and Deepslate ores. Steel mines and harvests them at its full speed, can harvest Deepslate
-Diamond Ore, and still cannot harvest Obsidian, preserving Diamond's next access step. Diamond and
-Netherite retain Deepslate harvesting after Steel.
+Steel-required list as incorrect for drops. That list contains the Deepslate tier—natural
+Deepslate, its construction variants, and Deepslate ores—plus normal Diamond Ore. Steel mines and
+harvests Deepslate at full speed and is the first tier that can harvest either Diamond Ore variant.
+It still cannot harvest Obsidian, preserving Diamond's next access step. Diamond and Netherite
+retain Steel-unlocked harvesting.
 
-This hard-gates deep Diamond access behind Steel.
+This hard-gates all mined Diamond access behind Steel.
 
 Keep vanilla Diamond generation initially; let geological access provide the progression gate.
 
@@ -555,7 +556,7 @@ Copper rate again only from concrete natural-world results.
 - Copper Pickaxe can mine Stone and obtain Cobblestone, but does so slowly.
 - Iron makes Stone mining practical.
 - Steel is produced by blasting Iron Ingots; Charcoal is an ordinary valid fuel rather than a required second ingredient.
-- Pre-Steel tools cannot harvest Deepslate-family blocks or ores; Steel unlocks them and thereby opens deep Diamond progression.
+- Pre-Steel tools cannot harvest Deepslate-family blocks, Deepslate ores, or normal Diamond Ore; Steel unlocks both Diamond Ore variants.
 - Ancient Debris remains in the Diamond harvest tier.
 - Copper and Steel receive full tool and armor sets.
 - Standard tool families follow the same tier ladder from Copper onward.

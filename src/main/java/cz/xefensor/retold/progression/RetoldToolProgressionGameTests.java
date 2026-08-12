@@ -715,6 +715,13 @@ public final class RetoldToolProgressionGameTests {
                         ),
                 "Iron must not harvest constructed Deepslate variants"
         );
+        helper.assertFalse(
+                Items.IRON_PICKAXE.getDefaultInstance()
+                        .isCorrectToolForDrops(
+                                Blocks.DIAMOND_ORE.defaultBlockState()
+                        ),
+                "Iron must not harvest normal Diamond Ore"
+        );
 
         ItemStack steelPickaxe = new ItemStack(
                 RetoldBlocks.STEEL_PICKAXE.get()
@@ -742,7 +749,13 @@ public final class RetoldToolProgressionGameTests {
                 steelPickaxe.isCorrectToolForDrops(
                         Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()
                 ),
-                "Steel must harvest deep Diamond ore"
+                "Steel must harvest Deepslate Diamond Ore"
+        );
+        helper.assertTrue(
+                steelPickaxe.isCorrectToolForDrops(
+                        Blocks.DIAMOND_ORE.defaultBlockState()
+                ),
+                "Steel must harvest normal Diamond Ore"
         );
         helper.assertTrue(
                 Items.DIAMOND_PICKAXE.getDefaultInstance()

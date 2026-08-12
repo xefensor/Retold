@@ -1,6 +1,6 @@
 {
   "replace": false,
   "values": [
-    "#retold:steel_tier_blocks"
+    "#retold:requires_steel_tool"
   ]
 }
