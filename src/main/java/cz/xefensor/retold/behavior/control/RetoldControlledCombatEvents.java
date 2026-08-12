@@ -29,6 +29,7 @@ public final class RetoldControlledCombatEvents {
     private static final int COMBAT_SCAN_CACHE_TICKS = 5;
     private static final int COMBAT_PATH_INTERVAL_TICKS = 6;
     private static final int ATTACK_CONTROL_TICKS = 20 * 4;
+    private static final int OWNER_THREAT_MEMORY_TICKS = 20 * 5;
 
     private static final double OWNER_THREAT_RADIUS_BLOCKS = 28.0D;
     private static final double OWNER_THREAT_RADIUS_SQUARED =
@@ -112,23 +113,23 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
-        if (RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)) {
-            continueAttack(
-                    mob,
-                    gameTime
-            );
-            return;
-        }
-
         LivingEntity ownerThreat = findOwnerThreat(mob);
 
-        if (ownerThreat != null) {
+        if (ownerThreat != null && !isCurrentOwnerDefenseTarget(mob, ownerThreat)) {
             beginAttack(
                     mob,
                     ownerThreat,
                     OWNER_DEFENSE_SPEED,
                     gameTime,
-                    RetoldTargetSource.BEHAVIOR_COMBAT
+                    RetoldTargetSource.OWNER_DEFENSE
+            );
+            return;
+        }
+
+        if (RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)) {
+            continueAttack(
+                    mob,
+                    gameTime
             );
             return;
         }
@@ -176,6 +177,22 @@ public final class RetoldControlledCombatEvents {
                 getEnemyAttackSpeed(mob, enemy),
                 gameTime,
                 RetoldTargetSource.BEHAVIOR_COMBAT
+        );
+    }
+
+    private static boolean isCurrentOwnerDefenseTarget(
+            PathfinderMob defender,
+            LivingEntity target
+    ) {
+        return RetoldAiControl.isControlledAs(
+                defender,
+                RetoldAiControlMode.ATTACK
+        )
+                && defender.getTarget() == target
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                defender,
+                target,
+                RetoldTargetSource.OWNER_DEFENSE
         );
     }
 
@@ -241,7 +258,7 @@ public final class RetoldControlledCombatEvents {
             return null;
         }
 
-        if (!tamableAnimal.isTame()) {
+        if (!tamableAnimal.isTame() || tamableAnimal.isOrderedToSit()) {
             return null;
         }
 
@@ -251,13 +268,48 @@ public final class RetoldControlledCombatEvents {
             return null;
         }
 
-        LivingEntity attacker = owner.getLastHurtByMob();
+        LivingEntity attacker = recentOwnerThreat(
+                owner,
+                owner.getLastHurtByMob(),
+                owner.getLastHurtByMobTimestamp()
+        );
+        LivingEntity attacked = recentOwnerThreat(
+                owner,
+                owner.getLastHurtMob(),
+                owner.getLastHurtMobTimestamp()
+        );
+        boolean validAttacker = isValidOwnerThreat(defender, owner, attacker);
+        boolean validAttacked = isValidOwnerThreat(defender, owner, attacked);
 
-        if (!isValidOwnerThreat(defender, owner, attacker)) {
+        if (validAttacker && validAttacked) {
+            return owner.getLastHurtByMobTimestamp() >= owner.getLastHurtMobTimestamp()
+                    ? attacker
+                    : attacked;
+        }
+
+        if (validAttacker) {
+            return attacker;
+        }
+
+        return validAttacked ? attacked : null;
+    }
+
+    private static LivingEntity recentOwnerThreat(
+            LivingEntity owner,
+            LivingEntity threat,
+            int timestamp
+    ) {
+        if (owner == null || threat == null) {
             return null;
         }
 
-        return attacker;
+        int age = owner.tickCount - timestamp;
+
+        if (age < 0 || age > OWNER_THREAT_MEMORY_TICKS) {
+            return null;
+        }
+
+        return threat;
     }
 
     private static boolean isValidOwnerThreat(
@@ -282,6 +334,12 @@ public final class RetoldControlledCombatEvents {
         }
 
         if (threat == owner || threat == defender) {
+            return false;
+        }
+
+        if (defender instanceof TamableAnimal tamableAnimal
+                && (!tamableAnimal.wantsToAttack(threat, owner)
+                || !tamableAnimal.canAttack(threat))) {
             return false;
         }
 
@@ -573,6 +631,10 @@ public final class RetoldControlledCombatEvents {
         }
 
         if (attacker instanceof TamableAnimal tamableAnimal && tamableAnimal.isTame()) {
+            if (tamableAnimal.isOrderedToSit()) {
+                return false;
+            }
+
             LivingEntity owner = tamableAnimal.getOwner();
 
             if (owner != null) {

@@ -6,6 +6,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
+import cz.xefensor.retold.behavior.control.RetoldTamedDefenderGameTests;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreedingGameTests;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.flee.RetoldCreeperAwareness;
@@ -254,6 +255,7 @@ public final class RetoldGameTests {
         RetoldPandaBambooGameTests.register(event);
         RetoldPolarBearWarningGameTests.register(event, environment);
         RetoldWolfPackHungerGameTests.register(event, environment);
+        RetoldTamedDefenderGameTests.register(event, environment);
         RetoldSpiderEcologyGameTests.register(event);
         RetoldSpiderLairGameTests.register(event);
         RetoldSlimeMergeGameTests.register(event);

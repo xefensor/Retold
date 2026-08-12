@@ -241,6 +241,7 @@ public final class RetoldControlledHuntingEvents {
                 || target != null && RetoldFactionTargetMemory.isOwnedByAny(
                 hunter,
                 target,
+                RetoldTargetSource.OWNER_DEFENSE,
                 RetoldTargetSource.RETALIATION,
                 RetoldTargetSource.TERRITORY_ATTACK
         )) {

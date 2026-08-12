@@ -736,6 +736,12 @@ the ordinary `Mob` target field, currently Axolotls and Piglins. Axolotl-to-Guar
 are source-sensitive: only `RETALIATION` and `FACTION_ASSIST` may pass the global hostility guard.
 Ordinary vanilla brain writes and Retold hunting remain blocked.
 
+Standing tamed predators inspect both five-second vanilla owner interaction memories: the entity
+that hurt the owner and the entity the owner hurt. A valid target receives explicit
+`OWNER_DEFENSE` ownership before lower-priority controlled combat continues. That source is
+protected from hunger cleanup and warning suppression while still using the tamed animal's vanilla
+`wantsToAttack` exclusions; sitting animals do not begin or continue owner defense.
+
 Important target rule:
 
 Retold-owned combat is allowed. Vanilla or random prey targeting is blocked where it would bypass Retold rules.
