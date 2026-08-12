@@ -321,6 +321,10 @@ and defenses of 3 Helmet, 7 Chestplate, 6 Leggings, and 3 Boots. Until a Steel a
 approved, inventory and equipped models deliberately reference vanilla Iron visuals without
 copying or modifying Minecraft textures.
 
+These current Steel tool and armor values are the retained working baseline. Do not change them
+pre-emptively; tune them only from concrete natural-play results comparing Iron, Steel, and
+enchanted Diamond.
+
 ### Steel mining identity
 
 Steel is the tier that unlocks **Deepslate** harvesting and opens the deepest Overworld geology.
@@ -572,8 +576,8 @@ Copper rate again only from concrete natural-world results.
 
 ## Still Undecided
 
-- final tool mining speeds and durability per tier beyond the provisional Flint, Copper, Steel, and unenchanted Diamond values
-- final armor/combat stats beyond the provisional Steel and unenchanted Diamond values
+- natural-play validation and any evidence-based tuning of the retained provisional Flint, Copper, Steel, and unenchanted Diamond tool values
+- natural-play validation and any evidence-based tuning of the retained provisional Steel and unenchanted Diamond armor/combat values
 - exact block/tag harvest lists beyond the implemented Flint and Steel-tier opening boundaries
 - exact Aenderite crafting/upgrading method and special abilities
 - whether later nonstandard tools/weapons follow different material rules after the future combat/tool audit
