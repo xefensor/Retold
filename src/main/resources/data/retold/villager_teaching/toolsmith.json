@@ -4,28 +4,19 @@
   "default_villager_xp_reward": 2,
   "recipes": [
     {
-      "id": "minecraft:wooden_pickaxe"
+      "id": "retold:flint_multi_tool"
     },
     {
-      "id": "minecraft:wooden_axe"
+      "id": "minecraft:copper_pickaxe"
     },
     {
-      "id": "minecraft:wooden_shovel"
+      "id": "minecraft:copper_axe"
     },
     {
-      "id": "minecraft:wooden_hoe"
+      "id": "minecraft:copper_shovel"
     },
     {
-      "id": "minecraft:stone_pickaxe"
-    },
-    {
-      "id": "minecraft:stone_axe"
-    },
-    {
-      "id": "minecraft:stone_shovel"
-    },
-    {
-      "id": "minecraft:stone_hoe"
+      "id": "minecraft:copper_hoe"
     },
     {
       "id": "minecraft:iron_pickaxe",
@@ -40,6 +31,22 @@
     },
     {
       "id": "minecraft:iron_hoe"
+    },
+    {
+      "id": "retold:steel_pickaxe",
+      "emerald_cost": 7
+    },
+    {
+      "id": "retold:steel_axe",
+      "emerald_cost": 7
+    },
+    {
+      "id": "retold:steel_shovel",
+      "emerald_cost": 5
+    },
+    {
+      "id": "retold:steel_hoe",
+      "emerald_cost": 5
     },
     {
       "id": "minecraft:golden_pickaxe",

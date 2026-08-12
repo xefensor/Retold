@@ -88,6 +88,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `mixin` | vanilla behavior hooks and accessors |
 | `module` | subsystem composition and NeoForge bus registration ownership |
 | `network` | custom payload registration and handlers |
+| `progression` | opening tool harvest rules, Copper-on-Stone pacing, vanilla tool-recipe removal, and focused progression GameTests |
 | `recipe` | known recipe storage and recipe unlock control |
 | `registry` | blocks, items, entities, tags, game rules |
 | `sky` | saved End sky seed data |
@@ -120,7 +121,7 @@ split into these modules:
 
 | Module | Registration ownership |
 | --- | --- |
-| `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, reload listeners, and GameTests |
+| `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, opening tool progression, reload listeners, and GameTests |
 | `RetoldStageModule` | stage runtime, End progression, recipe gating, and stage-gated patrols |
 | `RetoldMobModule` | undead, piglin, golem, enderman, and elder guardian events |
 | `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, and delayed structures |
@@ -131,6 +132,59 @@ split into these modules:
 
 `RetoldSubsystems` registers every mod-bus contribution before game-bus handlers. The module
 order is dependency-aware: faction precedes territory, and territory precedes behavior.
+
+## Tool And Station Progression
+
+`RetoldToolProgressionEvents` owns the non-data opening rules: logs require a correct held tool,
+the Copper Pickaxe receives a Stone-specific speed penalty, Copper and Iron Pickaxes receive the
+Steel-tier Deepslate penalty, and exact vanilla Wooden/Stone tool recipes are removed during recipe
+JSON modification. Tool-material correctness tags deny Deepslate-family and all Diamond Ore drops
+to every pre-Steel material while allowing Steel and later tiers to harvest them. The broader
+`retold:requires_steel_tool` harvest tag is separate from the Deepslate-only speed tag.
+`RetoldLeafStickLootModifier`,
+registered through `RetoldLootModifiers`, gives
+every `minecraft:leaves` block a supplemental 20% roll for 1–2 Sticks, increasing five percentage
+points per Fortune level. It also normalizes Dead Bushes to 2–4 Sticks and gives tagged living
+bushes a 10% one-Stick roll, while excluding shears and Silk Touch. `RetoldBlocks` registers the
+Flint Multi-tool, Flint Spear, Steel Spear, and provisional Steel tool/armor materials, while block/item tags own mining, repair,
+enchantment-family, and equipment boundaries. Vanilla placed-feature overrides reduce ordinary
+and Dripstone Copper from sixteen to six attempts per chunk while retaining vanilla vein sizes and
+height distribution; only newly generated chunks receive the reduced distribution.
+`CampfirePlacementMixin` is a narrow initial-state hook that delegates to
+`RetoldCampfireProgressionEvents`, making Campfires unlit on both logical sides before placement can
+render. The event class owns consumable bare-Flint ignition, while vanilla Flint and Steel remains
+the durable alternative. Recipes remove Coal from
+the three-Stick/three-Log Campfire, fire Clay Balls into Bricks through campfire cooking, repurpose
+the vanilla Smoker as the eight-Brick Brick Furnace, add its Copper/Charcoal processing, blast Iron
+Ingots directly into Steel, and craft the full standard Steel tool and armor sets. These rules are
+server-owned; client resources provide names and deliberately reference vanilla Flint/Iron models
+until final art is approved. Vanilla chest, Villager-trade, and enchantment-tag overrides define
+the same alternative-acquisition rules for every player: bonus chests stop at Flint, safe Village
+smith chests stop at Copper gear, smith equipment tiers follow Villager mastery and expensive
+Emerald ranges, and Mending is excluded from new random loot and Librarian selection. Existing
+saved offers and existing Mending items are deliberately not rewritten.
+
+`RetoldDiamondDurability` owns the selected dynamic Diamond rule. `ItemStackDiamondDurabilityMixin`
+is only the return-value hook for `ItemStack.getMaxDamage`; separate item tags identify affected
+Diamond tools/Spear and armor. Unenchanted tools use 64 durability and armor scales from vanilla's
+33x to 6x. Diamond Horse and Nautilus Armor receive the BODY/Chestplate base of 528, producing 96
+unenchanted durability. Any enchantment, including a curse by itself, restores the underlying full
+maximum, while removing all enchantments restores fragility. Raw damage is read directly from the component so the hook cannot
+re-enter itself; an over-cap stripped item receives an effective `damage + 1` maximum and one final
+use. A `LivingDamageEvent.Pre` handler gives those two BODY-slot items normal armor wear after a
+non-armor-bypassing hit; `ItemStack.hurtAndBreak` retains Unbreaking and break behavior.
+
+`RetoldAnimalArmorEnchanting` adds material-matched enchantability components to Wolf Armor and
+every Horse and Nautilus Armor variant during default-component initialization. The
+`retold:animal_armor` item tag is included in the vanilla Chestplate, durability, and equippable
+enchantment families, giving those twelve items the same supported enchantment set as a player
+Chestplate. Diamond Horse and Nautilus Armor also join Retold's fragile Diamond armor tag. Horse and Nautilus
+damage follows the ordinary `LivingEntity` enchantment pipeline. Wolf Armor instead absorbs most
+hits directly into item durability before that pipeline runs, so the same owner listens for
+incoming Wolf damage and applies vanilla `EnchantmentHelper` protection exactly once before the
+absorption branch. Damage that bypasses Wolf Armor or enchantments is excluded from this bridge.
+Fire Protection continues to reduce fire damage and burning duration rather than granting visual
+fire immunity. Non-Diamond Horse and Nautilus armor retains vanilla's indestructible behavior.
 
 ## World Stage System
 
@@ -573,8 +627,8 @@ Data:
 
 - spell definitions load from `data/<namespace>/enchantment_spells/*.json`
 - definitions map an enchantment id to semantic `domain`, `effect`, and `modifier` identifiers
-- 43 definitions cover every currently registered vanilla enchantment, including Mending while its
-  separately planned removal remains unimplemented
+- 43 definitions cover every currently registered vanilla enchantment, including Mending because
+  it remains usable on existing and command/Creative-created items even though new acquisition is removed
 - the fixed 26-concept vocabulary maps one semantic concept to each built-in SGA A-Z glyph;
   definitions using unknown concepts are rejected with the rest of an invalid reload
 

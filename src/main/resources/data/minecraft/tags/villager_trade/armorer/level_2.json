@@ -1,0 +1,10 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_2",
+    "retold:progression/copper_helmet",
+    "retold:progression/copper_chestplate",
+    "retold:progression/copper_leggings",
+    "retold:progression/copper_boots"
+  ]
+}

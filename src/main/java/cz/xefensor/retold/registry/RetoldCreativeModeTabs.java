@@ -26,6 +26,8 @@ public final class RetoldCreativeModeTabs {
             addFunctionalBlocks(event);
         } else if (CreativeModeTabs.TOOLS_AND_UTILITIES.equals(event.getTabKey())) {
             addToolsAndUtilities(event);
+        } else if (CreativeModeTabs.COMBAT.equals(event.getTabKey())) {
+            addCombat(event);
         } else if (CreativeModeTabs.INGREDIENTS.equals(event.getTabKey())) {
             addIngredients(event);
         } else if (CreativeModeTabs.SPAWN_EGGS.equals(event.getTabKey())) {
@@ -95,13 +97,42 @@ public final class RetoldCreativeModeTabs {
     private static void addToolsAndUtilities(BuildCreativeModeTabContentsEvent event) {
         insertAfter(
                 event,
+                Items.FLINT_AND_STEEL,
+                RetoldBlocks.FLINT_MULTI_TOOL.get(),
+                RetoldBlocks.FLINT_SPEAR.get()
+        );
+        insertAfter(
+                event,
                 Items.PALE_OAK_CHEST_BOAT,
                 RetoldAenderWood.AENDER_BOAT_ITEM.get(),
                 RetoldAenderWood.AENDER_CHEST_BOAT_ITEM.get()
         );
+        insertAfter(event, Items.IRON_SHOVEL, RetoldBlocks.STEEL_SHOVEL.get());
+        insertAfter(event, Items.IRON_PICKAXE, RetoldBlocks.STEEL_PICKAXE.get());
+        insertAfter(event, Items.IRON_AXE, RetoldBlocks.STEEL_AXE.get());
+        insertAfter(event, Items.IRON_HOE, RetoldBlocks.STEEL_HOE.get());
+    }
+
+    private static void addCombat(BuildCreativeModeTabContentsEvent event) {
+        insertAfter(event, Items.IRON_SWORD, RetoldBlocks.STEEL_SWORD.get());
+        insertAfter(event, Items.IRON_SPEAR, RetoldBlocks.STEEL_SPEAR.get());
+        insertAfter(event, Items.IRON_AXE, RetoldBlocks.STEEL_AXE.get());
+        insertAfter(event, Items.IRON_HELMET, RetoldBlocks.STEEL_HELMET.get());
+        insertAfter(
+                event,
+                Items.IRON_CHESTPLATE,
+                RetoldBlocks.STEEL_CHESTPLATE.get()
+        );
+        insertAfter(
+                event,
+                Items.IRON_LEGGINGS,
+                RetoldBlocks.STEEL_LEGGINGS.get()
+        );
+        insertAfter(event, Items.IRON_BOOTS, RetoldBlocks.STEEL_BOOTS.get());
     }
 
     private static void addIngredients(BuildCreativeModeTabContentsEvent event) {
+        insertAfter(event, Items.IRON_INGOT, RetoldBlocks.STEEL_INGOT.get());
         insertAfter(event, Items.RAW_GOLD, RetoldBlocks.RAW_AENDERITE.get());
         insertAfter(event, Items.NETHERITE_INGOT, RetoldBlocks.AENDERITE_INGOT.get());
         insertAfter(

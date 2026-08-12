@@ -8,9 +8,11 @@ import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.network.RetoldEnchantmentCatalogSyncPayload;
 import cz.xefensor.retold.network.RetoldEnchantingCastPayload;
 import cz.xefensor.retold.network.RetoldEnchantingCastResultPayload;
+import cz.xefensor.retold.registry.RetoldTags;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -20,21 +22,33 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.EnchantmentMenu;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.Enchantable;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class RetoldEnchantingGameTests {
     private static final Identifier EMPTY_STRUCTURE =
@@ -110,6 +124,20 @@ public final class RetoldEnchantingGameTests {
                 new InlineGameTest(
                         testData,
                         RetoldEnchantingGameTests::knownEnchantingOptionsFollowInsertedItem
+                )
+        );
+        event.registerTest(
+                id("animal_armor_supports_chestplate_enchantments"),
+                new InlineGameTest(
+                        testData,
+                        RetoldEnchantingGameTests::animalArmorSupportsChestplateEnchantments
+                )
+        );
+        event.registerTest(
+                id("animal_armor_enchantments_affect_equipped_animals"),
+                new InlineGameTest(
+                        testData,
+                        RetoldEnchantingGameTests::animalArmorEnchantmentsAffectEquippedAnimals
                 )
         );
     }
@@ -702,6 +730,354 @@ public final class RetoldEnchantingGameTests {
                 "The client option must expose the registered maximum level"
         );
         helper.succeed();
+    }
+
+    private static void animalArmorSupportsChestplateEnchantments(
+            GameTestHelper helper
+    ) {
+        Map<Item, Integer> animalArmorEnchantability = Map.ofEntries(
+                Map.entry(Items.WOLF_ARMOR, 10),
+                Map.entry(Items.LEATHER_HORSE_ARMOR, 15),
+                Map.entry(Items.COPPER_HORSE_ARMOR, 8),
+                Map.entry(Items.IRON_HORSE_ARMOR, 9),
+                Map.entry(Items.GOLDEN_HORSE_ARMOR, 25),
+                Map.entry(Items.DIAMOND_HORSE_ARMOR, 10),
+                Map.entry(Items.NETHERITE_HORSE_ARMOR, 15),
+                Map.entry(Items.COPPER_NAUTILUS_ARMOR, 8),
+                Map.entry(Items.IRON_NAUTILUS_ARMOR, 9),
+                Map.entry(Items.GOLDEN_NAUTILUS_ARMOR, 25),
+                Map.entry(Items.DIAMOND_NAUTILUS_ARMOR, 10),
+                Map.entry(Items.NETHERITE_NAUTILUS_ARMOR, 15)
+        );
+        Set<Identifier> chestplateEnchantments = supportedEnchantments(
+                helper,
+                new ItemStack(Items.DIAMOND_CHESTPLATE)
+        );
+
+        for (Map.Entry<Item, Integer> entry
+                : animalArmorEnchantability.entrySet()) {
+            ItemStack animalArmor = new ItemStack(entry.getKey());
+            helper.assertTrue(
+                    animalArmor.is(RetoldTags.ANIMAL_ARMOR),
+                    animalArmor.getItem() + " must be tagged as animal armor"
+            );
+            helper.assertValueEqual(
+                    animalArmor.get(DataComponents.ENCHANTABLE),
+                    new Enchantable(entry.getValue()),
+                    animalArmor.getItem()
+                            + " must use its armor material's enchantability"
+            );
+            helper.assertTrue(
+                    animalArmor.isEnchantable(),
+                    animalArmor.getItem()
+                            + " must be accepted by enchanting interfaces"
+            );
+            helper.assertValueEqual(
+                    supportedEnchantments(helper, animalArmor),
+                    chestplateEnchantments,
+                    animalArmor.getItem()
+                            + " must support exactly the Diamond Chestplate enchantments"
+            );
+        }
+
+        helper.succeed();
+    }
+
+    private static Set<Identifier> supportedEnchantments(
+            GameTestHelper helper,
+            ItemStack stack
+    ) {
+        return helper.getLevel()
+                .registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .listElements()
+                .filter(stack::supportsEnchantment)
+                .map(enchantment -> enchantment.key().identifier())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static void animalArmorEnchantmentsAffectEquippedAnimals(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        Wolf plainWolf = helper.spawn(EntityTypes.WOLF, 1, 2, 1);
+        Wolf protectedWolf = helper.spawn(EntityTypes.WOLF, 2, 2, 1);
+        Wolf plainFireWolf = helper.spawn(EntityTypes.WOLF, 3, 2, 1);
+        Wolf fireProtectedWolf = helper.spawn(EntityTypes.WOLF, 4, 2, 1);
+        Wolf thornsWolf = helper.spawn(EntityTypes.WOLF, 1, 2, 2);
+        var attacker = helper.spawn(EntityTypes.ZOMBIE, 4, 2, 2);
+        attacker.setNoAi(true);
+
+        plainWolf.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.WOLF_ARMOR)
+        );
+        protectedWolf.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(helper, Items.WOLF_ARMOR, Enchantments.PROTECTION, 4)
+        );
+        plainFireWolf.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.WOLF_ARMOR)
+        );
+        fireProtectedWolf.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(
+                        helper,
+                        Items.WOLF_ARMOR,
+                        Enchantments.FIRE_PROTECTION,
+                        4
+                )
+        );
+        thornsWolf.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(helper, Items.WOLF_ARMOR, Enchantments.THORNS, 255)
+        );
+
+        var plainHorse = helper.spawn(EntityTypes.HORSE, 1, 2, 3);
+        var protectedHorse = helper.spawn(EntityTypes.HORSE, 2, 2, 3);
+        plainHorse.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.IRON_HORSE_ARMOR)
+        );
+        protectedHorse.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(
+                        helper,
+                        Items.IRON_HORSE_ARMOR,
+                        Enchantments.FIRE_PROTECTION,
+                        4
+                )
+        );
+
+        var plainNautilus = helper.spawn(EntityTypes.NAUTILUS, 3, 2, 3);
+        var protectedNautilus = helper.spawn(EntityTypes.NAUTILUS, 4, 2, 3);
+        plainNautilus.setItemSlot(
+                EquipmentSlot.BODY,
+                new ItemStack(Items.IRON_NAUTILUS_ARMOR)
+        );
+        protectedNautilus.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(
+                        helper,
+                        Items.IRON_NAUTILUS_ARMOR,
+                        Enchantments.FIRE_PROTECTION,
+                        4
+                )
+        );
+
+        helper.runAfterDelay(2, () -> {
+            DamageSource genericDamage = level.damageSources().generic();
+            DamageSource fireDamage = level.damageSources().lava();
+
+            plainWolf.hurtServer(level, genericDamage, 10.0F);
+            protectedWolf.hurtServer(level, genericDamage, 10.0F);
+            helper.assertTrue(
+                    protectedWolf.getBodyArmorItem().getDamageValue()
+                            < plainWolf.getBodyArmorItem().getDamageValue(),
+                    "Protection must reduce damage absorbed by Wolf Armor"
+            );
+
+            plainFireWolf.hurtServer(level, fireDamage, 8.0F);
+            fireProtectedWolf.hurtServer(level, fireDamage, 8.0F);
+            helper.assertTrue(
+                    fireProtectedWolf.getBodyArmorItem().getDamageValue()
+                            < plainFireWolf.getBodyArmorItem().getDamageValue(),
+                    "Fire Protection must reduce fire damage absorbed by Wolf Armor"
+            );
+            fireProtectedWolf.igniteForTicks(100);
+            helper.assertTrue(
+                    fireProtectedWolf.getRemainingFireTicks() < 100,
+                    "Fire Protection must shorten an equipped animal's burning time"
+            );
+            helper.assertTrue(
+                    fireProtectedWolf.getAttributeValue(Attributes.BURNING_TIME)
+                            < 1.0,
+                    "Fire Protection must apply its burning-time attribute to BODY armor"
+            );
+
+            assertProtectionReducesAnimalDamage(
+                    helper,
+                    plainHorse,
+                    protectedHorse,
+                    fireDamage,
+                    "Horse Armor"
+            );
+            assertProtectionReducesAnimalDamage(
+                    helper,
+                    plainNautilus,
+                    protectedNautilus,
+                    fireDamage,
+                    "Nautilus Armor"
+            );
+
+            float attackerHealth = attacker.getHealth();
+            attacker.doHurtTarget(level, thornsWolf);
+            helper.assertTrue(
+                    attacker.getHealth() < attackerHealth,
+                    "Thorns on animal armor must retaliate against an attacker"
+            );
+
+            assertProtectionFamilyEffects(helper, protectedWolf);
+            assertDurabilityAndCurseEffects(helper);
+            helper.succeed();
+        });
+    }
+
+    private static void assertProtectionReducesAnimalDamage(
+            GameTestHelper helper,
+            net.minecraft.world.entity.LivingEntity plainAnimal,
+            net.minecraft.world.entity.LivingEntity protectedAnimal,
+            DamageSource source,
+            String armorName
+    ) {
+        float plainHealth = plainAnimal.getHealth();
+        float protectedHealth = protectedAnimal.getHealth();
+        plainAnimal.hurtServer(helper.getLevel(), source, 8.0F);
+        protectedAnimal.hurtServer(helper.getLevel(), source, 8.0F);
+        helper.assertTrue(
+                protectedHealth - protectedAnimal.getHealth()
+                        < plainHealth - plainAnimal.getHealth(),
+                "Fire Protection must reduce damage while wearing " + armorName
+        );
+    }
+
+    private static void assertProtectionFamilyEffects(
+            GameTestHelper helper,
+            Wolf wolf
+    ) {
+        assertProtectionEffect(
+                helper,
+                wolf,
+                Enchantments.PROTECTION,
+                helper.getLevel().damageSources().generic(),
+                "Protection"
+        );
+        assertProtectionEffect(
+                helper,
+                wolf,
+                Enchantments.FIRE_PROTECTION,
+                helper.getLevel().damageSources().lava(),
+                "Fire Protection"
+        );
+        assertProtectionEffect(
+                helper,
+                wolf,
+                Enchantments.BLAST_PROTECTION,
+                helper.getLevel().damageSources().explosion(null),
+                "Blast Protection"
+        );
+        assertProtectionEffect(
+                helper,
+                wolf,
+                Enchantments.PROJECTILE_PROTECTION,
+                helper.getLevel().damageSources().source(
+                        net.minecraft.world.damagesource.DamageTypes.ARROW
+                ),
+                "Projectile Protection"
+        );
+    }
+
+    private static void assertProtectionEffect(
+            GameTestHelper helper,
+            Wolf wolf,
+            ResourceKey<Enchantment> enchantment,
+            DamageSource source,
+            String enchantmentName
+    ) {
+        wolf.setItemSlot(
+                EquipmentSlot.BODY,
+                enchantedArmor(helper, Items.WOLF_ARMOR, enchantment, 4)
+        );
+        helper.assertTrue(
+                EnchantmentHelper.getDamageProtection(
+                        helper.getLevel(),
+                        wolf,
+                        source
+                ) > 0.0F,
+                enchantmentName + " must contribute BODY-slot damage protection"
+        );
+    }
+
+    private static void assertDurabilityAndCurseEffects(
+            GameTestHelper helper
+    ) {
+        ItemStack unbreakingArmor = enchantedArmor(
+                helper,
+                Items.WOLF_ARMOR,
+                Enchantments.UNBREAKING,
+                3
+        );
+        helper.assertTrue(
+                EnchantmentHelper.processDurabilityChange(
+                        helper.getLevel(),
+                        unbreakingArmor,
+                        1_000
+                ) < 1_000,
+                "Unbreaking must reduce Wolf Armor durability loss"
+        );
+
+        ItemStack mendingArmor = enchantedArmor(
+                helper,
+                Items.WOLF_ARMOR,
+                Enchantments.MENDING,
+                1
+        );
+        helper.assertValueEqual(
+                EnchantmentHelper.modifyDurabilityToRepairFromXp(
+                        helper.getLevel(),
+                        mendingArmor,
+                        1
+                ),
+                2,
+                "Mending must retain its normal repair conversion on Wolf Armor"
+        );
+
+        ItemStack bindingArmor = enchantedArmor(
+                helper,
+                Items.WOLF_ARMOR,
+                Enchantments.BINDING_CURSE,
+                1
+        );
+        helper.assertTrue(
+                EnchantmentHelper.has(
+                        bindingArmor,
+                        EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE
+                ),
+                "Curse of Binding must prevent ordinary animal-armor removal"
+        );
+
+        ItemStack vanishingArmor = enchantedArmor(
+                helper,
+                Items.WOLF_ARMOR,
+                Enchantments.VANISHING_CURSE,
+                1
+        );
+        helper.assertTrue(
+                EnchantmentHelper.has(
+                        vanishingArmor,
+                        EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP
+                ),
+                "Curse of Vanishing must suppress animal-armor death drops"
+        );
+    }
+
+    private static ItemStack enchantedArmor(
+            GameTestHelper helper,
+            Item item,
+            ResourceKey<Enchantment> enchantmentKey,
+            int level
+    ) {
+        Holder<Enchantment> enchantment = helper.getLevel()
+                .registryAccess()
+                .lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(enchantmentKey);
+        ItemStack armor = new ItemStack(item);
+        EnchantmentHelper.updateEnchantments(
+                armor,
+                enchantments -> enchantments.set(enchantment, level)
+        );
+        return armor;
     }
 
     private static boolean containsEnchantment(

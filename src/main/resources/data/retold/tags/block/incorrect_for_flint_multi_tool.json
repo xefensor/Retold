@@ -1,0 +1,7 @@
+{
+  "values": [
+    "#retold:requires_steel_tool",
+    "#minecraft:needs_iron_tool",
+    "#minecraft:needs_diamond_tool"
+  ]
+}

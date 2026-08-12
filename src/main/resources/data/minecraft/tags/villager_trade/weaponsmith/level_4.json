@@ -1,0 +1,10 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_4",
+    "retold:progression/iron_axe",
+    "retold:progression/iron_sword",
+    "retold:progression/iron_spear",
+    "minecraft:weaponsmith/4/diamond_emerald"
+  ]
+}

@@ -14,12 +14,20 @@ import cz.xefensor.retold.block.AenderPortalFrameBlock;
 import cz.xefensor.retold.block.AnimalFeederBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.ColorRGBA;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.AxeItem;
+import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.ShovelItem;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.item.ToolMaterial;
+import net.minecraft.world.item.equipment.ArmorMaterial;
+import net.minecraft.world.item.equipment.ArmorType;
+import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ColoredFallingBlock;
@@ -33,9 +41,171 @@ import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import java.util.Map;
+
 public final class RetoldBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(Retold.MODID);
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Retold.MODID);
+
+    private static final ToolMaterial FLINT_MULTI_TOOL_MATERIAL =
+            new ToolMaterial(
+                    RetoldTags.INCORRECT_FOR_FLINT_MULTI_TOOL,
+                    48,
+                    2.0F,
+                    0.0F,
+                    5,
+                    RetoldTags.FLINT_MULTI_TOOL_REPAIR_MATERIALS
+            );
+    private static final ToolMaterial STEEL_TOOL_MATERIAL =
+            new ToolMaterial(
+                    RetoldTags.INCORRECT_FOR_STEEL_TOOL,
+                    750,
+                    7.0F,
+                    2.5F,
+                    12,
+                    RetoldTags.STEEL_REPAIR_MATERIALS
+            );
+    private static final ArmorMaterial STEEL_ARMOR_MATERIAL =
+            new ArmorMaterial(
+                    25,
+                    Map.of(
+                            ArmorType.BOOTS, 3,
+                            ArmorType.LEGGINGS, 6,
+                            ArmorType.CHESTPLATE, 7,
+                            ArmorType.HELMET, 3,
+                            ArmorType.BODY, 9
+                    ),
+                    12,
+                    SoundEvents.ARMOR_EQUIP_IRON,
+                    1.0F,
+                    0.0F,
+                    RetoldTags.STEEL_REPAIR_MATERIALS,
+                    EquipmentAssets.IRON
+            );
+
+    public static final DeferredItem<Item> FLINT_MULTI_TOOL = ITEMS.registerItem(
+            "flint_multi_tool",
+            Item::new,
+            properties -> properties.tool(
+                    FLINT_MULTI_TOOL_MATERIAL,
+                    RetoldTags.FLINT_MULTI_TOOL_MINEABLE,
+                    1.0F,
+                    -2.8F,
+                    0.0F
+            )
+    );
+    public static final DeferredItem<Item> FLINT_SPEAR = ITEMS.registerItem(
+            "flint_spear",
+            Item::new,
+            properties -> properties.spear(
+                    FLINT_MULTI_TOOL_MATERIAL,
+                    0.75F,
+                    0.82F,
+                    0.70F,
+                    4.5F,
+                    13.0F,
+                    9.0F,
+                    5.1F,
+                    13.75F,
+                    4.6F
+            )
+    );
+    public static final DeferredItem<Item> STEEL_INGOT = ITEMS.registerSimpleItem(
+            "steel_ingot"
+    );
+    public static final DeferredItem<Item> STEEL_SWORD = ITEMS.registerItem(
+            "steel_sword",
+            Item::new,
+            properties -> properties.sword(
+                    STEEL_TOOL_MATERIAL,
+                    3.0F,
+                    -2.4F
+            )
+    );
+    public static final DeferredItem<Item> STEEL_SPEAR = ITEMS.registerItem(
+            "steel_spear",
+            Item::new,
+            properties -> properties.spear(
+                    STEEL_TOOL_MATERIAL,
+                    1.0F,
+                    1.0F,
+                    0.55F,
+                    2.75F,
+                    10.5F,
+                    6.625F,
+                    5.1F,
+                    10.625F,
+                    4.6F
+            )
+    );
+    public static final DeferredItem<ShovelItem> STEEL_SHOVEL = ITEMS.registerItem(
+            "steel_shovel",
+            properties -> new ShovelItem(
+                    STEEL_TOOL_MATERIAL,
+                    1.5F,
+                    -3.0F,
+                    properties
+            )
+    );
+    public static final DeferredItem<Item> STEEL_PICKAXE = ITEMS.registerItem(
+            "steel_pickaxe",
+            Item::new,
+            properties -> properties.pickaxe(
+                    STEEL_TOOL_MATERIAL,
+                    1.0F,
+                    -2.8F
+            )
+    );
+    public static final DeferredItem<AxeItem> STEEL_AXE = ITEMS.registerItem(
+            "steel_axe",
+            properties -> new AxeItem(
+                    STEEL_TOOL_MATERIAL,
+                    5.5F,
+                    -3.05F,
+                    properties
+            )
+    );
+    public static final DeferredItem<HoeItem> STEEL_HOE = ITEMS.registerItem(
+            "steel_hoe",
+            properties -> new HoeItem(
+                    STEEL_TOOL_MATERIAL,
+                    -2.5F,
+                    -0.5F,
+                    properties
+            )
+    );
+    public static final DeferredItem<Item> STEEL_HELMET = ITEMS.registerItem(
+            "steel_helmet",
+            Item::new,
+            properties -> properties.humanoidArmor(
+                    STEEL_ARMOR_MATERIAL,
+                    ArmorType.HELMET
+            )
+    );
+    public static final DeferredItem<Item> STEEL_CHESTPLATE = ITEMS.registerItem(
+            "steel_chestplate",
+            Item::new,
+            properties -> properties.humanoidArmor(
+                    STEEL_ARMOR_MATERIAL,
+                    ArmorType.CHESTPLATE
+            )
+    );
+    public static final DeferredItem<Item> STEEL_LEGGINGS = ITEMS.registerItem(
+            "steel_leggings",
+            Item::new,
+            properties -> properties.humanoidArmor(
+                    STEEL_ARMOR_MATERIAL,
+                    ArmorType.LEGGINGS
+            )
+    );
+    public static final DeferredItem<Item> STEEL_BOOTS = ITEMS.registerItem(
+            "steel_boots",
+            Item::new,
+            properties -> properties.humanoidArmor(
+                    STEEL_ARMOR_MATERIAL,
+                    ArmorType.BOOTS
+            )
+    );
 
     public static final DeferredItem<WaterElementItem> WATER_ELEMENT = ITEMS.registerItem(
             "water_element",

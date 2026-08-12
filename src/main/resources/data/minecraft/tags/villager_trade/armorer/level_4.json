@@ -1,0 +1,10 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_4",
+    "retold:progression/iron_helmet",
+    "retold:progression/iron_chestplate",
+    "retold:progression/iron_leggings",
+    "retold:progression/iron_boots"
+  ]
+}

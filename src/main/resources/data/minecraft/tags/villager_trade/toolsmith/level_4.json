@@ -1,0 +1,11 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_4",
+    "retold:progression/iron_axe",
+    "retold:progression/iron_hoe",
+    "retold:progression/iron_pickaxe",
+    "retold:progression/iron_shovel",
+    "minecraft:toolsmith/4/diamond_emerald"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "replace": true,
+  "values": [
+    "#minecraft:common_smith/level_5",
+    "retold:progression/diamond_helmet",
+    "retold:progression/diamond_chestplate",
+    "retold:progression/diamond_leggings",
+    "retold:progression/diamond_boots",
+    "retold:progression/enchanted_diamond_chestplate",
+    "retold:progression/enchanted_diamond_boots"
+  ]
+}
