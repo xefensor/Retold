@@ -265,7 +265,9 @@ public final class RetoldFactionTargetMemory {
             LivingEntity target,
             RetoldTargetSource source
     ) {
-        if (source == RetoldTargetSource.TERRITORY_ATTACK || source == RetoldTargetSource.RETALIATION) {
+        if (source == RetoldTargetSource.OWNER_DEFENSE
+                || source == RetoldTargetSource.TERRITORY_ATTACK
+                || source == RetoldTargetSource.RETALIATION) {
             return false;
         }
 

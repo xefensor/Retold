@@ -450,6 +450,7 @@ public final class RetoldFoodBehaviorEvents {
         if (target != null && RetoldFactionTargetMemory.isOwnedByAny(
                 mob,
                 target,
+                RetoldTargetSource.OWNER_DEFENSE,
                 RetoldTargetSource.RETALIATION,
                 RetoldTargetSource.TERRITORY_ATTACK
         )) {

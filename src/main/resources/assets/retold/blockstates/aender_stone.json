@@ -1,7 +1,20 @@
 {
   "variants": {
-    "": {
-      "model": "retold:block/aender_stone"
-    }
+    "": [
+      {
+        "model": "retold:block/aender_stone"
+      },
+      {
+        "model": "retold:block/aender_stone_mirrored"
+      },
+      {
+        "model": "retold:block/aender_stone",
+        "y": 180
+      },
+      {
+        "model": "retold:block/aender_stone_mirrored",
+        "y": 180
+      }
+    ]
   }
 }

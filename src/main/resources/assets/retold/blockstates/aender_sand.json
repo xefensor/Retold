@@ -1,7 +1,21 @@
 {
   "variants": {
-    "": {
-      "model": "retold:block/aender_sand"
-    }
+    "": [
+      {
+        "model": "retold:block/aender_sand"
+      },
+      {
+        "model": "retold:block/aender_sand",
+        "y": 90
+      },
+      {
+        "model": "retold:block/aender_sand",
+        "y": 180
+      },
+      {
+        "model": "retold:block/aender_sand",
+        "y": 270
+      }
+    ]
   }
 }

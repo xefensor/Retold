@@ -1,7 +1,21 @@
 {
   "variants": {
-    "": {
-      "model": "retold:block/aender_soil"
-    }
+    "": [
+      {
+        "model": "retold:block/aender_soil"
+      },
+      {
+        "model": "retold:block/aender_soil",
+        "y": 90
+      },
+      {
+        "model": "retold:block/aender_soil",
+        "y": 180
+      },
+      {
+        "model": "retold:block/aender_soil",
+        "y": 270
+      }
+    ]
   }
 }
