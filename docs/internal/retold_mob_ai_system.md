@@ -552,8 +552,10 @@ while remaining invalid prey. This is a one-meal viability matrix, not evidence 
 balance, every generated terrain arrangement, unloaded simulation, multiplayer, or existing worlds.
 
 Spawn-habitat fallbacks fill the contexts where an ordinary diet is not naturally placed nearby.
-Camels and desert Rabbits browse dead-bush scrub while cactus remains a hazard; Goats non-destructively scrape stone, snow, packed ice, or
-gravel; Mooshrooms non-destructively graze mycelium; and Armadillos find abstract grubs in red sand
+Camels and desert Rabbits browse blocks in `retold:desert_browse_blocks`, with Dead Bush as the
+default while cactus remains a hazard. Goats non-destructively scrape blocks in
+`retold:goat_scrape_blocks`, defaulting to stone, snow, packed ice, and gravel; Mooshrooms
+non-destructively graze `retold:mooshroom_grazing_blocks`, defaulting to mycelium; and Armadillos find abstract grubs in red sand
 and terracotta as well as ordinary soil. Piglins can consume red/brown mushrooms or Crimson Fungus.
 Cats admit Frogs as wetland prey, Ocelots retain jungle Chicken prey, and Spiders/Cave Spiders admit Bats. A hungry nighttime
 Bat that finds neither a dropped Spider Eye nor physical prey catches abstract cave insects, and a
@@ -564,6 +566,13 @@ target exists. Habitat forage is renewable and non-destructive, remains availabl
 Renewable habitat forage uses the existing six-block horizontal scan volume so a staggered first
 food tick does not lose a nearby source after ordinary vanilla wandering; destructive forage keeps
 the narrower four-block scoring radius.
+Ordinary crop, flower, grazer-plant, small-passive-plant, Turtle, Hoglin, Piglin, and Strider forage
+eligibility is exposed through Retold-owned block tags. Meat, fish, berry, grazer, small-passive,
+flower, Nether-fungus, Bat, and feline-scavenge dropped-food families are exposed through item
+tags, nesting exact-match vanilla/Common tags where available. Existing registry-path checks remain
+as compatibility fallbacks. Tagged ordinary forage is still destroyed and requires `mobGriefing`;
+tagging an item or block changes classification only and does not bypass AI ownership, bounded
+searches, feeding timing, or hunger rules.
 
 Living-death integration credits valid ordinary predator and wild Nautilus prey through
 `RetoldControlledHuntingEvents` and credits vanilla as well as Retold lethal Frog/Axolotl attacks

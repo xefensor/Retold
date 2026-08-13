@@ -1,6 +1,7 @@
 package cz.xefensor.retold.behavior.performance;
 
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.registry.RetoldTags;
 import cz.xefensor.retold.behavior.core.RetoldWeakBarriers;
 
 import net.minecraft.core.BlockPos;
@@ -669,8 +670,7 @@ public final class RetoldBlockTargetSearch {
     ) {
         BlockState state = level.getBlockState(pos);
 
-        return state.is(Blocks.SAND)
-                || state.is(Blocks.RED_SAND);
+        return state.is(RetoldTags.TURTLE_BEACH_BLOCKS);
     }
 
     private static boolean isWater(
@@ -784,8 +784,7 @@ public final class RetoldBlockTargetSearch {
     ) {
         BlockState state = level.getBlockState(pos);
 
-        return state.is(Blocks.BAMBOO)
-                || state.is(Blocks.BAMBOO_SAPLING);
+        return state.is(RetoldTags.PANDA_BAMBOO_BLOCKS);
     }
 
     private static boolean isScrubRange(
@@ -798,14 +797,7 @@ public final class RetoldBlockTargetSearch {
 
         BlockState state = level.getBlockState(pos);
 
-        return state.is(Blocks.GRASS_BLOCK)
-                || state.is(Blocks.DIRT)
-                || state.is(Blocks.COARSE_DIRT)
-                || state.is(Blocks.ROOTED_DIRT)
-                || state.is(Blocks.PODZOL)
-                || state.is(Blocks.SAND)
-                || state.is(Blocks.RED_SAND)
-                || state.is(Blocks.TERRACOTTA);
+        return state.is(RetoldTags.ARMADILLO_SCRUB_RANGE_BLOCKS);
     }
 
     private static boolean isArmadilloGrubSoil(

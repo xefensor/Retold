@@ -627,12 +627,10 @@ public final class RetoldFoodBehaviorEvents {
             return false;
         }
 
-        String itemPath = RetoldMobRules.getItemPath(stack);
-
         state.addHunger(
                 -RetoldMobRules.foodRelief(
                         mob,
-                        itemPath
+                        stack
                 )
         );
 
@@ -818,7 +816,7 @@ public final class RetoldFoodBehaviorEvents {
         state.addHunger(
                 -RetoldMobRules.forageRelief(
                         mob,
-                        blockPath
+                        blockState
                 )
         );
 

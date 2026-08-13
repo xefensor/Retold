@@ -161,7 +161,7 @@ public final class RetoldAnimalFeederBehavior {
 
         state.addHunger(-RetoldMobRules.foodRelief(
                 mob,
-                RetoldMobRules.getItemPath(consumed)
+                consumed
         ));
         state.markFed(gameTime);
         RetoldFeedingAnimations.play(mob);

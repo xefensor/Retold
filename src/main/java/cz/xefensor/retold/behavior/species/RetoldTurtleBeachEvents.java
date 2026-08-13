@@ -17,6 +17,7 @@ import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.registry.RetoldTags;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -24,7 +25,6 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -491,8 +491,7 @@ public final class RetoldTurtleBeachEvents {
             ServerLevel level,
             BlockPos pos
     ) {
-        return level.getBlockState(pos).is(Blocks.SAND)
-                || level.getBlockState(pos).is(Blocks.RED_SAND);
+        return level.getBlockState(pos).is(RetoldTags.TURTLE_BEACH_BLOCKS);
     }
 
     private static boolean isWater(

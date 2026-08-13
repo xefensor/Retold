@@ -69,6 +69,14 @@ Retold should remain usable as a standalone overhaul, but its major systems shou
 
 General rule:
 
+- design every new system with mod and datapack compatibility in mind from the beginning; identify
+  standard tags, Retold-owned semantic data/tags, optional integration boundaries, and safe behavior
+  for unknown third-party content before hard-coding vanilla identities
+- when materially changing an existing system, audit and improve the compatibility of the touched
+  surface where it is safe and testable; do not launch unrelated broad rewrites, and record unsafe or
+  unresolved extension points for later work
+- compatibility improvements must preserve Retold's standalone defaults unless the developer has
+  explicitly approved a gameplay change, with regression coverage for the unchanged defaults
 - prefer data, tags, stable public hooks, and small optional adapters over hard-coded checks for individual mods
 - distinguish **compatibility** (both mods work together), **integration** (Retold understands the other mod's systems), and **balance support** (the other mod preserves Retold's intended progression); broad compatibility is desirable, integration should be selective, and balance support should not be promised by default
 - avoid direct dependencies unless an integration genuinely cannot be implemented safely as optional support
@@ -82,10 +90,11 @@ General rule:
   - Make it possible for a datapack or compatibility addon to classify a modded mob as Undead, Illager, Nether Remnant, Village Defender, Ender, etc. without Java patches in Retold.
   - Keep conditional relations such as Witch raid cooperation expressible without turning every special case into a generic faction member.
 
-- [ ] Audit Retold for places where standard Minecraft/NeoForge common tags should be used instead of exact vanilla item/block checks.
+- [x] Audit Retold for places where standard Minecraft/NeoForge common tags should be used instead of exact vanilla item/block checks.
   - Prefer common material tags where the gameplay meaning is genuinely "any valid material of this type".
   - Keep Retold-specific semantic tags for concepts owned by Retold.
   - Add extension tags where useful for modpack authors, such as valid torch igniters, weak mob barriers, portal-related materials, or other future Retold systems.
+  - Behavior-preserving audit completed for environmental mob resources, ordinary forage and food families, Spider-lair web counting, Illager village signals, Nether-remnant and Ocean-Monument guard anchors, protected monument blocks, consumable Campfire igniters, and leaf-preserving tools. Standard vanilla/NeoForge tags are nested where their defaults match exactly. Fixed progression, paired mapping, portal/structure, unique loot/replacement, and currently unverified Sniffer checks remain exact by design.
 
 - [ ] Add a stable recipe-visibility/knowledge hook shared by all recipe UIs.
   - Vanilla recipe-book behavior, EMI, JEI, and future viewers should be able to ask the same Retold authority whether a recipe is known/visible to a player.

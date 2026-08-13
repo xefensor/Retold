@@ -17,6 +17,7 @@ import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.registry.RetoldTags;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -251,7 +252,9 @@ public final class RetoldSpiderLairEvents {
                             center.getZ() + dz
                     );
 
-                    if (level.getBlockState(mutable).is(Blocks.COBWEB)) {
+                    if (level.getBlockState(mutable).is(
+                            RetoldTags.SPIDER_LAIR_WEB_BLOCKS
+                    )) {
                         count++;
                     }
                 }

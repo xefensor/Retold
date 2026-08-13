@@ -74,6 +74,7 @@ Some systems still need broader real-world validation, especially dimension trav
 
 - [`docs/README.md`](docs/README.md) — documentation index
 - [`docs/design-overview.md`](docs/design-overview.md) — world and gameplay design
+- [`docs/compatibility.md`](docs/compatibility.md) — supported datapack extension tags and integration boundaries
 - [`ROADMAP.md`](ROADMAP.md) — public Now / Next / Later roadmap
 - [`docs/internal/README.md`](docs/internal/README.md) — developer and technical documentation
 - [`docs/internal/retold_mod_system.md`](docs/internal/retold_mod_system.md) — implementation architecture

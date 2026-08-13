@@ -149,7 +149,7 @@ public final class RetoldAnimalBreeding {
                 ? 20
                 : RetoldMobRules.foodRelief(
                         animal,
-                        RetoldMobRules.getItemPath(food)
+                        food
                 );
 
         state.addHunger(-Math.max(1, relief));

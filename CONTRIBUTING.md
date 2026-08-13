@@ -26,9 +26,14 @@ The current target is recorded in [`gradle.properties`](gradle.properties). Usef
 
 1. Start from current `master` and create a focused branch.
 2. Keep unrelated formatting and refactors out of the change.
-3. Update tests, documentation, and `CHANGELOG.md` when affected.
-4. Run appropriate validation and describe it honestly.
-5. Open a pull request and complete its template.
+3. Design new systems with mod and datapack compatibility in mind. When materially changing an
+   existing subsystem, audit compatibility assumptions on the touched path and improve them when
+   safe without turning the contribution into an unrelated rewrite.
+4. Preserve Retold's standalone defaults when adding extension points, unless a gameplay change was
+   explicitly agreed, and add focused regression coverage for those defaults.
+5. Update tests, documentation, and `CHANGELOG.md` when affected.
+6. Run appropriate validation and describe it honestly.
+7. Open a pull request and complete its template.
 
 Small changes are easier to verify. A technically sound proposal may still be declined when it conflicts with Retold's design.
 

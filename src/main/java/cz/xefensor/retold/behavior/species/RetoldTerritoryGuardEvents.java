@@ -11,12 +11,12 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.registry.RetoldTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -520,32 +520,11 @@ public final class RetoldTerritoryGuardEvents {
         String path = RetoldMobRules.getEntityTypePath(guard.getType());
 
         if (path.equals("wither_skeleton") || path.equals("blaze")) {
-            return state.is(Blocks.NETHER_BRICKS)
-                    || state.is(Blocks.NETHER_BRICK_FENCE)
-                    || state.is(Blocks.NETHER_BRICK_STAIRS)
-                    || state.is(Blocks.NETHER_BRICK_SLAB)
-                    || state.is(Blocks.CRACKED_NETHER_BRICKS)
-                    || state.is(Blocks.CHISELED_NETHER_BRICKS)
-                    || state.is(Blocks.RED_NETHER_BRICKS)
-                    || state.is(Blocks.RED_NETHER_BRICK_STAIRS)
-                    || state.is(Blocks.RED_NETHER_BRICK_SLAB)
-                    || state.is(Blocks.RED_NETHER_BRICK_WALL)
-                    || state.is(Blocks.NETHER_BRICK_WALL);
+            return state.is(RetoldTags.NETHER_REMNANT_GUARD_ANCHOR_BLOCKS);
         }
 
         if (isOceanMonumentGuard(path)) {
-            return state.is(Blocks.PRISMARINE)
-                    || state.is(Blocks.PRISMARINE_BRICKS)
-                    || state.is(Blocks.DARK_PRISMARINE)
-                    || state.is(Blocks.SEA_LANTERN)
-                    || state.is(Blocks.WET_SPONGE)
-                    || state.is(Blocks.PRISMARINE_STAIRS)
-                    || state.is(Blocks.PRISMARINE_SLAB)
-                    || state.is(Blocks.PRISMARINE_WALL)
-                    || state.is(Blocks.PRISMARINE_BRICK_STAIRS)
-                    || state.is(Blocks.PRISMARINE_BRICK_SLAB)
-                    || state.is(Blocks.DARK_PRISMARINE_STAIRS)
-                    || state.is(Blocks.DARK_PRISMARINE_SLAB);
+            return state.is(RetoldTags.OCEAN_MONUMENT_GUARD_ANCHOR_BLOCKS);
         }
 
         return false;

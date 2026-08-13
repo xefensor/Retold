@@ -1910,9 +1910,8 @@ public final class RetoldBatColonyEvents {
 
         Vec3 foodSource = food.position();
         ItemStack stack = food.getItem();
-        String itemPath = RetoldMobRules.getItemPath(stack);
 
-        state.addHunger(-RetoldMobRules.foodRelief(bat, itemPath));
+        state.addHunger(-RetoldMobRules.foodRelief(bat, stack));
         state.markFed(gameTime);
         bat.ate();
         stack.shrink(1);

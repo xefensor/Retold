@@ -73,8 +73,10 @@ Stick  Stick
 Log Log Log
 ```
 
-Newly placed Campfires begin unlit. A bare Flint lights an unlit, non-waterlogged Campfire and is
-consumed in Survival; Flint and Steel also works through its ordinary durability-based behavior.
+Newly placed Campfires begin unlit. An item in `retold:campfire_consumable_igniters` lights an
+unlit, non-waterlogged Campfire and is consumed in Survival; bare Flint is the default. Flint and
+Steel also works through its ordinary durability-based behavior and deliberately is not in the
+consumable tag.
 Campfire cooking turns one Clay Ball into one Brick in 600 ticks. Eight fired Bricks in a ring then
 craft the Brick Furnace:
 
@@ -148,8 +150,9 @@ The player begins by gathering materials that do not require tools:
 All blocks in the standard `minecraft:leaves` tag receive a supplemental 20% chance to drop 1–2
 Sticks. Fortune adds five percentage points per level (25%/30%/35% for Fortune I/II/III). This is
 independent of the leaf's ordinary loot-table Stick roll, so the vanilla drop remains possible too.
-Shears and Silk Touch do not receive the supplemental drop and continue harvesting the leaf block
-normally. The values are provisional until the natural opening loop is playtested.
+Tools in `retold:leaf_preserving_tools` and tools with Silk Touch do not receive the supplemental
+drop and continue harvesting the leaf block normally; Shears are the tag's default. The values are
+provisional until the natural opening loop is playtested.
 
 The first essential tool is the **Flint Multi-tool**.
 

@@ -163,7 +163,7 @@ public final class RetoldHeldFoodConsumptionEvents {
         );
         int relief = RetoldMobRules.foodRelief(
                 mob,
-                RetoldMobRules.getItemPath(stack)
+                stack
         );
 
         if (!RetoldAiControl.tryClaim(

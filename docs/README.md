@@ -9,6 +9,7 @@ This directory separates player-facing design information from detailed develope
 - [`../CHANGELOG.md`](../CHANGELOG.md) — released and unreleased changes
 - [`../SUPPORT.md`](../SUPPORT.md) — help and problem reporting
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — contribution workflow
+- [`compatibility.md`](compatibility.md) — supported datapack extension tags and integration boundaries
 
 ## Developer And Technical Documents
 

@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "#c:mushrooms",
+    "#minecraft:hoglin_food",
+    "#minecraft:strider_food"
+  ]
+}
