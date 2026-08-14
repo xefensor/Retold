@@ -742,6 +742,11 @@ public final class RetoldGameTests {
         var cow = helper.spawn(EntityTypes.COW, 3, 2, 3);
         var creeper = helper.spawn(EntityTypes.CREEPER, 4, 2, 3);
 
+        RetoldMobStates.getOrCreate(
+                slime,
+                helper.getLevel().getGameTime()
+        ).setHunger(RetoldMobRules.huntThreshold(slime));
+
         helper.assertTrue(
                 RetoldFactionRelations.shouldAttack(zombie, cow),
                 "Undead must consider unfactioned living animals hostile"
@@ -773,6 +778,41 @@ public final class RetoldGameTests {
         helper.assertFalse(
                 RetoldFactionRelations.shouldAttack(zombie, creeper),
                 "Even indiscriminate Undead must not deliberately attack creepers"
+        );
+        slime.setTarget(magmaCube);
+        guardian.setTarget(elderGuardian);
+        helper.assertTrue(
+                slime.getTarget() == null && guardian.getTarget() == null,
+                "Vanilla target writes must preserve Cube Mob and monument-Guardian tolerance"
+        );
+        slime.setTarget(cow);
+        guardian.setTarget(cow);
+        helper.assertTrue(
+                slime.getTarget() == cow && guardian.getTarget() == cow,
+                "Internal tolerance must not block valid outsider targets"
+        );
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                slime,
+                cow,
+                false
+        );
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                guardian,
+                cow,
+                false
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        slime,
+                        magmaCube,
+                        RetoldTargetSource.RETALIATION
+                )
+                        && RetoldCombatTargets.applyAttackTarget(
+                        guardian,
+                        elderGuardian,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "Explicit Retold retaliation must remain available across tolerant families"
         );
         helper.succeed();
     }

@@ -224,6 +224,14 @@ Zombie Nautilus TPS selectors when the shared target-policy or per-tick cleanup 
 not select the complete matrix unless the faction cache or generic target-cleanup architecture
 changes more broadly.
 
+For internally tolerant indiscriminate factions, run the exact
+`retold:indiscriminate_factions_follow_living_target_rules` selector. It covers Cube Mob and
+monument Guardian allied-target rejection, valid outsider targeting, and explicit Retold-owned
+retaliation. When the shared live target-policy path changes, add the exact affected
+`retold:mob_tps_slime`, `retold:mob_tps_magma_cube`, `retold:mob_tps_guardian`, and
+`retold:mob_tps_elder_guardian` selectors; do not select the complete matrix unless faction
+classification caching or generic target cleanup changes more broadly.
+
 For Wither threat selection, run the exact `retold:wither_prioritizes_serious_threats` selector.
 It covers Ghast, Zoglin, and wild Zombie Nautilus diplomacy, primary/side-head rejection and
 retained cleanup, the dynamic tamed Zombie Nautilus boundary, active-threat priority over nearer

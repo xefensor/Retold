@@ -30,6 +30,11 @@ Current position:
   the confirmed gameplay contract.
 - The central mob AI architecture, control ownership, source-aware targets, factions, territory,
   hunger, homes, searches, pathfinding adapters, caches, LOD, work budgets, and debugging exist.
+- The central live target policy rejects ordinary same-faction Mob/Brain targets for all three
+  internally tolerant indiscriminate families: Undead, Slimes/Magma Cubes, and Guardians/Elder
+  Guardians. Explicit Retold-owned retaliation remains available at this generic boundary. The
+  focused relationship selector passes; latest exact Cube Mob and Guardian-family TPS peaks are
+  4.488, 5.665, 4.580, and 5.040 ms/tick respectively.
 - There are 82 data-driven mob profiles. Zombie Nautilus is the newest unmanaged
   `SPECIAL_VANILLA` profile; Skeleton Horse, Zombie Horse, and Camel Husk are the newest
   `UNDEAD_MOUNT` profiles.

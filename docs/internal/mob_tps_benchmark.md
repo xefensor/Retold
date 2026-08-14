@@ -249,6 +249,19 @@ hunt/targeting, 4.139 danger/social, and 2.906 habitat/day-night. Zombie Nautilu
 idle/rest the 5.091 ms/tick rerun peak. The complete matrix remained unnecessary because faction
 classification caching and the scan/path budgets did not change.
 
+### Internally Tolerant Target-Safety Focused Run
+
+The exact Slime, Magma Cube, Guardian, and Elder Guardian selectors were run on 2026-08-14 after
+the shared live-faction target policy began rejecting ordinary allied Mob/Brain targets for Cube
+Mobs and monument Guardians. Explicit Retold-owned retaliation remains allowed by this boundary.
+
+Slime measured 4.373 idle/rest, 3.533 dropped-food/forage, 4.435 hunt/targeting, 4.488
+danger/social, and 2.525 habitat/day-night ms/tick. Magma Cube measured 3.709, 3.466, 5.665,
+4.614, and 2.435. Guardian measured 4.580, 3.136, 3.519, 3.184, and 1.620. Elder Guardian
+measured 5.040, 3.637, 3.774, 3.655, and 2.200 ms/tick. All twenty phases remained below 50
+ms/tick, with Magma Cube hunt/targeting the 5.665 ms/tick peak. The complete matrix was not
+selected because faction classification caching and the shared scan/path budgets did not change.
+
 ### Wither Threat-Selection Focused Run
 
 The exact `retold:mob_tps_wither` selector was run on 2026-08-14 because the Wither's formerly
