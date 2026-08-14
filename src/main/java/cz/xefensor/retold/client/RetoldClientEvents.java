@@ -5,6 +5,7 @@ import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentCatalog;
 import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
+import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
@@ -64,6 +65,7 @@ public final class RetoldClientEvents {
     private static void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
         RetoldClientEnchantmentCatalog.clear();
         RetoldClientEnchantmentKnowledge.clear();
+        RetoldClientRecipeKnowledge.clear();
     }
 
     private static void registerSpriteSources(RegisterSpriteSourcesEvent event) {

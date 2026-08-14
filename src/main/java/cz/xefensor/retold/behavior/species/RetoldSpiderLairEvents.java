@@ -182,7 +182,8 @@ public final class RetoldSpiderLairEvents {
 
         if (placement == null
                 || placement.equals(spider.blockPosition())
-                || !RetoldBlockTargetSearch.canPlaceCobwebAt(level, placement)) {
+                || !RetoldBlockTargetSearch.canPlaceCobwebAt(level, placement)
+                || !RetoldMobGriefing.canPlaceBlock(level, spider, placement)) {
             return false;
         }
 

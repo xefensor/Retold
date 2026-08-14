@@ -25,7 +25,7 @@ Compatibility work must preserve Retold's built-in defaults and standalone behav
 points need focused regression coverage for those defaults, and should remain data-driven or
 optional so installing no compatibility addon produces the same gameplay as before.
 
-## Extension Tags
+## Block And Item Extension Tags
 
 The following block and item tags are supported extension points:
 
@@ -110,11 +110,132 @@ data/retold/tags/block/turtle_beach_blocks.json
 Use the corresponding `data/retold/tags/item/<tag-name>.json` path for an item tag. Keep `replace`
 false so Retold's defaults and entries from other compatibility packs remain available.
 
+## Faction Entity Tags
+
+Compatibility datapacks can classify an entity type into one Retold faction by appending it to one
+of these tags:
+
+| Tag | Retold identity and inherited relationship rules |
+| --- | --- |
+| `retold:factions/nether_remnants` | Nether Remnant guards and territory members. |
+| `retold:factions/illagers` | Full Illager members, including territory and raid relationships. |
+| `retold:factions/undead` | Undead hostility and tolerance. Retold's default composes `minecraft:undead` and adds Ghasts. |
+| `retold:factions/slimes` | Slime and Magma Cube diplomacy. |
+| `retold:factions/aquatic_hostiles` | Guardian-family hostility. |
+| `retold:factions/creepers` | Creeper identity used by global target-safety rules. |
+| `retold:factions/arthropods` | Spider-family diplomacy. This intentionally does not include every entity in Minecraft's broader arthropod tag. |
+| `retold:factions/silverfish` | Silverfish diplomacy and same-species swarm boundary. |
+| `retold:factions/endermites` | Endermite diplomacy and same-species swarm boundary. |
+| `retold:factions/nether_beasts` | Hoglin-style faction relationships. |
+| `retold:factions/breezes` | Breeze faction relationships. |
+| `retold:factions/wardens` | Warden faction relationships. |
+| `retold:factions/bosses` | Boss faction relationships. |
+| `retold:factions/creakings` | Creaking faction relationships. |
+| `retold:factions/village_defenders` | Village Defender targeting and retaliation. |
+| `retold:factions/enders` | Ender faction relationships. |
+| `retold:alliances/illager_loose_allies` | Permanent non-hostile Illager alignment with combat cooperation only while both entities share the same active raid. This does not grant Illager territory membership. |
+
+Faction describes diplomacy, target selection, assistance, retaliation, and configured territory
+membership. It does not assign a Retold mob profile or take over the entity's daily-life AI. A
+compatibility pack may therefore classify a third-party mob without opting it into hunger,
+foraging, homes, or another profile. Unknown and untagged entity types remain unfactioned.
+
+Add an entity type exactly as for the block example, using the entity-type path. For example, this
+classifies `examplemod:ashen_guard` as an Undead entity:
+
+```json
+{
+  "replace": false,
+  "values": [
+    "examplemod:ashen_guard"
+  ]
+}
+```
+
+Save it as `data/retold/tags/entity_type/factions/undead.json`. Use `replace: false` so built-in and
+other compatibility-pack members remain available.
+
+An entity type must belong to at most one full `retold:factions/*` tag. If it appears in multiple
+full faction tags, Retold logs an error and treats it as unfactioned so datapack order cannot choose
+its diplomacy silently. If it is both a full member and an Illager loose ally, Retold logs a warning
+and full membership takes precedence. Classification caches and installed faction combat goals are
+updated after server tag reloads, including for already-loaded mobs.
+
+Players and a tamed Wolf that is actively defending are dynamic identities and are not represented
+by entity-type tags. Tamed entities covered by the standard Undead tag, such as Skeleton Horses,
+do not inherit generic hostile Undead behavior while tamed; their untamed forms do. Tags classify
+identity only: entity classes that cannot target, retaliate, assist, or use territory behavior do
+not gain those capabilities merely from membership.
+
+## Recipe Discovery Integrations
+
+Retold exposes one per-player recipe-visibility authority through
+`cz.xefensor.retold.api.recipe.RetoldRecipeKnowledge`. Vanilla's recipe book and optional recipe
+viewers must ask this authority instead of inferring discovery from their own recipe lists.
+Crafting, smelting, blasting, smoking, campfire cooking, stonecutting, and smithing recipes are
+managed by default and remain hidden until that player knows them. Knowledge is synchronized to
+the client on login, respawn, dimension change, and whenever a recipe is learned.
+
+Unknown third-party recipe types deliberately fail open: installing a machine mod does not make
+all of its recipes disappear merely because Retold does not understand how the machine teaches
+them. An integration that owns a reliable discovery route may register its `RecipeType` through
+`RetoldRecipeKnowledge.registerDiscoveryManagedType`, retain the returned registration for as long
+as the integration is active, and teach recipes through `teachAndUnlock`. The same registration
+must be present on the logical server and client. Closing it restores fail-open behavior.
+
+EMI and JEI adapters are not bundled yet. Their eventual adapters must filter through
+`RetoldRecipeKnowledge.isVisibleTo` and refresh when the synchronized knowledge snapshot changes;
+they must not create a separate discovery store or expose a managed recipe before vanilla would.
+Both viewers must remain optional dependencies.
+
+## World Protection Integrations
+
+`cz.xefensor.retold.api.world.RetoldWorldProtection` is Retold's generic permission layer for
+claim and protection addons. An addon registers one rule under its own unique identifier. Every
+registered rule must allow a mutation; any denial prevents it. With no registered rules, all
+checks allow the action and Retold behaves exactly as it did before this API existed. Closing a
+registration removes that rule. A rule that throws unexpectedly is logged and fails closed for
+that mutation so protected terrain is not damaged because an integration failed.
+
+Rules receive the server level, an exact representative block position, inclusive affected block
+bounds, mutation category, optional responsible entity, and optional subject identifier. Single
+block actions use one-block bounds; portals and whole-chunk operations expose their full possible
+area so an adapter can reject overlaps rather than checking only the center. Current categories
+distinguish mob breaking and placement, other entity breaking, Aender portal creation,
+delayed-structure retrogen, Aender chunk regeneration, and generic Retold world changes. Retold
+currently routes the following owned operations through this layer:
+
+- destructive animal forage, Panda bamboo consumption, weak-barrier breaking, Spider lair webs,
+  and Villager torch maintenance
+- Gale Core terrain damage
+- Aender stale-chunk blanking and regeneration
+- generated Aender counterpart portals and player-built portal activation
+- delayed structure retrogen
+
+The normal NeoForge entity-griefing hook and `mobGriefing` rule still apply before Retold's
+position-aware mob checks. Protection rules supplement those standard checks; they do not replace
+them. Concrete claim-mod adapters and their dedicated-server/multiplayer test matrix remain future
+work.
+
+## Public Java API Boundary
+
+Only types below `cz.xefensor.retold.api` are public integration contracts. The initial supported
+surface contains recipe knowledge/visibility and world-mutation protection. Other Retold packages
+remain implementation details and may change during ordinary development; addons must not edit
+Retold saved data or call internal managers directly.
+
+Public API additions should remain source-compatible within a Retold minor release line. A
+breaking public-API change requires an explicitly documented version transition and changelog
+entry. Query methods do not expose mutable storage, registrations are removable handles, and
+optional integrations must isolate references to absent third-party classes so Retold can always
+start without them.
+
 ## Current Boundaries
 
-These tags extend existing Retold behavior; they do not add Retold mob profiles or faction
-membership to third-party entities. Modded-mob faction membership, recipe-viewer integration,
-world-protection adapters, and the stable public Java API remain planned work.
+Faction tags do not add Retold mob profiles to third-party entities. Documentation and explicit
+opt-out support for modded-mob profiles, concrete EMI/JEI adapters, and claim-mod-specific
+world-protection adapters remain planned work. Stage, faction, mob-profile, and Aender-specific
+Java API surfaces are still under evaluation and are not public contracts yet.
 
 The exact item/block audit intentionally retains checks that define a fixed progression currency
 or ritual item, a specific tool tier, a lit/extinguished counterpart mapping, a portal or structure

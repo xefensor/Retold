@@ -1,10 +1,9 @@
 package cz.xefensor.retold.mixin;
 
-import cz.xefensor.retold.recipe.RetoldKnownRecipeData;
 import cz.xefensor.retold.recipe.RetoldRecipeUnlockContext;
+import cz.xefensor.retold.api.recipe.RetoldRecipeKnowledge;
 import net.minecraft.network.protocol.game.ClientboundRecipeBookAddPacket;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.ServerRecipeBook;
 import net.minecraft.world.item.crafting.Recipe;
@@ -45,12 +44,6 @@ public abstract class ServerRecipeBookMixin {
             ServerPlayer player,
             CallbackInfoReturnable<Integer> cir
     ) {
-        if (!(player.level() instanceof ServerLevel serverLevel)) {
-            cir.setReturnValue(0);
-            return;
-        }
-
-        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
         boolean internalUnlock = RetoldRecipeUnlockContext.isInternalUnlock();
 
         List<ClientboundRecipeBookAddPacket.Entry> entries = new ArrayList<>();
@@ -59,7 +52,8 @@ public abstract class ServerRecipeBookMixin {
         for (RecipeHolder<?> recipe : recipes) {
             ResourceKey<Recipe<?>> recipeId = recipe.id();
 
-            if (!internalUnlock && !data.hasKnown(player, recipeId)) {
+            if (!internalUnlock
+                    && !RetoldRecipeKnowledge.isVisibleTo(player, recipe)) {
                 continue;
             }
 

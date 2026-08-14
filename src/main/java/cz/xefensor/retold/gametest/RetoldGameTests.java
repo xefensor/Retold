@@ -42,6 +42,7 @@ import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.compatibility.RetoldWorldProtectionGameTests;
 import cz.xefensor.retold.enderman.RetoldEndermanDefense;
 import cz.xefensor.retold.enchanting.RetoldEnchantingGameTests;
 import cz.xefensor.retold.faction.RetoldFaction;
@@ -51,6 +52,7 @@ import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
 import cz.xefensor.retold.event.RetoldSnowballGameTests;
 import cz.xefensor.retold.event.RetoldVexGameTests;
 import cz.xefensor.retold.progression.RetoldToolProgressionGameTests;
+import cz.xefensor.retold.recipe.RetoldRecipeCompatibilityGameTests;
 import cz.xefensor.retold.progression.RetoldProgressionAcquisitionGameTests;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.registry.RetoldTags;
@@ -271,6 +273,7 @@ public final class RetoldGameTests {
         );
 
         RetoldAenderGameTests.register(event, environment);
+        RetoldWorldProtectionGameTests.register(event, environment);
         RetoldMobAvailabilityGameTests.register(event, environment);
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
@@ -299,6 +302,7 @@ public final class RetoldGameTests {
         RetoldEnchantingGameTests.register(event, environment);
         RetoldToolProgressionGameTests.register(event, environment);
         RetoldProgressionAcquisitionGameTests.register(event, environment);
+        RetoldRecipeCompatibilityGameTests.register(event, environment);
         RetoldTerritoryGameTests.register(event, environment);
         RetoldVillagerCommunalFoodGameTests.register(event);
         RetoldVillagerGolemConstructionGameTests.register(event);

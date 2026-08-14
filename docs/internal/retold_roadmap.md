@@ -84,11 +84,17 @@ General rule:
 
 ### High-priority compatibility work
 
-- [ ] Make faction membership data-driven instead of relying only on hard-coded vanilla entity IDs in `RetoldFactionMembers`.
+- [x] Make faction membership data-driven instead of relying only on hard-coded vanilla entity IDs in `RetoldFactionMembers`.
   - Allow exact entity IDs and/or entity tags to opt into Retold factions.
   - Preserve Retold's built-in vanilla defaults.
   - Make it possible for a datapack or compatibility addon to classify a modded mob as Undead, Illager, Nether Remnant, Village Defender, Ender, etc. without Java patches in Retold.
   - Keep conditional relations such as Witch raid cooperation expressible without turning every special case into a generic faction member.
+  - Implemented with one additive `retold:factions/*` entity-type tag per fixed Retold faction and
+    `retold:alliances/illager_loose_allies` for conditional Witch-style alignment. Conflicting full
+    memberships fail closed, a full faction suppresses a loose alliance, and reloads refresh cached
+    classification plus goals for loaded mobs. Defaults preserve the former exact members while
+    composing `minecraft:illager` and `minecraft:undead`; tamed undead mounts suppress generic
+    hostile Undead identity at the entity level.
 
 - [x] Audit Retold for places where standard Minecraft/NeoForge common tags should be used instead of exact vanilla item/block checks.
   - Prefer common material tags where the gameplay meaning is genuinely "any valid material of this type".
@@ -96,10 +102,14 @@ General rule:
   - Add extension tags where useful for modpack authors, such as valid torch igniters, weak mob barriers, portal-related materials, or other future Retold systems.
   - Behavior-preserving audit completed for environmental mob resources, ordinary forage and food families, Spider-lair web counting, Illager village signals, Nether-remnant and Ocean-Monument guard anchors, protected monument blocks, consumable Campfire igniters, and leaf-preserving tools. Standard vanilla/NeoForge tags are nested where their defaults match exactly. Fixed progression, paired mapping, portal/structure, unique loot/replacement, and currently unverified Sniffer checks remain exact by design.
 
-- [ ] Add a stable recipe-visibility/knowledge hook shared by all recipe UIs.
+- [x] Add a stable recipe-visibility/knowledge hook shared by all recipe UIs.
   - Vanilla recipe-book behavior, EMI, JEI, and future viewers should be able to ask the same Retold authority whether a recipe is known/visible to a player.
   - Unknown Retold recipes must not become spoilers merely because a recipe-viewer mod is installed.
   - Consider separate states where an item/output is known but its exact recipe is still undiscovered.
+  - `RetoldRecipeKnowledge` now exposes the authoritative per-player query, teaching operation,
+    immutable known-id snapshot, and opt-in custom recipe-type registration. The client receives the
+    same knowledge snapshot used by vanilla; separate output-only discovery remains only a future
+    design option.
 
 - [ ] Add optional EMI compatibility.
   - Hide or filter undiscovered recipes according to Retold recipe knowledge.
@@ -109,11 +119,14 @@ General rule:
   - Match the same recipe-discovery rules as vanilla/EMI rather than creating a separate knowledge model.
   - Do not require JEI for normal Retold operation.
 
-- [ ] Create a generic Retold world-protection permission layer before adding claim-mod-specific adapters.
+- [x] Create a generic Retold world-protection permission layer before adding claim-mod-specific adapters.
   - Centralize checks such as `canMobBreak`, `canWorldModify`, `canStructureGenerate`, and `canPortalCreate` (exact API names TBD).
   - Route Retold-owned world mutation through this layer where practical: Aender chunk replacement/regeneration, counterpart portal construction, retrogen/delayed structures, Gale Core block breaking, and future environmental transformations.
   - Default behavior without a protection integration should preserve current Retold behavior.
   - Later adapters can map this layer to popular claims/protection systems without scattering mod checks across gameplay code.
+  - `RetoldWorldProtection` is default-allow with uniquely identified, removable deny rules. It now
+    gates position-aware Retold mob breaking/placement, Gale Core damage, Aender regeneration and
+    portal creation, and delayed structure retrogen. Concrete claim adapters remain separate work.
 
 ### Data-driven mob compatibility
 
@@ -125,15 +138,17 @@ General rule:
   - Consider Retold tags/data for AI-managed, AI-excluded, territory-excluded, or faction-excluded entities if those distinctions are needed in practice.
   - A mod with sophisticated custom AI must be able to coexist without Retold overriding behavior it does not own.
 
-- [ ] Make faction + profile composition work cleanly for third-party mobs.
+- [x] Make faction + profile composition work cleanly for third-party mobs.
   - A compatibility pack should be able to say, for example, that a modded creature uses a predator/grazer profile while separately belonging to an existing Retold faction.
   - Preserve the design rule that profile describes daily life while faction describes diplomacy/relationships.
+  - Faction tags now classify independently of the existing datapack profile registry; adding only
+    a faction tag never opts an unknown entity into Retold's managed daily-life AI.
 
 ### Recipe and machine compatibility
 
-- [ ] Generalize recipe-discovery handling so unknown third-party recipe types fail open safely instead of being unintentionally blocked or spoiled.
+- [x] Generalize recipe-discovery handling so unknown third-party recipe types fail open safely instead of being unintentionally blocked or spoiled.
 
-- [ ] Provide an extension point for integrations to register additional recipe types with Retold's discovery system.
+- [x] Provide an extension point for integrations to register additional recipe types with Retold's discovery system.
   - This should support modded processing systems such as crushers, mixers, presses, sawmills, alloying, etc. without Retold knowing every machine mod directly.
   - Pack authors should be able to decide whether a third-party recipe type participates in Retold discovery.
 
@@ -143,24 +158,29 @@ General rule:
 
 ### Public Retold integration API
 
-- [ ] Design a deliberately small, stable public API package, tentatively `cz.xefensor.retold.api`.
+- [x] Design a deliberately small, stable public API package, `cz.xefensor.retold.api`.
+  - The initial supported surface intentionally contains only recipe discovery and world mutation
+    protection. Stage, faction, profile, and Aender-specific contracts remain candidates rather than
+    exposing their mutable implementation classes prematurely.
 
 Potential API surfaces to evaluate:
 
 - [ ] World stage read access and safe stage transition hooks (`RetoldStages` or equivalent).
 - [ ] Faction registration/query hooks (`RetoldFactions`).
 - [ ] Mob-profile integration/query hooks (`RetoldMobProfiles`).
-- [ ] Recipe knowledge and visibility (`RetoldRecipeKnowledge`).
-- [ ] World-protection/world-mutation permission hooks (`RetoldWorldProtection`).
+- [x] Recipe knowledge and visibility (`RetoldRecipeKnowledge`).
+- [x] World-protection/world-mutation permission hooks (`RetoldWorldProtection`).
 - [ ] Aender queries/events that third-party integrations may legitimately need (`RetoldAender`).
 
 API rules:
 
 - [ ] Do not expose mutable implementation storage when a manager already owns side effects.
   - Example: external code should never directly edit Retold world-stage saved data; stage changes must continue through the stage manager/official API so synchronization and transition side effects occur.
-- [ ] Prefer events/queries over exposing internal classes.
-- [ ] Document API stability expectations before declaring interfaces public.
-- [ ] Keep optional integrations isolated so a missing third-party mod never causes classloading failures.
+- [x] Prefer events/queries over exposing internal classes.
+- [x] Document API stability expectations before declaring interfaces public.
+- [x] Keep optional integrations isolated so a missing third-party mod never causes classloading failures.
+  - The core API contains no EMI, JEI, or claim-mod classes; concrete adapters will remain optional,
+    separately loaded integration code.
 
 ### UI/information integrations
 

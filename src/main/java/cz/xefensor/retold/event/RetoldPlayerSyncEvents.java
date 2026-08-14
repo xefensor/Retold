@@ -3,6 +3,7 @@ package cz.xefensor.retold.event;
 import cz.xefensor.retold.enchanting.RetoldEnchantmentKnowledge;
 import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 import cz.xefensor.retold.network.RetoldStageSyncPayload;
+import cz.xefensor.retold.recipe.RetoldRecipeBookEvents;
 import cz.xefensor.retold.sky.RetoldEndSkyData;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import net.minecraft.server.level.ServerLevel;
@@ -62,6 +63,7 @@ public final class RetoldPlayerSyncEvents {
         );
 
         RetoldEnchantmentKnowledge.syncToPlayer(serverPlayer);
+        RetoldRecipeBookEvents.syncToPlayer(serverPlayer);
         AenderChronolithEvents.syncToPlayer(serverPlayer);
     }
 }

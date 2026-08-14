@@ -1,5 +1,6 @@
 package cz.xefensor.retold.aender.generation;
 
+import cz.xefensor.retold.api.world.RetoldWorldProtection;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -21,19 +22,36 @@ public final class AenderLoadedChunkReplacement {
     private AenderLoadedChunkReplacement() {
     }
 
-    public static void regenerate(ServerLevel level, ChunkAccess chunk) {
+    public static boolean regenerate(ServerLevel level, ChunkAccess chunk) {
         ChunkPos chunkPos = chunk.getPos();
+
+        if (!RetoldWorldProtection.canRegenerateAenderChunk(level, chunkPos)) {
+            return false;
+        }
+
         List<Entity> entities = entitiesInChunk(level, chunkPos);
         AenderChunkGenerator.regenerateLoadedChunk(level, chunk);
         reconcileEntitiesAfterRegeneration(level, chunkPos, entities);
         resend(level, chunk);
+        return true;
     }
 
-    public static void blankForProgressiveRegeneration(ServerLevel level, ChunkAccess chunk) {
+    public static boolean blankForProgressiveRegeneration(
+            ServerLevel level,
+            ChunkAccess chunk
+    ) {
+        if (!RetoldWorldProtection.canRegenerateAenderChunk(
+                level,
+                chunk.getPos()
+        )) {
+            return false;
+        }
+
         discardEntitiesInChunk(level, chunk.getPos());
         AenderChunkSectionEditor.clear(chunk);
         AenderChunkSectionEditor.primeFreshHeightmaps(chunk);
         AenderVolatility.forgetGeneratedMark(chunk);
+        return true;
     }
 
     private static List<Entity> entitiesInChunk(ServerLevel level, ChunkPos chunkPos) {

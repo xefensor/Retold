@@ -797,7 +797,7 @@ public final class RetoldFoodBehaviorEvents {
                 RetoldMobRules.isRenewableEnvironmentalForage(mob, blockState);
 
         if (!renewableEnvironmentalForage
-                && !RetoldMobGriefing.canModifyBlocks(level, mob)) {
+                && !RetoldMobGriefing.canBreakBlock(level, mob, foragePos)) {
             return false;
         }
 

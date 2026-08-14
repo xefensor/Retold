@@ -698,8 +698,11 @@ Retold tracks recipe knowledge separately from vanilla automatic unlock assumpti
 
 Technical owners:
 
+- `api.recipe.RetoldRecipeKnowledge`
 - `RetoldKnownRecipeData`
 - `RetoldRecipeBookEvents`
+- `RetoldRecipeVisibility`
+- `RetoldRecipeKnowledgeSyncPayload`
 - `RetoldRecipeUnlockContext`
 - `RetoldRecipeResultHelper`
 - `RetoldCookingRecipeSiblingHelper`
@@ -717,12 +720,38 @@ Behavior:
 - Stonecutting and smithing are tracked by result where direct input matching is not enough.
 - Cooking siblings can be unlocked together.
 - Internal recipe unlocks are wrapped with `RetoldRecipeUnlockContext`.
+- The seven vanilla recipe types Retold already discovers are managed by one visibility authority.
+- Unknown custom recipe types fail open unless an integration explicitly registers that type.
+- The complete known-id snapshot is synchronized to the client on login, dimension change,
+  respawn, and successful learning so client recipe viewers can use the server authority.
 - Vanilla recipe book behavior is intercepted through mixins.
 - Many vanilla recipe advancements are included as data resources with reward/visibility changes.
 
 Design rule:
 
-Use `RetoldRecipeBookEvents.markKnownAndUnlockRecipe` or related helpers when teaching/unlocking recipes. Do not directly add recipe book entries from feature code.
+Feature code inside Retold should use `RetoldRecipeBookEvents.markKnownAndUnlockRecipe` or related
+helpers when teaching/unlocking recipes. External integrations use the stable
+`RetoldRecipeKnowledge` facade. Neither should directly add recipe-book entries or maintain a
+parallel discovery store.
+
+## World Mutation Protection
+
+Retold-owned world mutations use the default-allow `api.world.RetoldWorldProtection` facade.
+Protection integrations install uniquely identified `RetoldWorldProtectionRule` instances and
+retain their removable registration handles. Every installed rule must allow the immutable
+context. Unexpected rule failures are logged and deny only the checked mutation.
+
+The context exposes the server level, representative position, immutable inclusive affected bounds,
+mutation type, optional responsible entity, and optional subject id. Single-block actions use exact
+one-block bounds; portal and chunk operations expose their complete possible area. Current routed
+owners are destructive forage and bamboo, weak barriers, Spider webs, Villager torch maintenance,
+Gale Core breaking, Aender stale-chunk replacement, Aender portal creation, and delayed
+structure retrogen. `RetoldMobGriefing` continues to invoke NeoForge's normal entity-griefing hook
+first, then the position-aware Retold rule immediately before destructive or placement actions.
+
+Do not call a claim mod from gameplay classes. Add an optional adapter that translates a
+`RetoldWorldMutationContext` into that mod's permission query. No adapter may be required for Retold
+startup, and no registered rules must retain the exact pre-API behavior.
 
 ## Villager Teaching
 
@@ -1000,6 +1029,10 @@ High-level systems:
 - profile-based mob life behavior
 - faction relationships, including separate permanent identity, active combat alignment, and
   same-context cooperation for conditional allies such as raiding witches
+- tag-backed faction classification through additive `retold:factions/*` entity-type tags, with
+  fail-closed conflict handling, reload-aware cached membership, and a separate
+  `retold:alliances/illager_loose_allies` extension point; faction identity remains independent of
+  datapack mob profiles
 - separate neutral Silverfish and Endermite identities, with same-entity-type enforcement in the
   small-arthropod swarm owner so their shared profile cannot create cross-species coordination
 - owned Polar Bear cub defense with a cancellable standing/sound warning before proactive attack

@@ -377,7 +377,7 @@ public final class RetoldPandaBambooEvents {
     ) {
         if (!RetoldBehaviorCoordinator.canCompleteMeal(panda)
                 || !isBamboo(level, foodSource)
-                || !RetoldMobGriefing.canModifyBlocks(level, panda)
+                || !RetoldMobGriefing.canBreakBlock(level, panda, foodSource)
                 || !level.destroyBlock(foodSource, false, panda)) {
             return false;
         }

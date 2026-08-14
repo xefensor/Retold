@@ -1,5 +1,6 @@
 package cz.xefensor.retold.recipe;
 
+import cz.xefensor.retold.network.RetoldRecipeKnowledgeSyncPayload;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,6 +13,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -132,7 +134,9 @@ public final class RetoldRecipeBookEvents {
         }
 
         RetoldKnownRecipeData data = RetoldKnownRecipeData.get(serverLevel);
-        data.markKnown(player, recipe.id());
+        if (data.markKnown(player, recipe.id())) {
+            syncToPlayer(player);
+        }
     }
 
     public static void markKnownRecipeAndUnlockCookingSiblings(
@@ -187,6 +191,19 @@ public final class RetoldRecipeBookEvents {
             RecipeHolder<?> recipe
     ) {
         markAndUnlockRecipe(player, recipe);
+    }
+
+    public static void syncToPlayer(ServerPlayer player) {
+        if (player.connection == null
+                || !player.connection.getConnection().isConnected()) {
+            return;
+        }
+
+        RetoldKnownRecipeData data = RetoldKnownRecipeData.get(player.level());
+        PacketDistributor.sendToPlayer(
+                player,
+                new RetoldRecipeKnowledgeSyncPayload(data.knownRecipes(player))
+        );
     }
 
     private static void unlockRecipeSilently(
