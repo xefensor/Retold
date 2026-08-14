@@ -1,6 +1,8 @@
 package cz.xefensor.retold.worldgen.air;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindSource;
 import net.minecraft.core.BlockPos;
@@ -255,6 +257,10 @@ public final class RetoldGaleCoreGameTests {
                     boss.getTarget() == null,
                     "Disengagement must clear normal mob targeting"
             );
+            helper.assertTrue(
+                    RetoldFactionTargetMemory.getSource(boss, player) == null,
+                    "Disengagement must clear Gale Core target ownership"
+            );
 
             Projectile projectile = new Snowball(
                     level,
@@ -500,6 +506,12 @@ public final class RetoldGaleCoreGameTests {
         helper.assertTrue(
                 boss.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null) == player,
                 "The Gale Core must retain the expected attack target"
+        );
+        helper.assertTrue(
+                boss.getTarget() == player
+                        && RetoldFactionTargetMemory.getSource(boss, player)
+                        == RetoldTargetSource.BEHAVIOR_COMBAT,
+                "The Gale Core target must use source-aware Retold ownership"
         );
     }
 

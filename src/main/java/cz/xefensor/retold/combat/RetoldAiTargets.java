@@ -129,6 +129,22 @@ public final class RetoldAiTargets {
         }
     }
 
+    public static boolean setBrainAttackTargetSafely(
+            Mob mob,
+            LivingEntity target
+    ) {
+        if (!isValidAssignmentTarget(mob, target)) {
+            return false;
+        }
+
+        try {
+            mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
+            return true;
+        } catch (IllegalStateException ignored) {
+            return false;
+        }
+    }
+
     public static void setRetoldBrainTargetIfNeeded(
             Mob mob,
             LivingEntity target
@@ -137,10 +153,23 @@ public final class RetoldAiTargets {
             return;
         }
 
+        /*
+         * Axolotls and Piglins are known Brain-backed target owners. Other mobs may also expose
+         * getTarget() through ATTACK_TARGET instead of retaining the ordinary Mob field (Breeze
+         * family mobs do this), so fall back to their registered Brain memory when setTarget did
+         * not become observable.
+         */
         if (mob instanceof Axolotl || mob instanceof AbstractPiglin) {
             if (getBrainAttackTargetSafely(mob) != target) {
                 mob.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, target);
             }
+
+            return;
+        }
+
+        if (mob.getTarget() != target
+                && getBrainAttackTargetSafely(mob) != target) {
+            setBrainAttackTargetSafely(mob, target);
         }
 
         if (mob instanceof AbstractPiglin piglin) {

@@ -1,5 +1,8 @@
 package cz.xefensor.retold.worldgen.air;
 
+import cz.xefensor.retold.combat.RetoldAiTargets;
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
@@ -14,6 +17,7 @@ import net.minecraft.util.Unit;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -305,14 +309,21 @@ public class GaleCore extends Breeze {
     }
 
     private void activateAgainst(ServerPlayer player) {
+        if (!RetoldCombatTargets.applyAttackTarget(
+                this,
+                player,
+                RetoldTargetSource.BEHAVIOR_COMBAT
+        )) {
+            return;
+        }
+
         active = true;
         targetPlayerId = player.getUUID();
         idleRoamTarget = null;
         returnAreaTarget = null;
         hiddenTargetTicks = 0;
         initializeFlightPattern(player);
-        this.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, player);
-        this.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        RetoldAiTargets.eraseMemorySafely(this, MemoryModuleType.WALK_TARGET);
         this.setNoGravity(phaseTwo);
     }
 
@@ -377,14 +388,30 @@ public class GaleCore extends Breeze {
     }
 
     private void disengageAndReturnHome() {
+        LivingEntity combatTarget = this.getTarget();
+
+        if (combatTarget == null) {
+            combatTarget = RetoldAiTargets.getBrainAttackTargetSafely(this);
+        }
+
+        if (combatTarget != null) {
+            RetoldCombatTargets.clearTargetReferencesAndAggression(
+                    this,
+                    combatTarget,
+                    false
+            );
+            RetoldAiTargets.eraseMemorySafely(this, MemoryModuleType.ATTACK_TARGET);
+        } else {
+            RetoldAiTargets.setAggression(this, false);
+            RetoldAiTargets.eraseMemorySafely(this, MemoryModuleType.ATTACK_TARGET);
+        }
+
         active = false;
         targetPlayerId = null;
         idleRoamTarget = null;
         returnAreaTarget = null;
         hiddenTargetTicks = 0;
-        this.setTarget(null);
-        this.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-        this.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        RetoldAiTargets.eraseMemorySafely(this, MemoryModuleType.WALK_TARGET);
         this.setNoGravity(true);
         returnToHome();
     }

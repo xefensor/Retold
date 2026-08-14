@@ -4,7 +4,7 @@
 
 ## Coverage
 
-`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 81 mob types; the latest complete baseline covers 75, while focused runs cover the six later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
+`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 82 mob types; the latest complete baseline covers 75, while focused runs cover the seven later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
 2. `dropped_food_forage`: dropped food plus profile-appropriate forage blocks.
