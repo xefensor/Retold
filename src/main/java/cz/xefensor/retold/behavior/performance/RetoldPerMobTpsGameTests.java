@@ -5,6 +5,7 @@ import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfile;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
+import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.villager.RetoldVillagerCommunalSupply;
@@ -70,7 +71,8 @@ import java.util.function.Consumer;
  * subject so existing retaliation and danger systems are exercised. Mobs using
  * the shared passive-flee behavior additionally take one point of real mob damage,
  * which includes the production damage event, immediate movement claim, and
- * remembered flee follow-through in the measured workload.</p>
+ * remembered flee follow-through in the measured workload. Dolphin, Bee, and
+ * undead-mount damage-triggered defense paths receive the same treatment.</p>
  *
  * <p>Every test owns a separate GameTest environment. This is intentional: two
  * 50-mob samples running in the same server tick would contaminate one another's
@@ -105,6 +107,7 @@ public final class RetoldPerMobTpsGameTests {
             "bogged",
             "breeze",
             "camel",
+            "camel_husk",
             "cat",
             "cave_spider",
             "chicken",
@@ -153,6 +156,7 @@ public final class RetoldPerMobTpsGameTests {
             "shulker",
             "silverfish",
             "skeleton",
+            "skeleton_horse",
             "slime",
             "sniffer",
             "snow_golem",
@@ -173,6 +177,7 @@ public final class RetoldPerMobTpsGameTests {
             "wolf",
             "zoglin",
             "zombie",
+            "zombie_horse",
             "zombie_villager",
             "zombified_piglin"
     );
@@ -572,11 +577,12 @@ public final class RetoldPerMobTpsGameTests {
                 // Benchmark subjects are normally invulnerable so the 50-mob sample remains
                 // stable. Temporarily allow one real hit where production behavior begins from
                 // the successful-damage event: shared passive flight, Dolphin pod defense,
-                // and Bee colony defense.
+                // Bee colony defense, and undead-mount retaliation.
                 if (subject instanceof PathfinderMob pathfinderMob
                         && (RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)
                         || run.mobPath.equals("dolphin")
-                        || run.mobPath.equals("bee"))) {
+                        || run.mobPath.equals("bee")
+                        || RetoldMobRules.isUndeadMount(pathfinderMob))) {
                     subject.setInvulnerable(false);
                     subject.invulnerableTime = 0;
                     subject.hurtServer(

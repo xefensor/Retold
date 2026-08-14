@@ -162,8 +162,10 @@ and full membership takes precedence. Classification caches and installed factio
 updated after server tag reloads, including for already-loaded mobs.
 
 Players and a tamed Wolf that is actively defending are dynamic identities and are not represented
-by entity-type tags. Tamed entities covered by the standard Undead tag, such as Skeleton Horses,
-do not inherit generic hostile Undead behavior while tamed; their untamed forms do. Tags classify
+by entity-type tags. Undead mounts covered by the standard Undead tag stop inheriting generic
+hostile Undead behavior only after they have a persisted owner reference. Retold deliberately does
+not trust the vanilla tame flag here because Camel always reports itself as tamed and Skeleton-trap
+horses can be marked tamed before a player owns them. Tags classify
 identity only: entity classes that cannot target, retaliate, assist, or use territory behavior do
 not gain those capabilities merely from membership.
 

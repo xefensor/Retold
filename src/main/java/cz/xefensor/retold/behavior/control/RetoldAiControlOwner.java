@@ -17,6 +17,7 @@ public enum RetoldAiControlOwner {
     COMMANDER_SUPPORT,
     UNDEAD_HORDE,
     UNDEAD_RANGED,
+    UNDEAD_MOUNT,
     SPECIAL_UNDEAD,
     SWARM,
     SCAVENGER,

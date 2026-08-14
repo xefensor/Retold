@@ -415,9 +415,12 @@ an implementation claim. The completion matrix below and
   food away from lava and for player interaction. Wild
   hungry Nautiluses join the controlled aquatic hunt owner and pursue living fish, while tamed
   Nautiluses remain excluded from autonomous hunting.
-- Wild Skeleton Horses, Zombie Horses, and Camel Husks are hostile but tameable. Tamed undead
-  mounts defend themselves and their owners without independently hunting. Other Undead tolerate
-  them.
+- Wild Skeleton Horses, Zombie Horses, and Camel Husks are hostile but tameable. Persisted owner
+  references, rather than vanilla's tame flag, define when these mounts are claimed because Camel
+  always reports itself as tamed and Skeleton traps can mark horses tamed before player ownership.
+  An ownerless already-tame riderless Skeleton Horse or Camel Husk is claimed on a valid player
+  mount; Zombie Horses retain vanilla bucking/taming. Claimed undead mounts defend themselves and
+  their owners without independently hunting. Other Undead tolerate them.
 
 ### Special And Stage-Gated Creatures
 
@@ -1012,7 +1015,7 @@ dedicated-server observation, or profiler/JFR evidence.
 
 ### Per-Mob TPS Matrix
 
-`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 78 loaded
+`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 81 loaded
 mob profiles. Every species is measured through idle/rest, dropped-food/forage, hunt/target,
 danger/social, and habitat/day-night phases. Profile-appropriate fixtures provide water, caves,
 Nether ground, prey, threats, forage, hives, and other required stimuli. Each phase records real
@@ -1033,9 +1036,11 @@ After adding four school-fish and two loose-Squid profiles, the final rerun pass
 Adding the Villager, Strider, and Nautilus profiles expanded registration to 77 tests and 385 phases.
 The latest complete baseline remains the earlier 75-test/375-phase pass; focused Strider and
 Nautilus runs passed all ten new phases below 50 ms/tick, and Cow passed all five representative
-breeder phases. Parrot expands current registration to 78 tests/390 phases; its focused five-phase
-run passed with a 4.005 ms/tick peak. A complete expanded rerun was intentionally not used for
-these focused changes.
+breeder phases. Parrot expanded registration to 78 tests/390 phases; its focused five-phase run
+passed with a 4.005 ms/tick peak. Skeleton Horse, Zombie Horse, and Camel Husk now expand current
+registration to 81 tests/405 phases. Their fifteen focused phases passed below 50 ms/tick, peaking
+at 5.628, 4.593, and 5.843 ms/tick respectively. A complete expanded rerun was intentionally not
+used for these focused changes.
 The focused Bee defense rerun makes its danger phase deal real damage so the production colony
 event and staggered continuation are measured; all five phases passed with a 7.103 ms/tick peak.
 After natural acquisition was added, focused 50-mob Armadillo, Nautilus, and Strider runs again
@@ -1197,6 +1202,7 @@ Use this matrix before calling the mob AI system done.
 | Nether hungry | piglin, hoglin, strider | Hunger behavior plus faction/territory interactions for Piglins. Lava passively sustains Striders without being consumed, Warped Fungus remains fallback food, and Piglins receive meal credit from Hoglins they kill. |
 | Undead hungry | zombie, zombie villager, husk, drowned, zombified piglin | Hunger/horde behavior, faction targeting, and undead tolerance. A non-undead, non-Creeper living victim killed by one of these mobs provides a meal. |
 | Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop. |
+| Undead mount | skeleton horse, zombie horse, camel husk | Ownerless mounts retain Undead diplomacy and use a bounded cached 24-block scan, sight/close-awareness checks, source-aware faction targets, six-tick dispatch, throttled paths, and real melee damage. A persisted owner reference removes the generic faction identity. Claimed mounts never scan for prey; successful damage and five-second owner interaction memories alone start source-aware retaliation or owner defense under `UNDEAD_MOUNT` attack ownership. Mounting claims an ownerless already-tame riderless Skeleton Horse or Camel Husk, while Zombie Horse keeps vanilla bucking/taming. Two focused tests cover all three claim/faction boundaries, real damage, defense, cleanup, and non-hunting. Fifteen focused 50-mob phases pass below 50 ms/tick with a 5.843 ms/tick overall peak; natural pursuit, riding, multiplayer, dedicated-server, and save/reload behavior remain unverified. |
 | Phantom stalker | phantom | Stalking behavior and owned attack target. |
 | Ghast artillery | ghast | Artillery targeting and faction exclusions. |
 | Zoglin rampager | zoglin | Rampage targeting and owned attack target. |

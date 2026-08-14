@@ -4,12 +4,12 @@
 
 ## Coverage
 
-`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 78 mob types; the latest complete baseline covers 75, while focused runs cover the three later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
+`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 81 mob types; the latest complete baseline covers 75, while focused runs cover the six later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
 2. `dropped_food_forage`: dropped food plus profile-appropriate forage blocks.
 3. `hunt_targeting`: profile-appropriate prey or combat targets.
-4. `danger_social`: threats and nearby entities that exercise retaliation, assistance, flock, pack, or swarm behavior. Shared passive-flee profiles, Dolphins, and Bees take one real point of threat damage so this phase measures event-driven flight or collective defense and its remembered follow-through.
+4. `danger_social`: threats and nearby entities that exercise retaliation, assistance, flock, pack, or swarm behavior. Shared passive-flee profiles, Dolphins, Bees, and Undead mounts take one real point of threat damage so this phase measures event-driven flight or defense and its remembered follow-through.
 5. `habitat_day_night`: the opposite time-of-day/habitat condition, including special species stimuli where needed.
 
 The fixture supplies water, caves, ceiling space, Nether ground, hives, flowers, bamboo, mud, sand, cobwebs, prey, threats, or Warden disturbances as appropriate. It disables `mobGriefing` during measurement so 50 destructive mobs cannot erase the shared fixture; behavior decisions and searches still run. Bosses and special mobs retain their relevant vanilla behavior, while the test-only Warden prevents distance despawning long enough to measure all phases.
@@ -212,6 +212,21 @@ All five 50-Bee phases passed below 50 ms/tick: 7.103 idle/rest, 4.099
 dropped-food/forage, 4.554 hunt/targeting, 6.661 danger/social, and 4.538 habitat/day-night. The
 7.103 ms/tick idle/rest phase was the peak. The complete matrix was not selected because the change
 is confined to explicit Bee incident handling and its existing species tick path.
+
+### Undead-Mount Focused Runs
+
+The new `UNDEAD_MOUNT` profiles expand registration from 78 tests/390 phases to 81 tests/405
+phases. The exact `retold:mob_tps_skeleton_horse`, `retold:mob_tps_zombie_horse`, and
+`retold:mob_tps_camel_husk` selectors were run on 2026-08-14 because the family adds a six-tick
+dispatcher route, bounded cached target scans, sight checks, controlled pathing, and damage-event
+retaliation. The danger fixture deals one real Iron Golem hit to exercise the production event.
+
+All fifteen 50-mob phases passed below 50 ms/tick. Skeleton Horse measured 3.805 idle/rest, 2.885
+dropped-food/forage, 5.628 hunt/targeting, 3.072 danger/social, and 1.671 habitat/day-night. Zombie
+Horse measured 3.816, 3.344, 4.593, 3.696, and 1.835 ms/tick. Camel Husk measured 5.843, 4.026,
+5.686, 4.635, and 2.764 ms/tick. Camel Husk idle/rest was the 5.843 ms/tick overall peak. The
+complete 81-profile matrix was not selected because the shared scan, sight, path, and ownership
+primitives were unchanged and the new work is confined to these three profiles.
 
 ## Results
 

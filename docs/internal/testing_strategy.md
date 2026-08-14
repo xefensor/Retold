@@ -189,6 +189,16 @@ smoke, Creative exclusion, unsmoked harvest, and hive breaking. Add the exact
 `retold:mob_tps_bee` case when incident recruitment, scan caching, controlled continuation, or path
 cadence changes; do not expand this species-local path to the complete matrix.
 
+For Undead mounts, run the exact
+`retold:wild_undead_mounts_are_hostile_until_claimed` or
+`retold:claimed_undead_mounts_defend_themselves_and_owners` behavior test. Together they cover all
+three profiles, persisted-owner faction boundaries, trap-tamed and always-tamed vanilla edge cases,
+Zombie Horse taming preservation, real melee damage, retaliation/owner-defense ownership, stale
+target cleanup, and claimed non-hunting. Add only the affected exact
+`retold:mob_tps_skeleton_horse`, `retold:mob_tps_zombie_horse`, or
+`retold:mob_tps_camel_husk` selector when dispatcher cadence, scan/sight radius, movement, damage,
+or claim/defense event work changes; do not select the complete per-mob matrix for this family alone.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

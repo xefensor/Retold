@@ -30,8 +30,8 @@ Current position:
   the confirmed gameplay contract.
 - The central mob AI architecture, control ownership, source-aware targets, factions, territory,
   hunger, homes, searches, pathfinding adapters, caches, LOD, work budgets, and debugging exist.
-- There are 78 data-driven mob profiles. Parrot is the newest profile; Strider and Nautilus were
-  added earlier so every current vanilla breedable animal has positive hunger progression.
+- There are 81 data-driven mob profiles. Skeleton Horse, Zombie Horse, and Camel Husk are the
+  newest `UNDEAD_MOUNT` profiles; Parrot, Strider, and Nautilus were added earlier.
 - Implemented work includes Creeper safety/awareness, passive damage fleeing, dropped-food priority,
   active food search, predator disengagement, Wolf leadership transfer, weak barriers, complete
   current Slime/Magma Cube behavior, Spider hunting/lairs, Bat colonies, defensive Axolotls, Polar
@@ -144,6 +144,13 @@ Current position:
   unrelated Bee targets are excluded. Both focused tests pass, and the 50-Bee run peaks at
   7.103 ms/tick. Natural hive release, dense apiaries, multiplayer, and dedicated servers remain
   unverified.
+- Ownerless Skeleton Horses, Zombie Horses, and Camel Husks now retain Undead hostility until they
+  have a persisted owner. Wild riderless mounts use bounded cached scans and real owned melee;
+  claimed mounts stop hunting and only defend themselves or their owner. Mounting claims an
+  ownerless already-tame Skeleton Horse or Camel Husk without bypassing Zombie Horse's vanilla
+  bucking/taming path. Both focused behavior tests pass, and the three 50-mob runs peak at 5.628,
+  4.593, and 5.843 ms/tick. Natural taming/riding, other-Undead tolerance, save/reload,
+  multiplayer, and dedicated-server behavior remain unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped
@@ -152,8 +159,9 @@ Current position:
   kill; Creepers never count. `retold:natural_food_*` passes 5/5, the exact Armadillo/Nautilus/
   Strider survival cases pass, and their latest affected TPS peaks are 5.760/4.544/6.771 ms/tick.
 - The latest complete TPS baseline passes all 75 then-registered per-mob tests and all 375 phases below
-  50 ms/tick. Registration is now 78 tests/390 phases. Cow, Strider, Nautilus, and Parrot focused runs pass
-  all 15 phases below 50 ms/tick, and the final 256-managed-animal budget test passes at 17.082 ms/tick;
+  50 ms/tick. Registration is now 81 tests/405 phases. Cow, Strider, Nautilus, Parrot, Skeleton
+  Horse, Zombie Horse, and Camel Husk focused runs pass their affected phases below 50 ms/tick,
+  and the final 256-managed-animal budget test passes at 17.082 ms/tick;
   the complete expanded matrix was intentionally not rerun. After Farmer supply, only the affected `retold:mob_tps_villager` test was rerun per the
   selection policy; the latest affected-only rerun after the sustained Nitwit tool-visual fix
   passed all five phases and peaked at 7.102 ms/tick while

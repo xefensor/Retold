@@ -11,6 +11,7 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- Wild Skeleton Horses, Zombie Horses, and Camel Husks are now hostile to living non-Undead creatures. Once claimed, they stop hunting independently and instead defend themselves and their owner. Mounting an ownerless trap-tamed Skeleton Horse or riderless Camel Husk claims it; Zombie Horses retain their vanilla bucking/taming process.
 - Bees now defend their colony only in response to an actual Bee injury, a hive being broken, or a full hive being harvested without smoke. Nearby available Bees join the response, while smoke, Creative/Spectator players, and Bees already occupied by another live threat remain excluded.
 - Dolphins now defend their pod collectively. When one Dolphin is actually hurt by a valid living threat, nearby available Dolphins that witness the attack join the defense even when fed, while podmates already occupied by another urgent target are left alone. The response ends when the threat is gone or too far away.
 - Parrots now use Retold hunger: they eat dropped seeds and supported crops, visibly perform their eating animation, and remove crop blocks only when `mobGriefing` allows it. Tamed Parrots give a distinct sound-and-particle warning when a real nearby threat attacks or actively targets their owner, including while riding on the owner's shoulder; the warning does not make the Parrot attack.
@@ -33,6 +34,7 @@ Each release should be readable in two passes:
 
 ### Technical
 
+- Added the data-driven `UNDEAD_MOUNT` profile for Skeleton Horses, Zombie Horses, and Camel Husks. A six-tick species dispatcher uses bounded cached scans, source-aware faction/retaliation/owner-defense targets, explicit `UNDEAD_MOUNT` attack ownership, throttled paths, and real melee damage. Persisted owner references now define domestication instead of vanilla's unreliable tame flag. Two focused behavior tests and all three five-phase 50-mob benchmarks pass below 50 ms/tick, with a 5.843 ms/tick overall peak.
 - Reworked Hive-colony defense around explicit damage, hive-break, and unsmoked-harvest events. Retaliation and faction-assist targets use source-aware `HIVE_COLONY` ownership, recruitment is one bounded cached 18-block scan, path work starts on staggered Bee ticks, and arbitrary nearby Bee targets no longer propagate. Two focused behavior tests and the five-phase 50-Bee benchmark pass; its 7.103 ms/tick peak remains below the 50 ms/tick guard.
 - Added event-driven Dolphin pod defense using source-aware retaliation and faction-assist targets under `AQUATIC_POD` ownership. Recruitment uses one bounded cached 28-block scan plus close-witness or cached-sight checks, retains urgent existing targets, and has focused behavior and 50-Dolphin TPS coverage.
 - Added the data-driven `PARROT_FORAGER` profile and routed it through the shared hunger, bounded forage, flight-navigation, ownership, cache, and work-budget pipeline. Owner warnings use staggered bounded scans plus the shared sight cache, retain vanilla shoulder storage, and have focused transaction, danger, survival, profile-loader, and 50-Parrot TPS coverage.

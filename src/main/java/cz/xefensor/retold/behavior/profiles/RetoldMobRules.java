@@ -393,6 +393,10 @@ public final class RetoldMobRules {
         return hasProfile(entity, RetoldMobProfileType.PHANTOM_STALKER);
     }
 
+    public static boolean isUndeadMount(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.UNDEAD_MOUNT);
+    }
+
     public static boolean isGhastArtillery(Entity entity) {
         return hasProfile(entity, RetoldMobProfileType.GHAST_ARTILLERY);
     }

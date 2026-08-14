@@ -340,7 +340,12 @@ public final class RetoldFactionMembers {
 
     private static boolean isTamedUndeadMount(Entity entity) {
         if (entity instanceof AbstractHorse horse) {
-            return horse.isTamed();
+            /*
+             * Camel reports tame even before a player has claimed a Camel Husk, and
+             * Skeleton traps mark their horses tame for the skeleton riders. The
+             * persisted owner reference is the cross-species domestication boundary.
+             */
+            return horse.getOwnerReference() != null;
         }
 
         return entity instanceof TamableAnimal tamableAnimal

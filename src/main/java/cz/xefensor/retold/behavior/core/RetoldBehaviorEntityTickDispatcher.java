@@ -39,6 +39,7 @@ import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
 import cz.xefensor.retold.behavior.species.RetoldTerritoryGuardEvents;
 import cz.xefensor.retold.behavior.species.RetoldTurtleBeachEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadHordeEvents;
+import cz.xefensor.retold.behavior.species.RetoldUndeadMountEvents;
 import cz.xefensor.retold.behavior.control.RetoldVanillaAiBlockerEvents;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreeding;
 import cz.xefensor.retold.behavior.species.RetoldZoglinRampagerEvents;
@@ -139,6 +140,13 @@ public final class RetoldBehaviorEntityTickDispatcher {
             case NETHER_HUNGRY -> dispatchEvery(event, mob, gameTime, 7, RetoldNetherBehaviorEvents::onEntityTickPost);
             case UNDEAD_HUNGRY -> dispatchEvery(event, mob, gameTime, 6, RetoldUndeadHordeEvents::onEntityTickPost);
             case UNDEAD_TOLERANT -> dispatchEvery(event, mob, gameTime, 6, RetoldSkeletonRangedEvents::onEntityTickPost);
+            case UNDEAD_MOUNT -> dispatchEvery(
+                    event,
+                    mob,
+                    gameTime,
+                    6,
+                    ignored -> RetoldUndeadMountEvents.tick(level, mob, gameTime)
+            );
             case PHANTOM_STALKER -> dispatchEvery(event, mob, gameTime, 6, RetoldPhantomStalkerEvents::onEntityTickPost);
             case GHAST_ARTILLERY -> dispatchEvery(event, mob, gameTime, 8, RetoldGhastArtilleryEvents::onEntityTickPost);
             case ZOGLIN_RAMPAGER -> dispatchEvery(event, mob, gameTime, 5, RetoldZoglinRampagerEvents::onEntityTickPost);
