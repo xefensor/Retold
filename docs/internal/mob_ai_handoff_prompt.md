@@ -162,9 +162,11 @@ Current position:
 - Zoglins and wild Zombie Nautiluses are explicit members of the data-driven Undead faction;
   taming removes a Zombie Nautilus's generic faction identity. Zombie-horde, Skeleton-ranged,
   Ghast-artillery, and Zoglin-rampage proactive scorers no longer give players an arbitrary bonus.
-  The cross-family exact selector passes, as do the affected Zoglin and Zombie Nautilus 50-mob
-  runs with 5.147 and 5.676 ms/tick peaks. Natural target switching, aquatic Brain combat,
-  taming/riding, multiplayer, and dedicated servers remain unverified.
+  Ordinary same-Undead Mob targets and Brain memories are now rejected or cleared, including when
+  a tamed Zombie Nautilus becomes wild again; explicitly source-owned retaliation remains allowed.
+  Both cross-family exact selectors pass, as do the latest affected Zoglin and Zombie Nautilus
+  50-mob runs with 5.091 and 4.437 ms/tick peaks. Natural target switching, repeated allied damage,
+  aquatic Brain combat, taming/riding, multiplayer, and dedicated servers remain unverified.
 - Withers now use a specialized ten-tick bounded cached selector instead of Retold's generic
   forced-faction loop. Recent attackers and creatures actively targeting the Wither outrank merely
   nearby prey, current-target inertia limits churn, players receive no categorical bonus, and the

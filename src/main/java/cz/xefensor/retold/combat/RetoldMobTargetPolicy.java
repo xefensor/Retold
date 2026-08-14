@@ -1,8 +1,10 @@
 package cz.xefensor.retold.combat;
 
 import cz.xefensor.retold.behavior.species.RetoldSlimeHungerCombat;
+import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Guardian;
 
@@ -30,6 +32,18 @@ public final class RetoldMobTargetPolicy {
         }
 
         if (RetoldSlimeHungerCombat.shouldBlockHostility(attacker)) {
+            return true;
+        }
+
+        /*
+         * Vanilla target goals and Brain memories do not know about Retold's additive Undead
+         * identity. Preserve explicit Retold-owned retaliation, but never let an ordinary target
+         * write bypass the live per-entity diplomacy boundary (including tameable Undead).
+         */
+        if (source != RetoldTargetSource.RETALIATION
+                && target instanceof LivingEntity livingTarget
+                && RetoldFactionMembers.isUndead(attacker)
+                && RetoldFactionMembers.isUndead(livingTarget)) {
             return true;
         }
 

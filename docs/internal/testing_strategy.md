@@ -216,6 +216,14 @@ work changes. A score-only constant removal does not require a TPS rerun; adding
 Nautilus faction/profile work requires `retold:mob_tps_zoglin` or
 `retold:mob_tps_zombie_nautilus` respectively.
 
+For retained Undead diplomacy, run the exact
+`retold:undead_allies_reject_and_clear_vanilla_targets` selector. It covers immediate raw Mob
+target rejection, explicit `RETALIATION` ownership, a tamed Zombie Nautilus as a valid target,
+and cleanup of both Mob and Brain targets when it becomes wild again. Run the exact Zoglin and
+Zombie Nautilus TPS selectors when the shared target-policy or per-tick cleanup path changes; do
+not select the complete matrix unless the faction cache or generic target-cleanup architecture
+changes more broadly.
+
 For Wither threat selection, run the exact `retold:wither_prioritizes_serious_threats` selector.
 It covers Ghast, Zoglin, and wild Zombie Nautilus diplomacy, primary/side-head rejection and
 retained cleanup, the dynamic tamed Zombie Nautilus boundary, active-threat priority over nearer

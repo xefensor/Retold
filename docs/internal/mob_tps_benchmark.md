@@ -242,6 +242,13 @@ was the 5.676 ms/tick overall peak. The complete expanded matrix was not selecte
 these two species gained repeated work; removing constant player-score branches from Zombie,
 Skeleton, and Ghast selection does not increase their hot-path work.
 
+The same exact selectors were rerun after the shared target policy began rejecting and cleaning up
+same-Undead Mob/Brain targets. Zoglin measured 5.091 idle/rest, 3.441 dropped-food/forage, 5.017
+hunt/targeting, 4.139 danger/social, and 2.906 habitat/day-night. Zombie Nautilus measured 4.437,
+2.831, 3.632, 3.288, and 1.698 ms/tick. All ten phases remained below 50 ms/tick, with Zoglin
+idle/rest the 5.091 ms/tick rerun peak. The complete matrix remained unnecessary because faction
+classification caching and the scan/path budgets did not change.
+
 ### Wither Threat-Selection Focused Run
 
 The exact `retold:mob_tps_wither` selector was run on 2026-08-14 because the Wither's formerly
