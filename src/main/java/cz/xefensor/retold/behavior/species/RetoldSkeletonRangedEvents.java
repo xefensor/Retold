@@ -11,12 +11,10 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -172,7 +170,7 @@ public final class RetoldSkeletonRangedEvents {
         return bestTarget;
     }
 
-    private static LivingEntity findVisibleEnemy(
+    static LivingEntity findVisibleEnemy(
             ServerLevel level,
             PathfinderMob skeleton
     ) {
@@ -200,10 +198,6 @@ public final class RetoldSkeletonRangedEvents {
             }
 
             double score = Math.abs(distanceSquared - IDEAL_RANGE_SQUARED);
-
-            if (candidate instanceof Player) {
-                score -= 10.0D;
-            }
 
             if (score < bestScore) {
                 bestScore = score;

@@ -15,12 +15,10 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -194,7 +192,7 @@ public final class RetoldUndeadHordeEvents {
         return bestTarget;
     }
 
-    private static LivingEntity findHungryTarget(
+    static LivingEntity findHungryTarget(
             ServerLevel level,
             PathfinderMob undead
     ) {
@@ -225,10 +223,6 @@ public final class RetoldUndeadHordeEvents {
 
             if (RetoldAiSightCache.canSee(undead, candidate, level.getGameTime())) {
                 score -= 22.0D;
-            }
-
-            if (candidate instanceof Player) {
-                score -= 12.0D;
             }
 
             if (score < bestScore) {

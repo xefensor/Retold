@@ -9,12 +9,10 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -97,7 +95,7 @@ public final class RetoldGhastArtilleryEvents {
         );
     }
 
-    private static LivingEntity findBestArtilleryTarget(
+    static LivingEntity findBestArtilleryTarget(
             ServerLevel level,
             Mob ghast
     ) {
@@ -128,10 +126,6 @@ public final class RetoldGhastArtilleryEvents {
 
             if (RetoldAiSightCache.canSee(ghast, candidate, level.getGameTime())) {
                 score -= 500.0D;
-            }
-
-            if (candidate instanceof Player) {
-                score -= 120.0D;
             }
 
             if (RetoldFactionMembers.isNetherRemnant(candidate)) {

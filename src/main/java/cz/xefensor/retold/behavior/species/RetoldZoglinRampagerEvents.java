@@ -10,12 +10,10 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -101,7 +99,7 @@ public final class RetoldZoglinRampagerEvents {
         );
     }
 
-    private static LivingEntity findBestRampageTarget(
+    static LivingEntity findBestRampageTarget(
             ServerLevel level,
             PathfinderMob zoglin
     ) {
@@ -132,10 +130,6 @@ public final class RetoldZoglinRampagerEvents {
 
             if (RetoldAiSightCache.canSee(zoglin, candidate, level.getGameTime())) {
                 score -= 28.0D;
-            }
-
-            if (candidate instanceof Player) {
-                score -= 16.0D;
             }
 
             if (RetoldFactionMembers.isUndead(candidate)) {

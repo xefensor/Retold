@@ -207,6 +207,15 @@ diplomacy changes. These event-time and score-order changes do not by themselves
 `retold:mob_tps_phantom`; add that exact TPS selector only when repeated dispatch cadence, scan or
 sight caching, ownership continuation, movement, or path work changes.
 
+For cross-family Undead target parity, run the exact
+`retold:undead_targeting_does_not_prioritize_players` selector. It covers Zoglin and Zombie
+Nautilus faction membership, mutual Undead tolerance, ordinary hostility, and the Zombie-horde,
+Skeleton-ranged, Ghast-artillery, and Zoglin-rampage score boundaries. Add only the exact affected
+per-mob TPS selector when faction membership, repeated dispatch, scans, sight, movement, or path
+work changes. A score-only constant removal does not require a TPS rerun; adding Zoglin or Zombie
+Nautilus faction/profile work requires `retold:mob_tps_zoglin` or
+`retold:mob_tps_zombie_nautilus` respectively.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

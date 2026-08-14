@@ -30,8 +30,9 @@ Current position:
   the confirmed gameplay contract.
 - The central mob AI architecture, control ownership, source-aware targets, factions, territory,
   hunger, homes, searches, pathfinding adapters, caches, LOD, work budgets, and debugging exist.
-- There are 81 data-driven mob profiles. Skeleton Horse, Zombie Horse, and Camel Husk are the
-  newest `UNDEAD_MOUNT` profiles; Parrot, Strider, and Nautilus were added earlier.
+- There are 82 data-driven mob profiles. Zombie Nautilus is the newest unmanaged
+  `SPECIAL_VANILLA` profile; Skeleton Horse, Zombie Horse, and Camel Husk are the newest
+  `UNDEAD_MOUNT` profiles.
 - Implemented work includes Creeper safety/awareness, passive damage fleeing, dropped-food priority,
   active food search, predator disengagement, Wolf leadership transfer, weak barriers, complete
   current Slime/Magma Cube behavior, Spider hunting/lairs, Bat colonies, defensive Axolotls, Polar
@@ -158,6 +159,12 @@ Current position:
   from other mods remain untouched. Stalking no longer gives players an arbitrary score bonus and
   keeps Undead diplomacy. Both exact focused tests pass; natural frequency, storms, multiplayer,
   and dedicated servers remain unverified.
+- Zoglins and wild Zombie Nautiluses are explicit members of the data-driven Undead faction;
+  taming removes a Zombie Nautilus's generic faction identity. Zombie-horde, Skeleton-ranged,
+  Ghast-artillery, and Zoglin-rampage proactive scorers no longer give players an arbitrary bonus.
+  The cross-family exact selector passes, as do the affected Zoglin and Zombie Nautilus 50-mob
+  runs with 5.147 and 5.676 ms/tick peaks. Natural target switching, aquatic Brain combat,
+  taming/riding, multiplayer, and dedicated servers remain unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped
@@ -166,7 +173,7 @@ Current position:
   kill; Creepers never count. `retold:natural_food_*` passes 5/5, the exact Armadillo/Nautilus/
   Strider survival cases pass, and their latest affected TPS peaks are 5.760/4.544/6.771 ms/tick.
 - The latest complete TPS baseline passes all 75 then-registered per-mob tests and all 375 phases below
-  50 ms/tick. Registration is now 81 tests/405 phases. Cow, Strider, Nautilus, Parrot, Skeleton
+  50 ms/tick. Registration is now 82 tests/410 phases. Cow, Strider, Nautilus, Parrot, Skeleton
   Horse, Zombie Horse, and Camel Husk focused runs pass their affected phases below 50 ms/tick,
   and the final 256-managed-animal budget test passes at 17.082 ms/tick;
   the complete expanded matrix was intentionally not rerun. After Farmer supply, only the affected `retold:mob_tps_villager` test was rerun per the

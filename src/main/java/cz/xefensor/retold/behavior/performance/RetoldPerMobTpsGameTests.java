@@ -178,6 +178,7 @@ public final class RetoldPerMobTpsGameTests {
             "zoglin",
             "zombie",
             "zombie_horse",
+            "zombie_nautilus",
             "zombie_villager",
             "zombified_piglin"
     );
@@ -1201,7 +1202,7 @@ public final class RetoldPerMobTpsGameTests {
 
     private static ArenaKind arenaKind(String mobPath) {
         return switch (mobPath) {
-            case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish" -> ArenaKind.AQUATIC;
+            case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish", "zombie_nautilus" -> ArenaKind.AQUATIC;
             case "frog", "turtle" -> ArenaKind.WETLAND;
             case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "parrot", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
             case "cave_spider", "creaking", "enderman", "endermite", "shulker", "silverfish", "spider", "warden" -> ArenaKind.CAVE;
@@ -1256,6 +1257,7 @@ public final class RetoldPerMobTpsGameTests {
             case "cat", "ocelot" -> EntityTypes.RABBIT;
             case "spider", "cave_spider" -> EntityTypes.COW;
             case "dolphin", "axolotl" -> EntityTypes.COD;
+            case "zombie_nautilus" -> EntityTypes.COD;
             case "bat" -> EntityTypes.SPIDER;
             case "frog" -> EntityTypes.SLIME;
             case "guardian", "elder_guardian" -> EntityTypes.SQUID;

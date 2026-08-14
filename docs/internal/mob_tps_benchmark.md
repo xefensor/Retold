@@ -228,6 +228,20 @@ Horse measured 3.816, 3.344, 4.593, 3.696, and 1.835 ms/tick. Camel Husk measure
 complete 81-profile matrix was not selected because the shared scan, sight, path, and ownership
 primitives were unchanged and the new work is confined to these three profiles.
 
+### Undead Target-Parity Focused Runs
+
+Adding Zoglin and Zombie Nautilus to the data-driven Undead faction activates existing repeated
+faction-goal and forced-target work. Zombie Nautilus also adds an unmanaged `SPECIAL_VANILLA`
+profile and expands current registration to 82 tests/410 phases. The exact
+`retold:mob_tps_zoglin` and `retold:mob_tps_zombie_nautilus` selectors were run on 2026-08-14.
+
+All ten 50-mob phases passed below 50 ms/tick. Zoglin measured 5.147 idle/rest, 3.064
+dropped-food/forage, 4.775 hunt/targeting, 4.392 danger/social, and 2.272 habitat/day-night.
+Zombie Nautilus measured 5.676, 3.327, 4.769, 3.925, and 2.582 ms/tick. Zombie Nautilus idle/rest
+was the 5.676 ms/tick overall peak. The complete expanded matrix was not selected because only
+these two species gained repeated work; removing constant player-score branches from Zombie,
+Skeleton, and Ghast selection does not increase their hot-path work.
+
 ## Results
 
 The table below records the original clean baseline described above; later rerun summaries are
