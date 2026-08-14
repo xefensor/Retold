@@ -1,57 +1,74 @@
 package cz.xefensor.retold.faction;
 
+import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.registry.RetoldTags;
+
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.entity.raid.Raider;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.TagsUpdatedEvent;
 
-import java.util.HashMap;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class RetoldFactionMembers {
-    private static final Map<Identifier, RetoldFaction> EXACT_MEMBERS = new HashMap<>();
-
-    private static final Set<Identifier> ILLAGER_LOOSE_ALLIES = Set.of(
-            id("witch")
-    );
+    private static final Map<RetoldFaction, TagKey<EntityType<?>>> FACTION_TAGS =
+            new EnumMap<>(RetoldFaction.class);
+    private static final Map<EntityType<?>, StaticMembership> STATIC_MEMBERSHIPS =
+            new ConcurrentHashMap<>();
 
     static {
-        register(RetoldFaction.NETHER_REMNANTS, "piglin", "piglin_brute", "blaze");
-        register(RetoldFaction.ILLAGERS, "pillager", "vindicator", "evoker", "illusioner", "ravager", "vex");
-        register(
-                RetoldFaction.UNDEAD,
-                "zombie",
-                "zombie_villager",
-                "husk",
-                "drowned",
-                "skeleton",
-                "stray",
-                "bogged",
-                "wither_skeleton",
-                "zombified_piglin",
-                "phantom",
-                "ghast",
-                "zoglin",
-                "wither"
+        FACTION_TAGS.put(
+                RetoldFaction.NETHER_REMNANTS,
+                RetoldTags.FACTION_NETHER_REMNANTS
         );
-        register(RetoldFaction.SLIMES, "slime", "magma_cube");
-        register(RetoldFaction.AQUATIC_HOSTILES, "guardian", "elder_guardian");
-        register(RetoldFaction.CREEPERS, "creeper");
-        register(RetoldFaction.ARTHROPODS, "spider", "cave_spider");
-        register(RetoldFaction.SILVERFISH, "silverfish");
-        register(RetoldFaction.ENDERMITES, "endermite");
-        register(RetoldFaction.NETHER_BEASTS, "hoglin");
-        register(RetoldFaction.BREEZES, "breeze");
-        register(RetoldFaction.WARDENS, "warden");
-        register(RetoldFaction.BOSSES, "ender_dragon");
-        register(RetoldFaction.CREAKINGS, "creaking");
-        register(RetoldFaction.VILLAGE_DEFENDERS, "iron_golem", "snow_golem");
-        register(RetoldFaction.ENDERS, "enderman", "shulker");
+        FACTION_TAGS.put(RetoldFaction.ILLAGERS, RetoldTags.FACTION_ILLAGERS);
+        FACTION_TAGS.put(RetoldFaction.UNDEAD, RetoldTags.FACTION_UNDEAD);
+        FACTION_TAGS.put(RetoldFaction.SLIMES, RetoldTags.FACTION_SLIMES);
+        FACTION_TAGS.put(
+                RetoldFaction.AQUATIC_HOSTILES,
+                RetoldTags.FACTION_AQUATIC_HOSTILES
+        );
+        FACTION_TAGS.put(RetoldFaction.CREEPERS, RetoldTags.FACTION_CREEPERS);
+        FACTION_TAGS.put(
+                RetoldFaction.ARTHROPODS,
+                RetoldTags.FACTION_ARTHROPODS
+        );
+        FACTION_TAGS.put(
+                RetoldFaction.SILVERFISH,
+                RetoldTags.FACTION_SILVERFISH
+        );
+        FACTION_TAGS.put(
+                RetoldFaction.ENDERMITES,
+                RetoldTags.FACTION_ENDERMITES
+        );
+        FACTION_TAGS.put(
+                RetoldFaction.NETHER_BEASTS,
+                RetoldTags.FACTION_NETHER_BEASTS
+        );
+        FACTION_TAGS.put(RetoldFaction.BREEZES, RetoldTags.FACTION_BREEZES);
+        FACTION_TAGS.put(RetoldFaction.WARDENS, RetoldTags.FACTION_WARDENS);
+        FACTION_TAGS.put(RetoldFaction.BOSSES, RetoldTags.FACTION_BOSSES);
+        FACTION_TAGS.put(
+                RetoldFaction.CREAKINGS,
+                RetoldTags.FACTION_CREAKINGS
+        );
+        FACTION_TAGS.put(
+                RetoldFaction.VILLAGE_DEFENDERS,
+                RetoldTags.FACTION_VILLAGE_DEFENDERS
+        );
+        FACTION_TAGS.put(RetoldFaction.ENDERS, RetoldTags.FACTION_ENDERS);
     }
 
     private RetoldFactionMembers() {
@@ -70,7 +87,34 @@ public final class RetoldFactionMembers {
             return RetoldFaction.VILLAGE_DEFENDERS;
         }
 
-        return EXACT_MEMBERS.get(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+        RetoldFaction faction = getFaction(entity.getType());
+
+        if (faction == RetoldFaction.UNDEAD && isTamedUndeadMount(entity)) {
+            return null;
+        }
+
+        return faction;
+    }
+
+    public static RetoldFaction getFaction(EntityType<?> entityType) {
+        if (entityType == null) {
+            return null;
+        }
+
+        return staticMembership(entityType).faction();
+    }
+
+    public static TagKey<EntityType<?>> getFactionTag(RetoldFaction faction) {
+        if (faction == null) {
+            return null;
+        }
+
+        return FACTION_TAGS.get(faction);
+    }
+
+    public static boolean hasConflictingFactionTags(EntityType<?> entityType) {
+        return entityType != null
+                && staticMembership(entityType).conflictingFactionTags();
     }
 
     public static boolean isMemberOf(Entity entity, RetoldFaction faction) {
@@ -95,14 +139,15 @@ public final class RetoldFactionMembers {
     }
 
     public static boolean isLooseAllyOf(Entity entity, RetoldFaction faction) {
-        if (entity == null || faction == null) {
+        if (entity == null || faction != RetoldFaction.ILLAGERS) {
             return false;
         }
 
-        Identifier id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType());
+        StaticMembership membership = staticMembership(entity.getType());
 
-        return faction == RetoldFaction.ILLAGERS
-                && ILLAGER_LOOSE_ALLIES.contains(id);
+        return membership.faction() == null
+                && !membership.conflictingFactionTags()
+                && membership.illagerLooseAlly();
     }
 
     public static boolean isCombatAlignedWith(
@@ -218,6 +263,65 @@ public final class RetoldFactionMembers {
         return isMemberOf(entity, RetoldFaction.VILLAGE_DEFENDERS);
     }
 
+    @SubscribeEvent
+    public static void onTagsUpdated(TagsUpdatedEvent event) {
+        STATIC_MEMBERSHIPS.clear();
+
+        if (!(event instanceof TagsUpdatedEvent.ServerDataLoad)) {
+            return;
+        }
+
+        for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
+            staticMembership(entityType);
+        }
+    }
+
+    private static StaticMembership staticMembership(EntityType<?> entityType) {
+        return STATIC_MEMBERSHIPS.computeIfAbsent(
+                entityType,
+                RetoldFactionMembers::classify
+        );
+    }
+
+    private static StaticMembership classify(EntityType<?> entityType) {
+        EnumSet<RetoldFaction> matches = EnumSet.noneOf(RetoldFaction.class);
+
+        for (Map.Entry<RetoldFaction, TagKey<EntityType<?>>> entry
+                : FACTION_TAGS.entrySet()) {
+            if (entityType.builtInRegistryHolder().is(entry.getValue())) {
+                matches.add(entry.getKey());
+            }
+        }
+
+        boolean looseAlly = entityType.builtInRegistryHolder().is(
+                RetoldTags.ILLAGER_LOOSE_ALLIES
+        );
+
+        if (matches.size() > 1) {
+            Retold.LOGGER.error(
+                    "Entity type {} belongs to conflicting Retold faction tags {}; "
+                            + "treating it as unfactioned",
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType),
+                    matches
+            );
+            return new StaticMembership(null, true, false);
+        }
+
+        RetoldFaction faction = matches.isEmpty() ? null : matches.iterator().next();
+
+        if (faction != null && looseAlly) {
+            Retold.LOGGER.warn(
+                    "Entity type {} is both a full {} member and an Illager loose ally; "
+                            + "full faction membership takes precedence",
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType),
+                    faction
+            );
+            looseAlly = false;
+        }
+
+        return new StaticMembership(faction, false, looseAlly);
+    }
+
     private static boolean isDefendingTamedWolf(Entity entity) {
         if (!(entity instanceof Wolf wolf)) {
             return false;
@@ -234,16 +338,19 @@ public final class RetoldFactionMembers {
                 && target.level() == wolf.level();
     }
 
-    private static Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath("minecraft", path);
+    private static boolean isTamedUndeadMount(Entity entity) {
+        if (entity instanceof AbstractHorse horse) {
+            return horse.isTamed();
+        }
+
+        return entity instanceof TamableAnimal tamableAnimal
+                && tamableAnimal.isTame();
     }
 
-    private static void register(
+    private record StaticMembership(
             RetoldFaction faction,
-            String... paths
+            boolean conflictingFactionTags,
+            boolean illagerLooseAlly
     ) {
-        for (String path : paths) {
-            EXACT_MEMBERS.put(id(path), faction);
-        }
     }
 }

@@ -125,12 +125,23 @@ Technical owners:
 
 Main faction design:
 
+- Static faction classification is data-driven through one additive `retold:factions/*`
+  entity-type tag per fixed Retold faction. `minecraft:illager` and `minecraft:undead` are composed
+  where their meanings match; Ghasts remain an explicit Retold Undead addition.
+- An entity type in multiple full faction tags fails closed as unfactioned and logs an error. Full
+  membership takes precedence over `retold:alliances/illager_loose_allies` with a warning.
+- Classification is cached by entity type and invalidated after server tag reload. Faction target
+  and retaliation goals are added or removed for loaded mobs as their effective membership changes.
+- Faction membership is independent from mob profiles: it supplies diplomacy, assist, retaliation,
+  and territory identity without assigning daily-life behavior to an unknown third-party mob.
 - Nether Remnants: piglins, piglin brutes, blazes
 - Illagers: pillagers, vindicators, evokers, illusioners, ravagers, vexes
 - Witch: permanent loose-ally identity, active Illager combat alignment only during a raid, and
   cooperation only with members of that same raid; never a full faction or territory member
 - Village defenders: iron golems, snow golems, dynamically defending tamed wolves
-- Undead: not one cozy social faction; zombies horde, skeletons tolerate undead, wither skeletons guard fortress
+- Undead: not one cozy social faction; standard `minecraft:undead` types plus Ghasts share diplomacy,
+  zombies horde, skeletons tolerate undead, and Wither Skeletons guard fortresses. Tamed undead
+  mounts do not inherit the generic hostile identity while tamed.
 - Ocean Monument: guardians and elder guardians defend monument purpose
 
 ### State

@@ -182,6 +182,40 @@ public final class RetoldTags {
                             "automatic_breeders"
                     )
             );
+    public static final TagKey<EntityType<?>> FACTION_NETHER_REMNANTS =
+            entityTypeTag("factions/nether_remnants");
+    public static final TagKey<EntityType<?>> FACTION_ILLAGERS =
+            entityTypeTag("factions/illagers");
+    public static final TagKey<EntityType<?>> FACTION_UNDEAD =
+            entityTypeTag("factions/undead");
+    public static final TagKey<EntityType<?>> FACTION_SLIMES =
+            entityTypeTag("factions/slimes");
+    public static final TagKey<EntityType<?>> FACTION_AQUATIC_HOSTILES =
+            entityTypeTag("factions/aquatic_hostiles");
+    public static final TagKey<EntityType<?>> FACTION_CREEPERS =
+            entityTypeTag("factions/creepers");
+    public static final TagKey<EntityType<?>> FACTION_ARTHROPODS =
+            entityTypeTag("factions/arthropods");
+    public static final TagKey<EntityType<?>> FACTION_SILVERFISH =
+            entityTypeTag("factions/silverfish");
+    public static final TagKey<EntityType<?>> FACTION_ENDERMITES =
+            entityTypeTag("factions/endermites");
+    public static final TagKey<EntityType<?>> FACTION_NETHER_BEASTS =
+            entityTypeTag("factions/nether_beasts");
+    public static final TagKey<EntityType<?>> FACTION_BREEZES =
+            entityTypeTag("factions/breezes");
+    public static final TagKey<EntityType<?>> FACTION_WARDENS =
+            entityTypeTag("factions/wardens");
+    public static final TagKey<EntityType<?>> FACTION_BOSSES =
+            entityTypeTag("factions/bosses");
+    public static final TagKey<EntityType<?>> FACTION_CREAKINGS =
+            entityTypeTag("factions/creakings");
+    public static final TagKey<EntityType<?>> FACTION_VILLAGE_DEFENDERS =
+            entityTypeTag("factions/village_defenders");
+    public static final TagKey<EntityType<?>> FACTION_ENDERS =
+            entityTypeTag("factions/enders");
+    public static final TagKey<EntityType<?>> ILLAGER_LOOSE_ALLIES =
+            entityTypeTag("alliances/illager_loose_allies");
 
     private RetoldTags() {
     }
@@ -196,6 +230,13 @@ public final class RetoldTags {
     private static TagKey<Item> itemTag(String path) {
         return TagKey.create(
                 Registries.ITEM,
+                Identifier.fromNamespaceAndPath(Retold.MODID, path)
+        );
+    }
+
+    private static TagKey<EntityType<?>> entityTypeTag(String path) {
+        return TagKey.create(
+                Registries.ENTITY_TYPE,
                 Identifier.fromNamespaceAndPath(Retold.MODID, path)
         );
     }

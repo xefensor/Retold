@@ -75,6 +75,7 @@ import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -85,6 +86,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Guardian;
@@ -106,6 +108,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public final class RetoldGameTests {
@@ -181,6 +184,18 @@ public final class RetoldGameTests {
                 environment,
                 "indiscriminate_factions_follow_living_target_rules",
                 RetoldGameTests::indiscriminateFactionsFollowLivingTargetRules
+        );
+        registerTest(
+                event,
+                environment,
+                "faction_tags_preserve_defaults_and_standard_undead",
+                RetoldGameTests::factionTagsPreserveDefaultsAndStandardUndead
+        );
+        registerTest(
+                event,
+                environment,
+                "faction_tags_drive_targeting_and_retaliation",
+                RetoldGameTests::factionTagsDriveTargetingAndRetaliation
         );
         registerTest(
                 event,
@@ -740,6 +755,173 @@ public final class RetoldGameTests {
                 "Even indiscriminate Undead must not deliberately attack creepers"
         );
         helper.succeed();
+    }
+
+    private static void factionTagsPreserveDefaultsAndStandardUndead(
+            GameTestHelper helper
+    ) {
+        Map<EntityType<?>, RetoldFaction> expectedFactions = Map.ofEntries(
+                Map.entry(EntityTypes.PIGLIN, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.PIGLIN_BRUTE, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.BLAZE, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.PILLAGER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.VINDICATOR, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.EVOKER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.ILLUSIONER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.RAVAGER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.VEX, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.ZOMBIE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_VILLAGER, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.HUSK, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.DROWNED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_HORSE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.CAMEL_HUSK, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIFIED_PIGLIN, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOGLIN, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_NAUTILUS, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SKELETON, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.STRAY, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.WITHER_SKELETON, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SKELETON_HORSE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.BOGGED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.PARCHED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.WITHER, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.PHANTOM, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.GHAST, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SLIME, RetoldFaction.SLIMES),
+                Map.entry(EntityTypes.MAGMA_CUBE, RetoldFaction.SLIMES),
+                Map.entry(EntityTypes.GUARDIAN, RetoldFaction.AQUATIC_HOSTILES),
+                Map.entry(EntityTypes.ELDER_GUARDIAN, RetoldFaction.AQUATIC_HOSTILES),
+                Map.entry(EntityTypes.CREEPER, RetoldFaction.CREEPERS),
+                Map.entry(EntityTypes.SPIDER, RetoldFaction.ARTHROPODS),
+                Map.entry(EntityTypes.CAVE_SPIDER, RetoldFaction.ARTHROPODS),
+                Map.entry(EntityTypes.SILVERFISH, RetoldFaction.SILVERFISH),
+                Map.entry(EntityTypes.ENDERMITE, RetoldFaction.ENDERMITES),
+                Map.entry(EntityTypes.HOGLIN, RetoldFaction.NETHER_BEASTS),
+                Map.entry(EntityTypes.BREEZE, RetoldFaction.BREEZES),
+                Map.entry(EntityTypes.WARDEN, RetoldFaction.WARDENS),
+                Map.entry(EntityTypes.ENDER_DRAGON, RetoldFaction.BOSSES),
+                Map.entry(EntityTypes.CREAKING, RetoldFaction.CREAKINGS),
+                Map.entry(EntityTypes.IRON_GOLEM, RetoldFaction.VILLAGE_DEFENDERS),
+                Map.entry(EntityTypes.SNOW_GOLEM, RetoldFaction.VILLAGE_DEFENDERS),
+                Map.entry(EntityTypes.ENDERMAN, RetoldFaction.ENDERS),
+                Map.entry(EntityTypes.SHULKER, RetoldFaction.ENDERS)
+        );
+
+        for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
+            RetoldFaction expected = expectedFactions.get(entityType);
+            RetoldFaction actual = RetoldFactionMembers.getFaction(entityType);
+
+            helper.assertTrue(
+                    actual == expected,
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                            + " must retain faction " + expected + ", got " + actual
+            );
+            helper.assertFalse(
+                    RetoldFactionMembers.hasConflictingFactionTags(entityType),
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                            + " must not have conflicting default faction tags"
+            );
+
+            if (expected != null) {
+                helper.assertTrue(
+                        entityType.builtInRegistryHolder().is(
+                                RetoldFactionMembers.getFactionTag(expected)
+                        ),
+                        BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                                + " must be supplied by its Retold faction tag"
+                );
+            }
+        }
+
+        var witch = helper.spawn(EntityTypes.WITCH, 1, 2, 1);
+        helper.assertTrue(
+                RetoldFactionMembers.getFaction(witch) == null
+                        && RetoldFactionMembers.isLooseAllyOf(
+                        witch,
+                        RetoldFaction.ILLAGERS
+                ),
+                "Witches must remain loose Illager allies rather than full members"
+        );
+        helper.succeed();
+    }
+
+    private static void factionTagsDriveTargetingAndRetaliation(
+            GameTestHelper helper
+    ) {
+        var undeadMount = helper.spawn(EntityTypes.SKELETON_HORSE, 1, 2, 1);
+        var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
+        var defender = helper.spawn(EntityTypes.IRON_GOLEM, 5, 2, 1);
+
+        undeadMount.setTamed(false);
+        int untamedTargetGoalCount = undeadMount.targetSelector
+                .getAvailableGoals()
+                .size();
+        helper.assertValueEqual(
+                RetoldFactionMembers.getFaction(undeadMount),
+                RetoldFaction.UNDEAD,
+                "An untamed standard-tagged undead mount must join the Undead faction"
+        );
+        helper.assertTrue(
+                RetoldFactionRelations.shouldAttack(undeadMount, cow),
+                "A standard-tagged Undead member must inherit Undead targeting"
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        undeadMount,
+                        cow,
+                        RetoldTargetSource.FACTION_COMBAT
+                ),
+                "Faction targeting must accept a standard-tagged Undead attacker"
+        );
+        helper.assertTrue(
+                RetoldFactionTargetMemory.isOwnedByAny(
+                        undeadMount,
+                        cow,
+                        RetoldTargetSource.FACTION_COMBAT
+                ),
+                "Faction targeting must retain FACTION_COMBAT ownership"
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        defender,
+                        undeadMount,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "A tagged Village Defender must accept an immediate retaliation target"
+        );
+        helper.assertTrue(
+                RetoldFactionTargetMemory.isOwnedByAny(
+                        defender,
+                        undeadMount,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "Defender retaliation must retain RETALIATION ownership"
+        );
+
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                undeadMount,
+                cow,
+                true
+        );
+        undeadMount.setTamed(true);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(
+                    RetoldFactionMembers.getFaction(undeadMount) == null,
+                    "A tamed undead mount must not retain indiscriminate Undead hostility"
+            );
+            helper.assertFalse(
+                    RetoldFactionRelations.shouldAttack(undeadMount, cow),
+                    "A tamed undead mount must not inherit generic Undead targeting"
+            );
+            helper.assertValueEqual(
+                    undeadMount.targetSelector.getAvailableGoals().size(),
+                    untamedTargetGoalCount - 2,
+                    "Loaded mobs must remove their faction target and retaliation goals "
+                            + "when effective membership changes"
+            );
+            helper.succeed();
+        });
     }
 
     private static void ignitedCreeperCausesDelayedFlightExceptZombies(
