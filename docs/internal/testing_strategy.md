@@ -199,6 +199,14 @@ target cleanup, and claimed non-hunting. Add only the affected exact
 `retold:mob_tps_camel_husk` selector when dispatcher cadence, scan/sight radius, movement, damage,
 or claim/defense event work changes; do not select the complete per-mob matrix for this family alone.
 
+For Phantom pressure, run the exact
+`retold:phantom_spawn_pressure_is_insomnia_independent` test when the spawn event, rarity,
+time/weather, cover, difficulty, or compatibility boundary changes. Run
+`retold:phantoms_do_not_prioritize_players_over_nearer_prey` when stalk-target scoring or Undead
+diplomacy changes. These event-time and score-order changes do not by themselves justify
+`retold:mob_tps_phantom`; add that exact TPS selector only when repeated dispatch cadence, scan or
+sight caching, ownership continuation, movement, or path work changes.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

@@ -8,15 +8,15 @@ import cz.xefensor.retold.behavior.home.RetoldAnimalDailyRhythm;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCombat;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
-
 import cz.xefensor.retold.combat.RetoldTargetSource;
-import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerSpawnPhantomsEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
@@ -26,6 +26,8 @@ public final class RetoldPhantomStalkerEvents {
     private static final int STALK_SCAN_CACHE_TICKS = 6;
     private static final int STALK_CONTROL_TICKS = 20 * 5;
     private static final int STALK_PRIORITY = RetoldAiPriorities.SPECIAL_STALK;
+    // Applied after vanilla's bounded Phantom-spawner cadence and outer gamerule checks.
+    private static final int SPAWN_RARITY_ATTEMPTS = 8;
 
     private static final double TARGET_SEARCH_RADIUS_BLOCKS = 42.0D;
     private static final double TARGET_SEARCH_RADIUS_SQUARED =
@@ -98,7 +100,50 @@ public final class RetoldPhantomStalkerEvents {
         );
     }
 
-    private static LivingEntity findBestStalkTarget(
+    public static void onPlayerSpawnPhantoms(PlayerSpawnPhantomsEvent event) {
+        if (event.getResult() != PlayerSpawnPhantomsEvent.Result.DEFAULT
+                || !(event.getEntity() instanceof ServerPlayer player)
+                || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        BlockPos playerPos = player.blockPosition();
+
+        if (!isEligibleSpawnContext(level, playerPos)) {
+            event.setResult(PlayerSpawnPhantomsEvent.Result.DENY);
+            return;
+        }
+
+        applySpawnPolicy(
+                event,
+                level,
+                playerPos,
+                level.getRandom().nextInt(SPAWN_RARITY_ATTEMPTS),
+                level.getRandom().nextFloat() * 3.0F
+        );
+    }
+
+    static void applySpawnPolicy(
+            PlayerSpawnPhantomsEvent event,
+            ServerLevel level,
+            BlockPos playerPos,
+            int rarityRoll,
+            float difficultyRoll
+    ) {
+        if (event.getResult() != PlayerSpawnPhantomsEvent.Result.DEFAULT) {
+            return;
+        }
+
+        event.setResult(resolveSpawnResult(
+                level.dimensionType().hasSkyLight(),
+                level.canSeeSky(playerPos),
+                isStalkingTime(level),
+                rarityRoll,
+                level.getCurrentDifficultyAt(playerPos).isHarderThan(difficultyRoll)
+        ));
+    }
+
+    static LivingEntity findBestStalkTarget(
             ServerLevel level,
             Mob phantom
     ) {
@@ -133,10 +178,6 @@ public final class RetoldPhantomStalkerEvents {
 
             if (RetoldAiSightCache.canSee(phantom, candidate, level.getGameTime())) {
                 score -= 80.0D;
-            }
-
-            if (candidate instanceof Player) {
-                score -= 120.0D;
             }
 
             if (RetoldFactionMembers.isUndead(candidate)) {
@@ -228,8 +269,32 @@ public final class RetoldPhantomStalkerEvents {
 
     private static boolean isStalkingTime(ServerLevel level) {
         return RetoldAnimalDailyRhythm.isNight(level)
-                || RetoldAnimalDailyRhythm.isDusk(level)
                 || level.isRaining();
+    }
+
+    private static boolean isEligibleSpawnContext(
+            ServerLevel level,
+            BlockPos playerPos
+    ) {
+        return level.dimensionType().hasSkyLight()
+                && level.canSeeSky(playerPos)
+                && isStalkingTime(level);
+    }
+
+    static PlayerSpawnPhantomsEvent.Result resolveSpawnResult(
+            boolean hasSkyLight,
+            boolean openSky,
+            boolean nightOrStorm,
+            int rarityRoll,
+            boolean difficultyPassed
+    ) {
+        return hasSkyLight
+                && openSky
+                && nightOrStorm
+                && rarityRoll == 0
+                && difficultyPassed
+                ? PlayerSpawnPhantomsEvent.Result.ALLOW
+                : PlayerSpawnPhantomsEvent.Result.DENY;
     }
 
     private static boolean isExposedToSky(

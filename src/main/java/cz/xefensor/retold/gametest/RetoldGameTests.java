@@ -38,6 +38,7 @@ import cz.xefensor.retold.behavior.species.RetoldHiveColonyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldUndeadMountGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooGameTests;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerGameTests;
+import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPolarBearWarningGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderLairGameTests;
@@ -299,6 +300,7 @@ public final class RetoldGameTests {
         RetoldUndeadMountGameTests.register(event);
         RetoldPandaBambooGameTests.register(event);
         RetoldParrotForagerGameTests.register(event);
+        RetoldPhantomStalkerGameTests.register(event);
         RetoldPolarBearWarningGameTests.register(event, environment);
         RetoldWolfPackHungerGameTests.register(event, environment);
         RetoldTamedDefenderGameTests.register(event, environment);

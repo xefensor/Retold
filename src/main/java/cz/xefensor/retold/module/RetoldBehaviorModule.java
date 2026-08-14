@@ -16,6 +16,7 @@ import cz.xefensor.retold.behavior.species.RetoldBatColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldDolphinPodEvents;
 import cz.xefensor.retold.behavior.species.RetoldHiveColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
+import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadMountEvents;
 import cz.xefensor.retold.villager.RetoldVillageReputationEvents;
 import cz.xefensor.retold.villager.RetoldVillageAnimalEvents;
@@ -49,6 +50,10 @@ public final class RetoldBehaviorModule {
         gameEventBus.addListener(RetoldDolphinPodEvents::onLivingDamage);
         gameEventBus.addListener(RetoldHiveColonyEvents::onLivingDamage);
         gameEventBus.addListener(RetoldUndeadMountEvents::onLivingDamage);
+        gameEventBus.addListener(
+                EventPriority.LOWEST,
+                RetoldPhantomStalkerEvents::onPlayerSpawnPhantoms
+        );
         gameEventBus.addListener(
                 EventPriority.LOWEST,
                 RetoldUndeadMountEvents::onEntityMount

@@ -151,6 +151,13 @@ Current position:
   bucking/taming path. Both focused behavior tests pass, and the three 50-mob runs peak at 5.628,
   4.593, and 5.843 ms/tick. Natural taming/riding, other-Undead tolerance, save/reload,
   multiplayer, and dedicated-server behavior remain unverified.
+- Phantom spawning no longer depends on insomnia when Retold handles a still-default NeoForge
+  decision. Vanilla retains its hostile-spawn gamerule, 60–120-second cadence, dark-sky gate,
+  spectator exclusion, placement checks, and generated group size; Retold requires open sky,
+  night-or-storm context, local difficulty, and a one-in-eight rarity result. Explicit decisions
+  from other mods remain untouched. Stalking no longer gives players an arbitrary score bonus and
+  keeps Undead diplomacy. Both exact focused tests pass; natural frequency, storms, multiplayer,
+  and dedicated servers remain unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped
