@@ -32,6 +32,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.species.RetoldCommanderSupportGameTests;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianGameTests;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyGameTests;
+import cz.xefensor.retold.behavior.species.RetoldDolphinPodGameTests;
 import cz.xefensor.retold.behavior.species.RetoldHerdSchoolGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooGameTests;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerGameTests;
@@ -290,6 +291,7 @@ public final class RetoldGameTests {
         RetoldCommanderSupportGameTests.register(event, environment);
         RetoldAxolotlGuardianGameTests.register(event);
         RetoldBatColonyGameTests.register(event);
+        RetoldDolphinPodGameTests.register(event);
         RetoldHerdSchoolGameTests.register(event);
         RetoldPandaBambooGameTests.register(event);
         RetoldParrotForagerGameTests.register(event);

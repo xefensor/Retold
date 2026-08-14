@@ -558,12 +558,26 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
-        RetoldAiControl.refresh(
+        if (RetoldMobRules.isDolphin(attacker)
+                && RetoldAiControl.isControlledBy(
                 attacker,
-                RetoldAiControlMode.ATTACK,
-                gameTime,
-                ATTACK_CONTROL_TICKS
-        );
+                RetoldAiControlOwner.AQUATIC_POD
+        )) {
+            RetoldAiControl.refreshIfOwnedBy(
+                    attacker,
+                    RetoldAiControlMode.ATTACK,
+                    RetoldAiControlOwner.AQUATIC_POD,
+                    gameTime,
+                    ATTACK_CONTROL_TICKS
+            );
+        } else {
+            RetoldAiControl.refresh(
+                    attacker,
+                    RetoldAiControlMode.ATTACK,
+                    gameTime,
+                    ATTACK_CONTROL_TICKS
+            );
+        }
 
         RetoldBehaviorTargets.setAggression(attacker, true);
 
@@ -627,6 +641,16 @@ public final class RetoldControlledCombatEvents {
         }
 
         if (isWolf(attacker) && RetoldMobRules.isWolfEnemyButNotFood(target)) {
+            return true;
+        }
+
+        if (RetoldMobRules.isDolphin(attacker)
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                attacker,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST
+        )) {
             return true;
         }
 

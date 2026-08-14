@@ -13,6 +13,7 @@ import cz.xefensor.retold.behavior.species.RetoldSlimeItemStorage;
 import cz.xefensor.retold.behavior.species.RetoldSlimeSplitBehavior;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianCombatEvents;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyEvents;
+import cz.xefensor.retold.behavior.species.RetoldDolphinPodEvents;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.villager.RetoldVillageReputationEvents;
 import cz.xefensor.retold.villager.RetoldVillageAnimalEvents;
@@ -38,6 +39,7 @@ public final class RetoldBehaviorModule {
         gameEventBus.register(RetoldVillageReputationEvents.class);
         gameEventBus.register(RetoldVillageAnimalEvents.class);
         gameEventBus.addListener(RetoldControlledFleeEvents::onLivingDamage);
+        gameEventBus.addListener(RetoldDolphinPodEvents::onLivingDamage);
         gameEventBus.addListener(RetoldAnimalBreeding::onLivingDamage);
         gameEventBus.addListener(RetoldBehaviorModule::addServerReloadListeners);
     }

@@ -35,7 +35,8 @@ Current position:
 - Implemented work includes Creeper safety/awareness, passive damage fleeing, dropped-food priority,
   active food search, predator disengagement, Wolf leadership transfer, weak barriers, complete
   current Slime/Magma Cube behavior, Spider hunting/lairs, Bat colonies, defensive Axolotls, Polar
-  Bear warnings, Stage 3 Enderman assistance, Witch raid support, Stage 3 raid gating, territory
+  Bear warnings, Dolphin collective pod defense, Stage 3 Enderman assistance, Witch raid support,
+  Stage 3 raid gating, territory
   coverage, Snowball/Vex damage, Sniffer/Endermite survival removal, Villager stock refresh, shared
   bovine/equine/llama range identities, exact-species fish schooling, exact-species Squid panic,
   the loaded-world Animal Feeder, the loaded Villager communal consumer/Farmer-supplier loop, and

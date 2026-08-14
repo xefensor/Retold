@@ -400,7 +400,9 @@ an implementation claim. The completion matrix below and
   Squid and Glow Squid now use exact-species loose danger groups; successful damage performs one
   bounded cached broadcast before the receiver-side panic scan can retry. Fish diet assignments,
   seagrass/kelp consumption, and Squid hunger are not implemented by these profiles.
-- Dolphins defend their pod collectively. Bats use loose roost colonies, hunt arthropods at night,
+- Dolphins defend their pod collectively after successful damage from a valid living threat. The
+  victim owns retaliation, while available nearby witnesses use faction-assist ownership without
+  requiring hunger; a podmate with another live target is not redirected. Bats use loose roost colonies, hunt arthropods at night,
   dodge arthropod counterattacks without routing, and spread unrelated panic selectively with
   individual delays. Vanilla roost disturbances and unrelated danger hold Bats in owned panic
   flight for ten seconds before daytime settling can resume. Parrots now forage for seeds/crops and give owners a distinct real-danger warning; natural presentation still needs in-game verification.
@@ -1182,7 +1184,7 @@ Use this matrix before calling the mob AI system done.
 | Small forager | pig, chicken, rabbit | Hunger, foraging, home return, predator flee. |
 | Pack predator | wolf | Pack creation, pack hunt/search/return, den defense, target ownership. Ordinary food hunts release as soon as the predator is satisfied. Individual scouts must retain hunt drive, and a satisfied leader of an active hunt/search transfers leadership and search ownership to an available hungry member. Retaliation and territory defense are excluded from this cleanup. Integrated coverage verifies solo release, urgent-target protection, leadership transfer, and hunger-gated prey validation; natural feeding transitions, multi-candidate selection, and group movement remain unverified. |
 | Solo opportunist | fox, cat, ocelot | Solo home behavior, opportunistic hunting, flee/return. |
-| Aquatic predator | dolphin | Pod behavior, aquatic targeting, controlled combat. |
+| Aquatic predator | dolphin | Pod hunting remains hunger-driven. Successful damage starts collective defense through one cached bounded 28-block scan: the victim uses `RETALIATION`, nearby available witnesses use `FACTION_ASSIST`, and both routes hold `AQUATIC_POD` attack ownership until the threat is invalid or beyond 36 blocks. Recruits must be within six blocks of the victim or have cached sight of the attacker, and another live target is never overwritten. Focused behavior coverage exercises real damage, fed assistance, busy-podmate exclusion, and cleanup; the five-phase 50-Dolphin run peaks at 5.675 ms/tick. Natural aquatic pursuit and multiplayer remain unverified. |
 | Aquatic school | cod, salmon, tropical fish, pufferfish | Cached exact-species cohesion, low-priority `REGROUP` ownership, and reachable aquatic paths. Fish diets and natural school stability remain unverified. |
 | Loose aquatic group | squid, glow squid, nautilus | Successful damage produces exact-species nearby panic through bounded cached propagation for the two Squid species. Wild hungry Nautiluses use controlled aquatic navigation to hunt living fish; tamed Nautiluses do not hunt autonomously. Natural long-term group pacing remains unverified. |
 | Hungry swarm predator | spider, cave spider | Hunger-driven prey selection admits adult passive animals only at night, while proactive player aggression remains darkness-based and retaliation remains available at any time. Daylight ends Retold-owned food hunts. Cached swarm scans allow both Spider types to share an owned prey target at night. After a recent feeding or successful hunt, the persisted `SPIDER_LAIR` home lets up to six members share a dark lair, expand or repair one real cobweb per 600 ticks up to 50, and return during daylight through interruptible low-priority ownership. Construction requires the builder's vanilla darkness, raw skylight below 8 at both the builder and supported dark air block, the shared block-search budget, and `mobGriefing`; open-sky nighttime darkness is insufficient. Integrated coverage verifies the hunting boundaries plus bright/open-sky rejection, sheltered creation, sharing, the 50-web cap, repair, griefing, return, retaliation interruption, and night release; natural climbing, combat, site selection, and long-term pacing remain unverified. |
@@ -1257,7 +1259,7 @@ Animal life:
 - Squid and Glow Squid share danger only within their exact species
 - predators hunt and return
 - wolves keep pack/den behavior
-- dolphins keep pod behavior
+- dolphins keep hunger-driven pod hunting and collectively defend a successfully damaged podmate
 
 Special profiles:
 

@@ -173,6 +173,14 @@ environmental hunter or forager. Add only species whose repeated scan, movement,
 changed to TPS validation. A meal credited from an existing death event does not by itself justify
 a TPS run, while adding cached block discovery or controlled prey hunting does. Do not rerun the
 complete hunger-survival matrix.
+
+For Dolphin collective defense, run the exact
+`retold:dolphins_collectively_defend_attacked_podmates` behavior test. It exercises the successful
+damage-event entry point, direct retaliation versus faction-assist ownership, fed recruitment,
+preservation of another urgent target, and cleanup after the threat disappears. Add the exact
+`retold:mob_tps_dolphin` case when recruitment radius, scan caching, controlled continuation, or
+path cadence changes; this species-local path does not by itself justify the complete matrix.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

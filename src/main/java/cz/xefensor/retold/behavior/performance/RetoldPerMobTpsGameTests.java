@@ -570,10 +570,11 @@ public final class RetoldPerMobTpsGameTests {
                 subject.setLastHurtByMob(threat);
 
                 // Benchmark subjects are normally invulnerable so the 50-mob sample remains
-                // stable. Temporarily allow one real hit for shared passive-flee profiles: a
-                // last-hurt marker alone would bypass the production damage-event entry point.
+                // stable. Temporarily allow one real hit where production behavior begins from
+                // the successful-damage event: shared passive flight and Dolphin pod defense.
                 if (subject instanceof PathfinderMob pathfinderMob
-                        && RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)) {
+                        && (RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)
+                        || run.mobPath.equals("dolphin"))) {
                     subject.setInvulnerable(false);
                     subject.invulnerableTime = 0;
                     subject.hurtServer(
