@@ -242,6 +242,18 @@ was the 5.676 ms/tick overall peak. The complete expanded matrix was not selecte
 these two species gained repeated work; removing constant player-score branches from Zombie,
 Skeleton, and Ghast selection does not increase their hot-path work.
 
+### Wither Threat-Selection Focused Run
+
+The exact `retold:mob_tps_wither` selector was run on 2026-08-14 because the Wither's formerly
+no-op `APEX_OR_BOSS` dispatch now performs a ten-tick bounded cached threat scan with sight and
+score evaluation plus constant-time validation of its two alternative heads. The generic faction
+loop no longer duplicates forced-target work for Withers.
+
+All five 50-Wither phases passed below 50 ms/tick: 4.757 idle/rest, 2.674 dropped-food/forage,
+5.710 hunt/targeting, 3.225 danger/social, and 1.915 habitat/day-night ms/tick. Hunt/targeting was
+the 5.710 ms/tick peak. The complete 82-profile matrix was not selected because this change is
+confined to one existing profile and does not alter the shared cache or work-budget primitives.
+
 ## Results
 
 The table below records the original clean baseline described above; later rerun summaries are

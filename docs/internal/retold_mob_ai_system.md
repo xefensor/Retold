@@ -1044,6 +1044,11 @@ used for these focused changes.
 Zombie Nautilus now expands current registration to 82 tests/410 phases. Its focused five-phase
 run and the affected Zoglin rerun pass below 50 ms/tick, peaking at 5.676 and 5.147 ms/tick; the
 complete expanded matrix was intentionally not selected.
+The specialized Wither threat selector adds no profile but changes repeated `APEX_OR_BOSS` work.
+Its exact 50-mob run passes all five phases below 50 ms/tick, measuring 4.757 idle/rest, 2.674
+dropped-food/forage, 5.710 hunt/targeting, 3.225 danger/social, and 1.915 habitat/day-night
+ms/tick. The complete matrix remained unnecessary because no shared cache, budget, or other
+profile path changed.
 The focused Bee defense rerun makes its danger phase deal real damage so the production colony
 event and staggered continuation are measured; all five phases passed with a 7.103 ms/tick peak.
 After natural acquisition was added, focused 50-mob Armadillo, Nautilus, and Strider runs again
@@ -1225,7 +1230,7 @@ Use this matrix before calling the mob AI system done.
 | Commander support | evoker, witch | Support behavior, Illager coordination, target ownership. |
 | Illager raider | pillager, vindicator, ravager, vex, illusioner | Illager faction behavior and territory warning where applicable. |
 | Special vanilla | creeper, enderman, breeze, creaking, zombie nautilus | Mostly vanilla behavior with Retold target safety protections. Wild Zombie Nautiluses additionally use Undead diplomacy; taming removes that generic faction identity. The focused 50-Zombie-Nautilus run peaks at 5.676 ms/tick. |
-| Apex or boss | warden, wither, ender dragon | Mostly exempt from managed AI; keep special/boss behavior intact. |
+| Apex or boss | warden, wither, ender dragon | Warden and Ender Dragon remain exempt from managed AI. The Wither retains vanilla flight, three-head firing, healing, powered state, and block destruction, while a ten-tick specialized selector uses bounded cached 40-block scans and sight checks to choose living non-Undead/non-Creeper threats. Recent attackers and creatures actively targeting the Wither outrank proximity, current-target inertia reduces churn, players receive no categorical bonus, and source-aware faction ownership supplies the primary target. Retold's generic forced-target loop defers to this owner. The primary target hook and constant-time per-tick retained-primary/two-alternative-head guards validate all three against current per-entity Retold faction and target-safety rules; wild Zombie Nautilus friendship therefore remains dynamic and taming removes it correctly. One focused test covers scoring, ownership, all three Undead additions, all three heads, retained cleanup, and the tame boundary; the five-phase 50-Wither run peaks at 5.710 ms/tick. Natural three-head combat, flight, arena destruction, target switching, mixed battles, multiplayer, and dedicated servers remain unverified. |
 
 ### In-Game Completion Tests
 

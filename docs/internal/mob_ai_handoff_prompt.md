@@ -165,6 +165,17 @@ Current position:
   The cross-family exact selector passes, as do the affected Zoglin and Zombie Nautilus 50-mob
   runs with 5.147 and 5.676 ms/tick peaks. Natural target switching, aquatic Brain combat,
   taming/riding, multiplayer, and dedicated servers remain unverified.
+- Withers now use a specialized ten-tick bounded cached selector instead of Retold's generic
+  forced-faction loop. Recent attackers and creatures actively targeting the Wither outrank merely
+  nearby prey, current-target inertia limits churn, players receive no categorical bonus, and the
+  selected primary target uses source-aware faction ownership. A constant-time per-tick guard
+  validates the two side heads through current Retold entity relationships, so all three heads
+  tolerate Ghasts, Zoglins, wild Zombie Nautiluses, and datapack-added Undead while taming correctly
+  removes a Zombie Nautilus's protection. The primary target hook applies the same dynamic rule.
+  Retained targets are also cleared when their entity-level faction changes. The exact behavior
+  test passes, and all five 50-Wither phases pass with a 5.710 ms/tick peak. Natural three-head
+  firing, flight, target switching, mixed battles, multiplayer, and dedicated servers remain
+  unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped

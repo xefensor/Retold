@@ -42,6 +42,7 @@ import cz.xefensor.retold.behavior.species.RetoldUndeadHordeEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadMountEvents;
 import cz.xefensor.retold.behavior.control.RetoldVanillaAiBlockerEvents;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreeding;
+import cz.xefensor.retold.behavior.species.RetoldWitherThreatEvents;
 import cz.xefensor.retold.behavior.species.RetoldZoglinRampagerEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTradeRefresh;
 import cz.xefensor.retold.villager.RetoldVillagerAnimalTending;
@@ -174,7 +175,8 @@ public final class RetoldBehaviorEntityTickDispatcher {
             case AQUATIC_TERRITORY_GUARD, TERRITORY_GUARD -> dispatchEvery(event, mob, gameTime, 10, RetoldTerritoryGuardEvents::onEntityTickPost);
             case COMMANDER_SUPPORT -> dispatchCommanderSupport(event, mob, gameTime);
             case ILLAGER_RAIDER -> dispatchIllagerRaider(event, mob, gameTime);
-            case NONE, LOOSE_AQUATIC_GROUP, VILLAGER_COMMUNAL, BAT_COLONY, SPECIAL_VANILLA, APEX_OR_BOSS -> {
+            case APEX_OR_BOSS -> RetoldWitherThreatEvents.onEntityTickPost(event);
+            case NONE, LOOSE_AQUATIC_GROUP, VILLAGER_COMMUNAL, BAT_COLONY, SPECIAL_VANILLA -> {
             }
         }
 

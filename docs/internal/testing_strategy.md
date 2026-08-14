@@ -216,6 +216,14 @@ work changes. A score-only constant removal does not require a TPS rerun; adding
 Nautilus faction/profile work requires `retold:mob_tps_zoglin` or
 `retold:mob_tps_zombie_nautilus` respectively.
 
+For Wither threat selection, run the exact `retold:wither_prioritizes_serious_threats` selector.
+It covers Ghast, Zoglin, and wild Zombie Nautilus diplomacy, primary/side-head rejection and
+retained cleanup, the dynamic tamed Zombie Nautilus boundary, active-threat priority over nearer
+passive prey and a player, and source-aware target ownership. Add the exact
+`retold:mob_tps_wither` selector when dispatcher
+cadence, scan/sight work, side-head validation, scoring, or generic-faction-loop delegation changes;
+do not expand this boss-local path to the complete matrix.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

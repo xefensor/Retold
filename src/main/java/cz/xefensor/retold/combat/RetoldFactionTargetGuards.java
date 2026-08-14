@@ -6,10 +6,12 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.faction.RetoldFactionRelations;
 import cz.xefensor.retold.territory.RetoldTerritoryTargetBlocker;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.monster.piglin.AbstractPiglin;
 
 public final class RetoldFactionTargetGuards {
@@ -42,6 +44,16 @@ public final class RetoldFactionTargetGuards {
         }
 
         if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
+            return true;
+        }
+
+        /*
+         * The vanilla Wither goal knows only Minecraft's static wither-friend tag. Retold's
+         * Undead membership can be extended by datapacks and can change per entity when an
+         * undead mount is claimed, so its primary head must use the live faction relation.
+         */
+        if (mob instanceof WitherBoss
+                && !RetoldFactionRelations.shouldAttack(mob, target)) {
             return true;
         }
 
