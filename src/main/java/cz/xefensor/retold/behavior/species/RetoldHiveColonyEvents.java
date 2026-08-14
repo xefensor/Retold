@@ -16,15 +16,25 @@ import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
-
+import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.ItemAbilities;
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.UseItemOnBlockEvent;
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
@@ -58,6 +68,9 @@ public final class RetoldHiveColonyEvents {
     private static final double DEFENSE_SHARE_RADIUS_BLOCKS = 18.0D;
     private static final double DEFENSE_SHARE_RADIUS_SQUARED =
             DEFENSE_SHARE_RADIUS_BLOCKS * DEFENSE_SHARE_RADIUS_BLOCKS;
+    private static final double DEFENSE_KEEP_RADIUS_BLOCKS = 36.0D;
+    private static final double DEFENSE_KEEP_RADIUS_SQUARED =
+            DEFENSE_KEEP_RADIUS_BLOCKS * DEFENSE_KEEP_RADIUS_BLOCKS;
 
     private static final double FLOWER_SPEED = 0.78D;
     private static final double DEFENSE_SPEED = 1.18D;
@@ -80,22 +93,113 @@ public final class RetoldHiveColonyEvents {
             return;
         }
 
-        long gameTime = level.getGameTime();
+        tick(level, bee, level.getGameTime());
+    }
 
-        if (!shouldThink(bee, gameTime)) {
+    public static void onLivingDamage(LivingDamageEvent.Post event) {
+        if (event.getHealthDamage() <= 0.0F
+                || !(event.getEntity() instanceof PathfinderMob victim)
+                || !isHiveBee(victim)
+                || !(victim.level() instanceof ServerLevel level)
+                || !(event.getSource().getEntity() instanceof LivingEntity attacker)) {
+            return;
+        }
+
+        beginCollectiveDefense(
+                level,
+                victim.blockPosition(),
+                victim,
+                attacker,
+                level.getGameTime()
+        );
+    }
+
+    public static void onHiveHarvest(UseItemOnBlockEvent event) {
+        if (event.isCanceled()
+                || event.getUsePhase() != UseItemOnBlockEvent.UsePhase.BLOCK
+                || !(event.getLevel() instanceof ServerLevel level)
+                || event.getPlayer() == null) {
+            return;
+        }
+
+        BlockPos hivePos = event.getPos();
+        BlockState hiveState = level.getBlockState(hivePos);
+
+        if (!isUnsmokedHoneyHarvest(
+                level,
+                hivePos,
+                hiveState,
+                event.getItemStack()
+        )) {
+            return;
+        }
+
+        beginCollectiveDefense(
+                level,
+                hivePos,
+                null,
+                event.getPlayer(),
+                level.getGameTime()
+        );
+    }
+
+    public static void onHiveBreak(BreakBlockEvent event) {
+        if (event.isCanceled()
+                || !(event.getLevel() instanceof ServerLevel level)
+                || !event.getState().is(BlockTags.BEEHIVES)) {
+            return;
+        }
+
+        beginCollectiveDefense(
+                level,
+                event.getPos(),
+                null,
+                event.getPlayer(),
+                level.getGameTime()
+        );
+    }
+
+    public static void tick(
+            ServerLevel level,
+            PathfinderMob bee,
+            long gameTime
+    ) {
+        if (level == null
+                || bee == null
+                || bee.level() != level
+                || !isHiveBee(bee)) {
             return;
         }
 
         LivingEntity target = bee.getTarget();
 
-        if (isValidDefenseTarget(bee, target)) {
-            shareDefenseTarget(
-                    level,
-                    bee,
-                    target,
-                    gameTime
-            );
+        if ((isHiveDefenseTargetOwned(bee, target) || ownsHiveAttackControl(bee))
+                && !isValidDefenseTarget(bee, target)) {
+            stopDefense(bee, target);
             return;
+        }
+
+        if (!shouldThink(bee, gameTime)) {
+            return;
+        }
+
+        if (isOwnedHiveDefense(bee, target)) {
+            if (!continueDefense(bee, target, gameTime)) {
+                stopDefense(bee, target);
+                return;
+            }
+
+            shareDefenseTarget(level, bee, target, gameTime);
+            return;
+        }
+
+        if (RetoldAiControl.isControlledAsBy(
+                bee,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.HIVE_COLONY
+        )) {
+            stopDefense(bee, target);
+            target = bee.getTarget();
         }
 
         LivingEntity sharedTarget = findSharedDefenseTarget(
@@ -107,6 +211,7 @@ public final class RetoldHiveColonyEvents {
             defendAgainst(
                     bee,
                     sharedTarget,
+                    RetoldTargetSource.FACTION_ASSIST,
                     gameTime
             );
             return;
@@ -117,6 +222,76 @@ public final class RetoldHiveColonyEvents {
                 bee,
                 gameTime
         );
+    }
+
+    private static boolean isUnsmokedHoneyHarvest(
+            ServerLevel level,
+            BlockPos hivePos,
+            BlockState hiveState,
+            ItemStack stack
+    ) {
+        if (!hiveState.is(BlockTags.BEEHIVES)
+                || !hiveState.hasProperty(BeehiveBlock.HONEY_LEVEL)
+                || hiveState.getValue(BeehiveBlock.HONEY_LEVEL) < BeehiveBlock.MAX_HONEY_LEVELS
+                || CampfireBlock.isSmokeyPos(level, hivePos)) {
+            return false;
+        }
+
+        return stack.is(Items.GLASS_BOTTLE)
+                || stack.canPerformAction(ItemAbilities.SHEARS_HARVEST);
+    }
+
+    static void beginCollectiveDefense(
+            ServerLevel level,
+            BlockPos incidentPos,
+            PathfinderMob victim,
+            LivingEntity attacker,
+            long gameTime
+    ) {
+        if (level == null
+                || incidentPos == null
+                || attacker == null) {
+            return;
+        }
+
+        if (victim != null) {
+            if (victim.level() != level
+                    || !isHiveBee(victim)
+                    || !isValidDefenseTarget(victim, attacker)) {
+                return;
+            }
+
+            defendAgainst(
+                    victim,
+                    attacker,
+                    RetoldTargetSource.RETALIATION,
+                    gameTime
+            );
+        }
+
+        for (PathfinderMob recruit : RetoldAiScanCache.nearbyAt(
+                level,
+                incidentPos,
+                PathfinderMob.class,
+                DEFENSE_SHARE_RADIUS_BLOCKS,
+                gameTime,
+                HIVE_SCAN_CACHE_TICKS
+        )) {
+            if (recruit == victim
+                    || !isHiveBee(recruit)
+                    || !RetoldBehaviorCoordinator.isUsableEntity(recruit)
+                    || !isValidDefenseTarget(recruit, attacker)
+                    || !canDefend(recruit)) {
+                continue;
+            }
+
+            defendAgainst(
+                    recruit,
+                    attacker,
+                    RetoldTargetSource.FACTION_ASSIST,
+                    gameTime
+            );
+        }
     }
 
     private static boolean isHiveBee(PathfinderMob mob) {
@@ -197,10 +372,10 @@ public final class RetoldHiveColonyEvents {
             return false;
         }
 
-        return isValidDefenseTarget(
-                bee,
-                source.getTarget()
-        );
+        LivingEntity target = source.getTarget();
+
+        return isValidDefenseTarget(bee, target)
+                && isOwnedHiveDefense(source, target);
     }
 
     private static void shareDefenseTarget(
@@ -224,6 +399,7 @@ public final class RetoldHiveColonyEvents {
             defendAgainst(
                     recruit,
                     target,
+                    RetoldTargetSource.FACTION_ASSIST,
                     gameTime
             );
         }
@@ -278,31 +454,97 @@ public final class RetoldHiveColonyEvents {
         return target instanceof PathfinderMob mob && isHiveBee(mob);
     }
 
-    private static void defendAgainst(
+    private static boolean defendAgainst(
             PathfinderMob bee,
             LivingEntity target,
+            RetoldTargetSource source,
             long gameTime
     ) {
+        if ((source != RetoldTargetSource.RETALIATION
+                && source != RetoldTargetSource.FACTION_ASSIST)
+                || !isValidDefenseTarget(bee, target)) {
+            return false;
+        }
+
+        int priority = source == RetoldTargetSource.RETALIATION
+                ? RetoldAiPriorities.ATTACK
+                : DEFENSE_PRIORITY;
+
         if (!RetoldBehaviorCombat.claimAttackControl(
                 bee,
                 RetoldAiControlOwner.HIVE_COLONY,
-                DEFENSE_PRIORITY,
-                "hive_defense",
+                priority,
+                source == RetoldTargetSource.RETALIATION
+                        ? "hive_retaliation"
+                        : "hive_collective_defense",
                 gameTime,
                 DEFENSE_CONTROL_TICKS
         )) {
-            return;
+            return false;
         }
 
         if (!RetoldBehaviorCombat.applyAttackTargetOrClearOwner(
                 bee,
                 target,
-                RetoldTargetSource.FACTION_ASSIST,
+                source,
                 RetoldAiControlOwner.HIVE_COLONY
         )) {
-            return;
+            return false;
         }
 
+        RetoldMobState state = RetoldMobStates.getOrCreate(bee, gameTime);
+        state.markDanger(gameTime);
+        state.addStress(source == RetoldTargetSource.RETALIATION ? 5 : 3);
+        return true;
+    }
+
+    private static boolean isOwnedHiveDefense(
+            PathfinderMob bee,
+            LivingEntity target
+    ) {
+        return target != null
+                && ownsHiveAttackControl(bee)
+                && isHiveDefenseTargetOwned(bee, target);
+    }
+
+    private static boolean ownsHiveAttackControl(PathfinderMob bee) {
+        return RetoldAiControl.isControlledAsBy(
+                bee,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.HIVE_COLONY
+        );
+    }
+
+    private static boolean isHiveDefenseTargetOwned(
+            PathfinderMob bee,
+            LivingEntity target
+    ) {
+        return target != null
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                bee,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+    }
+
+    private static boolean continueDefense(
+            PathfinderMob bee,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!isValidDefenseTarget(bee, target)
+                || bee.distanceToSqr(target) > DEFENSE_KEEP_RADIUS_SQUARED) {
+            return false;
+        }
+
+        RetoldAiControl.refreshIfOwnedBy(
+                bee,
+                RetoldAiControlMode.ATTACK,
+                RetoldAiControlOwner.HIVE_COLONY,
+                gameTime,
+                DEFENSE_CONTROL_TICKS
+        );
         RetoldBehaviorMovement.throttledMoveTo(
                 bee,
                 target,
@@ -310,6 +552,33 @@ public final class RetoldHiveColonyEvents {
                 gameTime,
                 HIVE_PATH_INTERVAL_TICKS,
                 2.0D * 2.0D
+        );
+        return true;
+    }
+
+    private static void stopDefense(
+            PathfinderMob bee,
+            LivingEntity target
+    ) {
+        boolean ownsHiveAttack = ownsHiveAttackControl(bee);
+        boolean ownsTarget = target != null && RetoldFactionTargetMemory.isOwnedByAny(
+                bee,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+
+        if (target != null && (ownsTarget || ownsHiveAttack)) {
+            RetoldCombatTargets.clearTargetReferencesAndAggression(
+                    bee,
+                    target,
+                    true
+            );
+        }
+
+        RetoldAiControl.clearIfOwnedBy(
+                bee,
+                RetoldAiControlOwner.HIVE_COLONY
         );
     }
 

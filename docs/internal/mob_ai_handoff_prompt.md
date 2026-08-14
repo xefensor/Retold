@@ -138,6 +138,12 @@ Current position:
   shared feeding pose. Tamed entity and shoulder Parrots warn about real recent or active owner
   threats without taking combat ownership. Their focused behavior, profile, survival, and matrix
   guard tests pass; all five 50-Parrot phases pass below 50 ms/tick with a 4.005 ms/tick peak.
+- Bees now begin colony defense only from successful Bee damage, tagged-hive breaking, or an
+  unsmoked full-hive harvest. The victim uses retaliation ownership and nearby available Bees use
+  faction-assist ownership under `HIVE_COLONY`; smoke, Creative/Spectator players, busy Bees, and
+  unrelated Bee targets are excluded. Both focused tests pass, and the 50-Bee run peaks at
+  7.103 ms/tick. Natural hive release, dense apiaries, multiplayer, and dedicated servers remain
+  unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped

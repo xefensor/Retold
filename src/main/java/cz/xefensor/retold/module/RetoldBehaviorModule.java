@@ -14,9 +14,11 @@ import cz.xefensor.retold.behavior.species.RetoldSlimeSplitBehavior;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianCombatEvents;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldDolphinPodEvents;
+import cz.xefensor.retold.behavior.species.RetoldHiveColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.villager.RetoldVillageReputationEvents;
 import cz.xefensor.retold.villager.RetoldVillageAnimalEvents;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 
@@ -40,6 +42,15 @@ public final class RetoldBehaviorModule {
         gameEventBus.register(RetoldVillageAnimalEvents.class);
         gameEventBus.addListener(RetoldControlledFleeEvents::onLivingDamage);
         gameEventBus.addListener(RetoldDolphinPodEvents::onLivingDamage);
+        gameEventBus.addListener(RetoldHiveColonyEvents::onLivingDamage);
+        gameEventBus.addListener(
+                EventPriority.LOWEST,
+                RetoldHiveColonyEvents::onHiveHarvest
+        );
+        gameEventBus.addListener(
+                EventPriority.LOWEST,
+                RetoldHiveColonyEvents::onHiveBreak
+        );
         gameEventBus.addListener(RetoldAnimalBreeding::onLivingDamage);
         gameEventBus.addListener(RetoldBehaviorModule::addServerReloadListeners);
     }

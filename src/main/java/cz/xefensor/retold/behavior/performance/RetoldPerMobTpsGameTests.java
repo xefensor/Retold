@@ -571,10 +571,12 @@ public final class RetoldPerMobTpsGameTests {
 
                 // Benchmark subjects are normally invulnerable so the 50-mob sample remains
                 // stable. Temporarily allow one real hit where production behavior begins from
-                // the successful-damage event: shared passive flight and Dolphin pod defense.
+                // the successful-damage event: shared passive flight, Dolphin pod defense,
+                // and Bee colony defense.
                 if (subject instanceof PathfinderMob pathfinderMob
                         && (RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)
-                        || run.mobPath.equals("dolphin"))) {
+                        || run.mobPath.equals("dolphin")
+                        || run.mobPath.equals("bee"))) {
                     subject.setInvulnerable(false);
                     subject.invulnerableTime = 0;
                     subject.hurtServer(

@@ -181,6 +181,14 @@ preservation of another urgent target, and cleanup after the threat disappears. 
 `retold:mob_tps_dolphin` case when recruitment radius, scan caching, controlled continuation, or
 path cadence changes; this species-local path does not by itself justify the complete matrix.
 
+For Bee colony defense, choose the exact
+`retold:bees_collectively_defend_harmed_colony_members` or
+`retold:bees_defend_hives_but_not_smoked_harvests` behavior test. Together they exercise real
+health damage, retaliation versus faction-assist ownership, busy-target preservation, cleanup,
+smoke, Creative exclusion, unsmoked harvest, and hive breaking. Add the exact
+`retold:mob_tps_bee` case when incident recruitment, scan caching, controlled continuation, or path
+cadence changes; do not expand this species-local path to the complete matrix.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

@@ -374,8 +374,11 @@ an implementation claim. The completion matrix below and
   Tamed predators, leashed/passenger mobs, and water-only/flying navigation do not participate.
   Barrier breaking is bounded to a four-block local cached search and never happens in unloaded
   simulation.
-- Bees are peaceful near hives and flowers. The colony reacts collectively only to harm against a
-  bee/hive or an unsmoked harvest. Hungry Pandas consume the exact bamboo block they reach without
+- Bees are peaceful near hives and flowers. The colony reacts collectively only after successful
+  health damage to a Bee, a tagged hive is broken, or a full tagged hive is harvested with Shears
+  or a Glass Bottle without smoke. The victim owns retaliation while available nearby Bees use
+  faction-assist ownership; smoke, Creative/Spectator players, busy Bees, and arbitrary unrelated
+  Bee targets are excluded. Hungry Pandas consume the exact bamboo block they reach without
   producing a drop; the meal is credited only after successful removal and obeys `mobGriefing`.
   Armadillos tolerate ordinary walking but hide from sprinting, aggression, and real danger. When
   hungry, they use a cached bounded search to approach exposed grass/dirt-like soil, perform a
@@ -1033,6 +1036,8 @@ Nautilus runs passed all ten new phases below 50 ms/tick, and Cow passed all fiv
 breeder phases. Parrot expands current registration to 78 tests/390 phases; its focused five-phase
 run passed with a 4.005 ms/tick peak. A complete expanded rerun was intentionally not used for
 these focused changes.
+The focused Bee defense rerun makes its danger phase deal real damage so the production colony
+event and staggered continuation are measured; all five phases passed with a 7.103 ms/tick peak.
 After natural acquisition was added, focused 50-mob Armadillo, Nautilus, and Strider runs again
 passed all 15 affected phases, initially peaking at 5.760, 4.544, and 4.602 ms/tick respectively.
 The final Strider lava-sustenance rerun passed all five phases with a 6.771 ms/tick peak. Death-event
@@ -1188,7 +1193,7 @@ Use this matrix before calling the mob AI system done.
 | Aquatic school | cod, salmon, tropical fish, pufferfish | Cached exact-species cohesion, low-priority `REGROUP` ownership, and reachable aquatic paths. Fish diets and natural school stability remain unverified. |
 | Loose aquatic group | squid, glow squid, nautilus | Successful damage produces exact-species nearby panic through bounded cached propagation for the two Squid species. Wild hungry Nautiluses use controlled aquatic navigation to hunt living fish; tamed Nautiluses do not hunt autonomously. Natural long-term group pacing remains unverified. |
 | Hungry swarm predator | spider, cave spider | Hunger-driven prey selection admits adult passive animals only at night, while proactive player aggression remains darkness-based and retaliation remains available at any time. Daylight ends Retold-owned food hunts. Cached swarm scans allow both Spider types to share an owned prey target at night. After a recent feeding or successful hunt, the persisted `SPIDER_LAIR` home lets up to six members share a dark lair, expand or repair one real cobweb per 600 ticks up to 50, and return during daylight through interruptible low-priority ownership. Construction requires the builder's vanilla darkness, raw skylight below 8 at both the builder and supported dark air block, the shared block-search budget, and `mobGriefing`; open-sky nighttime darkness is insufficient. Integrated coverage verifies the hunting boundaries plus bright/open-sky rejection, sheltered creation, sharing, the 50-web cap, repair, griefing, return, retaliation interruption, and night release; natural climbing, combat, site selection, and long-term pacing remain unverified. |
-| Hive colony | bee | Hive/home behavior, defense, controlled targeting. |
+| Hive colony | bee | Flower foraging retains its bounded specialized search. Successful Bee damage, tagged-hive breaking, and unsmoked full-hive harvest are the only Retold colony-defense triggers. The victim uses `RETALIATION`; one cached bounded 18-block incident scan recruits available Bees with `FACTION_ASSIST`. Both hold `HIVE_COLONY` attack ownership until the threat is invalid or beyond 36 blocks. Smoke, Creative/Spectator targets, friendly Bees, and another live target are excluded. Event assignment starts no synchronous path; staggered species ticks refresh ownership and request movement. Focused behavior coverage exercises real damage, source ownership, recruitment, busy-target preservation, prompt cleanup, smoke, player-mode exclusions, harvest, and breaking. The five-phase 50-Bee run peaks at 7.103 ms/tick. Natural hive release, crowded colonies, multiplayer, and dedicated servers remain unverified. |
 | Nether hungry | piglin, hoglin, strider | Hunger behavior plus faction/territory interactions for Piglins. Lava passively sustains Striders without being consumed, Warped Fungus remains fallback food, and Piglins receive meal credit from Hoglins they kill. |
 | Undead hungry | zombie, zombie villager, husk, drowned, zombified piglin | Hunger/horde behavior, faction targeting, and undead tolerance. A non-undead, non-Creeper living victim killed by one of these mobs provides a meal. |
 | Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop. |
