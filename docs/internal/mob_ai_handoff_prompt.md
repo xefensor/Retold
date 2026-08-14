@@ -176,6 +176,11 @@ Current position:
   test passes, and all five 50-Wither phases pass with a 5.710 ms/tick peak. Natural three-head
   firing, flight, target switching, mixed battles, multiplayer, and dedicated servers remain
   unverified.
+- Wither Skeletons now have a data-driven weight-one, pack-size-one monster entry in Soul Sand
+  Valleys. Their territory owner still requires a fortress anchor, so valley spawns do not become
+  guards. The exact registry-backed test covers the default biome boundary and spawn parameters;
+  natural frequency, placement, datapack composition, and newly generated existing-world terrain
+  remain unverified.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped

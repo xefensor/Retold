@@ -974,6 +974,7 @@ Data:
 
 - `data/retold/tags/worldgen/structure/delayed_until_stage_2.json`
 - `data/retold/neoforge/biome_modifier/stage3_piglins_nether.json`
+- `data/retold/neoforge/biome_modifier/wither_skeletons_soul_sand_valley.json`
 - `data/retold/neoforge/structure_modifier/stage3_piglins_structures.json`
 
 Behavior:

@@ -224,6 +224,12 @@ passive prey and a player, and source-aware target ownership. Add the exact
 cadence, scan/sight work, side-head validation, scoring, or generic-faction-loop delegation changes;
 do not expand this boss-local path to the complete matrix.
 
+For the rare Soul Sand Valley Wither Skeleton spawn, run the exact
+`retold:wither_skeletons_spawn_rarely_in_soul_sand_valleys` selector. It reads the server's
+modified biome registry and guards the exact biome, smallest-positive weight, solitary pack, and
+absence from ordinary Nether Wastes. This data-only spawn-list change does not justify a per-mob
+TPS run; naturally verify spawn frequency and placement in fresh Soul Sand Valley terrain.
+
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.
 

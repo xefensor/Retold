@@ -11,6 +11,7 @@ Each release should be readable in two passes:
 
 ### Player-Facing
 
+- Wither Skeletons can now spawn naturally as rare solitary encounters in Soul Sand Valleys while retaining their fortress guard role.
 - Withers now favor creatures that recently attacked them or are actively fighting them over merely nearby targets, while retaining target inertia and treating players by the same threat rules. All three Wither heads now recognize Ghasts, Zoglins, wild Zombie Nautiluses, and other current Retold Undead as allies; taming still removes a Zombie Nautilus's Undead protection.
 - Zoglins and wild Zombie Nautiluses now use Undead diplomacy, tolerating other Undead while attacking living non-Undead creatures except Creepers. Zombie hordes, ranged Skeletons, Ghasts, and Zoglins no longer prefer players over better ordinary prey selected by the same behavior.
 - Phantoms now provide rare night and dark-storm pressure under open sky without requiring the player to avoid sleep. Their stalking behavior no longer prefers players over nearer valid living prey, while Undead creatures remain excluded from deliberate targeting.
@@ -37,6 +38,7 @@ Each release should be readable in two passes:
 
 ### Technical
 
+- Added a data-driven Soul Sand Valley Wither Skeleton biome spawn with weight 1 and pack size 1. An exact registry-backed GameTest guards the biome boundary and spawn parameters; no repeated AI work or profile registration changed.
 - Added an `APEX_OR_BOSS` Wither dispatcher with a ten-tick bounded shared entity scan, cached sight checks, target inertia, active-threat/recent-attacker scoring, and source-aware faction-combat ownership. The generic faction target loop now defers Withers to this selector, the primary target hook applies dynamic faction rules, and a constant-time per-tick retained/side-head guard preserves the same tamed-mount boundaries. The exact behavior test passes, and all five 50-Wither phases remain below 50 ms/tick with a 5.710 ms/tick peak.
 - Added Zoglin and Zombie Nautilus to the data-driven Undead faction and added an unmanaged `SPECIAL_VANILLA` profile plus an aquatic per-mob benchmark for Zombie Nautilus. Removed explicit player score bonuses from Zombie-horde, Skeleton-ranged, Ghast-artillery, and Zoglin-rampage target selection. One focused behavior test covers both added memberships, mutual tolerance, ordinary hostility, and all four parity boundaries. The affected 50-Zoglin and 50-Zombie-Nautilus benchmarks pass all ten phases below 50 ms/tick, peaking at 5.147 and 5.676 ms/tick respectively.
 - Replaced the default per-player Phantom insomnia decision through NeoForge's lowest-priority spawn event while preserving explicit decisions from other mods. Retold keeps vanilla's hostile-spawn gamerule, 60–120-second cadence, dark-sky gate, spectator exclusion, placement validation, and generated group size; eligible open-sky attempts retain the local-difficulty check and pass a one-in-eight rarity gate. Two focused tests cover zero-insomnia spawning, time/rarity/cover boundaries, external event decisions, Undead exclusion, and removal of player target favoritism.

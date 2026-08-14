@@ -427,9 +427,10 @@ an implementation claim. The completion matrix below and
 - Stage 2 Undead escalation comes from awareness, convergence, and broader spawning pressure,
   not stat buffs. Stage 3 cleanses/removes zombie villagers and zombified piglins rather than
   restoring them.
-- Wither Skeletons spawn in fortresses and naturally but rarely in Soul Sand Valleys; they do not
-  guard the valley. Phantoms are rare nightmare-like demons that can appear alone or in groups at
-  night or during storms under open sky, independently of insomnia.
+- Wither Skeletons spawn in fortresses and naturally but rarely in Soul Sand Valleys. The valley
+  uses a data-driven weight-one solitary biome entry; their territory profile still requires a
+  fortress anchor, so they do not guard the valley. Phantoms are rare nightmare-like demons that
+  can appear alone or in groups at night or during storms under open sky, independently of insomnia.
 - Endermen retain vanilla gaze aggression in Stage 1 and become peaceful unless attacked in
   Stages 2 and 3. Vanilla block carrying remains. Aender Eye gameplay beyond the prototype is
   undesigned.

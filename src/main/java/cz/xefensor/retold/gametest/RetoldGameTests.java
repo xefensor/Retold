@@ -78,6 +78,7 @@ import cz.xefensor.retold.villager.RetoldVillagerTorchRelightingGameTests;
 import cz.xefensor.retold.villager.RetoldVillageContainerOwnershipGameTests;
 import cz.xefensor.retold.villager.RetoldVillageCropReputationGameTests;
 import cz.xefensor.retold.villager.RetoldVillageAnimalReputationGameTests;
+import cz.xefensor.retold.worldgen.RetoldNetherMobSpawnGameTests;
 import cz.xefensor.retold.worldgen.RetoldRuinedPortalGameTests;
 import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
@@ -282,6 +283,7 @@ public final class RetoldGameTests {
         RetoldAenderGameTests.register(event, environment);
         RetoldWorldProtectionGameTests.register(event, environment);
         RetoldMobAvailabilityGameTests.register(event, environment);
+        RetoldNetherMobSpawnGameTests.register(event);
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
         RetoldAiSightCacheGameTests.register(event, environment);
