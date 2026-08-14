@@ -11,6 +11,7 @@ import net.minecraft.world.entity.animal.equine.Llama;
 import net.minecraft.world.entity.animal.fox.Fox;
 import net.minecraft.world.entity.animal.frog.Frog;
 import net.minecraft.world.entity.animal.goat.Goat;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.animal.sheep.Sheep;
 
 public final class RetoldFeedingAnimations {
@@ -103,6 +104,15 @@ public final class RetoldFeedingAnimations {
                     level,
                     frog,
                     SoundEvents.FROG_EAT
+            );
+            return;
+        }
+
+        if (mob instanceof Parrot parrot) {
+            playNeutralEatSound(
+                    level,
+                    parrot,
+                    SoundEvents.PARROT_EAT
             );
         }
     }

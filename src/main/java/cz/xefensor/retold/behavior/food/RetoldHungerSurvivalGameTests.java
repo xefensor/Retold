@@ -93,6 +93,7 @@ public final class RetoldHungerSurvivalGameTests {
             prey("nautilus", Habitat.AQUATIC, "cod"),
             prey("ocelot", Habitat.LAND, "chicken"),
             source("panda", Habitat.LAND, FoodSource.BAMBOO),
+            source("parrot", Habitat.LAND, FoodSource.CROP),
             source("pig", Habitat.LAND, FoodSource.SMALL_PLANT),
             source("piglin", Habitat.NETHER, FoodSource.NETHER_MUSHROOM),
             source("rabbit", Habitat.DESERT, FoodSource.DESERT_BROWSE),
@@ -448,6 +449,10 @@ public final class RetoldHungerSurvivalGameTests {
             case BAMBOO -> {
                 helper.setBlock(5, 1, 5, Blocks.DIRT);
                 helper.setBlock(5, 2, 5, Blocks.BAMBOO);
+            }
+            case CROP -> {
+                helper.setBlock(6, 1, 5, Blocks.FARMLAND);
+                helper.setBlock(6, 2, 5, Blocks.WHEAT);
             }
             case SNIFFER_GROUND -> fillGroundPatch(helper, Blocks.DIRT);
             case SEAGRASS -> helper.setBlock(5, 2, 5, Blocks.SEAGRASS);
@@ -830,6 +835,7 @@ public final class RetoldHungerSurvivalGameTests {
         AMBIENT_CAVE_INSECTS,
         CARAVAN_FODDER,
         BAMBOO,
+        CROP,
         SNIFFER_GROUND,
         SEAGRASS,
         VILLAGE_STORAGE

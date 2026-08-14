@@ -155,7 +155,7 @@ foragers, dropped food where appropriate, and communal storage for Villagers. A 
 observer models player-loaded full LOD without becoming prey. The matrix deliberately uses nearby
 patches for consumption checks; use the existing species, food-search, and feeder tests for longer
 route requirements. Run one exact `retold:hunger_survival_<mob>` selector while diagnosing a
-species. Do not rerun the 41-test group; run another exact habitat case only when its own feeding
+species. Do not rerun the 42-test group; run another exact habitat case only when its own feeding
 contract changed. Add only affected exact species TPS IDs when profile cadence, scans, or paths can
 cost more.
 

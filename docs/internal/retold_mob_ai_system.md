@@ -403,7 +403,7 @@ an implementation claim. The completion matrix below and
 - Dolphins defend their pod collectively. Bats use loose roost colonies, hunt arthropods at night,
   dodge arthropod counterattacks without routing, and spread unrelated panic selectively with
   individual delays. Vanilla roost disturbances and unrelated danger hold Bats in owned panic
-  flight for ten seconds before daytime settling can resume. Parrots forage for seeds/crops and give owners a distinct real-danger warning.
+  flight for ten seconds before daytime settling can resume. Parrots now forage for seeds/crops and give owners a distinct real-danger warning; natural presentation still needs in-game verification.
   Striders are hungry Nether herd animals with remembered lava ranges and domesticated homes. A
   Strider standing on or in lava receives two hunger relief every ten seconds without consuming
   lava and does not leave it for an ordinary autonomous food search; warped fungus remains fallback
@@ -553,8 +553,8 @@ the same `RetoldStarvationBehavior`. Slimes and Magma Cubes retain their establi
 hunger split-or-die response and never receive the generic pulse.
 
 `RetoldHungerSurvivalGameTests` complements the starvation-owner checks with one isolated loaded
-feeding habitat for every positive-hunger profile. Forty species begin at 99 hunger and must stay
-alive while lowering it through production behavior; a 41st registry guard prevents profiles from
+feeding habitat for every positive-hunger profile. Forty-one species begin at 99 hunger and must stay
+alive while lowering it through production behavior; a 42nd registry guard prevents profiles from
 being added without a case. The cases use a representative source from the species' patched 26.2
 spawn environments rather than artificial dropped-item substitutes: appropriate living prey,
 aquatic prey and water, flowers/crops/forage, cave and Nether resources, caravan sustenance, or
@@ -1007,7 +1007,7 @@ dedicated-server observation, or profiler/JFR evidence.
 
 ### Per-Mob TPS Matrix
 
-`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 77 loaded
+`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 78 loaded
 mob profiles. Every species is measured through idle/rest, dropped-food/forage, hunt/target,
 danger/social, and habitat/day-night phases. Profile-appropriate fixtures provide water, caves,
 Nether ground, prey, threats, forage, hives, and other required stimuli. Each phase records real
@@ -1025,10 +1025,12 @@ habitat/day-night was highest at 8.438 ms/tick.
 After adding four school-fish and two loose-Squid profiles, the final rerun passed all 74 tests and
 370 phases in 1.396 minutes. Skeleton idle/rest was the host-load-dependent overall peak at
 7.516 ms/tick; the six added aquatic profiles peaked at 2.905 ms/tick for Cod danger/social.
-Adding the Villager, Strider, and Nautilus profiles expands registration to 77 tests and 385 phases.
+Adding the Villager, Strider, and Nautilus profiles expanded registration to 77 tests and 385 phases.
 The latest complete baseline remains the earlier 75-test/375-phase pass; focused Strider and
 Nautilus runs passed all ten new phases below 50 ms/tick, and Cow passed all five representative
-breeder phases. A complete 77-profile rerun was intentionally not used for this focused change.
+breeder phases. Parrot expands current registration to 78 tests/390 phases; its focused five-phase
+run passed with a 4.005 ms/tick peak. A complete expanded rerun was intentionally not used for
+these focused changes.
 After natural acquisition was added, focused 50-mob Armadillo, Nautilus, and Strider runs again
 passed all 15 affected phases, initially peaking at 5.760, 4.544, and 4.602 ms/tick respectively.
 The final Strider lava-sustenance rerun passed all five phases with a 6.771 ms/tick peak. Death-event
@@ -1197,6 +1199,7 @@ Use this matrix before calling the mob AI system done.
 | Protective neutral | polar bear | `RetoldNeutralWildlifeEvents` uses cached cub/threat scans. Passive cub intruders receive a 40-tick standing/sound warning with no attack target and can withdraw; staying escalates to owned defense, while actual attacks bypass the warning. Vanilla proactive cub-proximity targeting is blocked. GameTests cover the state boundaries; natural navigation and warning readability still need in-game verification. |
 | Armadillo defensive | armadillo | Defensive/flee behavior plus active hunger. A bounded cached soil search drives low-priority movement to exposed eligible ground; reaching it produces a visible non-destructive grub dig, hunger relief, and a 30-second forage cooldown. |
 | Panda bamboo | panda | Its dedicated bounded search approaches bamboo and atomically removes the reached block without drops before applying hunger relief. Consumption obeys the shared entity-griefing policy. Two isolated GameTests cover natural approach/removal and `mobGriefing=false`; the focused Panda survival case passes and all five 50-Panda TPS phases remain below 50 ms/tick with a 9.305 ms/tick peak. Natural tall-grove selection and long-term grove depletion remain unverified. |
+| Parrot forager | parrot | Loaded hunger uses the shared dropped-food and bounded crop-forage owner with flying navigation, feeding pose, caches, work budgets, and destructive `mobGriefing` policy. Tamed entity and shoulder Parrots first recognize a recent owner attacker, then use a staggered cached 18-block scan for a visible or close-heard mob actively targeting the living non-Creative/non-Spectator owner. The transient sound-and-particle warning takes no combat or movement ownership. Focused coverage verifies diet/griefing, false-positive rejection, threat memory, pacifist behavior, shoulder persistence, profile loading, crop survival, and five 50-Parrot phases below 50 ms/tick with a 4.005 ms/tick peak. Natural flight, crop choice, warning readability, multiplayer, and dedicated-server behavior remain unverified. |
 | Sniffer forager | sniffer | Its specialized diggable-ground owner is protected from generic search ownership; paths target air above the ground and use a large-body completion radius before applying forage relief. |
 | Turtle beach | turtle | Beach/home behavior plus active hunger and seagrass forage. |
 | Amphibian forager | frog | Foraging and controlled prey targeting; valid prey killed through vanilla tongue behavior or Retold bites credits one meal. |

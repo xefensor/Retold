@@ -13,6 +13,7 @@ import cz.xefensor.retold.behavior.species.RetoldSlimeItemStorage;
 import cz.xefensor.retold.behavior.species.RetoldSlimeSplitBehavior;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianCombatEvents;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyEvents;
+import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.villager.RetoldVillageReputationEvents;
 import cz.xefensor.retold.villager.RetoldVillageAnimalEvents;
 import net.neoforged.bus.api.IEventBus;
@@ -33,6 +34,7 @@ public final class RetoldBehaviorModule {
         gameEventBus.register(RetoldSlimeSplitBehavior.class);
         gameEventBus.register(RetoldAxolotlGuardianCombatEvents.class);
         gameEventBus.register(RetoldBatColonyEvents.class);
+        gameEventBus.register(RetoldParrotForagerEvents.class);
         gameEventBus.register(RetoldVillageReputationEvents.class);
         gameEventBus.register(RetoldVillageAnimalEvents.class);
         gameEventBus.addListener(RetoldControlledFleeEvents::onLivingDamage);

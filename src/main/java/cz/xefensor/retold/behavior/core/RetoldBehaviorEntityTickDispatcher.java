@@ -27,6 +27,7 @@ import cz.xefensor.retold.behavior.species.RetoldNeutralWildlifeEvents;
 import cz.xefensor.retold.behavior.pack.RetoldPackHomeEvents;
 import cz.xefensor.retold.behavior.pack.RetoldPackHuntingEvents;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooEvents;
+import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerEvents;
 import cz.xefensor.retold.behavior.hunting.RetoldPredatorSearchEvents;
 import cz.xefensor.retold.behavior.species.RetoldSkeletonRangedEvents;
@@ -154,6 +155,13 @@ public final class RetoldBehaviorEntityTickDispatcher {
                     gameTime,
                     10,
                     ignored -> RetoldAquaticSchoolEvents.tick(level, mob, gameTime)
+            );
+            case PARROT_FORAGER -> dispatchEvery(
+                    event,
+                    mob,
+                    gameTime,
+                    10,
+                    ignored -> RetoldParrotForagerEvents.tick(level, mob, gameTime)
             );
             case AQUATIC_TERRITORY_GUARD, TERRITORY_GUARD -> dispatchEvery(event, mob, gameTime, 10, RetoldTerritoryGuardEvents::onEntityTickPost);
             case COMMANDER_SUPPORT -> dispatchCommanderSupport(event, mob, gameTime);

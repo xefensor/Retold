@@ -34,6 +34,7 @@ import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianGameTests;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldHerdSchoolGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooGameTests;
+import cz.xefensor.retold.behavior.species.RetoldParrotForagerGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPolarBearWarningGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderLairGameTests;
@@ -291,6 +292,7 @@ public final class RetoldGameTests {
         RetoldBatColonyGameTests.register(event);
         RetoldHerdSchoolGameTests.register(event);
         RetoldPandaBambooGameTests.register(event);
+        RetoldParrotForagerGameTests.register(event);
         RetoldPolarBearWarningGameTests.register(event, environment);
         RetoldWolfPackHungerGameTests.register(event, environment);
         RetoldTamedDefenderGameTests.register(event, environment);
@@ -506,7 +508,7 @@ public final class RetoldGameTests {
     private static void mobProfilesLoadFromDatapack(GameTestHelper helper) {
         helper.assertValueEqual(
                 RetoldMobProfiles.loadedProfileCount(),
-                77,
+                78,
                 "Every bundled mob profile must load"
         );
 

@@ -30,8 +30,8 @@ Current position:
   the confirmed gameplay contract.
 - The central mob AI architecture, control ownership, source-aware targets, factions, territory,
   hunger, homes, searches, pathfinding adapters, caches, LOD, work budgets, and debugging exist.
-- There are 77 data-driven mob profiles. Strider and Nautilus are the newest profiles, added so
-  every current vanilla breedable animal has positive hunger progression.
+- There are 78 data-driven mob profiles. Parrot is the newest profile; Strider and Nautilus were
+  added earlier so every current vanilla breedable animal has positive hunger progression.
 - Implemented work includes Creeper safety/awareness, passive damage fleeing, dropped-food priority,
   active food search, predator disengagement, Wolf leadership transfer, weak barriers, complete
   current Slime/Magma Cube behavior, Spider hunting/lairs, Bat colonies, defensive Axolotls, Polar
@@ -40,7 +40,7 @@ Current position:
   bovine/equine/llama range identities, exact-species fish schooling, exact-species Squid panic,
   the loaded-world Animal Feeder, the loaded Villager communal consumer/Farmer-supplier loop, and
   global loaded-world hunger-satisfaction breeding for all current vanilla breedable animals,
-  loaded starvation damage and a passing 40-species natural-feeding survival matrix for every
+  loaded starvation damage and a passing 41-species natural-feeding survival matrix for every
   active hunger profile, plus
   Stage 2+ staged Villager Iron Golem construction restricted to Clerics, Librarians, Armorers,
   Toolsmiths, and Weaponsmiths, plus all-stage ranged magical Villager torch maintenance with a
@@ -133,6 +133,10 @@ Current position:
   relief only after successful removal. The transaction obeys `mobGriefing`; the isolated Panda
   selector passes 2/2, its hunger-survival case passes 1/1, and all five Panda TPS phases pass below
   50 ms/tick with a 9.305 ms/tick peak.
+- Parrots now use loaded hunger, dropped seeds, bounded crop foraging, flying navigation, and the
+  shared feeding pose. Tamed entity and shoulder Parrots warn about real recent or active owner
+  threats without taking combat ownership. Their focused behavior, profile, survival, and matrix
+  guard tests pass; all five 50-Parrot phases pass below 50 ms/tick with a 4.005 ms/tick peak.
 - Every positive-hunger profile now has an intended loaded food-acquisition route. Armadillos use
   bounded cached searches to dig exposed soil for grubs without changing the block, wild hungry
   Nautiluses hunt living fish, and lava passively sustains Striders without being consumed; Warped
@@ -141,7 +145,7 @@ Current position:
   kill; Creepers never count. `retold:natural_food_*` passes 5/5, the exact Armadillo/Nautilus/
   Strider survival cases pass, and their latest affected TPS peaks are 5.760/4.544/6.771 ms/tick.
 - The latest complete TPS baseline passes all 75 then-registered per-mob tests and all 375 phases below
-  50 ms/tick. Registration is now 77 tests/385 phases. Cow, Strider, and Nautilus focused runs pass
+  50 ms/tick. Registration is now 78 tests/390 phases. Cow, Strider, Nautilus, and Parrot focused runs pass
   all 15 phases below 50 ms/tick, and the final 256-managed-animal budget test passes at 17.082 ms/tick;
   the complete expanded matrix was intentionally not rerun. After Farmer supply, only the affected `retold:mob_tps_villager` test was rerun per the
   selection policy; the latest affected-only rerun after the sustained Nitwit tool-visual fix

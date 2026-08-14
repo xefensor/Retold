@@ -20,6 +20,7 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
@@ -30,6 +31,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.animal.polarbear.PolarBear;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.cubemob.AbstractCubeMob;
@@ -43,6 +45,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
@@ -135,6 +138,7 @@ public final class RetoldPerMobTpsGameTests {
             "nautilus",
             "ocelot",
             "panda",
+            "parrot",
             "phantom",
             "pig",
             "piglin",
@@ -518,6 +522,31 @@ public final class RetoldPerMobTpsGameTests {
                 .map(LivingEntity.class::cast)
                 .filter(entity -> !(entity instanceof AgeableMob ageable) || !ageable.isBaby())
                 .toList();
+        ServerPlayer parrotOwner = null;
+
+        if (run.mobPath.equals("parrot")) {
+            parrotOwner = (ServerPlayer) helper.makeMockServerPlayer(GameType.SURVIVAL);
+            Vec3 ownerPosition = helper.absoluteVec(new Vec3(7.5D, 2.0D, 7.5D));
+            parrotOwner.snapTo(
+                    ownerPosition.x(),
+                    ownerPosition.y(),
+                    ownerPosition.z(),
+                    0.0F,
+                    0.0F
+            );
+            run.stimuli.add(parrotOwner);
+
+            for (LivingEntity threat : threats) {
+                if (threat instanceof Mob threatMob) {
+                    threatMob.setTarget(parrotOwner);
+                    // Mock server players have no network connection. Keep the threats
+                    // target-bearing for Parrot sensing without letting melee AI invoke
+                    // connection-dependent player damage code in this clientless fixture.
+                    threatMob.setNoAi(true);
+                }
+            }
+        }
+
         long gameTime = helper.getLevel().getGameTime();
 
         for (int index = 0; index < run.subjects.size(); index++) {
@@ -526,6 +555,11 @@ public final class RetoldPerMobTpsGameTests {
             state.setStress(100);
             state.setConfidence(20);
             state.markDanger(gameTime);
+
+            if (subject instanceof Parrot parrot && parrotOwner != null) {
+                parrot.setTame(true, true);
+                parrot.setOwner(parrotOwner);
+            }
 
             if (subject instanceof Warden warden) {
                 preventWardenBurrowing(warden);
@@ -1002,6 +1036,7 @@ public final class RetoldPerMobTpsGameTests {
     ) {
         Block feature = switch (mobPath) {
             case "panda" -> Blocks.BAMBOO;
+            case "parrot" -> Blocks.WHEAT;
             case "bee" -> Blocks.DANDELION;
             case "hoglin", "piglin" -> Blocks.CRIMSON_FUNGUS;
             default -> Blocks.SHORT_GRASS;
@@ -1159,7 +1194,7 @@ public final class RetoldPerMobTpsGameTests {
         return switch (mobPath) {
             case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish" -> ArenaKind.AQUATIC;
             case "frog", "turtle" -> ArenaKind.WETLAND;
-            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
+            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "parrot", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
             case "cave_spider", "creaking", "enderman", "endermite", "shulker", "silverfish", "spider", "warden" -> ArenaKind.CAVE;
             case "hoglin", "magma_cube", "piglin", "piglin_brute", "strider", "wither_skeleton", "zoglin", "zombified_piglin" -> ArenaKind.NETHER;
             default -> ArenaKind.LAND;
@@ -1192,6 +1227,7 @@ public final class RetoldPerMobTpsGameTests {
         return switch (profileType) {
             case HUNGRY_GRAZER -> Items.WHEAT;
             case SMALL_FORAGER -> Items.WHEAT_SEEDS;
+            case PARROT_FORAGER -> Items.WHEAT_SEEDS;
             case PACK_PREDATOR, AQUATIC_PREDATOR, HUNGRY_SWARM_PREDATOR, SOLO_OPPORTUNIST -> Items.BEEF;
             case HIVE_COLONY -> Items.DANDELION;
             case NETHER_HUNGRY -> Items.CRIMSON_FUNGUS;
@@ -1222,7 +1258,7 @@ public final class RetoldPerMobTpsGameTests {
 
     private static EntityType<?> dangerTargetType(String mobPath) {
         return switch (mobPath) {
-            case "cow", "sheep", "pig", "chicken", "rabbit", "horse", "donkey", "mule", "llama", "trader_llama", "camel", "goat", "mooshroom", "sniffer", "panda", "armadillo", "turtle", "frog", "axolotl", "dolphin", "polar_bear", "bee", "wolf", "fox", "cat", "ocelot", "iron_golem", "snow_golem", "villager" -> EntityTypes.ZOMBIE;
+            case "cow", "sheep", "pig", "chicken", "rabbit", "horse", "donkey", "mule", "llama", "trader_llama", "camel", "goat", "mooshroom", "sniffer", "panda", "parrot", "armadillo", "turtle", "frog", "axolotl", "dolphin", "polar_bear", "bee", "wolf", "fox", "cat", "ocelot", "iron_golem", "snow_golem", "villager" -> EntityTypes.ZOMBIE;
             default -> EntityTypes.IRON_GOLEM;
         };
     }

@@ -4,7 +4,7 @@
 
 ## Coverage
 
-`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 77 mob types; the latest complete baseline covers 75, while the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
+`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 78 mob types; the latest complete baseline covers 75, while focused runs cover the three later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
 2. `dropped_food_forage`: dropped food plus profile-appropriate forage blocks.
@@ -175,6 +175,19 @@ dropped-food/forage, 6.771 hunt/targeting, 3.662 danger/social, and 2.368 habita
 6.771 ms/tick hunt/targeting phase was the peak. The complete matrix was not selected because the
 focused natural-food and survival tests cover the transaction and only this species-local tick path
 changed.
+
+### Parrot Forage And Owner-Warning Focused Run
+
+The new `PARROT_FORAGER` profile expands registration to 78 tests and 390 phases. The exact
+`retold:mob_tps_parrot` selector was run on 2026-08-14 because the species adds shared flying
+food paths, crop block searches, and a staggered cached owner-threat scan. Its clientless danger
+fixture keeps eight Zombies target-bearing but disables their melee AI so the real warning scan is
+measured without invoking mock-player network-dependent damage code.
+
+All five 50-Parrot phases passed below 50 ms/tick: 3.669 idle/rest, 3.327 dropped-food/forage,
+4.005 hunt/targeting, 3.439 danger/social, and 1.976 habitat/day-night. The complete 78-profile
+matrix was not selected because the other 77 species and shared performance primitives were
+unchanged.
 
 ## Results
 
