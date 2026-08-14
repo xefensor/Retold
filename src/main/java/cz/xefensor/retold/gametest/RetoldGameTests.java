@@ -42,6 +42,7 @@ import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.compatibility.RetoldWorldProtectionGameTests;
 import cz.xefensor.retold.enderman.RetoldEndermanDefense;
 import cz.xefensor.retold.enchanting.RetoldEnchantingGameTests;
 import cz.xefensor.retold.faction.RetoldFaction;
@@ -51,8 +52,10 @@ import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
 import cz.xefensor.retold.event.RetoldSnowballGameTests;
 import cz.xefensor.retold.event.RetoldVexGameTests;
 import cz.xefensor.retold.progression.RetoldToolProgressionGameTests;
+import cz.xefensor.retold.recipe.RetoldRecipeCompatibilityGameTests;
 import cz.xefensor.retold.progression.RetoldProgressionAcquisitionGameTests;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldTags;
 import cz.xefensor.retold.stage.RetoldElementType;
 import cz.xefensor.retold.stage.RetoldRaidProgression;
 import cz.xefensor.retold.stage.RetoldStageManager;
@@ -74,6 +77,7 @@ import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -82,7 +86,9 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Guardian;
@@ -104,6 +110,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public final class RetoldGameTests {
@@ -183,6 +190,18 @@ public final class RetoldGameTests {
         registerTest(
                 event,
                 environment,
+                "faction_tags_preserve_defaults_and_standard_undead",
+                RetoldGameTests::factionTagsPreserveDefaultsAndStandardUndead
+        );
+        registerTest(
+                event,
+                environment,
+                "faction_tags_drive_targeting_and_retaliation",
+                RetoldGameTests::factionTagsDriveTargetingAndRetaliation
+        );
+        registerTest(
+                event,
+                environment,
                 "silverfish_and_endermites_are_unrelated",
                 RetoldGameTests::silverfishAndEndermitesAreUnrelated
         );
@@ -231,11 +250,30 @@ public final class RetoldGameTests {
         registerTest(
                 event,
                 environment,
+                "compatibility_block_tags_preserve_existing_defaults",
+                RetoldGameTests::compatibilityBlockTagsPreserveExistingDefaults
+        );
+        registerTest(
+                event,
+                environment,
+                "compatibility_item_tags_preserve_existing_defaults",
+                RetoldGameTests::compatibilityItemTagsPreserveExistingDefaults
+        );
+        registerTest(
+                event,
+                environment,
+                "compatibility_food_and_forage_preserve_existing_behavior",
+                RetoldGameTests::compatibilityFoodAndForagePreserveExistingBehavior
+        );
+        registerTest(
+                event,
+                environment,
                 "extinguished_torches_drop_matching_lit_items",
                 RetoldGameTests::extinguishedTorchesDropMatchingLitItems
         );
 
         RetoldAenderGameTests.register(event, environment);
+        RetoldWorldProtectionGameTests.register(event, environment);
         RetoldMobAvailabilityGameTests.register(event, environment);
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
@@ -264,6 +302,7 @@ public final class RetoldGameTests {
         RetoldEnchantingGameTests.register(event, environment);
         RetoldToolProgressionGameTests.register(event, environment);
         RetoldProgressionAcquisitionGameTests.register(event, environment);
+        RetoldRecipeCompatibilityGameTests.register(event, environment);
         RetoldTerritoryGameTests.register(event, environment);
         RetoldVillagerCommunalFoodGameTests.register(event);
         RetoldVillagerGolemConstructionGameTests.register(event);
@@ -720,6 +759,173 @@ public final class RetoldGameTests {
                 "Even indiscriminate Undead must not deliberately attack creepers"
         );
         helper.succeed();
+    }
+
+    private static void factionTagsPreserveDefaultsAndStandardUndead(
+            GameTestHelper helper
+    ) {
+        Map<EntityType<?>, RetoldFaction> expectedFactions = Map.ofEntries(
+                Map.entry(EntityTypes.PIGLIN, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.PIGLIN_BRUTE, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.BLAZE, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(EntityTypes.PILLAGER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.VINDICATOR, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.EVOKER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.ILLUSIONER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.RAVAGER, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.VEX, RetoldFaction.ILLAGERS),
+                Map.entry(EntityTypes.ZOMBIE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_VILLAGER, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.HUSK, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.DROWNED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_HORSE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.CAMEL_HUSK, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIFIED_PIGLIN, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOGLIN, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.ZOMBIE_NAUTILUS, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SKELETON, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.STRAY, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.WITHER_SKELETON, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SKELETON_HORSE, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.BOGGED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.PARCHED, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.WITHER, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.PHANTOM, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.GHAST, RetoldFaction.UNDEAD),
+                Map.entry(EntityTypes.SLIME, RetoldFaction.SLIMES),
+                Map.entry(EntityTypes.MAGMA_CUBE, RetoldFaction.SLIMES),
+                Map.entry(EntityTypes.GUARDIAN, RetoldFaction.AQUATIC_HOSTILES),
+                Map.entry(EntityTypes.ELDER_GUARDIAN, RetoldFaction.AQUATIC_HOSTILES),
+                Map.entry(EntityTypes.CREEPER, RetoldFaction.CREEPERS),
+                Map.entry(EntityTypes.SPIDER, RetoldFaction.ARTHROPODS),
+                Map.entry(EntityTypes.CAVE_SPIDER, RetoldFaction.ARTHROPODS),
+                Map.entry(EntityTypes.SILVERFISH, RetoldFaction.SILVERFISH),
+                Map.entry(EntityTypes.ENDERMITE, RetoldFaction.ENDERMITES),
+                Map.entry(EntityTypes.HOGLIN, RetoldFaction.NETHER_BEASTS),
+                Map.entry(EntityTypes.BREEZE, RetoldFaction.BREEZES),
+                Map.entry(EntityTypes.WARDEN, RetoldFaction.WARDENS),
+                Map.entry(EntityTypes.ENDER_DRAGON, RetoldFaction.BOSSES),
+                Map.entry(EntityTypes.CREAKING, RetoldFaction.CREAKINGS),
+                Map.entry(EntityTypes.IRON_GOLEM, RetoldFaction.VILLAGE_DEFENDERS),
+                Map.entry(EntityTypes.SNOW_GOLEM, RetoldFaction.VILLAGE_DEFENDERS),
+                Map.entry(EntityTypes.ENDERMAN, RetoldFaction.ENDERS),
+                Map.entry(EntityTypes.SHULKER, RetoldFaction.ENDERS)
+        );
+
+        for (EntityType<?> entityType : BuiltInRegistries.ENTITY_TYPE) {
+            RetoldFaction expected = expectedFactions.get(entityType);
+            RetoldFaction actual = RetoldFactionMembers.getFaction(entityType);
+
+            helper.assertTrue(
+                    actual == expected,
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                            + " must retain faction " + expected + ", got " + actual
+            );
+            helper.assertFalse(
+                    RetoldFactionMembers.hasConflictingFactionTags(entityType),
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                            + " must not have conflicting default faction tags"
+            );
+
+            if (expected != null) {
+                helper.assertTrue(
+                        entityType.builtInRegistryHolder().is(
+                                RetoldFactionMembers.getFactionTag(expected)
+                        ),
+                        BuiltInRegistries.ENTITY_TYPE.getKey(entityType)
+                                + " must be supplied by its Retold faction tag"
+                );
+            }
+        }
+
+        var witch = helper.spawn(EntityTypes.WITCH, 1, 2, 1);
+        helper.assertTrue(
+                RetoldFactionMembers.getFaction(witch) == null
+                        && RetoldFactionMembers.isLooseAllyOf(
+                        witch,
+                        RetoldFaction.ILLAGERS
+                ),
+                "Witches must remain loose Illager allies rather than full members"
+        );
+        helper.succeed();
+    }
+
+    private static void factionTagsDriveTargetingAndRetaliation(
+            GameTestHelper helper
+    ) {
+        var undeadMount = helper.spawn(EntityTypes.SKELETON_HORSE, 1, 2, 1);
+        var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
+        var defender = helper.spawn(EntityTypes.IRON_GOLEM, 5, 2, 1);
+
+        undeadMount.setTamed(false);
+        int untamedTargetGoalCount = undeadMount.targetSelector
+                .getAvailableGoals()
+                .size();
+        helper.assertValueEqual(
+                RetoldFactionMembers.getFaction(undeadMount),
+                RetoldFaction.UNDEAD,
+                "An untamed standard-tagged undead mount must join the Undead faction"
+        );
+        helper.assertTrue(
+                RetoldFactionRelations.shouldAttack(undeadMount, cow),
+                "A standard-tagged Undead member must inherit Undead targeting"
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        undeadMount,
+                        cow,
+                        RetoldTargetSource.FACTION_COMBAT
+                ),
+                "Faction targeting must accept a standard-tagged Undead attacker"
+        );
+        helper.assertTrue(
+                RetoldFactionTargetMemory.isOwnedByAny(
+                        undeadMount,
+                        cow,
+                        RetoldTargetSource.FACTION_COMBAT
+                ),
+                "Faction targeting must retain FACTION_COMBAT ownership"
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        defender,
+                        undeadMount,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "A tagged Village Defender must accept an immediate retaliation target"
+        );
+        helper.assertTrue(
+                RetoldFactionTargetMemory.isOwnedByAny(
+                        defender,
+                        undeadMount,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "Defender retaliation must retain RETALIATION ownership"
+        );
+
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                undeadMount,
+                cow,
+                true
+        );
+        undeadMount.setTamed(true);
+        helper.runAfterDelay(2, () -> {
+            helper.assertTrue(
+                    RetoldFactionMembers.getFaction(undeadMount) == null,
+                    "A tamed undead mount must not retain indiscriminate Undead hostility"
+            );
+            helper.assertFalse(
+                    RetoldFactionRelations.shouldAttack(undeadMount, cow),
+                    "A tamed undead mount must not inherit generic Undead targeting"
+            );
+            helper.assertValueEqual(
+                    undeadMount.targetSelector.getAvailableGoals().size(),
+                    untamedTargetGoalCount - 2,
+                    "Loaded mobs must remove their faction target and retaliation goals "
+                            + "when effective membership changes"
+            );
+            helper.succeed();
+        });
     }
 
     private static void ignitedCreeperCausesDelayedFlightExceptZombies(
@@ -1403,6 +1609,489 @@ public final class RetoldGameTests {
         );
 
         helper.succeed();
+    }
+
+    private static void compatibilityBlockTagsPreserveExistingDefaults(
+            GameTestHelper helper
+    ) {
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.ARMADILLO_GRUB_SOILS,
+                Blocks.GRASS_BLOCK,
+                Blocks.DIRT,
+                Blocks.COARSE_DIRT,
+                Blocks.ROOTED_DIRT,
+                Blocks.PODZOL,
+                Blocks.RED_SAND,
+                Blocks.TERRACOTTA,
+                Blocks.MUD,
+                Blocks.MUDDY_MANGROVE_ROOTS
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.ARMADILLO_SCRUB_RANGE_BLOCKS,
+                Blocks.GRASS_BLOCK,
+                Blocks.DIRT,
+                Blocks.COARSE_DIRT,
+                Blocks.ROOTED_DIRT,
+                Blocks.PODZOL,
+                Blocks.SAND,
+                Blocks.RED_SAND,
+                Blocks.TERRACOTTA
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.PANDA_BAMBOO_BLOCKS,
+                Blocks.BAMBOO,
+                Blocks.BAMBOO_SAPLING
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.TURTLE_BEACH_BLOCKS,
+                Blocks.SAND,
+                Blocks.RED_SAND
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.DESERT_BROWSE_BLOCKS,
+                Blocks.DEAD_BUSH
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.GOAT_SCRAPE_BLOCKS,
+                Blocks.STONE,
+                Blocks.SNOW_BLOCK,
+                Blocks.PACKED_ICE,
+                Blocks.GRAVEL
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.MOOSHROOM_GRAZING_BLOCKS,
+                Blocks.MYCELIUM
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.FORAGE_CROPS,
+                Blocks.WHEAT,
+                Blocks.CARROTS,
+                Blocks.POTATOES,
+                Blocks.BEETROOTS,
+                Blocks.MELON_STEM,
+                Blocks.PUMPKIN_STEM,
+                Blocks.ATTACHED_MELON_STEM,
+                Blocks.ATTACHED_PUMPKIN_STEM
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.FORAGE_FLOWERS,
+                Blocks.POPPY,
+                Blocks.DANDELION,
+                Blocks.BLUE_ORCHID,
+                Blocks.ALLIUM,
+                Blocks.AZURE_BLUET,
+                Blocks.RED_TULIP,
+                Blocks.ORANGE_TULIP,
+                Blocks.WHITE_TULIP,
+                Blocks.PINK_TULIP,
+                Blocks.OXEYE_DAISY,
+                Blocks.CORNFLOWER,
+                Blocks.LILY_OF_THE_VALLEY,
+                Blocks.SUNFLOWER,
+                Blocks.LILAC,
+                Blocks.ROSE_BUSH,
+                Blocks.PEONY
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.GRAZER_FORAGE_PLANTS,
+                Blocks.GRASS_BLOCK,
+                Blocks.SHORT_GRASS,
+                Blocks.TALL_GRASS,
+                Blocks.FERN,
+                Blocks.LARGE_FERN
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.SMALL_PASSIVE_FORAGE_PLANTS,
+                Blocks.SHORT_GRASS,
+                Blocks.TALL_GRASS
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.TURTLE_FORAGE_BLOCKS,
+                Blocks.SEAGRASS
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.HOGLIN_FORAGE_BLOCKS,
+                Blocks.CRIMSON_FUNGUS
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.PIGLIN_FORAGE_BLOCKS,
+                Blocks.CRIMSON_FUNGUS,
+                Blocks.RED_MUSHROOM,
+                Blocks.BROWN_MUSHROOM
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.STRIDER_FORAGE_BLOCKS,
+                Blocks.WARPED_FUNGUS
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.SPIDER_LAIR_WEB_BLOCKS,
+                Blocks.COBWEB
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.ILLAGER_VILLAGE_SIGNAL_BLOCKS,
+                Blocks.BELL
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.NETHER_REMNANT_GUARD_ANCHOR_BLOCKS,
+                Blocks.NETHER_BRICKS,
+                Blocks.NETHER_BRICK_FENCE,
+                Blocks.NETHER_BRICK_STAIRS,
+                Blocks.NETHER_BRICK_SLAB,
+                Blocks.CRACKED_NETHER_BRICKS,
+                Blocks.CHISELED_NETHER_BRICKS,
+                Blocks.RED_NETHER_BRICKS,
+                Blocks.RED_NETHER_BRICK_STAIRS,
+                Blocks.RED_NETHER_BRICK_SLAB,
+                Blocks.RED_NETHER_BRICK_WALL,
+                Blocks.NETHER_BRICK_WALL
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.OCEAN_MONUMENT_GUARD_ANCHOR_BLOCKS,
+                Blocks.PRISMARINE,
+                Blocks.PRISMARINE_BRICKS,
+                Blocks.DARK_PRISMARINE,
+                Blocks.SEA_LANTERN,
+                Blocks.WET_SPONGE,
+                Blocks.PRISMARINE_STAIRS,
+                Blocks.PRISMARINE_SLAB,
+                Blocks.PRISMARINE_WALL,
+                Blocks.PRISMARINE_BRICK_STAIRS,
+                Blocks.PRISMARINE_BRICK_SLAB,
+                Blocks.DARK_PRISMARINE_STAIRS,
+                Blocks.DARK_PRISMARINE_SLAB
+        );
+        assertTaggedDefaults(
+                helper,
+                RetoldTags.OCEAN_MONUMENT_PROTECTED_BLOCKS,
+                Blocks.PRISMARINE,
+                Blocks.PRISMARINE_BRICKS,
+                Blocks.DARK_PRISMARINE,
+                Blocks.SEA_LANTERN,
+                Blocks.WET_SPONGE
+        );
+        helper.succeed();
+    }
+
+    private static void compatibilityItemTagsPreserveExistingDefaults(
+            GameTestHelper helper
+    ) {
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.CAMPFIRE_CONSUMABLE_IGNITERS,
+                Items.FLINT
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.LEAF_PRESERVING_TOOLS,
+                Items.SHEARS
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.MEAT_FOODS,
+                Items.BEEF,
+                Items.COOKED_BEEF,
+                Items.PORKCHOP,
+                Items.COOKED_PORKCHOP,
+                Items.MUTTON,
+                Items.COOKED_MUTTON,
+                Items.CHICKEN,
+                Items.COOKED_CHICKEN,
+                Items.RABBIT,
+                Items.COOKED_RABBIT,
+                Items.ROTTEN_FLESH
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.FISH_FOODS,
+                Items.COD,
+                Items.COOKED_COD,
+                Items.SALMON,
+                Items.COOKED_SALMON,
+                Items.TROPICAL_FISH,
+                Items.PUFFERFISH
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.BERRY_FOODS,
+                Items.SWEET_BERRIES,
+                Items.GLOW_BERRIES
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.GRAZER_FOODS,
+                Items.WHEAT,
+                Items.HAY_BLOCK,
+                Items.APPLE,
+                Items.CARROT,
+                Items.POTATO,
+                Items.BEETROOT,
+                Items.SHORT_GRASS,
+                Items.TALL_GRASS,
+                Items.FERN,
+                Items.LARGE_FERN
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.SMALL_PASSIVE_FOODS,
+                Items.WHEAT_SEEDS,
+                Items.BEETROOT_SEEDS,
+                Items.MELON_SEEDS,
+                Items.PUMPKIN_SEEDS,
+                Items.CARROT,
+                Items.POTATO,
+                Items.BEETROOT,
+                Items.DANDELION
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.FLOWER_FOODS,
+                Items.POPPY,
+                Items.DANDELION,
+                Items.BLUE_ORCHID,
+                Items.ALLIUM,
+                Items.AZURE_BLUET,
+                Items.RED_TULIP,
+                Items.ORANGE_TULIP,
+                Items.WHITE_TULIP,
+                Items.PINK_TULIP,
+                Items.OXEYE_DAISY,
+                Items.CORNFLOWER,
+                Items.LILY_OF_THE_VALLEY,
+                Items.SUNFLOWER,
+                Items.LILAC,
+                Items.ROSE_BUSH,
+                Items.PEONY
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.NETHER_FUNGUS_FOODS,
+                Items.CRIMSON_FUNGUS,
+                Items.WARPED_FUNGUS,
+                Items.RED_MUSHROOM,
+                Items.BROWN_MUSHROOM
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.BAT_FOODS,
+                Items.SPIDER_EYE
+        );
+        assertTaggedItemDefaults(
+                helper,
+                RetoldTags.FELINE_SCAVENGE_FOODS,
+                Items.PHANTOM_MEMBRANE
+        );
+        helper.succeed();
+    }
+
+    private static void compatibilityFoodAndForagePreserveExistingBehavior(
+            GameTestHelper helper
+    ) {
+        var wolf = helper.spawn(EntityTypes.WOLF, 1, 2, 1);
+        var fox = helper.spawn(EntityTypes.FOX, 1, 2, 1);
+        var cat = helper.spawn(EntityTypes.CAT, 1, 2, 1);
+        var cow = helper.spawn(EntityTypes.COW, 1, 2, 1);
+        var chicken = helper.spawn(EntityTypes.CHICKEN, 1, 2, 1);
+        var bee = helper.spawn(EntityTypes.BEE, 1, 2, 1);
+        var turtle = helper.spawn(EntityTypes.TURTLE, 1, 2, 1);
+        var armadillo = helper.spawn(EntityTypes.ARMADILLO, 1, 2, 1);
+        var panda = helper.spawn(EntityTypes.PANDA, 1, 2, 1);
+        var bat = helper.spawn(EntityTypes.BAT, 1, 2, 1);
+        var hoglin = helper.spawn(EntityTypes.HOGLIN, 1, 2, 1);
+        var piglin = helper.spawn(EntityTypes.PIGLIN, 1, 2, 1);
+        var strider = helper.spawn(EntityTypes.STRIDER, 1, 2, 1);
+        var guardian = helper.spawn(EntityTypes.GUARDIAN, 1, 2, 1);
+
+        helper.assertTrue(
+                RetoldMobRules.canEatDroppedItem(
+                        wolf,
+                        new ItemStack(Items.BEEF)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        wolf,
+                        new ItemStack(Items.COD)
+                )
+                        && !RetoldMobRules.canEatDroppedItem(
+                        wolf,
+                        new ItemStack(Items.WHEAT)
+                ),
+                "Predator meat/fish eligibility must remain unchanged"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canEatDroppedItem(
+                        fox,
+                        new ItemStack(Items.SWEET_BERRIES)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        cat,
+                        new ItemStack(Items.PHANTOM_MEMBRANE)
+                ),
+                "Fox berry and feline scavenging foods must remain eligible"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canEatDroppedItem(
+                        cow,
+                        new ItemStack(Items.WHEAT)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        chicken,
+                        new ItemStack(Items.WHEAT_SEEDS)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        bee,
+                        new ItemStack(Items.POPPY)
+                ),
+                "Herbivore and Bee dropped-food eligibility must remain unchanged"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canEatDroppedItem(
+                        turtle,
+                        new ItemStack(Items.SEAGRASS)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        armadillo,
+                        new ItemStack(Items.SPIDER_EYE)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        panda,
+                        new ItemStack(Items.BAMBOO)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        bat,
+                        new ItemStack(Items.SPIDER_EYE)
+                ),
+                "Species-specific dropped foods must remain eligible"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canEatDroppedItem(
+                        hoglin,
+                        new ItemStack(Items.CRIMSON_FUNGUS)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        piglin,
+                        new ItemStack(Items.BROWN_MUSHROOM)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        strider,
+                        new ItemStack(Items.WARPED_FUNGUS)
+                )
+                        && RetoldMobRules.canEatDroppedItem(
+                        guardian,
+                        new ItemStack(Items.SALMON)
+                ),
+                "Nether and aquatic dropped foods must remain eligible"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canForageBlock(
+                        cow,
+                        Blocks.GRASS_BLOCK.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        cow,
+                        Blocks.WHEAT.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        cow,
+                        Blocks.POPPY.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        chicken,
+                        Blocks.SHORT_GRASS.defaultBlockState()
+                ),
+                "Ordinary grazer and small-passive forage must remain eligible"
+        );
+        helper.assertTrue(
+                RetoldMobRules.canForageBlock(
+                        turtle,
+                        Blocks.SEAGRASS.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        hoglin,
+                        Blocks.CRIMSON_FUNGUS.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        piglin,
+                        Blocks.BROWN_MUSHROOM.defaultBlockState()
+                )
+                        && RetoldMobRules.canForageBlock(
+                        strider,
+                        Blocks.WARPED_FUNGUS.defaultBlockState()
+                ),
+                "Turtle and Nether forage must remain eligible"
+        );
+        helper.assertTrue(
+                RetoldMobRules.isFlowerBlock(
+                        Blocks.POPPY.defaultBlockState()
+                )
+                        && !RetoldMobRules.isFlowerBlock(
+                        Blocks.STONE.defaultBlockState()
+                ),
+                "Bee flower classification must remain unchanged"
+        );
+        helper.assertValueEqual(
+                RetoldMobRules.foodRelief(wolf, new ItemStack(Items.BEEF)),
+                28,
+                "Predator meat relief must remain unchanged"
+        );
+        helper.assertValueEqual(
+                RetoldMobRules.foodRelief(cow, new ItemStack(Items.WHEAT)),
+                28,
+                "High-value grazer food relief must remain unchanged"
+        );
+        helper.assertValueEqual(
+                RetoldMobRules.forageRelief(
+                        cow,
+                        Blocks.WHEAT.defaultBlockState()
+                ),
+                24,
+                "Grazer crop relief must remain unchanged"
+        );
+
+        helper.succeed();
+    }
+
+    private static void assertTaggedDefaults(
+            GameTestHelper helper,
+            TagKey<Block> tag,
+            Block... blocks
+    ) {
+        for (Block block : blocks) {
+            helper.assertTrue(
+                    block.defaultBlockState().is(tag),
+                    block + " must remain in " + tag.location()
+            );
+        }
+    }
+
+    private static void assertTaggedItemDefaults(
+            GameTestHelper helper,
+            TagKey<Item> tag,
+            Item... items
+    ) {
+        for (Item item : items) {
+            helper.assertTrue(
+                    item.getDefaultInstance().is(tag),
+                    item + " must remain in " + tag.location()
+            );
+        }
     }
 
     private static void assertOnlyDrop(

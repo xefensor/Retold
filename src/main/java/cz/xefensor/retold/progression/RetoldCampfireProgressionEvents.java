@@ -1,5 +1,6 @@
 package cz.xefensor.retold.progression;
 
+import cz.xefensor.retold.registry.RetoldTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -8,7 +9,6 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CampfireBlock;
@@ -55,7 +55,8 @@ public final class RetoldCampfireProgressionEvents {
             ItemStack stack
     ) {
         BlockState state = level.getBlockState(pos);
-        if (!stack.is(Items.FLINT) || !CampfireBlock.canLight(state)) {
+        if (!stack.is(RetoldTags.CAMPFIRE_CONSUMABLE_IGNITERS)
+                || !CampfireBlock.canLight(state)) {
             return false;
         }
 
@@ -77,7 +78,7 @@ public final class RetoldCampfireProgressionEvents {
                 level.getRandom().nextFloat() * 0.4F + 0.8F
         );
         level.gameEvent(player, GameEvent.BLOCK_CHANGE, pos);
-        player.awardStat(Stats.ITEM_USED.get(Items.FLINT));
+        player.awardStat(Stats.ITEM_USED.get(stack.getItem()));
 
         if (!player.getAbilities().instabuild) {
             stack.shrink(1);

@@ -1,5 +1,7 @@
 package cz.xefensor.retold.behavior.core;
 
+import cz.xefensor.retold.api.world.RetoldWorldProtection;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -20,6 +22,34 @@ public final class RetoldMobGriefing {
 
         return EventHooks.canEntityGrief(
                 level,
+                responsibleActor(actor)
+        );
+    }
+
+    public static boolean canBreakBlock(
+            ServerLevel level,
+            Entity actor,
+            BlockPos pos
+    ) {
+        return canModifyBlocks(level, actor)
+                && pos != null
+                && RetoldWorldProtection.canMobBreak(
+                level,
+                pos,
+                responsibleActor(actor)
+        );
+    }
+
+    public static boolean canPlaceBlock(
+            ServerLevel level,
+            Entity actor,
+            BlockPos pos
+    ) {
+        return canModifyBlocks(level, actor)
+                && pos != null
+                && RetoldWorldProtection.canMobPlace(
+                level,
+                pos,
                 responsibleActor(actor)
         );
     }

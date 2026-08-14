@@ -4,6 +4,7 @@ import cz.xefensor.retold.client.RetoldTeachingPreviewClient;
 import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentCatalog;
 import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantingScreenFeedback;
+import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
 import cz.xefensor.retold.client.stage.RetoldClientStage;
 import cz.xefensor.retold.enchanting.RetoldEnchantingMenuActions;
@@ -108,6 +109,14 @@ public final class RetoldNetworking {
                 RetoldEnchantmentKnowledgeSyncPayload.STREAM_CODEC,
                 (payload, context) -> RetoldClientEnchantmentKnowledge.replace(
                         payload.knownEnchantments()
+                )
+        );
+
+        registrar.playToClient(
+                RetoldRecipeKnowledgeSyncPayload.TYPE,
+                RetoldRecipeKnowledgeSyncPayload.STREAM_CODEC,
+                (payload, context) -> RetoldClientRecipeKnowledge.replace(
+                        payload.knownRecipes()
                 )
         );
 

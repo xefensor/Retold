@@ -1,11 +1,13 @@
 package cz.xefensor.retold.behavior.profiles;
 
+import cz.xefensor.retold.registry.RetoldTags;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.performance.RetoldAiTickContext;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -689,6 +691,41 @@ public final class RetoldMobRules {
         return 20;
     }
 
+    public static int foodRelief(
+            Mob mob,
+            ItemStack stack
+    ) {
+        String mobPath = getEntityTypePath(mob.getType());
+
+        if (isPredator(mobPath)) {
+            return isMeatItem(stack) || isFishItem(stack) ? 28 : 18;
+        }
+
+        if (isGrazer(mobPath)) {
+            String itemPath = getItemPath(stack);
+            return itemPath.equals("hay_block") || itemPath.equals("wheat")
+                    ? 28
+                    : 20;
+        }
+
+        if (isSmallPassive(mobPath)) {
+            return 20;
+        }
+
+        if (isPandaBamboo(mob)) {
+            return (stack.is(ItemTags.PANDA_FOOD)
+                    || getItemPath(stack).equals("bamboo"))
+                    ? 28
+                    : 16;
+        }
+
+        if (isSlime(mobPath)) {
+            return 18;
+        }
+
+        return 20;
+    }
+
     public static int preyRelief(
             Mob hunter,
             LivingEntity prey
@@ -710,12 +747,7 @@ public final class RetoldMobRules {
         String mobPath = getEntityTypePath(mob.getType());
 
         if (isRenewableEnvironmentalForage(mob, blockPath)) {
-            return switch (mobPath) {
-                case "goat" -> 12;
-                case "mooshroom" -> 20;
-                case "camel", "rabbit" -> 16;
-                default -> 16;
-            };
+            return renewableEnvironmentalForageRelief(mob);
         }
 
         if (isGrazer(mobPath)) {
@@ -749,6 +781,29 @@ public final class RetoldMobRules {
         return 16;
     }
 
+    public static int forageRelief(
+            PathfinderMob mob,
+            BlockState state
+    ) {
+        if (isRenewableEnvironmentalForage(mob, state)) {
+            return renewableEnvironmentalForageRelief(mob);
+        }
+
+        String mobPath = getEntityTypePath(mob.getType());
+        String blockPath = getBlockPath(state);
+
+        if (isGrazer(mobPath) && state.is(RetoldTags.FORAGE_CROPS)) {
+            return 24;
+        }
+
+        if (isSmallPassive(mobPath)
+                && state.is(RetoldTags.FORAGE_CROPS)) {
+            return 22;
+        }
+
+        return forageRelief(mob, blockPath);
+    }
+
     public static boolean canEatDroppedItem(
             Mob mob,
             ItemStack stack
@@ -761,52 +816,58 @@ public final class RetoldMobRules {
         String itemPath = getItemPath(stack);
 
         if (mobPath.equals("armadillo")) {
-            return itemPath.equals("spider_eye");
+            return stack.is(ItemTags.ARMADILLO_FOOD)
+                    || itemPath.equals("spider_eye");
         }
 
         if (mobPath.equals("turtle")) {
-            return itemPath.equals("seagrass");
+            return stack.is(ItemTags.TURTLE_FOOD)
+                    || itemPath.equals("seagrass");
         }
 
         if (mobPath.equals("nautilus")) {
-            return isFishItem(itemPath);
+            return isFishItem(stack);
         }
 
         if (mobPath.equals("bat")) {
-            return itemPath.equals("spider_eye");
+            return stack.is(RetoldTags.BAT_FOODS)
+                    || itemPath.equals("spider_eye");
         }
 
         if (isPredator(mobPath)) {
-            return isMeatItem(itemPath)
-                    || isFishItem(itemPath)
-                    || (mobPath.equals("fox") && isBerryItem(itemPath))
-                    || ((mobPath.equals("cat") || mobPath.equals("ocelot")) && itemPath.equals("phantom_membrane"));
+            return isMeatItem(stack)
+                    || isFishItem(stack)
+                    || (mobPath.equals("fox") && isBerryItem(stack))
+                    || ((mobPath.equals("cat") || mobPath.equals("ocelot"))
+                    && (stack.is(RetoldTags.FELINE_SCAVENGE_FOODS)
+                    || itemPath.equals("phantom_membrane")));
         }
 
         if (isGrazer(mobPath)) {
-            return isGrazerFoodItem(itemPath);
+            return isGrazerFoodItem(stack);
         }
 
         if (isSmallPassive(mobPath)) {
-            return isSmallPassiveFoodItem(itemPath);
+            return isSmallPassiveFoodItem(stack);
         }
 
         if (mobPath.equals("bee")) {
-            return isFlower(itemPath);
+            return isFlowerFoodItem(stack);
         }
 
         if (isPandaBamboo(mob)) {
-            return itemPath.equals("bamboo");
+            return stack.is(ItemTags.PANDA_FOOD)
+                    || itemPath.equals("bamboo");
         }
 
         if (isNetherHungry(mobPath)) {
-            return isMeatItem(itemPath)
-                    || isNetherFungusItem(itemPath);
+            return isMeatItem(stack)
+                    || isNetherFungusItem(stack);
         }
 
         if (isUndeadHungry(mobPath)) {
             return itemPath.equals("rotten_flesh")
-                    || isMeatItem(itemPath);
+                    || isMeatItem(stack);
         }
 
         if (isSlime(mobPath)) {
@@ -814,7 +875,7 @@ public final class RetoldMobRules {
         }
 
         if (mobPath.equals("guardian") || mobPath.equals("elder_guardian")) {
-            return isFishItem(itemPath);
+            return isFishItem(stack);
         }
 
         return false;
@@ -843,13 +904,18 @@ public final class RetoldMobRules {
 
         String itemPath = getItemPath(stack);
 
-        return isMeatItem(itemPath)
-                || isFishItem(itemPath)
-                || isBerryItem(itemPath)
-                || isGrazerFoodItem(itemPath)
-                || isSmallPassiveFoodItem(itemPath)
-                || isFlower(itemPath)
-                || isNetherFungusItem(itemPath)
+        return isMeatItem(stack)
+                || isFishItem(stack)
+                || isBerryItem(stack)
+                || isGrazerFoodItem(stack)
+                || isSmallPassiveFoodItem(stack)
+                || isFlowerFoodItem(stack)
+                || isNetherFungusItem(stack)
+                || stack.is(ItemTags.TURTLE_FOOD)
+                || stack.is(ItemTags.ARMADILLO_FOOD)
+                || stack.is(ItemTags.PANDA_FOOD)
+                || stack.is(RetoldTags.BAT_FOODS)
+                || stack.is(RetoldTags.FELINE_SCAVENGE_FOODS)
                 || itemPath.equals("seagrass")
                 || itemPath.equals("spider_eye")
                 || itemPath.equals("bamboo")
@@ -867,16 +933,20 @@ public final class RetoldMobRules {
         String mobPath = getEntityTypePath(mob.getType());
         String blockPath = getBlockPath(state);
 
-        if (isRenewableEnvironmentalForage(mob, blockPath)) {
+        if (isRenewableEnvironmentalForage(mob, state)) {
             return true;
         }
 
         if (mobPath.equals("turtle")) {
-            return blockPath.equals("seagrass");
+            return state.is(RetoldTags.TURTLE_FORAGE_BLOCKS)
+                    || blockPath.equals("seagrass");
         }
 
         if (isGrazer(mobPath)) {
-            return blockPath.equals("grass_block")
+            return state.is(RetoldTags.GRAZER_FORAGE_PLANTS)
+                    || state.is(RetoldTags.FORAGE_CROPS)
+                    || state.is(RetoldTags.FORAGE_FLOWERS)
+                    || blockPath.equals("grass_block")
                     || blockPath.equals("short_grass")
                     || blockPath.equals("tall_grass")
                     || blockPath.equals("fern")
@@ -886,7 +956,10 @@ public final class RetoldMobRules {
         }
 
         if (isSmallPassive(mobPath)) {
-            return blockPath.equals("short_grass")
+            return state.is(RetoldTags.SMALL_PASSIVE_FORAGE_PLANTS)
+                    || state.is(RetoldTags.FORAGE_CROPS)
+                    || state.is(RetoldTags.FORAGE_FLOWERS)
+                    || blockPath.equals("short_grass")
                     || blockPath.equals("tall_grass")
                     || isCropBlock(blockPath)
                     || isFlower(blockPath);
@@ -897,17 +970,20 @@ public final class RetoldMobRules {
         }
 
         if (mobPath.equals("hoglin")) {
-            return blockPath.equals("crimson_fungus");
+            return state.is(RetoldTags.HOGLIN_FORAGE_BLOCKS)
+                    || blockPath.equals("crimson_fungus");
         }
 
         if (mobPath.equals("piglin")) {
-            return blockPath.equals("crimson_fungus")
+            return state.is(RetoldTags.PIGLIN_FORAGE_BLOCKS)
+                    || blockPath.equals("crimson_fungus")
                     || blockPath.equals("red_mushroom")
                     || blockPath.equals("brown_mushroom");
         }
 
         if (mobPath.equals("strider")) {
-            return blockPath.equals("warped_fungus");
+            return state.is(RetoldTags.STRIDER_FORAGE_BLOCKS)
+                    || blockPath.equals("warped_fungus");
         }
 
         return false;
@@ -917,12 +993,28 @@ public final class RetoldMobRules {
             PathfinderMob mob,
             BlockState state
     ) {
-        return mob != null
-                && state != null
-                && isRenewableEnvironmentalForage(
-                mob,
-                getBlockPath(state)
-        );
+        if (mob == null || state == null) {
+            return false;
+        }
+
+        String mobPath = getEntityTypePath(mob.getType());
+
+        if ((mobPath.equals("camel") || mobPath.equals("rabbit"))
+                && state.is(RetoldTags.DESERT_BROWSE_BLOCKS)) {
+            return true;
+        }
+
+        if (mobPath.equals("mooshroom")
+                && state.is(RetoldTags.MOOSHROOM_GRAZING_BLOCKS)) {
+            return true;
+        }
+
+        if (mobPath.equals("goat")
+                && state.is(RetoldTags.GOAT_SCRAPE_BLOCKS)) {
+            return true;
+        }
+
+        return isRenewableEnvironmentalForage(mob, getBlockPath(state));
     }
 
     public static boolean usesRenewableEnvironmentalForage(PathfinderMob mob) {
@@ -961,6 +1053,17 @@ public final class RetoldMobRules {
         return false;
     }
 
+    private static int renewableEnvironmentalForageRelief(
+            PathfinderMob mob
+    ) {
+        return switch (getEntityTypePath(mob.getType())) {
+            case "goat" -> 12;
+            case "mooshroom" -> 20;
+            case "camel", "rabbit" -> 16;
+            default -> 16;
+        };
+    }
+
     public static boolean canDigForGrubs(BlockState state) {
         if (state == null) {
             return false;
@@ -968,7 +1071,8 @@ public final class RetoldMobRules {
 
         String blockPath = getBlockPath(state);
 
-        return blockPath.equals("grass_block")
+        return state.is(RetoldTags.ARMADILLO_GRUB_SOILS)
+                || blockPath.equals("grass_block")
                 || blockPath.equals("dirt")
                 || blockPath.equals("coarse_dirt")
                 || blockPath.equals("rooted_dirt")
@@ -982,9 +1086,10 @@ public final class RetoldMobRules {
 
     public static boolean isFlowerBlock(BlockState state) {
         return state != null
-                && isFlower(
+                && (state.is(RetoldTags.FORAGE_FLOWERS)
+                || isFlower(
                 getBlockPath(state)
-        );
+        ));
     }
 
     public static boolean canHuntPrey(
@@ -1148,6 +1253,11 @@ public final class RetoldMobRules {
                 || itemPath.equals("rotten_flesh");
     }
 
+    private static boolean isMeatItem(ItemStack stack) {
+        return stack.is(RetoldTags.MEAT_FOODS)
+                || isMeatItem(getItemPath(stack));
+    }
+
     private static boolean isFishItem(String itemPath) {
         return itemPath.equals("cod")
                 || itemPath.equals("cooked_cod")
@@ -1157,9 +1267,19 @@ public final class RetoldMobRules {
                 || itemPath.equals("pufferfish");
     }
 
+    private static boolean isFishItem(ItemStack stack) {
+        return stack.is(RetoldTags.FISH_FOODS)
+                || isFishItem(getItemPath(stack));
+    }
+
     private static boolean isBerryItem(String itemPath) {
         return itemPath.equals("sweet_berries")
                 || itemPath.equals("glow_berries");
+    }
+
+    private static boolean isBerryItem(ItemStack stack) {
+        return stack.is(RetoldTags.BERRY_FOODS)
+                || isBerryItem(getItemPath(stack));
     }
 
     private static boolean isGrazerFoodItem(String itemPath) {
@@ -1176,6 +1296,11 @@ public final class RetoldMobRules {
                 || itemPath.equals("large_fern");
     }
 
+    private static boolean isGrazerFoodItem(ItemStack stack) {
+        return stack.is(RetoldTags.GRAZER_FOODS)
+                || isGrazerFoodItem(getItemPath(stack));
+    }
+
     private static boolean isSmallPassiveFoodItem(String itemPath) {
         return itemPath.equals("wheat_seeds")
                 || itemPath.equals("beetroot_seeds")
@@ -1187,11 +1312,26 @@ public final class RetoldMobRules {
                 || itemPath.equals("dandelion");
     }
 
+    private static boolean isSmallPassiveFoodItem(ItemStack stack) {
+        return stack.is(RetoldTags.SMALL_PASSIVE_FOODS)
+                || isSmallPassiveFoodItem(getItemPath(stack));
+    }
+
     private static boolean isNetherFungusItem(String itemPath) {
         return itemPath.equals("crimson_fungus")
                 || itemPath.equals("warped_fungus")
                 || itemPath.equals("brown_mushroom")
                 || itemPath.equals("red_mushroom");
+    }
+
+    private static boolean isNetherFungusItem(ItemStack stack) {
+        return stack.is(RetoldTags.NETHER_FUNGUS_FOODS)
+                || isNetherFungusItem(getItemPath(stack));
+    }
+
+    private static boolean isFlowerFoodItem(ItemStack stack) {
+        return stack.is(RetoldTags.FLOWER_FOODS)
+                || isFlower(getItemPath(stack));
     }
 
     private static boolean isOrganicItem(String itemPath) {

@@ -71,6 +71,29 @@ Generic push, pull-request, and release workflows run `./gradlew build` but do n
 automatically because the correct exact test depends on the changed behavior. The developer or
 implementer records the exact GameTest command and result for the change before handoff.
 
+For faction classification changes, run
+`retold:faction_tags_preserve_defaults_and_standard_undead` for the registry contract and
+`retold:faction_tags_drive_targeting_and_retaliation` for live relationships, target ownership,
+retaliation, and loaded-mob goal removal. Add the exact existing faction behavior affected, such as
+the Silverfish/Endermite, Witch raid-alliance, or territory-member test. When changing tag extension
+or conflict behavior, also run those two faction tests once with a temporary external datapack that
+adds a member and exercises the relevant ambiguity rule. Add one factioned and one unfactioned mob
+TPS selector when repeated classification or loaded-goal maintenance changes.
+
+For recipe-discovery compatibility changes, run
+`retold:recipe_visibility_uses_shared_knowledge_authority` and
+`retold:unknown_recipe_types_fail_open_for_viewers`, then the exact existing crafting, cooking,
+smithing, stonecutting, or Villager-teaching path changed. A concrete viewer adapter also requires
+an in-client login/learning/reconnect pass with that viewer present; a server-only GameTest cannot
+prove its dynamic UI refresh.
+
+For generic world-protection changes, run
+`retold:world_protection_rules_preserve_defaults_and_block_mutations` plus one focused existing test
+for every routed owner changed. A concrete claim adapter requires dedicated-server and multiplayer
+checks for allow/deny, claim boundaries, owner/projectile attribution, portals, delayed structures,
+and Aender retry behavior. Do not run the complete worldgen or mob suite unless the shared layer or
+mutation routing changed broadly enough to justify it.
+
 The Villager consumer transaction, consumer route, and Farmer supply tests intentionally use
 separate isolated GameTest environments. Run only the exact route or transaction test changed.
 
@@ -157,7 +180,10 @@ For Villager golem construction, select the exact profession, eligibility, curre
 structure-animation, or player-placement test changed. Add
 `retold:mob_tps_villager` only
 when the repeated Villager dispatcher, scan, budget, ownership, or navigation path changes; the
-player pumpkin-placement hook alone does not justify a TPS rerun.
+player pumpkin-placement hook alone does not justify a TPS rerun. Long-running construction
+fixtures must trade-lock manually assigned professions and select an allowed activity while testing
+staged mechanics; otherwise vanilla may legitimately remove an unclaimed profession or Retold may
+correctly pause for the inherited schedule.
 
 For Villager torch maintenance, select the exact relighting test for magical casting, Nitwit
 close-range fake-tool use, stage, village, range, priority, inventory conservation, or wall-state

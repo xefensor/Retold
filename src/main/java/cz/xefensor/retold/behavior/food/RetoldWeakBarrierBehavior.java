@@ -287,7 +287,7 @@ public final class RetoldWeakBarrierBehavior {
     ) {
         clearProgress(level, mob, breach);
 
-        if (!RetoldMobGriefing.canModifyBlocks(level, mob)
+        if (!RetoldMobGriefing.canBreakBlock(level, mob, target)
                 || !RetoldWeakBarriers.isBreakable(level.getBlockState(target))) {
             breach.target = null;
             return;

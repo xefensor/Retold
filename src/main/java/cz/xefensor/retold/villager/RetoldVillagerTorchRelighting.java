@@ -211,7 +211,12 @@ public final class RetoldVillagerTorchRelighting {
                 villager,
                 RetoldAiControlMode.SUPPORT,
                 RetoldAiControlOwner.VILLAGER_TORCH_RELIGHT
-        ) || !isValidTarget(level, villager, cast.target())) {
+        ) || !isValidTarget(level, villager, cast.target())
+                || !RetoldMobGriefing.canPlaceBlock(
+                level,
+                villager,
+                cast.target()
+        )) {
             cancel(villager);
             return;
         }

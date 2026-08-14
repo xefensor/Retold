@@ -59,7 +59,8 @@ public final class RetoldLeafStickLootModifier extends LootModifier {
         int silkTouchLevel = tool.getEnchantmentLevel(
                 enchantments.getOrThrow(Enchantments.SILK_TOUCH)
         );
-        if (tool.is(Items.SHEARS) || silkTouchLevel > 0) {
+        if (tool.is(RetoldTags.LEAF_PRESERVING_TOOLS)
+                || silkTouchLevel > 0) {
             return generatedLoot;
         }
 

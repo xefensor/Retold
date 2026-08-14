@@ -19,6 +19,7 @@ import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.registry.RetoldTags;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -26,7 +27,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -569,14 +569,7 @@ public final class RetoldArmadilloDefenseEvents {
 
         BlockState state = level.getBlockState(pos);
 
-        return state.is(Blocks.GRASS_BLOCK)
-                || state.is(Blocks.DIRT)
-                || state.is(Blocks.COARSE_DIRT)
-                || state.is(Blocks.ROOTED_DIRT)
-                || state.is(Blocks.PODZOL)
-                || state.is(Blocks.SAND)
-                || state.is(Blocks.RED_SAND)
-                || state.is(Blocks.TERRACOTTA);
+        return state.is(RetoldTags.ARMADILLO_SCRUB_RANGE_BLOCKS);
     }
 
     private static boolean isScaryMob(LivingEntity entity) {

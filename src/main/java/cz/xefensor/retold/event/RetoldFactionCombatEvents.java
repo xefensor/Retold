@@ -12,21 +12,25 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-import java.util.Collections;
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
+import java.util.UUID;
 import java.util.WeakHashMap;
 
 public final class RetoldFactionCombatEvents {
-    private static final Set<Entity> PATCHED_ENTITIES = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Map<UUID, WeakReference<Goal>> FACTION_TARGET_GOALS = new HashMap<>();
+    private static final Map<UUID, WeakReference<Goal>> RETALIATION_GOALS = new HashMap<>();
 
     private static final int FORCED_TARGET_CHECK_INTERVAL_TICKS = 10;
     private static final int FORCED_TARGET_REFRESH_INTERVAL_TICKS = 20;
@@ -49,24 +53,19 @@ public final class RetoldFactionCombatEvents {
             return;
         }
 
-        if (!PATCHED_ENTITIES.add(entity)) {
+        if (entity instanceof Mob mob) {
+            updateFactionGoals(mob);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
+        if (event.getLevel().isClientSide()) {
             return;
         }
 
-        if (entity instanceof Mob) {
-            Mob mob = (Mob) entity;
-
-            if (RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
-                addFactionTargetGoal(mob);
-            }
-        }
-
-        if (entity instanceof PathfinderMob) {
-            PathfinderMob pathfinderMob = (PathfinderMob) entity;
-
-            if (RetoldFactionMembers.hasFaction(pathfinderMob)) {
-                addRetaliationGoal(pathfinderMob);
-            }
+        if (event.getEntity() instanceof Mob mob) {
+            removeFactionGoals(mob);
         }
     }
 
@@ -91,6 +90,7 @@ public final class RetoldFactionCombatEvents {
 
         ServerLevel level = (ServerLevel) mob.level();
 
+        updateFactionGoals(mob);
         RetoldFactionTargetMemory.cleanupTargetState(mob);
 
         if (!RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
@@ -114,18 +114,65 @@ public final class RetoldFactionCombatEvents {
         updateForcedTarget(level, mob, gameTime);
     }
 
-    private static void addFactionTargetGoal(Mob mob) {
-        mob.targetSelector.addGoal(
-                2,
-                new NearestAttackableTargetGoal<>(
-                        mob,
-                        LivingEntity.class,
-                        10,
-                        true,
-                        false,
-                        (target, level) -> isValidFactionTarget(mob, target)
-                )
-        );
+    private static void updateFactionGoals(Mob mob) {
+        boolean needsFactionTargetGoal = RetoldFactionRelations.hasPotentialFactionTarget(mob);
+        UUID entityId = mob.getUUID();
+        Goal factionTargetGoal = getGoal(FACTION_TARGET_GOALS.get(entityId));
+
+        if (needsFactionTargetGoal && factionTargetGoal == null) {
+            factionTargetGoal = new NearestAttackableTargetGoal<>(
+                    mob,
+                    LivingEntity.class,
+                    10,
+                    true,
+                    false,
+                    (target, level) -> isValidFactionTarget(mob, target)
+            );
+            FACTION_TARGET_GOALS.put(entityId, new WeakReference<>(factionTargetGoal));
+            mob.targetSelector.addGoal(2, factionTargetGoal);
+        } else if (!needsFactionTargetGoal && factionTargetGoal != null) {
+            mob.targetSelector.removeGoal(factionTargetGoal);
+            FACTION_TARGET_GOALS.remove(entityId);
+        }
+
+        if (!(mob instanceof PathfinderMob pathfinderMob)) {
+            return;
+        }
+
+        boolean needsRetaliationGoal = RetoldFactionMembers.hasFaction(pathfinderMob);
+        Goal retaliationGoal = getGoal(RETALIATION_GOALS.get(entityId));
+
+        if (needsRetaliationGoal && retaliationGoal == null) {
+            retaliationGoal = new HurtByTargetGoal(pathfinderMob);
+            RETALIATION_GOALS.put(entityId, new WeakReference<>(retaliationGoal));
+            pathfinderMob.targetSelector.addGoal(1, retaliationGoal);
+        } else if (!needsRetaliationGoal && retaliationGoal != null) {
+            pathfinderMob.targetSelector.removeGoal(retaliationGoal);
+            RETALIATION_GOALS.remove(entityId);
+        }
+    }
+
+    private static void removeFactionGoals(Mob mob) {
+        UUID entityId = mob.getUUID();
+        Goal factionTargetGoal = getGoal(FACTION_TARGET_GOALS.remove(entityId));
+
+        if (factionTargetGoal != null) {
+            mob.targetSelector.removeGoal(factionTargetGoal);
+        }
+
+        if (!(mob instanceof PathfinderMob pathfinderMob)) {
+            return;
+        }
+
+        Goal retaliationGoal = getGoal(RETALIATION_GOALS.remove(entityId));
+
+        if (retaliationGoal != null) {
+            pathfinderMob.targetSelector.removeGoal(retaliationGoal);
+        }
+    }
+
+    private static Goal getGoal(WeakReference<Goal> reference) {
+        return reference == null ? null : reference.get();
     }
 
     private static boolean isValidFactionTarget(Mob mob, LivingEntity target) {
@@ -166,10 +213,6 @@ public final class RetoldFactionCombatEvents {
         }
 
         return mob.getSensing().hasLineOfSight(target);
-    }
-
-    private static void addRetaliationGoal(PathfinderMob mob) {
-        mob.targetSelector.addGoal(1, new HurtByTargetGoal(mob));
     }
 
     private static void updateForcedTarget(ServerLevel level, Mob mob, long gameTime) {

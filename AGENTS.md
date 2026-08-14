@@ -55,6 +55,13 @@ Registration is composed through `RetoldSubsystems` and the classes under `modul
 
 ### Architecture And Ownership
 
+- Design new systems with mod and datapack compatibility in mind from the start. Prefer standard
+  tags when their full meaning matches, Retold-owned semantic tags/data for Retold concepts, and
+  small optional hooks over hard-coded third-party integrations.
+- When materially changing an existing subsystem, audit compatibility assumptions on the touched
+  path and improve them when safe and testable. Do not perform unrelated compatibility rewrites;
+  document and defer unresolved cases. Preserve standalone defaults unless the developer explicitly
+  approves a gameplay change, and regression-test those defaults when adding extension points.
 - Keep gameplay rules in named Retold system classes. Mixins should normally be hooks, guards, accessors, or narrowly scoped vanilla interception points.
 - Route world-stage changes through `RetoldStageManager.setStage` so persistence, synchronization, and transition effects remain consistent.
 - Keep server gameplay state authoritative. Client code should render, present feedback, or consume synchronized state rather than decide progression.

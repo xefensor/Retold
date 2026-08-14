@@ -19,12 +19,12 @@ import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.registry.RetoldTags;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -377,7 +377,7 @@ public final class RetoldPandaBambooEvents {
     ) {
         if (!RetoldBehaviorCoordinator.canCompleteMeal(panda)
                 || !isBamboo(level, foodSource)
-                || !RetoldMobGriefing.canModifyBlocks(level, panda)
+                || !RetoldMobGriefing.canBreakBlock(level, panda, foodSource)
                 || !level.destroyBlock(foodSource, false, panda)) {
             return false;
         }
@@ -516,7 +516,6 @@ public final class RetoldPandaBambooEvents {
             ServerLevel level,
             BlockPos pos
     ) {
-        return level.getBlockState(pos).is(Blocks.BAMBOO)
-                || level.getBlockState(pos).is(Blocks.BAMBOO_SAPLING);
+        return level.getBlockState(pos).is(RetoldTags.PANDA_BAMBOO_BLOCKS);
     }
 }

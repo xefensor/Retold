@@ -37,9 +37,13 @@ public class RetoldKnownRecipeData extends SavedData {
     }
 
     public static ResourceKey<Recipe<?>> recipeKeyFromString(String id) {
+        return recipeKeyFromIdentifier(Identifier.parse(id));
+    }
+
+    public static ResourceKey<Recipe<?>> recipeKeyFromIdentifier(Identifier id) {
         return ResourceKey.create(
                 Registries.RECIPE,
-                Identifier.parse(id)
+                id
         );
     }
 
@@ -83,5 +87,21 @@ public class RetoldKnownRecipeData extends SavedData {
         }
 
         return added;
+    }
+
+    public Set<ResourceKey<Recipe<?>>> knownRecipes(ServerPlayer player) {
+        Set<String> knownRecipes = knownRecipesByPlayer.get(player.getUUID());
+
+        if (knownRecipes == null || knownRecipes.isEmpty()) {
+            return Set.of();
+        }
+
+        Set<ResourceKey<Recipe<?>>> result = new HashSet<>();
+
+        for (String recipeId : knownRecipes) {
+            result.add(recipeKeyFromString(recipeId));
+        }
+
+        return Set.copyOf(result);
     }
 }

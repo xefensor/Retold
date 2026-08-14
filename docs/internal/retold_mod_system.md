@@ -145,15 +145,17 @@ to every pre-Steel material while allowing Steel and later tiers to harvest them
 registered through `RetoldLootModifiers`, gives
 every `minecraft:leaves` block a supplemental 20% roll for 1–2 Sticks, increasing five percentage
 points per Fortune level. It also normalizes Dead Bushes to 2–4 Sticks and gives tagged living
-bushes a 10% one-Stick roll, while excluding shears and Silk Touch. `RetoldBlocks` registers the
+bushes a 10% one-Stick roll, while excluding Silk Touch and tools in the Retold-owned
+`leaf_preserving_tools` item tag. `RetoldBlocks` registers the
 Flint Multi-tool, Flint Spear, Steel Spear, and provisional Steel tool/armor materials, while block/item tags own mining, repair,
 enchantment-family, and equipment boundaries. Vanilla placed-feature overrides reduce ordinary
 and Dripstone Copper from sixteen to six attempts per chunk while retaining vanilla vein sizes and
 height distribution; only newly generated chunks receive the reduced distribution.
 `CampfirePlacementMixin` is a narrow initial-state hook that delegates to
 `RetoldCampfireProgressionEvents`, making Campfires unlit on both logical sides before placement can
-render. The event class owns consumable bare-Flint ignition, while vanilla Flint and Steel remains
-the durable alternative. Recipes remove Coal from
+render. The event class owns ignition by items in the Retold-owned
+`campfire_consumable_igniters` tag, consuming one in Survival; bare Flint is the default, while
+vanilla Flint and Steel remains the durable alternative. Recipes remove Coal from
 the three-Stick/three-Log Campfire, fire Clay Balls into Bricks through campfire cooking, repurpose
 the vanilla Smoker as the eight-Brick Brick Furnace, add its Copper/Charcoal processing, blast Iron
 Ingots directly into Steel, and craft the full standard Steel tool and armor sets. These rules are
@@ -696,8 +698,11 @@ Retold tracks recipe knowledge separately from vanilla automatic unlock assumpti
 
 Technical owners:
 
+- `api.recipe.RetoldRecipeKnowledge`
 - `RetoldKnownRecipeData`
 - `RetoldRecipeBookEvents`
+- `RetoldRecipeVisibility`
+- `RetoldRecipeKnowledgeSyncPayload`
 - `RetoldRecipeUnlockContext`
 - `RetoldRecipeResultHelper`
 - `RetoldCookingRecipeSiblingHelper`
@@ -715,12 +720,38 @@ Behavior:
 - Stonecutting and smithing are tracked by result where direct input matching is not enough.
 - Cooking siblings can be unlocked together.
 - Internal recipe unlocks are wrapped with `RetoldRecipeUnlockContext`.
+- The seven vanilla recipe types Retold already discovers are managed by one visibility authority.
+- Unknown custom recipe types fail open unless an integration explicitly registers that type.
+- The complete known-id snapshot is synchronized to the client on login, dimension change,
+  respawn, and successful learning so client recipe viewers can use the server authority.
 - Vanilla recipe book behavior is intercepted through mixins.
 - Many vanilla recipe advancements are included as data resources with reward/visibility changes.
 
 Design rule:
 
-Use `RetoldRecipeBookEvents.markKnownAndUnlockRecipe` or related helpers when teaching/unlocking recipes. Do not directly add recipe book entries from feature code.
+Feature code inside Retold should use `RetoldRecipeBookEvents.markKnownAndUnlockRecipe` or related
+helpers when teaching/unlocking recipes. External integrations use the stable
+`RetoldRecipeKnowledge` facade. Neither should directly add recipe-book entries or maintain a
+parallel discovery store.
+
+## World Mutation Protection
+
+Retold-owned world mutations use the default-allow `api.world.RetoldWorldProtection` facade.
+Protection integrations install uniquely identified `RetoldWorldProtectionRule` instances and
+retain their removable registration handles. Every installed rule must allow the immutable
+context. Unexpected rule failures are logged and deny only the checked mutation.
+
+The context exposes the server level, representative position, immutable inclusive affected bounds,
+mutation type, optional responsible entity, and optional subject id. Single-block actions use exact
+one-block bounds; portal and chunk operations expose their complete possible area. Current routed
+owners are destructive forage and bamboo, weak barriers, Spider webs, Villager torch maintenance,
+Gale Core breaking, Aender stale-chunk replacement, Aender portal creation, and delayed
+structure retrogen. `RetoldMobGriefing` continues to invoke NeoForge's normal entity-griefing hook
+first, then the position-aware Retold rule immediately before destructive or placement actions.
+
+Do not call a claim mod from gameplay classes. Add an optional adapter that translates a
+`RetoldWorldMutationContext` into that mod's permission query. No adapter may be required for Retold
+startup, and no registered rules must retain the exact pre-API behavior.
 
 ## Villager Teaching
 
@@ -998,6 +1029,10 @@ High-level systems:
 - profile-based mob life behavior
 - faction relationships, including separate permanent identity, active combat alignment, and
   same-context cooperation for conditional allies such as raiding witches
+- tag-backed faction classification through additive `retold:factions/*` entity-type tags, with
+  fail-closed conflict handling, reload-aware cached membership, and a separate
+  `retold:alliances/illager_loose_allies` extension point; faction identity remains independent of
+  datapack mob profiles
 - separate neutral Silverfish and Endermite identities, with same-entity-type enforcement in the
   small-arthropod swarm owner so their shared profile cannot create cross-species coordination
 - owned Polar Bear cub defense with a cancellable standing/sound warning before proactive attack
@@ -1020,6 +1055,16 @@ High-level systems:
 - invalid player target cleanup
 - AI performance scheduling, caches, LOD, and budgets
 - hunger-driven weak-barrier breaching through a data tag, shared griefing policy, and AI ownership
+- Retold-owned extension tags for Armadillo grub/scrub terrain, Panda bamboo, Turtle beaches,
+  Nether-remnant/Ocean-Monument guard anchors, consumable Campfire igniters, and tools that
+  preserve leaves and woody bushes from supplemental Stick drops
+- Retold-owned renewable forage tags for Camel/Rabbit desert browse, Goat scraping, and Mooshroom
+  grazing; these retain bounded searches, per-mob cooldowns, and non-destructive behavior
+- tag-driven ordinary forage crops/flowers/plants and dropped-food families, with vanilla/Common
+  tag composition where memberships preserve Retold's current defaults; ordinary forage remains
+  destructive and `mobGriefing`-gated
+- tag-driven Spider-lair web counting and Illager village-signal blocks; Spiders still place the
+  exact vanilla Cobweb block
 
 Territory escalation is an explicit state machine owned by `RetoldTerritoryStateMachine`:
 
@@ -1149,6 +1194,8 @@ Behavior:
 - Blocked hits apply feedback, knockback/bounce, and mining fatigue.
 - Elder guardians guarantee a `water_element` drop if one is not already dropping.
 - Guardians pressure players mining protected monument blocks.
+- Protected monument materials are selected through `retold:ocean_monument_protected_blocks`;
+  compatibility packs may append equivalent blocks without patching Guardian code.
 - Guardian beam pressure can block mining and alert nearby guardians.
 - Ordinary Guardians are not Axolotl prey. A Guardian attack may create a retaliation-owned target
   for the victim and faction-assist targets for nearby witnessing Axolotls; these assignments use
@@ -1405,15 +1452,23 @@ bash ./gradlew compileJava
 Use this checklist:
 
 1. Identify the owning subsystem.
-2. Add registries in `registry` if new blocks, items, entities, game rules, or tags are needed.
-3. Add data files if behavior should be pack-tunable.
-4. Add saved data only when state must persist.
-5. Add network payload only when client/server state must sync.
-6. Add event registration in `Retold` only when needed.
-7. Prefer system classes over mixin logic.
-8. Keep mixins small and named after the vanilla hook they touch.
-9. Add debug commands or output for stateful systems.
-10. Compile and test the relevant progression path.
+2. Identify compatibility boundaries before hard-coding item, block, entity, recipe, structure, or
+   world-mutation identities. Prefer standard tags where their complete meaning matches, otherwise
+   use a Retold-owned semantic tag, data definition, or small stable hook.
+3. When materially changing an existing subsystem, audit the compatibility assumptions on the
+   touched path. Improve them in the same focused change when safe and testable; document and defer
+   unresolved cases instead of broadening the change into an unrelated rewrite.
+4. Preserve Retold's standalone defaults and add focused regression coverage when introducing an
+   extension point. Unknown third-party content must fail safely rather than being implicitly owned.
+5. Add registries in `registry` if new blocks, items, entities, game rules, or tags are needed.
+6. Add data files if behavior should be pack-tunable.
+7. Add saved data only when state must persist.
+8. Add network payload only when client/server state must sync.
+9. Add event registration in `Retold` only when needed.
+10. Prefer system classes over mixin logic.
+11. Keep mixins small and named after the vanilla hook they touch.
+12. Add debug commands or output for stateful systems.
+13. Compile and test the relevant progression path.
 
 Do not:
 

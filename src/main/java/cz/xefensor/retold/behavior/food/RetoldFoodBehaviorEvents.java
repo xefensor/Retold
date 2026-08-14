@@ -627,12 +627,10 @@ public final class RetoldFoodBehaviorEvents {
             return false;
         }
 
-        String itemPath = RetoldMobRules.getItemPath(stack);
-
         state.addHunger(
                 -RetoldMobRules.foodRelief(
                         mob,
-                        itemPath
+                        stack
                 )
         );
 
@@ -799,7 +797,7 @@ public final class RetoldFoodBehaviorEvents {
                 RetoldMobRules.isRenewableEnvironmentalForage(mob, blockState);
 
         if (!renewableEnvironmentalForage
-                && !RetoldMobGriefing.canModifyBlocks(level, mob)) {
+                && !RetoldMobGriefing.canBreakBlock(level, mob, foragePos)) {
             return false;
         }
 
@@ -818,7 +816,7 @@ public final class RetoldFoodBehaviorEvents {
         state.addHunger(
                 -RetoldMobRules.forageRelief(
                         mob,
-                        blockPath
+                        blockState
                 )
         );
 

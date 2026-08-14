@@ -153,9 +153,9 @@ public final class AenderRealityTickEvents {
      * radius prevents configured view distance from turning a teleport into an
      * unbounded main-thread generation stall.</p>
      */
-    public static void prepareArrivalCore(ServerLevel level, BlockPos center) {
+    public static boolean prepareArrivalCore(ServerLevel level, BlockPos center) {
         if (level.dimension() != RetoldAenderDimensions.AENDER) {
-            return;
+            return false;
         }
 
         int centerChunkX = center.getX() >> 4;
@@ -165,6 +165,7 @@ public final class AenderRealityTickEvents {
         int regenerated = 0;
         long startedAtNanos = System.nanoTime();
         AenderStabilityData stability = AenderStabilityData.get(level);
+        boolean allReady = true;
 
         // Work from the center out so the essential arrival chunks are prepared first.
         for (int ring = 0; ring <= radius; ring++) {
@@ -190,8 +191,11 @@ public final class AenderRealityTickEvents {
                     AenderVolatility.retainForChunk(chunk);
 
                     if (AenderVolatility.needsRegeneration(chunk)) {
-                        AenderLoadedChunkReplacement.regenerate(level, chunk);
-                        regenerated++;
+                        if (AenderLoadedChunkReplacement.regenerate(level, chunk)) {
+                            regenerated++;
+                        } else {
+                            allReady = false;
+                        }
                     }
                 }
             }
@@ -207,6 +211,8 @@ public final class AenderRealityTickEvents {
                     regenerated
             );
         }
+
+        return allReady;
     }
 
     /**
@@ -234,7 +240,7 @@ public final class AenderRealityTickEvents {
         AenderVolatility.retainForChunk(chunk);
 
         if (shouldRegenerate(stability, chunk)) {
-            AenderLoadedChunkReplacement.regenerate(level, chunk);
+            return AenderLoadedChunkReplacement.regenerate(level, chunk);
         }
 
         return true;
@@ -266,16 +272,23 @@ public final class AenderRealityTickEvents {
         AenderVolatility.retainForChunk(chunk);
 
         if (AenderVolatility.needsRegeneration(chunk)) {
-            blankLoadedStaleChunk(level, chunk);
+            return blankLoadedStaleChunk(level, chunk);
         }
 
         return true;
     }
 
-    public static void blankLoadedStaleChunk(ServerLevel level, ChunkAccess chunk) {
-        AenderLoadedChunkReplacement.blankForProgressiveRegeneration(level, chunk);
+    public static boolean blankLoadedStaleChunk(ServerLevel level, ChunkAccess chunk) {
+        if (!AenderLoadedChunkReplacement.blankForProgressiveRegeneration(
+                level,
+                chunk
+        )) {
+            return false;
+        }
+
         BLANK_QUEUED.remove(pack(chunk.getPos().x(), chunk.getPos().z()));
         enqueueIfNeeded(level, chunk);
+        return true;
     }
 
     /**
@@ -455,7 +468,15 @@ public final class AenderRealityTickEvents {
                 continue;
             }
 
-            AenderLoadedChunkReplacement.blankForProgressiveRegeneration(level, chunk);
+            if (!AenderLoadedChunkReplacement.blankForProgressiveRegeneration(
+                    level,
+                    chunk
+            )) {
+                enqueueBlank(chunk.getPos().x(), chunk.getPos().z());
+                nextBlankGameTime = gameTime + OVERLOADED_RETRY_TICKS;
+                break;
+            }
+
             blanked++;
         }
 
@@ -512,7 +533,12 @@ public final class AenderRealityTickEvents {
             }
 
             long chunkStartedAt = System.nanoTime();
-            AenderLoadedChunkReplacement.regenerate(level, chunk);
+            if (!AenderLoadedChunkReplacement.regenerate(level, chunk)) {
+                enqueue(chunkX, chunkZ);
+                nextRegenGameTime = gameTime + OVERLOADED_RETRY_TICKS;
+                break;
+            }
+
             long chunkNanos = System.nanoTime() - chunkStartedAt;
             estimatedRegenNanos = (estimatedRegenNanos * 3L + chunkNanos) / 4L;
             regenerated++;

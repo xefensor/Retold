@@ -1,8 +1,10 @@
 package cz.xefensor.retold.worldgen.delayed;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.api.world.RetoldWorldProtection;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
 import cz.xefensor.retold.stage.RetoldWorldStage;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.ChunkPos;
@@ -307,6 +309,14 @@ public final class RetoldDelayedStructureRetrogen {
             }
 
             if (RetoldClientChunkTracker.isSentToAnyPlayer(pos)) {
+                return RetrogenResult.TRY_LATER;
+            }
+
+            if (!RetoldWorldProtection.canRetrogenStructure(
+                    level,
+                    pos,
+                    Identifier.parse(structureId)
+            )) {
                 return RetrogenResult.TRY_LATER;
             }
 

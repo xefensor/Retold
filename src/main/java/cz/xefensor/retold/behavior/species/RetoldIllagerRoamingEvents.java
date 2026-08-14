@@ -9,6 +9,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.registry.RetoldTags;
 
 import cz.xefensor.retold.territory.RetoldTerritoryConfig;
 import cz.xefensor.retold.territory.RetoldTerritoryConfigs;
@@ -19,7 +20,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -225,7 +225,9 @@ public final class RetoldIllagerRoamingEvents {
                 for (int dy = -BELL_SIGNAL_VERTICAL_RADIUS; dy <= BELL_SIGNAL_VERTICAL_RADIUS; dy++) {
                     BlockPos pos = center.offset(dx, dy, dz);
 
-                    if (level.getBlockState(pos).is(Blocks.BELL)) {
+                    if (level.getBlockState(pos).is(
+                            RetoldTags.ILLAGER_VILLAGE_SIGNAL_BLOCKS
+                    )) {
                         return true;
                     }
                 }

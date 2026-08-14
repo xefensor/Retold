@@ -1,6 +1,8 @@
 package cz.xefensor.retold.aender.portal;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.api.world.RetoldWorldMutationBounds;
+import cz.xefensor.retold.api.world.RetoldWorldProtection;
 import cz.xefensor.retold.aender.RetoldAenderDimensions;
 import cz.xefensor.retold.aender.generation.AenderVolatility;
 import cz.xefensor.retold.aender.stability.AenderRealityTickEvents;
@@ -44,6 +46,10 @@ public final class AenderPortalLogic {
     }
 
     public static void activatePortal(ServerLevel level, AenderPortalShape shape) {
+        if (!isPortalCreationAllowed(level, shape.minCorner())) {
+            return;
+        }
+
         shape.createPortalBlocks(level);
         AenderPortalData.get(level).register(level, shape);
 
@@ -99,11 +105,24 @@ public final class AenderPortalLogic {
              * bounded fallback remains for commands, other portal integrations,
              * and non-player entities that bypass the charging state machine.
              */
-            AenderRealityTickEvents.prepareArrivalCore(destinationLevel, approximateExit);
+            if (!AenderRealityTickEvents.prepareArrivalCore(
+                    destinationLevel,
+                    approximateExit
+            )) {
+                return null;
+            }
         }
 
         AenderPortalShape exitPortal = findClosestPortal(destinationLevel, approximateExit)
-                .orElseGet(() -> createExitPortal(destinationLevel, approximateExit));
+                .orElse(null);
+
+        if (exitPortal == null) {
+            exitPortal = createExitPortal(destinationLevel, approximateExit);
+        }
+
+        if (exitPortal == null) {
+            return null;
+        }
 
         if (enteringAender) {
             AenderPortalWarmup.finish(entity);
@@ -284,8 +303,16 @@ public final class AenderPortalLogic {
         return true;
     }
 
-    static AenderPortalShape createExitPortal(ServerLevel level, BlockPos approximateExit) {
+    static @Nullable AenderPortalShape createExitPortal(
+            ServerLevel level,
+            BlockPos approximateExit
+    ) {
         BlockPos origin = findExitOrigin(level, approximateExit);
+
+        if (origin == null) {
+            return null;
+        }
+
         AenderPortalShape shape = new AenderPortalShape(origin, TARGET_PORTAL_SIZE, TARGET_PORTAL_SIZE);
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         BlockState frame = RetoldBlocks.DEV_AENDER_PORTAL_FRAME.get().defaultBlockState();
@@ -322,7 +349,7 @@ public final class AenderPortalLogic {
         return shape;
     }
 
-    private static BlockPos findExitOrigin(ServerLevel level, BlockPos approximateExit) {
+    private static @Nullable BlockPos findExitOrigin(ServerLevel level, BlockPos approximateExit) {
         BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
         boolean destinationIsAender = level.dimension() == RetoldAenderDimensions.AENDER;
 
@@ -345,7 +372,8 @@ public final class AenderPortalLogic {
             int y = preferredPortalY(level, surfaceY);
             candidate.set(column.getX() - 1, y, column.getZ() - 1);
 
-            if (canCreatePortal(level, candidate)) {
+            if (canCreatePortal(level, candidate)
+                    && isPortalCreationAllowed(level, candidate)) {
                 return candidate.immutable();
             }
         }
@@ -375,7 +403,8 @@ public final class AenderPortalLogic {
                 ? Mth.clamp(approximateExit.getZ() - 1, minOriginZ, maxOriginZ)
                 : approximateExit.getZ() - 1;
 
-        return new BlockPos(fallbackX, fallbackY, fallbackZ);
+        BlockPos fallback = new BlockPos(fallbackX, fallbackY, fallbackZ);
+        return isPortalCreationAllowed(level, fallback) ? fallback : null;
     }
 
     private static int preferredPortalY(ServerLevel level, int surfaceY) {
@@ -413,6 +442,23 @@ public final class AenderPortalLogic {
         }
 
         return true;
+    }
+
+    private static boolean isPortalCreationAllowed(
+            ServerLevel level,
+            BlockPos origin
+    ) {
+        return RetoldWorldProtection.canCreatePortal(
+                level,
+                new RetoldWorldMutationBounds(
+                        origin.getX() - 1,
+                        origin.getY() - 1,
+                        origin.getZ() - 1,
+                        origin.getX() + TARGET_PORTAL_SIZE,
+                        origin.getY() + 3,
+                        origin.getZ() + TARGET_PORTAL_SIZE
+                )
+        );
     }
 
     private static TeleportTransition createTransition(

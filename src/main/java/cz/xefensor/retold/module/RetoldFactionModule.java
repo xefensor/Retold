@@ -3,6 +3,7 @@ package cz.xefensor.retold.module;
 import cz.xefensor.retold.event.RetoldFactionAssistEvents;
 import cz.xefensor.retold.event.RetoldFactionCombatEvents;
 import cz.xefensor.retold.event.RetoldInvalidTargetEvents;
+import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.neoforged.bus.api.IEventBus;
 
 public final class RetoldFactionModule {
@@ -13,5 +14,6 @@ public final class RetoldFactionModule {
         gameEventBus.register(RetoldInvalidTargetEvents.class);
         gameEventBus.register(RetoldFactionCombatEvents.class);
         gameEventBus.register(RetoldFactionAssistEvents.class);
+        gameEventBus.register(RetoldFactionMembers.class);
     }
 }

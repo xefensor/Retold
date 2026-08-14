@@ -1,6 +1,10 @@
 package cz.xefensor.retold.villager;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.behavior.control.RetoldAiControl;
+import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.behavior.profiles.RetoldMobState;
+import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.event.RetoldGolemEvents;
 import cz.xefensor.retold.golem.RetoldGolemAnimation;
 import cz.xefensor.retold.stage.RetoldWorldData;
@@ -28,6 +32,7 @@ import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
@@ -261,6 +266,7 @@ public final class RetoldVillagerGolemConstructionGameTests {
                 return;
             }
 
+            builder.getBrain().setActiveActivityIfPossible(Activity.IDLE);
             builder.snapTo(
                     state.access().getX() + 0.5D,
                     state.access().getY(),
@@ -294,6 +300,10 @@ public final class RetoldVillagerGolemConstructionGameTests {
             );
             RetoldVillagerGolemConstruction.BuildState current =
                     RetoldVillagerGolemConstruction.constructionState(builder);
+            RetoldMobState mobState = RetoldMobStates.getOrCreate(
+                    builder,
+                    level.getGameTime()
+            );
             helper.assertTrue(
                     !golems.isEmpty(),
                     "The staged structure must animate into a golem; step="
@@ -302,6 +312,28 @@ public final class RetoldVillagerGolemConstructionGameTests {
                             + countItem(chest, Items.EMERALD.getDefaultInstance())
                             + ", top="
                             + level.getBlockState(initial.top())
+                            + ", profession="
+                            + builder.getVillagerData().profession().unwrapKey()
+                            .map(ResourceKey::identifier)
+                            .orElse(null)
+                            + ", alive="
+                            + builder.isAlive()
+                            + ", removed="
+                            + builder.isRemoved()
+                            + ", hunger="
+                            + mobState.hunger()
+                            + ", eatDrive="
+                            + RetoldMobRules.hasEatDrive(builder, mobState)
+                            + ", urgent="
+                            + RetoldVillagerCommunalFood.hasUrgentVanillaActivity(builder)
+                            + ", activity="
+                            + builder.getBrain().getActiveNonCoreActivity()
+                            + ", control="
+                            + RetoldAiControl.getOwner(builder)
+                            + "/"
+                            + RetoldAiControl.getPriority(builder)
+                            + "/"
+                            + RetoldAiControl.getReason(builder)
             );
             helper.assertFalse(
                     golems.getFirst().isPlayerCreated(),
@@ -523,6 +555,7 @@ public final class RetoldVillagerGolemConstructionGameTests {
     ) {
         Villager villager = helper.spawn(EntityTypes.VILLAGER, x, y, z);
         setProfession(helper, villager, VillagerProfession.CLERIC);
+        villager.setVillagerXp(1);
         villager.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, gameTime);
         return villager;
     }

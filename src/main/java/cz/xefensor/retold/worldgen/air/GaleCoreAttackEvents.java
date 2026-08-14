@@ -1,5 +1,6 @@
 package cz.xefensor.retold.worldgen.air;
 
+import cz.xefensor.retold.api.world.RetoldWorldProtection;
 import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -200,6 +201,13 @@ public final class GaleCoreAttackEvents {
 
     private static void crackBlock(ServerLevel level, BlockPos pos, double distanceSq, Entity breaker, int progressBonus) {
         CrackKey key = new CrackKey(level.dimension(), pos);
+
+        if (!RetoldWorldProtection.canEntityBreak(level, pos, breaker)) {
+            level.destroyBlockProgress(breakerId(key), pos, -1);
+            CRACKS.remove(key);
+            return;
+        }
+
         CrackState current = CRACKS.getOrDefault(key, new CrackState(0, level.getGameTime()));
         int progress = current.progress() + progressGain(level, pos, distanceSq) + progressBonus;
         int durability = blockDurability(level, pos);
