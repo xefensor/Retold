@@ -180,7 +180,10 @@ For Villager golem construction, select the exact profession, eligibility, curre
 structure-animation, or player-placement test changed. Add
 `retold:mob_tps_villager` only
 when the repeated Villager dispatcher, scan, budget, ownership, or navigation path changes; the
-player pumpkin-placement hook alone does not justify a TPS rerun.
+player pumpkin-placement hook alone does not justify a TPS rerun. Long-running construction
+fixtures must trade-lock manually assigned professions and select an allowed activity while testing
+staged mechanics; otherwise vanilla may legitimately remove an unclaimed profession or Retold may
+correctly pause for the inherited schedule.
 
 For Villager torch maintenance, select the exact relighting test for magical casting, Nitwit
 close-range fake-tool use, stage, village, range, priority, inventory conservation, or wall-state
