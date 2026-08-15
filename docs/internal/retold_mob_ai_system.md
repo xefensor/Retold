@@ -191,8 +191,16 @@ an implementation claim. The completion matrix below and
 - Intelligent creatures use believable sight, hearing, scent, communication, memory, target
   inertia, and occasional mistakes rather than perfect shared knowledge. Some species may rely
   on more senses than others.
-- Living, intelligent creatures may disengage when seriously wounded. Mindless undead continue
-  fighting. A predator normally switches to an attacker, but may flee instead when badly hurt.
+- Healthy ordinary predators defend themselves after successful damage from a valid living attacker.
+  Wolves, Foxes, Cats, Ocelots, Dolphins, Spiders, and Cave Spiders use five-second recent-attacker
+  memory and explicit `RETALIATION` target ownership; the owned response may continue after the
+  one-time vanilla damage memory clears. Tamed animals never retaliate against their owner, and
+  global player-mode, alliance, and Creeper exclusions remain authoritative.
+- The implemented first serious-wound rule applies to wild ordinary predators: after real damage
+  from a living attacker leaves one below 25% health, it abandons ordinary hunting or retaliation
+  and flees that attacker for ten seconds. Exactly 25% does not trigger the rule. Tamed defenders,
+  Undead, bosses, and active territory duty are exempt. Broader intelligent-creature disengagement
+  remains unspecified and must not be inferred from this predator slice.
 - Tamed and hired defenders prioritize their owner and the owner's allies, except that they do
   not attack creepers. Tamed predators may defend but do not independently hunt owner or allied
   livestock.
@@ -209,10 +217,15 @@ an implementation claim. The completion matrix below and
 - Ordinary vanilla Mob targets and Brain attack memories cannot bypass that Undead tolerance.
   Retained targets clear when a live per-entity boundary changes, such as a tamed Zombie Nautilus
   becoming wild again. An explicit Retold-owned `RETALIATION` target remains allowed.
-- Zombies, drowned, husks, and zombie villagers form mixed hordes. Cooperation is strongest
-  inside each behavior family; nearby violence may draw occasional cross-family Undead support,
-  but it is not perfect coordination. Zombies should remain comparatively simple and do not
-  sprint merely because another creature recognized a danger.
+- Zombies, drowned, husks, and zombie villagers form mixed hordes. Stage 1 keeps Zombie- and
+  Skeleton-family awareness and cooperation deliberately local: Zombie-family sharing uses 10
+  blocks and notice uses 12, while Skeleton-family sharing uses 10 and notice uses 14. Stage 2
+  restores wider same-family convergence at 22/18 blocks for Zombie sharing/notice and 24/22 for
+  Skeleton sharing/notice. A stable one-in-three subset of the opposite family may also answer an
+  incident within 12 blocks when within six blocks of the source or able to see it. This support
+  uses normal faction-assist ownership and never becomes perfect shared knowledge. Zombies should
+  remain comparatively simple and do not sprint merely because another creature recognized a
+  danger.
 - Slimes and magma cubes do not attack one another. Only members at or above their configured
   hunt-hunger threshold attack other living creatures indiscriminately except creepers. Dropping
   below that threshold clears their target and ends combat. They consume defeated prey to relieve
@@ -288,7 +301,9 @@ an implementation claim. The completion matrix below and
   making, then deliver only surplus Bread, Carrots, Potatoes, and Beetroot to the same stores while
   retaining 24 vanilla food points for themselves. Delivery uses low-priority communal search
   ownership, exact supported-side movement, the shared loaded-chunk cache/LOD/work budget, and
-  yields to hunger, danger, sleep, and trading. It does not create food or simulate unloaded time.
+  yields to hunger, danger, sleep, and trading. Bounded unloaded reconciliation can consume
+  personal or stored food through the same transaction and separately simulate one transaction-safe
+  Farmer-owned crop harvest/replant/deposit per unloaded day.
   Generated village loot and future Villager-controlled deposits carry separately persisted
   village-owned quantities. Player additions remain unowned even when matching stacks merge, and
   withdrawals consume that unowned quantity first. A nearby village-context Villager who can see
@@ -314,25 +329,30 @@ an implementation claim. The completion matrix below and
   work budgets, and control priorities, and performs no unloaded simulation.
   All current vanilla breedable animals use persisted hunger-satisfaction breeding rather than
   direct item-triggered love mode. A supported adult must remain at `FULL` hunger without panic,
-  damage, or an active target for five loaded minutes. It then performs a bounded cached search for
+  damage, or an active target for five loaded or reconciled minutes. It then performs a bounded cached search for
   a compatible equally ready adult within eight blocks; a miss waits one minute before retrying.
   Retold only arms the ready pair, while vanilla owns mating movement, offspring/genetics, tame
   ownership, mixed Horse/Donkey births, Turtle eggs, Frog pregnancy, and other special behavior.
   A successful birth adds 40 hunger to each parent and retains vanilla's five-minute age cooldown.
-  Player and Villager feeding only relieve hunger. Accumulated loaded satisfaction plus retry/armed
-  state saves with the entity; dispatcher progress is interval-capped so unloaded elapsed time is
-  not simulated.
+  Player and Villager feeding only relieve hunger. Accumulated satisfaction plus retry/armed state
+  saves with the entity; loaded dispatcher progress is interval-capped, while bounded catch-up
+  advances only the continuous portion of its simulated timeline that remains `FULL`.
   In every world stage, adult Villagers also maintain dry weather-extinguished torches within
   eight horizontal and five vertical blocks and within 32 blocks of their village anchor. Most
-  professions stop, face the source, and use a one-second ranged magical cast. Nitwits cannot use
+  professions stop and use a one-second ranged magical cast. Nitwits cannot use
   magic: they select a supported adjacent access cell, acquire `VILLAGER_TORCH_RELIGHT` movement
   ownership, path close, and show a temporary Flint and Steel throughout the one-second interaction.
   The active visual is reasserted each tick if vanilla clears the hand, but the tool never enters
-  inventory and consumes no item or durability. Idle discovery and routing retain the central
-  20-tick Villager cadence; only an active physical-use animation receives continuous updates. Both methods
+  inventory and consumes no item or durability. Both active methods continuously aim the
+  Villager's body, head, and look control at the torch. Idle discovery and routing retain the
+  central 20-tick Villager cadence; active magical and physical casts alone receive continuous
+  presentation updates. A success immediately selects another eligible nearby indexed torch,
+  bounded to eight relights per interruptible maintenance run before the normal success cooldown.
+  Both methods
   preserve normal/soul/copper and floor/wall identity. Priority 29 maintenance uses the
   weather-owned loaded-chunk index, shared block-search/path budgets, LOD-scaled cooldowns, and a
-  bounded physical-route timeout; it performs no broad block scan. Nitwit `PLAY` is eligible
+  bounded physical-route timeout; every consecutive search is separately work-budgeted and performs
+  no broad block scan. Nitwit `PLAY` is eligible
   low-priority time, while hunger, danger, targets, sleep, trading, incompatible activities,
   higher-priority work, ongoing precipitation, and `mobGriefing=false` prevent or interrupt it.
   Wandering Traders remain independent and teach travel-themed recipes that ordinary villagers do
@@ -358,7 +378,7 @@ an implementation claim. The completion matrix below and
 
 ### Animals And Ecology
 
-- All ordinary animals, including domesticated ones, have hunger and consume/remove reachable
+- All ordinary animals, including player-kept, named, and tamed animals, have hunger and consume/remove reachable
   food according to species-specific diets. `mobGriefing=false` prevents block/crop consumption,
   weak-barrier damage, creeper terrain damage, and Gale Core block damage, while dropped food can
   still be eaten. At 100 hunger, loaded hunger-aware mobs take one point of starvation damage per
@@ -366,12 +386,13 @@ an implementation claim. The completion matrix below and
   also applies to named and tamed mobs; the separately planned unloaded simulation retains its
   confirmed protection against offline death for named/tamed animals.
 - Cows and mooshrooms share herds. Other herds are mainly species-specific; equines can group,
-  and llamas group with trader llamas. Wild groups migrate when local food is depleted.
-  Domesticated animals remain within a player-defined enclosure/range.
-  The implemented loaded-world core now gives Cows/Mooshrooms one `bovine` social identity and
-  retains the mixed `equine` and `llama` identities when sharing persisted ranges. The explicit
-  player-defined enclosure mechanism is not implemented and must not be inferred from ordinary
-  herd ranges.
+  and llamas group with trader llamas. Groups remain around their persisted range while compatible
+  local food is usable, then migrate together under hunger when that food is depleted or
+  inaccessible. There is no separate domesticated classification or player-defined enclosure flag:
+  a player keeps animals where they placed them by maintaining food there. The loaded core gives
+  Cows/Mooshrooms one `bovine` social identity, retains the mixed `equine` and `llama` identities,
+  recognizes compatible Animal Feeders around land ranges, and applies the same rule to Pig
+  foraging ranges.
 - Desperate animals and actively hunting wild predators may breach explicitly tagged weak
   barriers, including player-built barriers. The initial tag contains wooden fences and closed
   wooden fence gates, including the Aender variants; open gates, doors, trapdoors, walls, and iron
@@ -399,16 +420,23 @@ an implementation claim. The completion matrix below and
   obeys `mobGriefing`. Members return during daylight, but targets interrupt that movement and night
   releases it. Wolves give hungry pack members priority in initiating and benefiting from hunts.
   Predators disengage when sufficiently fed during a hunt.
-- Fish form species-specific schools but may share panic across species. Their diets use the
-  simplified herbivore/omnivore/predator model and may consume seagrass/kelp. Squid and glow
-  squid have hunger and loose same-species danger groups. Bucketed fish and axolotls remain wild.
+- Fish form species-specific schools but may share panic across species. Cod, Salmon, Tropical Fish,
+  and Pufferfish use a conservative loaded grazer model: their 520-tick hunger cycle drives bounded
+  destructive searches for `retold:aquatic_school_forage_blocks`, whose default contains seagrass,
+  tall seagrass, kelp, and kelp plants. Squid and Glow Squid use the same loaded hunger interval and
+  seek dropped `retold:squid_foods`; the standalone default contains raw fish only and does not
+  enable living-prey hunting. Plant grazing obeys `mobGriefing`, while dropped-food consumption does
+  not edit terrain. Bucketed fish and axolotls remain wild.
   The loaded-world school core is implemented for Cod, Salmon, Tropical Fish, and Pufferfish:
-  cached exact-species scans find a nearby center, isolated members acquire low-priority
+  cached exact-species scans establish a shared persisted `AQUATIC_SCHOOL_RANGE`, isolated members acquire low-priority
   `AQUATIC_SCHOOL` ownership in `REGROUP`, and `RetoldBehaviorMovement` requests a real aquatic
-  navigation path. Fish still share panic across fish species through the separate flee owner.
-  Squid and Glow Squid now use exact-species loose danger groups; successful damage performs one
-  bounded cached broadcast before the receiver-side panic scan can retry. Fish diet assignments,
-  seagrass/kelp consumption, and Squid hunger are not implemented by these profiles.
+  navigation path. Nearby usable plants hold that range; when hungry and depleted, the lowest-ID
+  current member alone evaluates a bounded cached better range and shares it with the school. Fish
+  still share panic across fish species through the separate flee owner.
+  Squid and Glow Squid use exact-species loose danger groups; successful damage performs one
+  bounded cached broadcast before the receiver-side panic scan can retry. The shared food owner
+  supplies cached scans, block-search budgets, throttled paths, feeding priority, and starvation for
+  the six loaded diet profiles. Natural depletion/regrowth balance remains unverified.
 - Dolphins defend their pod collectively after successful damage from a valid living threat. The
   victim owns retaliation, while available nearby witnesses use faction-assist ownership without
   requiring hunger; a podmate with another live target is not redirected. Bats use loose roost colonies, hunt arthropods at night,
@@ -430,9 +458,13 @@ an implementation claim. The completion matrix below and
 
 ### Special And Stage-Gated Creatures
 
-- Stage 2 Undead escalation comes from awareness, convergence, and broader spawning pressure,
-  not stat buffs. Stage 3 cleanses/removes zombie villagers and zombified piglins rather than
-  restoring them.
+- Stage 2 Undead escalation comes from wider awareness, convergence, imperfect
+  Zombie/Skeleton-family assistance, and modest natural-spawn pressure, not stat buffs. For each
+  already-present entry whose entity type belongs to `retold:stage_2_undead_spawn_pressure`, the
+  potential-spawn list gains a duplicate entry worth about 25% of its original weight. Vanilla
+  retains the monster cap, biome/structure eligibility, placement checks, and original pack sizes;
+  the hook creates no entry where one did not already exist. Stage 1 retains the weaker short-range
+  coordination baseline, and Stage 3 adds no bonus before its existing Undead spawn cancellation.
 - Wither Skeletons spawn in fortresses and naturally but rarely in Soul Sand Valleys. The valley
   uses a data-driven weight-one solitary biome entry; their territory profile still requires a
   fortress anchor, so they do not guard the valley. Phantoms are rare nightmare-like demons that
@@ -459,18 +491,79 @@ an implementation claim. The completion matrix below and
 
 ### Unloaded Ecosystem Simulation
 
-- Unloaded mobs use a bounded, configurable catch-up calculation that estimates hunger, food
-  access, feeding, predation, breeding, carrying capacity, migration, and population-aware natural
-  spawning. Catch-up work is queued so chunk loading does not spike.
+- The implemented first stage detects at least two missed metabolism pulses from each mob's
+  persisted `lastHungerTickAt`, deduplicates the returning mob into a server-lifecycle queue, and
+  reconciles at most 16 mobs per tick. At most seven Minecraft days are considered. Uncapped
+  calculations retain their incomplete metabolism interval; a capped calculation discards older
+  debt so the same time cannot be charged again.
+- The implemented food stage advances hunger and the persisted timestamp atomically and permits at
+  most one real meal per simulated Minecraft day, only after that day's species-specific metabolism
+  reaches its eat threshold. Eligible animals first resolve a compatible Animal Feeder around a
+  valid persisted home/range, falling back to their saved entity position when no valid home exists.
+  A remaining meal deficit uses one fair-budget local scan to collect enough distinct accessible
+  forage blocks before any mutation. Destructive grass, crops, and aquatic plants reuse the normal
+  `mobGriefing` and world-protection guard; renewable environmental forage remains non-destructive.
+  Villagers consume their highest-value personal food first, then use only an accessible chest or
+  barrel inside remembered/live village context through the existing provenance-aware restock
+  transaction. Discovery can defer the whole task when shared search work is unavailable. Meals use
+  normal relief and persist exact source state, meal time, stress, and confidence without playing a
+  loaded animation or synthesizing movement.
+- The implemented predation stage runs only after feeder and forage capacity is exhausted. A fresh
+  shared-budget snapshot finds currently loaded living candidates within the ordinary 18-block hunt
+  radius, then at most eight global reconciliation path probes per tick prove that prey is reachable
+  without crossing a closed barrier. It reuses the loaded prey diet/faction rules and hunt threshold.
+  Named, tamed, ridden, and passenger prey are excluded, as are tamed hunters. Each simulated day can
+  remove at most one actual wild prey; `discard` deliberately creates no loot or XP, and the normal
+  feeding plus successful-hunt stress, confidence, and timestamps persist. Budget denial defers the
+  complete transaction before any mutation.
+- The breeding stage advances the existing continuous five-minute `FULL` clock for eligible adult
+  breeders across the same bounded hunger timeline. Hunger above `FULL` resets progress, capped
+  history does not preserve uncertain earlier progress, and a returning ready pair uses the normal
+  bounded loaded mate scan and vanilla birth path. Local population never blocks breeding.
+- The migration stage applies only after at least one full unloaded Minecraft day, no catch-up meal,
+  species-specific hunger, and depletion of the group's valid persisted range. Land herds, Pig
+  foraging groups, and fish schools reuse their loaded social compatibility and forage policies; a
+  compatible feeder or local forage therefore holds a player-placed land range without a separate
+  domesticated state. One real group per tick uses a fresh budgeted entity snapshot, and only its
+  lowest-ID current member may move the shared range to a better loaded candidate within 32 blocks.
+  While that member is queued, a dedicated unloaded-ecology owner holds `REGROUP` just above
+  ordinary feeding priority so a budget deferral cannot silently hand the mob to loaded food or
+  social movement; higher-priority danger and combat behavior can still cancel the migration.
+  Every member must be idle or under safe `REGROUP` ownership, free of targets, leashes, riders, and
+  vehicles, and settled on land or in water. The transaction pre-resolves distinct collision-free
+  landings and proves every route through a separate ten-probe-per-tick budget and 64-block path
+  horizon. Any unavailable budget, unsafe landing, busy member, or unreachable route prevents all
+  movement and home replacement; closed barriers cannot cause a partial teleport.
+- The starvation stage applies one bounded damage transaction for all remaining critical hunger
+  pulses. Ordinary wild mobs can die from that accumulated damage. Named mobs, tamed animals, and
+  horse-family mobs instead stop at one health. Cube Mobs use one real split-or-die transaction;
+  catch-up never recursively simulates fictional child generations, and swallowed storage is
+  transferred only through that real split.
+- The Farmer stage queues at most one eligible adult Farmer per tick and one real production cycle
+  per unloaded Minecraft day, capped at seven. It considers at most seven nearby persisted
+  Farmer-owned vanilla crops, applies current `mobGriefing` and world-protection checks, and proves
+  a current route to the crop and an accessible village chest/barrel before mutation. The mature
+  crop's real loot is generated, one matching replant item is consumed, Wheat can become Bread,
+  the crop is replanted at age zero, the Farmer retains 24 food points, and only the surplus enters
+  storage through the normal village-ownership ledger. Missing access, crop, inventory capacity,
+  or compatible storage produces nothing.
+- The natural-spawn stage deduplicates returning mobs by dimension/chunk and records the largest
+  daily debt before post-tick work begins. One returning chunk per tick receives at most one vanilla
+  `NaturalSpawner` chunk pass per simulated day, capped at seven, and no chunk is force-loaded.
+  Current spawn gamerules, biome/structure lists, server monster mode, placement/light validation,
+  player-distance eligibility, and mob caps remain vanilla-owned.
+- Catch-up work is queued so chunk loading does not spike. Ordinary loaded behavior resumes after
+  reconciliation; natural population composition and pacing still require in-game verification.
 - The simulation changes real state: food/crop stores can be consumed, predators can remove real
-  prey entities, successful breeding creates real offspring, and migration relocates creatures
-  toward a suitable region. It never breaks barriers while unloaded.
-- Extreme hunger can cause weakness, suppress regeneration, deal damage, and eventually kill,
-  because simulated feeding opportunities also exist. Named/tamed animals return from a long
-  unload at critical health/hunger instead of dying offline.
-- Carrying capacity considers habitat, food, water, shelter, and player-provided food. Explicit
-  feeders, troughs, and communal stores count; arbitrary chests do not. Catch-up randomness does
-  not need deterministic replay. The exact elapsed-time cap and granularity remain undecided.
+  prey entities, and breeding readiness persists. A ready returned pair then uses vanilla to create
+  real offspring; eligible foodless groups physically relocate together only after every member's
+  route and landing have been validated. Catch-up never breaks barriers.
+- Extreme hunger can cause weakness, suppress regeneration, deal damage, and eventually kill.
+  Named/tamed and horse-family mobs return from a long unload at no less than one health.
+- There is deliberately no separate carrying-capacity or population-count gate. Food availability
+  and the continuous `FULL` requirement control breeding, including for player-placed groups.
+  Catch-up randomness does not need deterministic replay. The elapsed-time cap is seven Minecraft
+  days; food, predation, Farmer production, and returning-chunk spawning use daily granularity.
 
 Territory mob state is separate and currently lives in `RetoldTerritoryMobStates` as runtime weak-map state for warning posture/debug values. Per-player suspicion/reputation is owned by server-global `RetoldTerritoryReputationData` SavedData and accessed through `RetoldTerritoryReputation`.
 
@@ -562,14 +655,16 @@ of starvation damage whenever its normal metabolism interval reaches or remains 
 The damage uses Minecraft's starvation source, has no minimum-health floor, and can therefore kill
 ordinary, hostile, tamed, named, and Villager mobs that use Retold hunger. Feeding below 100 stops
 the next pulse without a separate recovery timer. `RetoldFoodBehaviorEvents` owns the ordinary
-`PathfinderMob` path, `RetoldBatColonyEvents` owns the non-pathfinding Bat path, and
+`PathfinderMob` path, `RetoldBatColonyEvents` owns the distinct Bat-colony path, and
 `RetoldVillagerCommunalFood` owns the deliberately separate Villager path; all three route through
-the same `RetoldStarvationBehavior`. Slimes and Magma Cubes retain their established critical-
+the same `RetoldStarvationBehavior`. The dispatcher routes Bats to their adapter before checking
+the vanilla mob hierarchy because `Bat` enters the `PathfinderMob` branch in 26.2. Slimes and Magma
+Cubes retain their established critical-
 hunger split-or-die response and never receive the generic pulse.
 
 `RetoldHungerSurvivalGameTests` complements the starvation-owner checks with one isolated loaded
-feeding habitat for every positive-hunger profile. Forty-one species begin at 99 hunger and must stay
-alive while lowering it through production behavior; a 42nd registry guard prevents profiles from
+feeding habitat for every positive-hunger profile. Forty-seven species begin at 99 hunger and must stay
+alive while lowering it through production behavior; a 48th registry guard prevents profiles from
 being added without a case. The cases use a representative source from the species' patched 26.2
 spawn environments rather than artificial dropped-item substitutes: appropriate living prey,
 aquatic prey and water, flowers/crops/forage, cave and Nether resources, caravan sustenance, or
@@ -630,7 +725,7 @@ item nor an edible block acquire `FOOD`/`SEARCH` ownership and travel to a bound
 point. Successful paths are reused briefly; failed paths are not cached as successful. Predator
 profiles retain their directional prey-search layer, while dropped edible items can supersede an
 ordinary food hunt as soon as they are detected. Bats use the corresponding bounded 3D search route
-at night because vanilla `Bat` is not a `PathfinderMob`.
+at night through their colony adapter rather than the ordinary ground-search path.
 
 The loaded-world food order is dropped food, Animal Feeder, edible forage, then bounded random food
 search. `animal_feeder` is a one-slot wooden trough whose exact stack persists. Hungry managed
@@ -655,7 +750,8 @@ consumes one, retains the rest, and uses the shared source-facing feeding pose. 
 are removed from the container, so a full Villager inventory cannot delete or duplicate food. Sleep,
 trading, recent attackers, avoidance, and remembered nearby hostiles retain priority. Other
 containers are ignored. Entity hunger, personal inventory, and container inventory save normally,
-but no unloaded-time feeding or catch-up is simulated.
+and bounded unloaded reconciliation reuses the same personal-first withdrawal transaction without
+loaded movement, sound, or pose state.
 Player insertion is a server transaction. A normal right-click offers one compatible item; a
 sneak-right-click with compatible food offers as much of the held stack as the remaining capacity
 accepts. Storage receives a copy, then a Survival player's actual held stack loses exactly that
@@ -663,6 +759,13 @@ accepted count. Creative players retain their held stack, matching ordinary Crea
 Sneak-right-clicking with an empty hand or incompatible item retrieves only the stored stack or
 drops only the inventory remainder. Focused coverage checks the single-item, bulk, and retrieval
 controls, exact Survival conservation, and non-consuming Creative behavior.
+
+Stationary or instantaneous Retold actions with a concrete subject use `RetoldActionFacing` to aim
+the mob's body, head, and look control together. Current users are feeding poses, Villager torch
+casts, golem work, communal storage and livestock tending, desperate weak-barrier breaking, Polar
+Bear warnings, and Spider web placement. Moving pursuit, ranged positioning, migration, fleeing,
+and free-flight navigation intentionally retain ordinary look control so presentation does not
+fight the navigation-owned body heading.
 
 Every completed Retold feeding action enters the same two-second presentation through
 `RetoldFeedingPose`. The pose remembers the actual source position, owns `FOOD`/`FEED` at priority
@@ -703,6 +806,7 @@ Home/range types:
 - `WOLF_DEN`
 - `DOLPHIN_POD_RANGE`
 - `HERD_RANGE`
+- `AQUATIC_SCHOOL_RANGE`
 - `FORAGING_RANGE`
 - `ROOST`
 - `WARREN`
@@ -733,6 +837,13 @@ Flee:
 - successful damage immediately seeds the same ten-second flee memory for shared passive prey;
   the causing entity is preferred as the escape origin, projectile/explosion positions are used when
   available, and source-less environmental damage produces a random panic direction
+- a successful hit from a living attacker that leaves a wild ordinary Wolf, Fox, Cat, Ocelot,
+  Dolphin, Spider, or Cave Spider below 25% health seeds a separate ten-second wounded-flight
+  memory, clears ordinary hunt/retaliation target ownership, and claims `FLEE` as `FLEEING`
+- exactly 25% health does not trigger wounded flight; tamed predators, Undead, bosses, profile
+  territory guards, active `TERRITORY` ownership, and `TERRITORY_ATTACK` targets are exempt
+- wounded flight suppresses ordinary controlled retaliation and Dolphin pod retaliation for the
+  victim while active, then releases only its own reasoned flee claim when the memory expires
 - panic can spread through nearby herd-like mobs
 - successful Squid damage immediately broadcasts panic through one bounded cached scan to nearby
   ordinary Squid only, or nearby Glow Squid only; the normal receiver-side scan remains a fallback
@@ -776,6 +887,13 @@ that hurt the owner and the entity the owner hurt. A valid target receives expli
 `OWNER_DEFENSE` ownership before lower-priority controlled combat continues. That source is
 protected from hunger cleanup and warning suppression while still using the tamed animal's vanilla
 `wantsToAttack` exclusions; sitting animals do not begin or continue owner defense.
+
+Ordinary predators use the same controlled-combat owner for direct self-defense. A successful hit
+records a valid living attacker for five seconds, claims `ATTACK` control, and assigns the target
+with `RETALIATION` ownership. Existing owned retaliation can continue after the transient damage
+memory clears. The central target policy, `canAttack`, tame-owner safety, and wounded-predator flight
+gate are checked before assignment, so this replacement cannot bypass alliance, Creeper, player-mode,
+or below-25% escape rules.
 
 Important target rule:
 
@@ -879,8 +997,8 @@ Most AI entity tick behavior is routed through:
 The dispatcher exists for performance. Instead of registering many independent entity tick subscribers, it:
 
 1. receives one entity tick event
-2. routes explicitly supported non-pathfinding mobs such as Bats, Ghasts, and Phantoms through
-   bounded species adapters
+2. routes explicitly supported special-hierarchy mobs such as Bats, Ghasts, and Phantoms through
+   bounded species adapters before the ordinary `PathfinderMob` split
 3. checks whether other entities are `PathfinderMob`s
 4. gets the cached profile once from `RetoldAiTickContext`
 5. routes only relevant behavior handlers for that profile
@@ -900,8 +1018,8 @@ Examples:
   movement uses ordinary aquatic navigation and yields to targets and higher-priority ownership
 - bats route to their colony adapter, whose cached scans and owned flight hook cover feeding,
   five-member directional hunting parties, selective panic, and upward searches for personal
-  daytime ceiling slots without making Bat a `PathfinderMob`; vanilla retains physical roost
-  validation and ordinary unowned flight
+  daytime ceiling slots without using the ordinary ground-mob behavior route; vanilla retains
+  physical roost validation and ordinary unowned flight
 
 Classes with other event types, such as server tick, death, or damage events, remain registered normally.
 
@@ -1053,6 +1171,11 @@ five-phase run and the affected Zoglin rerun passed below 50 ms/tick, peaking at
 ms/tick. After adding same-Undead Mob/Brain target enforcement, both exact selectors passed again,
 peaking at 4.437 and 5.091 ms/tick respectively; the complete expanded matrix was intentionally
 not selected.
+The Stage 2 Undead-pressure rerun forces `UNDEAD_HUNGRY` and `UNDEAD_TOLERANT` benchmark fixtures
+to Stage 2, restores the previous saved stage during cleanup, and covers all eight affected species.
+All 40 exact phases passed below 50 ms/tick; Zombie hunt/targeting was the 6.046 ms/tick overall
+peak. The complete 82-profile matrix was not selected because the new cached coordination work is
+confined to these two existing profile families.
 The specialized Wither threat selector adds no profile but changes repeated `APEX_OR_BOSS` work.
 Its exact 50-mob run passes all five phases below 50 ms/tick, measuring 4.757 idle/rest, 2.674
 dropped-food/forage, 5.710 hunt/targeting, 3.225 danger/social, and 1.915 habitat/day-night
@@ -1187,8 +1310,11 @@ Use this matrix before calling the mob AI system done.
 | Target ownership | Retold-owned targets go through `RetoldCombatTargets` / `RetoldFactionTargetMemory`. | Direct `setTarget`, `setAggressive`, `ATTACK_TARGET`, and `ANGRY_AT` writes only exist in low-level guard helpers, and debug shows source/current target ownership. |
 | Invalid players | Creative and spectator players are never valid retained targets. | `/retoldbehavior get` shows no lasting target or brain target for creative/spectator players. |
 | Creeper safety | No mob deliberately targets or directly melees a creeper; mobile non-zombies flee an active fuse and cats avoid creepers before ignition. | Vanilla, Retold-owned, brain-memory, retained-target, and direct-melee paths reject creepers. Cached awareness produces delayed high-priority flight for pathfinding/flying mobs, and cat retreat preserves vanilla creeper avoidance. |
+| Ordinary predator self-defense | Healthy ordinary predators retaliate after successful damage from a valid living attacker. | Real-damage coverage includes wild Wolf, tamed Wolf, Fox, Cat, Ocelot, Dolphin, Spider, and Cave Spider; target and `ATTACK` control use `RETALIATION` ownership, ownership continues after transient damage memory clears, and tame-owner safety is preserved. |
+| Wounded predator disengagement | Wild ordinary predators flee a living attacker for ten seconds when a successful hit leaves them below 25% health. | Hunt/retaliation targets and ownership clear before reasoned `FLEEING` control begins; the exact boundary and tamed, Undead, boss, and territory exemptions are covered, all seven profile species enter the same bounded continuation, and affected exact TPS selectors remain below 50 ms/tick. |
 | Mob griefing | Mob-caused terrain edits obey `mobGriefing`; consuming dropped items does not count as terrain editing. | Retold forage, weak-barrier, and Gale Core paths use `RetoldMobGriefing`, vanilla creeper explosions remain behind NeoForge's entity-griefing hook, and each destructive owner has regression GameTest coverage. |
 | Loaded starvation | Every mob with a positive Retold hunger interval can lose health and die at 100 hunger; Cube Mobs retain their separate response. | Ordinary `PathfinderMob`, Bat, and Villager hunger ticks share `RetoldStarvationBehavior`, profiles with hunger disabled are excluded, feeding below 100 stops pulses, and Cube Mob splitting remains covered separately. |
+| Unloaded reconciliation | Returning hunger-aware mobs reconcile no more than seven days through bounded real transactions. | The deduplicated queue attempts at most 16 mobs per tick; daily food order is feeder, accessible forage, then compatible reachable wild prey for untamed predators. Fresh scans and bounded route probes prevent barrier bypass. Critical pulses become one damage/Cube transaction, one Farmer per tick can process real owned crops and storage, and one returning chunk per tick delegates a daily attempt to vanilla spawning. Named/tamed mobs retain a one-health floor. |
 | Faction assist | Nearby allies can help only when target gating allows it. Witches cooperate with Illagers only inside the same active raid. | Assist does not bypass warning-stage players in territory; Witch/Illager GameTests cover ordinary neutrality, same-raid assistance, different/no-raid rejection, and raid-exit target cleanup. |
 | Raid progression | Bad Omen and vanilla raid creation cannot begin a raid before Stage 3; active raids are not cancelled by the start gate. | The authoritative saved stage is checked both before Bad Omen conversion and at `Raids.createOrExtendRaid`; the live creation path has a Stage 2 rejection GameTest and the natural Stage 3 omen flow is verified in-game. |
 | Territory warning | Nether Remnants and Illagers warn before attack in configured structures. | Bastion, fortress, outpost, and mansion all show warning progression before attack. |
@@ -1212,13 +1338,13 @@ Use this matrix before calling the mob AI system done.
 | Pack predator | wolf | Pack creation, pack hunt/search/return, den defense, target ownership. Ordinary food hunts release as soon as the predator is satisfied. Individual scouts must retain hunt drive, and a satisfied leader of an active hunt/search transfers leadership and search ownership to an available hungry member. Retaliation and territory defense are excluded from this cleanup. Integrated coverage verifies solo release, urgent-target protection, leadership transfer, and hunger-gated prey validation; natural feeding transitions, multi-candidate selection, and group movement remain unverified. |
 | Solo opportunist | fox, cat, ocelot | Solo home behavior, opportunistic hunting, flee/return. |
 | Aquatic predator | dolphin | Pod hunting remains hunger-driven. Successful damage starts collective defense through one cached bounded 28-block scan: the victim uses `RETALIATION`, nearby available witnesses use `FACTION_ASSIST`, and both routes hold `AQUATIC_POD` attack ownership until the threat is invalid or beyond 36 blocks. Recruits must be within six blocks of the victim or have cached sight of the attacker, and another live target is never overwritten. Focused behavior coverage exercises real damage, fed assistance, busy-podmate exclusion, and cleanup; the five-phase 50-Dolphin run peaks at 5.675 ms/tick. Natural aquatic pursuit and multiplayer remain unverified. |
-| Aquatic school | cod, salmon, tropical fish, pufferfish | Cached exact-species cohesion, low-priority `REGROUP` ownership, and reachable aquatic paths. Fish diets and natural school stability remain unverified. |
-| Loose aquatic group | squid, glow squid, nautilus | Successful damage produces exact-species nearby panic through bounded cached propagation for the two Squid species. Wild hungry Nautiluses use controlled aquatic navigation to hunt living fish; tamed Nautiluses do not hunt autonomously. Natural long-term group pacing remains unverified. |
+| Aquatic school | cod, salmon, tropical fish, pufferfish | Cached exact-species cohesion, a shared persisted `AQUATIC_SCHOOL_RANGE`, low-priority `REGROUP` ownership, reachable aquatic paths, and 520-tick loaded hunger. Tagged seagrass/kelp anchors the range and supplies higher-priority food ownership under `mobGriefing`; when the hungry school is locally depleted, one deterministic member evaluates and shares a bounded better range. Focused coverage exercises all four profiles, the protected transaction, food anchoring, shared migration, and a real route. Natural school stability, migration pacing, and plant-depletion balance remain unverified. |
+| Loose aquatic group | squid, glow squid, nautilus | Successful damage produces exact-species nearby panic through bounded cached propagation for the two Squid species. Squid and Glow Squid use 520-tick loaded hunger and consume tagged dropped raw fish without hunting living prey. Wild hungry Nautiluses use controlled aquatic navigation to hunt living fish; tamed Nautiluses do not hunt autonomously. Natural long-term group and diet pacing remain unverified. |
 | Hungry swarm predator | spider, cave spider | Hunger-driven prey selection admits adult passive animals only at night, while proactive player aggression remains darkness-based and retaliation remains available at any time. Daylight ends Retold-owned food hunts. Cached swarm scans allow both Spider types to share an owned prey target at night. After a recent feeding or successful hunt, the persisted `SPIDER_LAIR` home lets up to six members share a dark lair, expand or repair one real cobweb per 600 ticks up to 50, and return during daylight through interruptible low-priority ownership. Construction requires the builder's vanilla darkness, raw skylight below 8 at both the builder and supported dark air block, the shared block-search budget, and `mobGriefing`; open-sky nighttime darkness is insufficient. Integrated coverage verifies the hunting boundaries plus bright/open-sky rejection, sheltered creation, sharing, the 50-web cap, repair, griefing, return, retaliation interruption, and night release; natural climbing, combat, site selection, and long-term pacing remain unverified. |
 | Hive colony | bee | Flower foraging retains its bounded specialized search. Successful Bee damage, tagged-hive breaking, and unsmoked full-hive harvest are the only Retold colony-defense triggers. The victim uses `RETALIATION`; one cached bounded 18-block incident scan recruits available Bees with `FACTION_ASSIST`. Both hold `HIVE_COLONY` attack ownership until the threat is invalid or beyond 36 blocks. Smoke, Creative/Spectator targets, friendly Bees, and another live target are excluded. Event assignment starts no synchronous path; staggered species ticks refresh ownership and request movement. Focused behavior coverage exercises real damage, source ownership, recruitment, busy-target preservation, prompt cleanup, smoke, player-mode exclusions, harvest, and breaking. The five-phase 50-Bee run peaks at 7.103 ms/tick. Natural hive release, crowded colonies, multiplayer, and dedicated servers remain unverified. |
 | Nether hungry | piglin, hoglin, strider | Hunger behavior plus faction/territory interactions for Piglins. Lava passively sustains Striders without being consumed, Warped Fungus remains fallback food, and Piglins receive meal credit from Hoglins they kill. |
-| Undead hungry | zombie, zombie villager, husk, drowned, zombified piglin | Hunger/horde behavior, faction targeting, and undead tolerance. A non-undead, non-Creeper living victim killed by one of these mobs provides a meal. Proactive hungry-target scoring has no player bonus. |
-| Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop, and no player bonus when choosing a firing position. |
+| Undead hungry | zombie, zombie villager, husk, drowned, zombified piglin | Hunger/horde behavior, faction targeting, and undead tolerance. Stage 1 uses 10-block same-family sharing and 12-block notice; Stage 2 expands these to 22 and 18 blocks, permits stable one-in-three cross-family assistance within 12 blocks when the incident is heard or seen, and adds about 25% to already-present tagged natural-spawn weights under vanilla caps. A non-undead, non-Creeper living victim killed by one of these mobs provides a meal. Proactive hungry-target scoring has no player bonus. The five exact Stage 2 50-mob runs peak at 6.046 ms/tick. |
+| Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop, and no player bonus when choosing a firing position. Stage 1 uses 10-block same-family sharing and 14-block notice; Stage 2 expands these to 24 and 22 blocks, uses the same bounded imperfect cross-family assistance contract, and shares the tagged natural-spawn weight bonus. The three exact Stage 2 50-mob runs peak at 4.952 ms/tick. |
 | Undead mount | skeleton horse, zombie horse, camel husk | Ownerless mounts retain Undead diplomacy and use a bounded cached 24-block scan, sight/close-awareness checks, source-aware faction targets, six-tick dispatch, throttled paths, and real melee damage. A persisted owner reference removes the generic faction identity. Claimed mounts never scan for prey; successful damage and five-second owner interaction memories alone start source-aware retaliation or owner defense under `UNDEAD_MOUNT` attack ownership. Mounting claims an ownerless already-tame riderless Skeleton Horse or Camel Husk, while Zombie Horse keeps vanilla bucking/taming. Two focused tests cover all three claim/faction boundaries, real damage, defense, cleanup, and non-hunting. Fifteen focused 50-mob phases pass below 50 ms/tick with a 5.843 ms/tick overall peak; natural pursuit, riding, multiplayer, dedicated-server, and save/reload behavior remain unverified. |
 | Phantom stalker | phantom | Vanilla retains the hostile-spawn gamerule, 60–120-second custom-spawner cadence, dark-sky gate, spectator exclusion, placement validation, and generated group size. At lowest event priority, Retold preserves explicit decisions from other mods and replaces only a default per-player insomnia decision: skylight dimensions require open sky, the Retold night-or-storm context, vanilla local difficulty, and a one-in-eight rarity result. The existing bounded stalker uses owned faction-combat targets without arbitrary player priority and retains Undead diplomacy. Two focused tests cover zero-insomnia eligibility, policy boundaries, event compatibility, and closer ordinary prey versus an Undead neighbor and player. Natural frequency, storms, movement/combat, multiplayer, and dedicated servers remain unverified. |
 | Ghast artillery | ghast | Artillery targeting and faction exclusions without an arbitrary player score bonus. |
@@ -1226,7 +1352,7 @@ Use this matrix before calling the mob AI system done.
 | Slime hungry | slime, magma cube | `RetoldSlimeHungerCombat` gates target assignment, retained combat, swarm assistance, and every contact-damage path at the profile hunt threshold; only hungry Cube Mobs use faction targeting and `RetoldCubeMobContactDamage`. The central live-faction policy rejects ordinary same-family Mob/Brain targets while retaining explicit Retold-owned retaliation. A non-Cube, non-Creeper living victim killed by either species relieves hunger. The contact hook also lets hungry size-one members use vanilla `dealDamage`, while fed members remain harmless. Independently, `RetoldMobRules.wantsDroppedFood` gives this profile an unconditional item appetite: `RetoldFoodBehaviorEvents` and `RetoldSwarmScavengerEvents` seek items even at zero hunger. `RetoldCubeMobMovement` translates shared movement requests into Cube Mob controller headings and hop speed while the narrow random-direction mixin prevents vanilla wandering from overwriting an owned direction. `RetoldSlimeSplitBehavior` gives every split child half of its parent's current hunger through NeoForge's standard mob-split event and the explicit starvation path. `RetoldSlimeStarvationBehavior` scales each hunger gain as `ceil(size / 2)`, splits size-two-or-larger Cube Mobs into two half-size children at 100 hunger with 50 hunger each, preserves swallowed storage once, starts their merge cooldown, and kills size-one members through normal death. `RetoldSlimeItemStorage` swallows any complete dropped stack, persists exact stack components, returns contents through death drops, and grows Cube Mobs one size at a time up to size 10 with exponentially doubling costs from 16 through 4,096 items. Cached same-species/same-size idle merging through `RetoldSlimeMergeBehavior` remains restricted to natural sizes 1-to-2-to-4 with a persisted cooldown and transfers swallowed contents. The latest focused Slime and Magma Cube runs peak at 4.488 and 5.665 ms/tick. |
 | Small arthropod swarm | silverfish, endermite | Species-local swarm behavior and separate faction targeting; the two species remain neutral and never coordinate with each other. |
 | Bat colony | bat | Persisted hunger and `BAT_ROOST` homes are supported for this non-pathfinding `Mob`. A loaded home must remain a dark supported ceiling cell; legacy ground homes and broken supports are repaired upward around the previous anchor. Up to 12 nearby Bats share the resulting broad 16-horizontal/8-vertical colony anchor. Daylight clears food and combat directives, then each awake Bat searches upward within eight horizontal and 32 vertical blocks for a personal currently dark supported ceiling cell. Discovery checks the founding column first and exits at the first valid nearby support instead of scoring the full volume; individual Bats then reserve distinct supported cells around that anchor. In-flight destinations plus settling and occupied cells remain reserved, and an already-stacked sleeper with the higher entity ID drops clear before rerouting. The explicit-center cache and selected five-second route remain reusable while the Bat travels. A bounded vanilla `FlyingPathNavigation` route leads toward that slot; Retold flight ownership then performs a collision-checked final approach with minimum lift, holds the Bat against vanilla wandering, and completes its individual 8-to-40-tick settling delay. Vanilla resting-to-awake disturbances and unrelated danger clear shelter state and hold the Bat in owned panic flight for ten seconds before settling can resume. At night, a hungry Bat prefers a reachable dropped Spider Eye, then joins compatible hungry members in a party capped at five. Party-wide sensing and coordination run at most once per eight ticks, incomplete parties retry recruitment once per 40 ticks, the direction lasts 20 seconds, and unchanged routes and four-tick separation vectors are reused. Frightened, feeding, and sheltering Bats remain outside parties. Feeding, search, hunt, dodge, and panic destinations require reachable paths. Close bites deal one damage; local separation, individual arthropod dodges, and selective delayed unrelated-danger panic remain in effect. Isolated coverage verifies legacy/broken-home repair, tall-cave ceiling acquisition, distinct destinations and occupied slots, repair of a stacked pair, eight awake Bats completing a real-tick daytime return, a ten-second disturbance recovery window, party behavior, and a 64-Bat day/night workload that must remain below 50 ms/tick. Clientless GameTest players are now excluded from login payload synchronization, and broken-roost coverage retries across shared AI budget windows while still requiring a different valid dark supported ceiling, shelter ownership, and a real flying path. The latest focused selection passed 7/7, including the 64-Bat workload at 10.658 ms/tick; the post-ecology complete suite passed 150/150. The developer reported the ordered natural Bat acceptance pass works on 2026-08-03; dedicated-server, multiplayer, profiler, and existing-world verification remain unconfirmed. |
-| Protective neutral | polar bear | `RetoldNeutralWildlifeEvents` uses cached cub/threat scans. Passive cub intruders receive a 40-tick standing/sound warning with no attack target and can withdraw; staying escalates to owned defense, while actual attacks bypass the warning. Vanilla proactive cub-proximity targeting is blocked. GameTests cover the state boundaries; natural navigation and warning readability still need in-game verification. |
+| Protective neutral | polar bear | `RetoldNeutralWildlifeEvents` uses cached cub/threat scans. Passive cub intruders receive a 40-tick standing/sound warning with no attack target; the stationary warning keeps the bear's body, head, and look control aimed at the intruder. The intruder can withdraw; staying escalates to owned defense, while actual attacks bypass the warning. Vanilla proactive cub-proximity targeting is blocked. GameTests cover the state boundaries; natural navigation and warning readability still need in-game verification. |
 | Armadillo defensive | armadillo | Defensive/flee behavior plus active hunger. A bounded cached soil search drives low-priority movement to exposed eligible ground; reaching it produces a visible non-destructive grub dig, hunger relief, and a 30-second forage cooldown. |
 | Panda bamboo | panda | Its dedicated bounded search approaches bamboo and atomically removes the reached block without drops before applying hunger relief. Consumption obeys the shared entity-griefing policy. Two isolated GameTests cover natural approach/removal and `mobGriefing=false`; the focused Panda survival case passes and all five 50-Panda TPS phases remain below 50 ms/tick with a 9.305 ms/tick peak. Natural tall-grove selection and long-term grove depletion remain unverified. |
 | Parrot forager | parrot | Loaded hunger uses the shared dropped-food and bounded crop-forage owner with flying navigation, feeding pose, caches, work budgets, and destructive `mobGriefing` policy. Tamed entity and shoulder Parrots first recognize a recent owner attacker, then use a staggered cached 18-block scan for a visible or close-heard mob actively targeting the living non-Creative/non-Spectator owner. The transient sound-and-particle warning takes no combat or movement ownership. Focused coverage verifies diet/griefing, false-positive rejection, threat memory, pacifist behavior, shoulder persistence, profile loading, crop survival, and five 50-Parrot phases below 50 ms/tick with a 4.005 ms/tick peak. Natural flight, crop choice, warning readability, multiplayer, and dedicated-server behavior remain unverified. |
@@ -1283,7 +1409,8 @@ Animal life:
   confirmed group, and Llamas/Trader Llamas share theirs
 - small foragers use home/range behavior
 - prey flee and regroup
-- four ordinary fish types use exact-species school cohesion through aquatic paths
+- four ordinary fish types use exact-species school cohesion and shared food-driven persisted ranges
+  through aquatic paths
 - Squid and Glow Squid share danger only within their exact species
 - predators hunt and return
 - wolves keep pack/den behavior

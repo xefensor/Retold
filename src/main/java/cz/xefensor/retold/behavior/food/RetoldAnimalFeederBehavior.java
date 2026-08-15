@@ -27,6 +27,72 @@ public final class RetoldAnimalFeederBehavior {
     private RetoldAnimalFeederBehavior() {
     }
 
+    public static boolean hasUsableFoodNearby(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos center,
+            long gameTime
+    ) {
+        if (level == null
+                || mob == null
+                || center == null
+                || mob.level() != level
+                || !RetoldMobRules.canUseAnimalFeeder(mob)) {
+            return false;
+        }
+
+        return RetoldAnimalFeederSearch.findAt(
+                level,
+                mob,
+                center,
+                HORIZONTAL_RADIUS,
+                VERTICAL_RADIUS,
+                gameTime,
+                CACHE_TICKS
+        ) != null;
+    }
+
+    public static CatchUpFeederResult findCatchUpFeeder(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos center,
+            long gameTime
+    ) {
+        if (level == null
+                || mob == null
+                || center == null
+                || mob.level() != level
+                || !RetoldMobRules.canUseAnimalFeeder(mob)) {
+            return CatchUpFeederResult.none();
+        }
+
+        RetoldAnimalFeederSearch.FindResult search =
+                RetoldAnimalFeederSearch.findAtResult(
+                        level,
+                        mob,
+                        center,
+                        HORIZONTAL_RADIUS,
+                        VERTICAL_RADIUS,
+                        gameTime,
+                        CACHE_TICKS
+                );
+
+        if (search.deferred()) {
+            return CatchUpFeederResult.deferredResult();
+        }
+
+        BlockPos feederPos = search.target();
+
+        if (feederPos == null
+                || findAccessPos(level, mob, feederPos) == null
+                || !(level.getBlockEntity(feederPos)
+                instanceof AnimalFeederBlockEntity feeder)) {
+            return CatchUpFeederResult.none();
+        }
+
+        return new CatchUpFeederResult(feeder, false);
+    }
+
     public static boolean tryUse(
             ServerLevel level,
             PathfinderMob mob,
@@ -178,5 +244,18 @@ public final class RetoldAnimalFeederBehavior {
                 gameTime
         );
         return true;
+    }
+
+    public record CatchUpFeederResult(
+            AnimalFeederBlockEntity feeder,
+            boolean deferred
+    ) {
+        private static CatchUpFeederResult none() {
+            return new CatchUpFeederResult(null, false);
+        }
+
+        private static CatchUpFeederResult deferredResult() {
+            return new CatchUpFeederResult(null, true);
+        }
     }
 }

@@ -69,6 +69,22 @@ public final class RetoldBehaviorEntityTickDispatcher {
     public static void onEntityTickPost(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
 
+        // Bat is a PathfinderMob in 26.2, but its colony owner remains a distinct adapter. Dispatch
+        // it before the hierarchy split so future vanilla hierarchy changes cannot silently skip it.
+        if (entity instanceof Bat bat
+                && entity.level() instanceof ServerLevel batLevel) {
+            long batGameTime = batLevel.getGameTime();
+
+            if (RetoldMobRules.isBatColony(bat)
+                    && shouldDispatch(bat, batGameTime, 4)) {
+                RetoldBatColonyEvents.tick(
+                        batLevel,
+                        bat,
+                        batGameTime
+                );
+            }
+        }
+
         if (!(entity instanceof PathfinderMob mob)) {
             dispatchNonPathfinder(
                     event,
@@ -92,6 +108,11 @@ public final class RetoldBehaviorEntityTickDispatcher {
                 RetoldVillagerCommunalFood.tick(level, villager, gameTime);
                 RetoldVillagerCommunalSupply.tick(level, villager, gameTime);
                 RetoldVillagerAnimalTending.tick(level, villager, gameTime);
+            }
+
+            if (villagerCadence
+                    || RetoldVillagerGolemConstruction
+                    .requiresContinuousFacingTick(villager)) {
                 RetoldVillagerGolemConstruction.tick(level, villager, gameTime);
             }
 
@@ -202,16 +223,6 @@ public final class RetoldBehaviorEntityTickDispatcher {
         }
 
         long gameTime = level.getGameTime();
-
-        if (entity instanceof Bat bat
-                && RetoldMobRules.isBatColony(bat)
-                && shouldDispatch(bat, gameTime, 4)) {
-            RetoldBatColonyEvents.tick(
-                    level,
-                    bat,
-                    gameTime
-            );
-        }
 
         if (shouldDispatch(entity, gameTime, 8)) {
             RetoldGhastArtilleryEvents.onEntityTickPost(event);

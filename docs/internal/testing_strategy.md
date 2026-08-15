@@ -137,7 +137,7 @@ satisfied minutes, use the 256-mob bounded-work test plus one representative ord
 case; add affected new profile cases separately.
 
 For loaded starvation, select the exact relevant `retold:starvation_...` test. The tests cover the
-ordinary `PathfinderMob`, separate non-pathfinding Bat, and Villager communal-food hunger owners,
+ordinary `PathfinderMob`, distinct Bat-colony, and Villager communal-food hunger owners,
 first critical damage, terminal death, exclusion of profiles whose hunger interval is zero, and a
 registry-wide assertion that every loaded positive-hunger profile reaches one of those owners. Add the exact
 `retold:cube_mob_size_scales_hunger_and_starvation_splits` regression when the shared critical-
@@ -145,6 +145,70 @@ hunger dispatch changes, because Cube Mobs must split or die through their speci
 than receive generic damage. The rule adds only a constant-time check on an existing metabolism
 tick, so use `retold:mob_tps_cow`, `retold:mob_tps_bat`, and `retold:mob_tps_villager` as the three
 representative tick paths when that shared cadence changes, running each exact TPS ID separately.
+
+For unloaded metabolism reconciliation, run the JUnit
+`RetoldUnloadedEcosystemCatchUpTest` and exact
+`retold:unloaded_hunger_catch_up_is_capped_and_budgeted` GameTest. They cover the seven-day cap,
+sub-interval remainder, invalid timestamps, a real persisted entity timestamp, protected-mob
+one-health clamping, queue deduplication, and the 16-mob-per-tick budget with deferred overflow.
+Select exact contracts below or a coherent subgroup such as `retold:unloaded_*migration*`; do not
+use `retold:unloaded_*` as a routine aggregate because the real-mob fixtures intentionally persist
+through their isolated arenas and can contend for shared work budgets in randomized test order. Add
+`retold:unloaded_feeder_catch_up_consumes_one_daily_meal` when catch-up food cadence, feeder
+discovery, diet compatibility, conservation, or persisted meal state changes. It covers two real
+daily Wheat removals for a Cow, exact interleaved metabolism/relief, an incompatible Chicken, and
+source-priority health outcomes. Add `retold:animal_feeder_uses_paths_without_mob_griefing` whenever shared feeder
+search or inventory code changes so the ordinary loaded route remains intact. Add
+`retold:unloaded_natural_forage_catch_up_consumes_real_daily_blocks` and
+`retold:unloaded_aquatic_forage_catch_up_consumes_real_daily_plants` when catch-up forage discovery,
+daily selection, access, mutation, or relief changes. Add
+`retold:unloaded_natural_forage_catch_up_respects_mob_griefing` when the destructive transaction or
+world-protection routing changes. These cases cover distinct real land/aquatic source removal,
+daily metabolism interleaving, persisted meal time, and denial without free relief. Add
+`retold:unloaded_villager_food_catch_up_conserves_communal_provenance` when personal-first order,
+communal discovery/restocking, or ownership reconciliation changes; pair it with the exact loaded
+Villager consumer transaction affected. For unloaded predation, select the exact changed contract:
+`retold:unloaded_predation_consumes_one_wild_prey_per_day_without_drops` covers the daily cap, real
+prey conservation, exact metabolism relief, no loot/XP, and persisted feeding/hunt outcomes;
+`retold:unloaded_predation_protects_named_tamed_and_tamed_hunter_animals` covers named and tamed
+prey plus the tamed-hunter exclusion; and
+`retold:unloaded_predation_respects_diets_and_closed_barriers` covers loaded-diet parity and the
+reachability guard. `retold:unloaded_predation_uses_feeder_before_wild_prey` covers source priority
+when predator feeder handling or the transition into predation changes. Add the exact loaded
+hunt/kill regression when shared prey rules or hunt outcome state changes. Add
+`retold:unloaded_breeding_uses_food_satisfaction_without_population_cap` when catch-up breeding
+progress, hunger/fullness interleaving, or the no-population-cap rule changes. It covers a crowded
+real Cow group, hunger-reset readiness, actual vanilla offspring, and the normal parent hunger cost.
+Pair it with the focused `RetoldUnloadedBreedingProgressTest` timeline unit test. For unloaded
+migration, select the exact changed contract: `retold:unloaded_land_migration_requires_one_day_and_no_food`
+covers the elapsed-time gate and the feeder/meal anchor;
+`retold:unloaded_land_migration_relocates_reachable_real_herd` covers a real mixed bovine group,
+shared persisted range replacement, bounded distance, and physical landings;
+`retold:unloaded_land_migration_respects_closed_barriers` covers the all-or-nothing reachability
+guard; `retold:unloaded_pig_migration_relocates_reachable_foraging_group` covers the distinct Pig
+foraging-range policy; and `retold:unloaded_aquatic_migration_relocates_reachable_real_school`
+covers shared fish-school range replacement and water landings. Pair migration-policy or range
+scoring changes with the exact loaded land/aquatic range case below. Add
+`retold:unloaded_starvation_damages_wild_and_protects_named_tamed_animals` when offline critical-
+hunger pulse accounting, accumulated damage, or the protected one-health floor changes. Add
+`retold:unloaded_cube_starvation_splits_once` with every change to the offline Cube transaction or
+shared Cube split/storage path; pair it with
+`retold:cube_mob_size_scales_hunger_and_starvation_splits` when shared loaded behavior changes. Add
+`retold:unloaded_farmer_production_uses_owned_crops_and_storage_provenance` when owned-crop indexing,
+harvest/replant loot, Farmer reserve, storage access, or ownership deposits change; pair it with the
+exact loaded crop and communal-supplier regressions affected by the shared path. Add
+`retold:unloaded_natural_spawning_deduplicates_chunks_and_respects_rules` when returning-chunk
+deduplication, daily debt, gamerule handling, or vanilla spawn delegation changes. The spawning
+GameTest proves queue/rule behavior, not natural biome composition or successful placement; verify
+those in-game. Add
+`retold:starvation_damages_every_hunger_tick_owner` whenever queue entry changes so the ordinary
+single-pulse Cow, Bat, and Villager paths remain immediate. This bounded reconciliation is not a
+reason to run the per-species TPS matrix: current environment scans and real transactions are
+episodic, globally task-bounded, and charged to the existing block-search/entity-scan budgets plus
+separate reconciliation and migration path budgets. Migration processes at most one group per tick
+and bounds route proofs to 64 blocks; Farmer and natural-spawn queues process at most one owner per
+tick and never force-load chunks. Add focused performance coverage only if cadence, group size,
+per-task scan/path bounds, or a shared task/work budget changes.
 
 For the viability of natural loaded feeding, choose one exact `retold:hunger_survival_<mob>` ID. The
 test family registers one isolated habitat case for every managed profile whose hunger interval is
@@ -155,7 +219,7 @@ foragers, dropped food where appropriate, and communal storage for Villagers. A 
 observer models player-loaded full LOD without becoming prey. The matrix deliberately uses nearby
 patches for consumption checks; use the existing species, food-search, and feeder tests for longer
 route requirements. Run one exact `retold:hunger_survival_<mob>` selector while diagnosing a
-species. Do not rerun the 42-test group; run another exact habitat case only when its own feeding
+species. Do not rerun the 48-test group; run another exact habitat case only when its own feeding
 contract changed. Add only affected exact species TPS IDs when profile cadence, scans, or paths can
 cost more.
 
@@ -180,6 +244,25 @@ damage-event entry point, direct retaliation versus faction-assist ownership, fe
 preservation of another urgent target, and cleanup after the threat disappears. Add the exact
 `retold:mob_tps_dolphin` case when recruitment radius, scan caching, controlled continuation, or
 path cadence changes; this species-local path does not by itself justify the complete matrix.
+
+For loaded school-fish and Squid diets, run
+`retold:aquatic_school_fish_graze_tagged_plants` for all four fish profiles, both default plant
+families, actual removal, and the `mobGriefing` denial transaction. Run
+`retold:aquatic_squid_consume_only_dropped_raw_fish` for both Squid profiles, raw-only standalone
+defaults, stack remainder preservation, and the living-prey-hunting exclusion. When hunger,
+repeated food scans, block search, sight, or path work changes, add only the exact affected
+`retold:mob_tps_cod`, `salmon`, `tropical_fish`, `pufferfish`, `squid`, or `glow_squid` selectors;
+do not select the complete matrix.
+
+For loaded food-driven range migration, run the exact
+`retold:herd_school_land_ranges_follow_local_food` case for Animal Feeder anchoring, depleted land
+forage, shared range replacement, and reasoned migration ownership. Run the exact
+`retold:herd_school_aquatic_ranges_follow_local_food` case for plant anchoring, shared persisted
+school ranges, depletion, and a real aquatic path. Add the existing
+`retold:herd_school_fish_use_species_paths` and
+`retold:aquatic_school_fish_graze_tagged_plants` regressions when school routing or edible-plant
+scoring changes. Repeated range scoring affects Cow, Pig, Cod, Salmon, Tropical Fish, and
+Pufferfish; run those exact TPS selectors separately rather than selecting the complete matrix.
 
 For Bee colony defense, choose the exact
 `retold:bees_collectively_defend_harmed_colony_members` or
@@ -232,6 +315,49 @@ retaliation. When the shared live target-policy path changes, add the exact affe
 `retold:mob_tps_elder_guardian` selectors; do not select the complete matrix unless faction
 classification caching or generic target cleanup changes more broadly.
 
+For Stage 1/Stage 2 Undead coordination, run the exact
+`retold:undead_stage_two_expands_coordination` selector. It covers the short Stage 1 same-family
+baseline, the wider Stage 2 Zombie-family convergence radius, stable sampled Skeleton-family
+assistance, and source-aware faction-assist ownership. When the stage pressure radii, recruitment,
+scan/sight work, or repeated continuation path changes, add the eight exact
+`retold:mob_tps_zombie`, `retold:mob_tps_zombie_villager`, `retold:mob_tps_husk`,
+`retold:mob_tps_drowned`, `retold:mob_tps_zombified_piglin`, `retold:mob_tps_skeleton`,
+`retold:mob_tps_stray`, and `retold:mob_tps_bogged` selectors. These fixtures force Stage 2 and
+restore the previous saved stage during cleanup. Do not select unrelated profiles unless a shared
+cache, sight, budget, or ownership primitive changes.
+
+For Stage 2 natural-spawn pressure, run the exact
+`retold:undead_stage_two_increases_natural_spawn_weights` selector. It covers all eight default tag
+members, Stage 1 and Stage 3 non-application, the rounded 25% Stage 2 bonus, preservation of the
+original spawn data, unrelated monsters, and unrelated spawn categories. This potential-spawn-list
+hook does not change loaded-mob tick work and therefore does not by itself require per-mob TPS
+selectors. Naturally measure spawn composition under vanilla caps and with representative
+spawn-list datapacks before tuning the bonus.
+
+For ordinary-predator self-defense, run
+`retold:ordinary_predators_defend_themselves_after_damage`. It applies real damage to wild Wolf,
+tamed Wolf, Fox, Cat, Ocelot, Dolphin, Spider, and Cave Spider fixtures, then verifies the target,
+`ATTACK` control, `RETALIATION` ownership, continuation after transient damage memory clears, and
+the tame-owner exclusion. Pair it with `retold:wounded_predator_flee_respects_threshold_and_exemptions`
+when changing the health-priority boundary, `retold:passive_mobs_flee_every_successful_damage_source`
+when changing shared damage routing, and the affected species-specific defense selector when a
+special defense owner changes. The fix adds no scan, path, cadence, or per-tick allocation, so it
+does not by itself justify repeating the seven ordinary-predator TPS selectors.
+
+For badly wounded wild-predator flight, run
+`retold:badly_wounded_wild_predators_flee_attackers`,
+`retold:wounded_predator_flee_respects_threshold_and_exemptions`, and
+`retold:wounded_predator_flee_lasts_ten_seconds` as separate exact selectors. Together they cover
+all seven ordinary predator species, ordinary retaliation/target release, the strict below-25%
+boundary, tamed/Undead/boss/territory exemptions, and reasoned ownership expiry. Add
+`retold:passive_mobs_flee_every_successful_damage_source` when the shared flee memory changes and
+`retold:dolphins_collectively_defend_attacked_podmates` when the low-health guard touches Dolphin
+defense. Because the rule adds repeated path-backed continuation, run the seven exact
+`retold:mob_tps_wolf`, `retold:mob_tps_fox`, `retold:mob_tps_cat`, `retold:mob_tps_ocelot`,
+`retold:mob_tps_dolphin`, `retold:mob_tps_spider`, and `retold:mob_tps_cave_spider` selectors; the
+danger fixture lowers wild ordinary predators through the threshold with real damage. Do not select
+the other 75 profiles unless a shared cache, movement, dispatcher, or work-budget primitive changes.
+
 For Wither threat selection, run the exact `retold:wither_prioritizes_serious_threats` selector.
 It covers Ghast, Zoglin, and wild Zombie Nautilus diplomacy, primary/side-head rejection and
 retained cleanup, the dynamic tamed Zombie Nautilus boundary, active-threat priority over nearer
@@ -260,7 +386,11 @@ correctly pause for the inherited schedule.
 
 For Villager torch maintenance, select the exact relighting test for magical casting, Nitwit
 close-range fake-tool use, stage, village, range, priority, inventory conservation, or wall-state
-behavior. Add the single extinguished-torch drop regression only when torch conversion/indexing
+behavior. The all-stage magical test forcibly turns an active caster away and requires the next
+continuous action tick to restore body, head, and look-control alignment. Add the single
+`retold:villager_relights_nearby_torches_in_one_maintenance_run` selector when consecutive-search,
+batch-limit, success-cooldown, or indexed multi-torch behavior changes. Add the single
+extinguished-torch drop regression only when torch conversion/indexing
 changes. Add `retold:mob_tps_villager` when the dispatcher, index query, physical route, cooldown,
 budget, or ownership hot path changes; do not expand to unrelated Villagers or every mob. Because
 vanilla path creation is nondeterministic at the framework's random multi-million-block test

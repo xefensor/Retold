@@ -8,7 +8,10 @@ import cz.xefensor.retold.behavior.home.RetoldAnimalHomeMemory;
 import cz.xefensor.retold.behavior.home.RetoldAnimalHomeType;
 import cz.xefensor.retold.behavior.home.RetoldAnimalHomes;
 import cz.xefensor.retold.behavior.home.RetoldAnimalSocialGroups;
+import cz.xefensor.retold.behavior.home.RetoldHerdRangeEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.block.AnimalFeederBlockEntity;
+import cz.xefensor.retold.registry.RetoldBlocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -21,7 +24,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.pathfinder.Path;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
@@ -53,6 +59,18 @@ public final class RetoldHerdSchoolGameTests {
                 environment,
                 "herd_school_fish_use_species_paths",
                 RetoldHerdSchoolGameTests::fishSchoolBySpeciesWithAquaticPaths
+        );
+        registerTest(
+                event,
+                environment,
+                "herd_school_land_ranges_follow_local_food",
+                RetoldHerdSchoolGameTests::landRangesRemainSuppliedAndMigrateAfterDepletion
+        );
+        registerTest(
+                event,
+                environment,
+                "herd_school_aquatic_ranges_follow_local_food",
+                RetoldHerdSchoolGameTests::aquaticRangesRemainSuppliedAndMigrateAfterDepletion
         );
         registerTest(
                 event,
@@ -149,6 +167,167 @@ public final class RetoldHerdSchoolGameTests {
                         salmon
                 ))
                 .thenExecute(() -> cleanup(isolatedCod, firstCod, secondCod, salmon))
+                .thenSucceed();
+    }
+
+    private static void landRangesRemainSuppliedAndMigrateAfterDepletion(
+            GameTestHelper helper
+    ) {
+        buildMigrationLandArena(helper);
+        ServerLevel level = helper.getLevel();
+        var cow = helper.spawn(EntityTypes.COW, 4, 2, 8);
+        var mooshroom = helper.spawn(EntityTypes.MOOSHROOM, 5, 2, 8);
+        BlockPos feederPos = new BlockPos(6, 2, 8);
+        helper.setBlock(feederPos, RetoldBlocks.ANIMAL_FEEDER.get());
+        AnimalFeederBlockEntity feeder = feederAt(helper, feederPos);
+        feeder.setItem(0, new ItemStack(Items.WHEAT, 8));
+        long gameTime = level.getGameTime();
+        RetoldAnimalHomeMemory originalRange = RetoldAnimalHomes.getOrCreatePackHome(
+                level,
+                cow,
+                List.of(mooshroom),
+                cow.blockPosition(),
+                gameTime
+        );
+
+        try {
+            helper.assertTrue(
+                    originalRange != null
+                            && originalRange.type() == RetoldAnimalHomeType.HERD_RANGE,
+                    "The test herd must begin with one persisted grazing range"
+            );
+            RetoldMobStates.getOrCreate(cow, gameTime).setHunger(60);
+            RetoldHerdRangeEvents.tick(level, cow, gameTime);
+            RetoldAnimalHomeMemory suppliedRange = RetoldAnimalHomes.get(cow);
+            helper.assertTrue(
+                    suppliedRange != null
+                            && suppliedRange.pos().equals(originalRange.pos())
+                            && RetoldAnimalHomes.hasSameValidHomeAs(
+                            level,
+                            mooshroom,
+                            suppliedRange
+                    ),
+                    "A compatible stocked feeder must hold the herd's existing range"
+            );
+
+            helper.setBlock(feederPos, Blocks.AIR);
+            RetoldAiControl.clear(cow);
+            long migrationTime = gameTime + 100L;
+            RetoldHerdRangeEvents.tick(level, cow, migrationTime);
+            RetoldAnimalHomeMemory migratedRange = RetoldAnimalHomes.get(cow);
+            helper.assertTrue(
+                    migratedRange != null
+                            && !migratedRange.pos().equals(originalRange.pos())
+                            && RetoldAnimalHomes.hasSameValidHomeAs(
+                            level,
+                            mooshroom,
+                            migratedRange
+                    ),
+                    "A hungry herd must shift its shared range after local supply is removed"
+            );
+            helper.assertTrue(
+                    RetoldAiControl.isControlledAsBy(
+                            cow,
+                            RetoldAiControlMode.REGROUP,
+                            RetoldAiControlOwner.REGROUP
+                    )
+                            && "migrate_depleted_range".equals(
+                            RetoldAiControl.getReason(cow)
+                    ),
+                    "Land migration must use reasoned shared regroup ownership"
+            );
+            helper.succeed();
+        } finally {
+            cleanup(cow, mooshroom);
+        }
+    }
+
+    private static void aquaticRangesRemainSuppliedAndMigrateAfterDepletion(
+            GameTestHelper helper
+    ) {
+        buildMigrationWaterArena(helper);
+        placeAquaticForagePatch(helper, 2, 6, 6, 10);
+        placeAquaticForagePatch(helper, 17, 23, 5, 11);
+        ServerLevel level = helper.getLevel();
+        var leader = helper.spawn(EntityTypes.COD, 4, 3, 8);
+        var member = helper.spawn(EntityTypes.COD, 5, 3, 8);
+        long gameTime = level.getGameTime();
+        RetoldAnimalHomeMemory originalRange = RetoldAnimalHomes.getOrCreatePackHome(
+                level,
+                leader,
+                List.of(member),
+                leader.blockPosition(),
+                gameTime
+        );
+
+        helper.startSequence()
+                .thenIdle(1)
+                .thenExecute(() -> {
+                    try {
+                        helper.assertTrue(
+                                originalRange != null
+                                        && originalRange.type()
+                                        == RetoldAnimalHomeType.AQUATIC_SCHOOL_RANGE,
+                                "The test school must begin with one persisted aquatic range"
+                        );
+                        long readyTime = level.getGameTime();
+                        RetoldMobStates.getOrCreate(leader, readyTime).setHunger(60);
+                        RetoldAquaticSchoolEvents.tick(level, leader, readyTime);
+                        helper.assertTrue(
+                                RetoldAnimalHomes.get(leader).pos().equals(originalRange.pos()),
+                                "Nearby edible aquatic plants must hold the school's existing range"
+                        );
+
+                        placeAquaticWaterPatch(helper, 2, 6, 6, 10);
+                        RetoldAiControl.clear(leader);
+                        long migrationTime = readyTime + 100L;
+                        helper.assertTrue(
+                                RetoldAquaticSchoolEvents.tick(level, leader, migrationTime),
+                                "A depleted hungry school must begin range migration"
+                        );
+                        RetoldAnimalHomeMemory migratedRange = RetoldAnimalHomes.get(leader);
+                        Path path = leader.getNavigation().getPath();
+                        helper.assertTrue(
+                                migratedRange != null
+                                        && migratedRange.type()
+                                        == RetoldAnimalHomeType.AQUATIC_SCHOOL_RANGE
+                                        && !migratedRange.pos().equals(originalRange.pos())
+                                        && RetoldAnimalHomes.hasSameValidHomeAs(
+                                        level,
+                                        member,
+                                        migratedRange
+                                ),
+                                "Aquatic migration must shift the shared persisted school range"
+                        );
+                        helper.assertTrue(
+                                RetoldAiControl.isControlledAsBy(
+                                        leader,
+                                        RetoldAiControlMode.REGROUP,
+                                        RetoldAiControlOwner.AQUATIC_SCHOOL
+                                )
+                                        && "migrate_depleted_aquatic_range".equals(
+                                        RetoldAiControl.getReason(leader)
+                                        )
+                                        && path != null
+                                        && path.canReach(),
+                                "Aquatic migration must use owned regroup movement and a reachable water path; "
+                                        + "mode="
+                                        + RetoldAiControl.getMode(leader)
+                                        + ", owner="
+                                        + RetoldAiControl.getOwner(leader)
+                                        + ", reason="
+                                        + RetoldAiControl.getReason(leader)
+                                        + ", path="
+                                        + path
+                                        + ", range="
+                                        + migratedRange.pos()
+                                        + ", position="
+                                        + leader.position()
+                        );
+                    } finally {
+                        cleanup(leader, member);
+                    }
+                })
                 .thenSucceed();
     }
 
@@ -267,6 +446,74 @@ public final class RetoldHerdSchoolGameTests {
                 }
             }
         }
+    }
+
+    private static void buildMigrationLandArena(GameTestHelper helper) {
+        for (int x = 0; x <= 32; x++) {
+            for (int z = 0; z <= 16; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+            }
+        }
+
+        for (int x = 17; x <= 23; x++) {
+            for (int z = 5; z <= 11; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.GRASS_BLOCK);
+            }
+        }
+    }
+
+    private static void buildMigrationWaterArena(GameTestHelper helper) {
+        for (int x = 0; x <= 32; x++) {
+            for (int z = 0; z <= 16; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.GLASS);
+
+                for (int y = 2; y <= 6; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.WATER);
+                }
+            }
+        }
+    }
+
+    private static void placeAquaticForagePatch(
+            GameTestHelper helper,
+            int minX,
+            int maxX,
+            int minZ,
+            int maxZ
+    ) {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                helper.setBlock(new BlockPos(x, 2, z), Blocks.SEAGRASS);
+            }
+        }
+    }
+
+    private static void placeAquaticWaterPatch(
+            GameTestHelper helper,
+            int minX,
+            int maxX,
+            int minZ,
+            int maxZ
+    ) {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                helper.setBlock(new BlockPos(x, 2, z), Blocks.WATER);
+            }
+        }
+    }
+
+    private static AnimalFeederBlockEntity feederAt(
+            GameTestHelper helper,
+            BlockPos relativePos
+    ) {
+        BlockEntity blockEntity = helper.getLevel().getBlockEntity(
+                helper.absolutePos(relativePos)
+        );
+        helper.assertTrue(
+                blockEntity instanceof AnimalFeederBlockEntity,
+                "Animal Feeder placement must create its block entity"
+        );
+        return (AnimalFeederBlockEntity) blockEntity;
     }
 
     private static void cleanup(PathfinderMob... mobs) {

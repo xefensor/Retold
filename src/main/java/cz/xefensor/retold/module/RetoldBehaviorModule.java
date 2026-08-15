@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreeding;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorEntityTickDispatcher;
 import cz.xefensor.retold.behavior.debug.RetoldBehaviorDebugEvents;
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
 import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
 import cz.xefensor.retold.behavior.food.RetoldFoodBehaviorEvents;
 import cz.xefensor.retold.behavior.hunting.RetoldControlledHuntingEvents;
@@ -34,6 +35,7 @@ public final class RetoldBehaviorModule {
 
     public static void registerGameBus(IEventBus gameEventBus) {
         gameEventBus.register(RetoldBehaviorEntityTickDispatcher.class);
+        gameEventBus.register(RetoldUnloadedEcosystemCatchUp.class);
         gameEventBus.register(RetoldFoodBehaviorEvents.class);
         gameEventBus.register(RetoldControlledHuntingEvents.class);
         gameEventBus.register(RetoldBehaviorDebugEvents.class);

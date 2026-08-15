@@ -11,6 +11,7 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
@@ -71,6 +72,7 @@ public final class RetoldDolphinPodEvents {
                 || !(event.getEntity() instanceof PathfinderMob victim)
                 || !isDolphin(victim)
                 || !(victim.level() instanceof ServerLevel level)
+                || RetoldControlledFleeEvents.isWoundedPredatorFleeing(victim)
                 || !(event.getSource().getEntity() instanceof LivingEntity attacker)) {
             return;
         }

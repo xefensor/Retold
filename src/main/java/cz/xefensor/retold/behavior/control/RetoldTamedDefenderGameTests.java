@@ -16,6 +16,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.monster.skeleton.Skeleton;
 import net.minecraft.world.entity.monster.zombie.Drowned;
@@ -24,6 +25,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public final class RetoldTamedDefenderGameTests {
@@ -53,6 +55,135 @@ public final class RetoldTamedDefenderGameTests {
                 testData,
                 RetoldTamedDefenderGameTests::tamedWolfDefendsOwnerAndAttacksOwnerTarget
         ));
+        event.registerTest(
+                Identifier.fromNamespaceAndPath(
+                        Retold.MODID,
+                        "ordinary_predators_defend_themselves_after_damage"
+                ),
+                new InlineGameTest(
+                        testData,
+                        RetoldTamedDefenderGameTests::ordinaryPredatorsDefendThemselvesAfterDamage
+                )
+        );
+    }
+
+    private static void ordinaryPredatorsDefendThemselvesAfterDamage(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        Player owner = helper.makeMockPlayer(GameType.SURVIVAL);
+        Zombie attacker = helper.spawnWithNoFreeWill(EntityTypes.ZOMBIE, 8, 2, 5);
+        Wolf tamedWolf = helper.spawnWithNoFreeWill(EntityTypes.WOLF, 2, 2, 3);
+        Wolf ownerSafeWolf = helper.spawnWithNoFreeWill(EntityTypes.WOLF, 6, 2, 5);
+        List<PathfinderMob> predators = List.of(
+                helper.spawnWithNoFreeWill(EntityTypes.WOLF, 2, 2, 1),
+                tamedWolf,
+                helper.spawnWithNoFreeWill(EntityTypes.FOX, 2, 2, 5),
+                helper.spawnWithNoFreeWill(EntityTypes.CAT, 4, 2, 1),
+                helper.spawnWithNoFreeWill(EntityTypes.OCELOT, 4, 2, 3),
+                helper.spawnWithNoFreeWill(EntityTypes.DOLPHIN, 4, 2, 5),
+                helper.spawnWithNoFreeWill(EntityTypes.SPIDER, 6, 2, 1),
+                helper.spawnWithNoFreeWill(EntityTypes.CAVE_SPIDER, 6, 2, 3)
+        );
+
+        tamedWolf.setTame(true, true);
+        tamedWolf.setOwner(owner);
+        tamedWolf.setOrderedToSit(false);
+        ownerSafeWolf.setTame(true, true);
+        ownerSafeWolf.setOwner(owner);
+        ownerSafeWolf.setOrderedToSit(false);
+
+        try {
+            for (PathfinderMob predator : predators) {
+                helper.assertTrue(
+                        predator.hurtServer(
+                                level,
+                                level.damageSources().mobAttack(attacker),
+                                1.0F
+                        ),
+                        "The attacker must deal real damage to " + predator.getType()
+                );
+                helper.assertTrue(
+                        predator.getLastHurtByMob() == attacker,
+                        "Real damage must record the attacker for " + predator.getType()
+                );
+
+                RetoldControlledCombatEvents.tickControlledCombat(
+                        level,
+                        predator,
+                        level.getGameTime()
+                );
+
+                helper.assertTrue(
+                        predator.getTarget() == attacker,
+                        "A healthy combat-capable " + predator.getType()
+                                + " must defend itself after damage"
+                );
+                helper.assertTrue(
+                        RetoldAiControl.isControlledAs(
+                                predator,
+                                RetoldAiControlMode.ATTACK
+                        ),
+                        "Self-defense must own ATTACK control for " + predator.getType()
+                );
+                helper.assertTrue(
+                        RetoldFactionTargetMemory.isOwnedByAny(
+                                predator,
+                                attacker,
+                                RetoldTargetSource.RETALIATION
+                        ),
+                        "Self-defense must use retaliation ownership for "
+                                + predator.getType()
+                );
+            }
+
+            PathfinderMob continuingWolf = predators.getFirst();
+            continuingWolf.setLastHurtByMob(null);
+            RetoldControlledCombatEvents.tickControlledCombat(
+                    level,
+                    continuingWolf,
+                    level.getGameTime() + 10L
+            );
+            helper.assertTrue(
+                    continuingWolf.getTarget() == attacker
+                            && RetoldFactionTargetMemory.isOwnedByAny(
+                                    continuingWolf,
+                                    attacker,
+                                    RetoldTargetSource.RETALIATION
+                            ),
+                    "Owned self-defense must continue after one-time damage memory clears"
+            );
+
+            helper.assertTrue(
+                    ownerSafeWolf.hurtServer(
+                            level,
+                            level.damageSources().playerAttack(owner),
+                            1.0F
+                    ),
+                    "The owner must be able to deal real damage for the tame-safety boundary"
+            );
+            RetoldControlledCombatEvents.tickControlledCombat(
+                    level,
+                    ownerSafeWolf,
+                    level.getGameTime()
+            );
+            helper.assertTrue(
+                    ownerSafeWolf.getTarget() == null,
+                    "A tamed Wolf must never retaliate against its own owner"
+            );
+
+            helper.succeed();
+        } finally {
+            for (PathfinderMob predator : predators) {
+                RetoldAiControl.clear(predator);
+                predator.discard();
+            }
+
+            RetoldAiControl.clear(ownerSafeWolf);
+            ownerSafeWolf.discard();
+            attacker.discard();
+            owner.discard();
+        }
     }
 
     private static void tamedWolfDefendsOwnerAndAttacksOwnerTarget(

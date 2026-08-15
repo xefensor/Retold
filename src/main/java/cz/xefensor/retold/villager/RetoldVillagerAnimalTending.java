@@ -5,6 +5,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.performance.RetoldAiLod;
@@ -246,7 +247,7 @@ public final class RetoldVillagerAnimalTending {
         }
 
         villager.getNavigation().stop();
-        villager.getLookControl().setLookAt(Vec3.atCenterOf(storagePos));
+        RetoldActionFacing.face(villager, Vec3.atCenterOf(storagePos));
         villager.swing(InteractionHand.MAIN_HAND);
         TendTask updated = task.withReservedFood(
                 task.reservedFood() + collected
@@ -327,7 +328,7 @@ public final class RetoldVillagerAnimalTending {
         }
 
         villager.getNavigation().stop();
-        villager.getLookControl().setLookAt(midpoint(
+        RetoldActionFacing.face(villager, midpoint(
                 pair.first(),
                 pair.second()
         ));

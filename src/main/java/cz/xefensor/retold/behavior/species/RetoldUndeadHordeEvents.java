@@ -31,14 +31,6 @@ public final class RetoldUndeadHordeEvents {
     private static final int HORDE_CONTROL_TICKS = 20 * 4;
     private static final int HORDE_PRIORITY = RetoldAiPriorities.FACTION_PRESSURE;
 
-    private static final double TARGET_SHARE_RADIUS_BLOCKS = 22.0D;
-    private static final double TARGET_SHARE_RADIUS_SQUARED =
-            TARGET_SHARE_RADIUS_BLOCKS * TARGET_SHARE_RADIUS_BLOCKS;
-
-    private static final double HUNGRY_NOTICE_RADIUS_BLOCKS = 18.0D;
-    private static final double HUNGRY_NOTICE_RADIUS_SQUARED =
-            HUNGRY_NOTICE_RADIUS_BLOCKS * HUNGRY_NOTICE_RADIUS_BLOCKS;
-
     private static final double CONVERGE_SPEED = 1.0D;
 
     private RetoldUndeadHordeEvents() {
@@ -150,11 +142,12 @@ public final class RetoldUndeadHordeEvents {
             ServerLevel level,
             PathfinderMob undead
     ) {
+        double shareRadius = RetoldUndeadStagePressure.zombieShareRadius(level);
         List<PathfinderMob> sources = RetoldAiScanCache.nearby(
                 level,
                 undead,
                 PathfinderMob.class,
-                TARGET_SHARE_RADIUS_BLOCKS,
+                shareRadius,
                 level.getGameTime(),
                 HORDE_SCAN_CACHE_TICKS
         );
@@ -163,7 +156,7 @@ public final class RetoldUndeadHordeEvents {
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
-            if (!isValidHordeSource(undead, source)) {
+            if (!isValidHordeSource(undead, source, shareRadius)) {
                 continue;
             }
 
@@ -196,11 +189,12 @@ public final class RetoldUndeadHordeEvents {
             ServerLevel level,
             PathfinderMob undead
     ) {
+        double noticeRadius = RetoldUndeadStagePressure.zombieNoticeRadius(level);
         List<LivingEntity> candidates = RetoldAiScanCache.nearby(
                 level,
                 undead,
                 LivingEntity.class,
-                HUNGRY_NOTICE_RADIUS_BLOCKS,
+                noticeRadius,
                 level.getGameTime(),
                 HORDE_SCAN_CACHE_TICKS
         );
@@ -209,13 +203,13 @@ public final class RetoldUndeadHordeEvents {
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
-            if (!isValidHungrySearchTarget(undead, candidate)) {
+            if (!isValidHungrySearchTarget(undead, candidate, noticeRadius)) {
                 continue;
             }
 
             double distanceSquared = undead.distanceToSqr(candidate);
 
-            if (distanceSquared > HUNGRY_NOTICE_RADIUS_SQUARED) {
+            if (distanceSquared > noticeRadius * noticeRadius) {
                 continue;
             }
 
@@ -236,7 +230,8 @@ public final class RetoldUndeadHordeEvents {
 
     private static boolean isValidHordeSource(
             PathfinderMob undead,
-            PathfinderMob source
+            PathfinderMob source,
+            double shareRadius
     ) {
         if (source == null || source == undead) {
             return false;
@@ -250,7 +245,7 @@ public final class RetoldUndeadHordeEvents {
             return false;
         }
 
-        if (undead.distanceToSqr(source) > TARGET_SHARE_RADIUS_SQUARED) {
+        if (undead.distanceToSqr(source) > shareRadius * shareRadius) {
             return false;
         }
 
@@ -264,13 +259,14 @@ public final class RetoldUndeadHordeEvents {
 
     private static boolean isValidHungrySearchTarget(
             PathfinderMob undead,
-            LivingEntity candidate
+            LivingEntity candidate,
+            double noticeRadius
     ) {
         if (!isValidHordeTarget(undead, candidate)) {
             return false;
         }
 
-        if (undead.distanceToSqr(candidate) > HUNGRY_NOTICE_RADIUS_SQUARED) {
+        if (undead.distanceToSqr(candidate) > noticeRadius * noticeRadius) {
             return false;
         }
 
@@ -298,21 +294,23 @@ public final class RetoldUndeadHordeEvents {
         return true;
     }
 
-    private static void spreadTargetToNearbyHorde(
+    static void spreadTargetToNearbyHorde(
             ServerLevel level,
             PathfinderMob source,
             LivingEntity target,
             long gameTime
     ) {
+        double shareRadius = RetoldUndeadStagePressure.zombieShareRadius(level);
+
         for (PathfinderMob ally : RetoldAiScanCache.nearby(
                 level,
                 source,
                 PathfinderMob.class,
-                TARGET_SHARE_RADIUS_BLOCKS,
+                shareRadius,
                 gameTime,
                 HORDE_SCAN_CACHE_TICKS
         )) {
-            if (!isValidHordeRecruit(source, ally)) {
+            if (!isValidHordeRecruit(source, ally, shareRadius)) {
                 continue;
             }
 
@@ -322,11 +320,19 @@ public final class RetoldUndeadHordeEvents {
                     gameTime
             );
         }
+
+        RetoldUndeadStagePressure.spreadCrossFamilyTarget(
+                level,
+                source,
+                target,
+                gameTime
+        );
     }
 
     private static boolean isValidHordeRecruit(
             PathfinderMob source,
-            PathfinderMob recruit
+            PathfinderMob recruit,
+            double shareRadius
     ) {
         if (recruit == null || recruit == source) {
             return false;
@@ -340,7 +346,7 @@ public final class RetoldUndeadHordeEvents {
             return false;
         }
 
-        if (source.distanceToSqr(recruit) > TARGET_SHARE_RADIUS_SQUARED) {
+        if (source.distanceToSqr(recruit) > shareRadius * shareRadius) {
             return false;
         }
 
@@ -388,6 +394,18 @@ public final class RetoldUndeadHordeEvents {
                 HORDE_PATH_INTERVAL_TICKS,
                 2.0D * 2.0D
         );
+    }
+
+    static void adoptStagePressureTarget(
+            PathfinderMob undead,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!canAdoptHordeTarget(undead)) {
+            return;
+        }
+
+        adoptAndConverge(undead, target, gameTime);
     }
 
     private static void clearHordeControlIfOwned(PathfinderMob undead) {

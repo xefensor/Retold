@@ -7,6 +7,11 @@ import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
+import cz.xefensor.retold.registry.RetoldTags;
+import cz.xefensor.retold.stage.RetoldWorldData;
+import cz.xefensor.retold.stage.RetoldWorldStage;
+import cz.xefensor.retold.undead.RetoldUndeadSpawnPressure;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
@@ -16,12 +21,19 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.random.WeightedList;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.biome.MobSpawnSettings;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 public final class RetoldUndeadTargetParityGameTests {
@@ -49,6 +61,254 @@ public final class RetoldUndeadTargetParityGameTests {
                 "undead_allies_reject_and_clear_vanilla_targets",
                 RetoldUndeadTargetParityGameTests::undeadAlliesRejectAndClearVanillaTargets
         );
+        registerTest(
+                event,
+                environment,
+                "undead_stage_two_expands_coordination",
+                RetoldUndeadTargetParityGameTests::undeadStageTwoExpandsCoordination
+        );
+        registerTest(
+                event,
+                environment,
+                "undead_stage_two_increases_natural_spawn_weights",
+                RetoldUndeadTargetParityGameTests::undeadStageTwoIncreasesNaturalSpawnWeights
+        );
+    }
+
+    private static void undeadStageTwoIncreasesNaturalSpawnWeights(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        RetoldWorldData worldData = RetoldWorldData.get(level);
+        RetoldWorldStage originalStage = worldData.getStage();
+        MobSpawnSettings.SpawnerData zombieSpawn =
+                new MobSpawnSettings.SpawnerData(EntityTypes.ZOMBIE, 1, 4);
+        MobSpawnSettings.SpawnerData skeletonSpawn =
+                new MobSpawnSettings.SpawnerData(EntityTypes.SKELETON, 1, 4);
+        MobSpawnSettings.SpawnerData creeperSpawn =
+                new MobSpawnSettings.SpawnerData(EntityTypes.CREEPER, 1, 4);
+        WeightedList<MobSpawnSettings.SpawnerData> baseSpawns =
+                WeightedList.<MobSpawnSettings.SpawnerData>builder()
+                        .add(zombieSpawn, 95)
+                        .add(skeletonSpawn, 100)
+                        .add(creeperSpawn, 100)
+                        .build();
+
+        try {
+            assertSpawnPressureTag(helper);
+
+            worldData.setStage(RetoldWorldStage.STAGE_1);
+            LevelEvent.PotentialSpawns stageOne = potentialSpawns(level, baseSpawns);
+            RetoldUndeadSpawnPressure.apply(stageOne);
+            helper.assertValueEqual(
+                    stageOne.getSpawnerDataList().size(),
+                    3,
+                    "Stage 1 must preserve the biome's original natural-spawn weights"
+            );
+
+            worldData.setStage(RetoldWorldStage.STAGE_2);
+            LevelEvent.PotentialSpawns stageTwo = potentialSpawns(level, baseSpawns);
+            RetoldUndeadSpawnPressure.apply(stageTwo);
+            helper.assertTrue(
+                    hasWeightedEntry(stageTwo, zombieSpawn, 24)
+                            && hasWeightedEntry(stageTwo, skeletonSpawn, 25),
+                    "Stage 2 must add the rounded 25% weight bonus for tagged Undead entries"
+            );
+            helper.assertValueEqual(
+                    stageTwo.getSpawnerDataList().size(),
+                    5,
+                    "Stage 2 must add only tagged entries and retain the original spawn data"
+            );
+            helper.assertValueEqual(
+                    countEntries(stageTwo, creeperSpawn),
+                    1L,
+                    "Stage 2 must not change an unrelated monster's natural-spawn weight"
+            );
+
+            LevelEvent.PotentialSpawns nonMonster = new LevelEvent.PotentialSpawns(
+                    level,
+                    MobCategory.CREATURE,
+                    BlockPos.ZERO,
+                    baseSpawns
+            );
+            RetoldUndeadSpawnPressure.apply(nonMonster);
+            helper.assertValueEqual(
+                    nonMonster.getSpawnerDataList().size(),
+                    3,
+                    "Stage 2 pressure must not alter another natural-spawn category"
+            );
+
+            worldData.setStage(RetoldWorldStage.STAGE_3);
+            LevelEvent.PotentialSpawns stageThree = potentialSpawns(level, baseSpawns);
+            RetoldUndeadSpawnPressure.apply(stageThree);
+            helper.assertValueEqual(
+                    stageThree.getSpawnerDataList().size(),
+                    3,
+                    "Stage 3 must not add Undead spawn weight before its spawn cancellation"
+            );
+            helper.succeed();
+        } finally {
+            worldData.setStage(originalStage);
+        }
+    }
+
+    private static void assertSpawnPressureTag(GameTestHelper helper) {
+        List<EntityType<?>> pressuredTypes = List.of(
+                EntityTypes.ZOMBIE,
+                EntityTypes.ZOMBIE_VILLAGER,
+                EntityTypes.HUSK,
+                EntityTypes.DROWNED,
+                EntityTypes.ZOMBIFIED_PIGLIN,
+                EntityTypes.SKELETON,
+                EntityTypes.STRAY,
+                EntityTypes.BOGGED
+        );
+
+        helper.assertTrue(
+                pressuredTypes.stream().allMatch(type ->
+                        type.builtInRegistryHolder().is(
+                                RetoldTags.STAGE_2_UNDEAD_SPAWN_PRESSURE
+                        )),
+                "The Stage 2 spawn-pressure tag must contain both coordination families"
+        );
+        helper.assertTrue(
+                !EntityTypes.CREEPER.builtInRegistryHolder().is(
+                        RetoldTags.STAGE_2_UNDEAD_SPAWN_PRESSURE
+                ),
+                "The Stage 2 spawn-pressure tag must not include unrelated monsters"
+        );
+    }
+
+    private static LevelEvent.PotentialSpawns potentialSpawns(
+            ServerLevel level,
+            WeightedList<MobSpawnSettings.SpawnerData> baseSpawns
+    ) {
+        return new LevelEvent.PotentialSpawns(
+                level,
+                MobCategory.MONSTER,
+                BlockPos.ZERO,
+                baseSpawns
+        );
+    }
+
+    private static boolean hasWeightedEntry(
+            LevelEvent.PotentialSpawns event,
+            MobSpawnSettings.SpawnerData spawn,
+            int weight
+    ) {
+        return event.getSpawnerDataList().stream().anyMatch(entry ->
+                entry.value().equals(spawn) && entry.weight() == weight
+        );
+    }
+
+    private static long countEntries(
+            LevelEvent.PotentialSpawns event,
+            MobSpawnSettings.SpawnerData spawn
+    ) {
+        return event.getSpawnerDataList().stream()
+                .filter(entry -> entry.value().equals(spawn))
+                .count();
+    }
+
+    private static void undeadStageTwoExpandsCoordination(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        RetoldWorldData worldData = RetoldWorldData.get(level);
+        RetoldWorldStage originalStage = worldData.getStage();
+        var source = helper.spawn(EntityTypes.ZOMBIE, 3, 3, 3);
+        var closeFamilyRecruit = helper.spawn(EntityTypes.HUSK, 9, 3, 3);
+        var distantFamilyRecruit = helper.spawn(EntityTypes.DROWNED, 18, 3, 3);
+        PathfinderMob crossFamilyRecruit = spawnOccasionalRangedResponder(helper);
+        var target = helper.spawn(EntityTypes.COW, 23, 3, 3);
+
+        source.setNoAi(true);
+        closeFamilyRecruit.setNoAi(true);
+        distantFamilyRecruit.setNoAi(true);
+        crossFamilyRecruit.setNoAi(true);
+        target.setNoAi(true);
+
+        try {
+            worldData.setStage(RetoldWorldStage.STAGE_1);
+            helper.assertTrue(
+                    RetoldCombatTargets.applyAttackTarget(
+                            source,
+                            target,
+                            RetoldTargetSource.FACTION_COMBAT
+                    ),
+                    "The fixture source must acquire its ordinary enemy target"
+            );
+
+            RetoldUndeadHordeEvents.spreadTargetToNearbyHorde(
+                    level,
+                    source,
+                    target,
+                    level.getGameTime()
+            );
+
+            helper.assertTrue(
+                    closeFamilyRecruit.getTarget() == target,
+                    "Stage 1 must retain close same-family Undead cooperation"
+            );
+            helper.assertTrue(
+                    distantFamilyRecruit.getTarget() == null,
+                    "Stage 1 must not use the wider Stage 2 convergence radius"
+            );
+            helper.assertTrue(
+                    crossFamilyRecruit.getTarget() == null,
+                    "Stage 1 must not recruit a different Undead combat family"
+            );
+
+            worldData.setStage(RetoldWorldStage.STAGE_2);
+            RetoldUndeadHordeEvents.spreadTargetToNearbyHorde(
+                    level,
+                    source,
+                    target,
+                    level.getGameTime() + 1L
+            );
+
+            helper.assertTrue(
+                    distantFamilyRecruit.getTarget() == target
+                            && RetoldFactionTargetMemory.getSource(
+                            distantFamilyRecruit,
+                            target
+                    ) == RetoldTargetSource.FACTION_ASSIST,
+                    "Stage 2 must widen same-family target sharing and convergence"
+            );
+            helper.assertTrue(
+                    crossFamilyRecruit.getTarget() == target
+                            && RetoldFactionTargetMemory.getSource(
+                            crossFamilyRecruit,
+                            target
+                    ) == RetoldTargetSource.FACTION_ASSIST,
+                    "Stage 2 must allow selected nearby ranged Undead to join the incident"
+            );
+
+            helper.succeed();
+        } finally {
+            worldData.setStage(originalStage);
+            source.discard();
+            closeFamilyRecruit.discard();
+            distantFamilyRecruit.discard();
+            crossFamilyRecruit.discard();
+            target.discard();
+        }
+    }
+
+    private static PathfinderMob spawnOccasionalRangedResponder(
+            GameTestHelper helper
+    ) {
+        for (int attempt = 0; attempt < 64; attempt++) {
+            PathfinderMob candidate = helper.spawn(EntityTypes.SKELETON, 7, 3, 4);
+
+            if (RetoldUndeadStagePressure.isOccasionalResponder(candidate)) {
+                return candidate;
+            }
+
+            candidate.discard();
+        }
+
+        throw new IllegalStateException("Unable to create a sampled Stage 2 Undead responder");
     }
 
     private static void undeadAlliesRejectAndClearVanillaTargets(

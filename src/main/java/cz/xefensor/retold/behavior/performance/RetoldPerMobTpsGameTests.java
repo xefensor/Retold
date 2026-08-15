@@ -8,6 +8,8 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.stage.RetoldWorldData;
+import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.villager.RetoldVillagerCommunalSupply;
 
 import net.minecraft.core.BlockPos;
@@ -71,8 +73,10 @@ import java.util.function.Consumer;
  * subject so existing retaliation and danger systems are exercised. Mobs using
  * the shared passive-flee behavior additionally take one point of real mob damage,
  * which includes the production damage event, immediate movement claim, and
- * remembered flee follow-through in the measured workload. Dolphin, Bee, and
- * undead-mount damage-triggered defense paths receive the same treatment.</p>
+ * remembered flee follow-through in the measured workload. Wild ordinary predators
+ * are lowered through their 25% health threshold so their ten-second wounded-flight
+ * continuation is measured. Bee and undead-mount damage-triggered defense paths
+ * receive the same treatment.</p>
  *
  * <p>Every test owns a separate GameTest environment. This is intentional: two
  * 50-mob samples running in the same server tick would contaminate one another's
@@ -247,8 +251,14 @@ public final class RetoldPerMobTpsGameTests {
                 profile,
                 arenaKind,
                 currentClockTime(helper.getLevel()),
-                helper.getLevel().getGameRules().get(GameRules.MOB_GRIEFING)
+                helper.getLevel().getGameRules().get(GameRules.MOB_GRIEFING),
+                RetoldWorldData.get(helper.getLevel()).getStage()
         );
+
+        if (profile.type() == RetoldMobProfileType.UNDEAD_HUNGRY
+                || profile.type() == RetoldMobProfileType.UNDEAD_TOLERANT) {
+            RetoldWorldData.get(helper.getLevel()).setStage(RetoldWorldStage.STAGE_2);
+        }
 
         helper.getLevel().getGameRules().set(
                 GameRules.MOB_GRIEFING,
@@ -577,15 +587,20 @@ public final class RetoldPerMobTpsGameTests {
 
                 // Benchmark subjects are normally invulnerable so the 50-mob sample remains
                 // stable. Temporarily allow one real hit where production behavior begins from
-                // the successful-damage event: shared passive flight, Dolphin pod defense,
-                // Bee colony defense, and undead-mount retaliation.
+                // the successful-damage event: shared passive flight, badly wounded
+                // wild-predator flight, Bee colony defense, and undead-mount retaliation.
                 if (subject instanceof PathfinderMob pathfinderMob
                         && (RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)
-                        || run.mobPath.equals("dolphin")
+                        || RetoldMobRules.canUseOrdinaryPredatorSystems(pathfinderMob)
                         || run.mobPath.equals("bee")
                         || RetoldMobRules.isUndeadMount(pathfinderMob))) {
                     subject.setInvulnerable(false);
                     subject.invulnerableTime = 0;
+
+                    if (RetoldMobRules.canUseOrdinaryPredatorSystems(pathfinderMob)) {
+                        subject.setHealth(subject.getMaxHealth() * 0.25F + 0.5F);
+                    }
+
                     subject.hurtServer(
                             helper.getLevel(),
                             helper.getLevel().damageSources().mobAttack(threat),
@@ -966,6 +981,7 @@ public final class RetoldPerMobTpsGameTests {
                 run.originalMobGriefing,
                 helper.getLevel().getServer()
         );
+        RetoldWorldData.get(helper.getLevel()).setStage(run.originalStage);
         clearStimuli(run);
 
         for (Mob subject : run.subjects) {
@@ -1049,6 +1065,7 @@ public final class RetoldPerMobTpsGameTests {
             case "parrot" -> Blocks.WHEAT;
             case "bee" -> Blocks.DANDELION;
             case "hoglin", "piglin" -> Blocks.CRIMSON_FUNGUS;
+            case "cod", "salmon", "tropical_fish", "pufferfish" -> Blocks.SEAGRASS;
             default -> Blocks.SHORT_GRASS;
         };
 
@@ -1230,6 +1247,10 @@ public final class RetoldPerMobTpsGameTests {
             return Items.COD;
         }
 
+        if (mobPath.equals("squid") || mobPath.equals("glow_squid")) {
+            return Items.COD;
+        }
+
         if (mobPath.equals("strider")) {
             return Items.WARPED_FUNGUS;
         }
@@ -1317,6 +1338,7 @@ public final class RetoldPerMobTpsGameTests {
         private final ArenaKind arenaKind;
         private final long originalDayTime;
         private final boolean originalMobGriefing;
+        private final RetoldWorldStage originalStage;
         private final List<Mob> subjects = new ArrayList<>(SUBJECT_COUNT);
         private final List<Entity> stimuli = new ArrayList<>();
         private final Map<BenchmarkPhase, PhaseResult> results =
@@ -1332,7 +1354,8 @@ public final class RetoldPerMobTpsGameTests {
                 RetoldMobProfile profile,
                 ArenaKind arenaKind,
                 long originalDayTime,
-                boolean originalMobGriefing
+                boolean originalMobGriefing,
+                RetoldWorldStage originalStage
         ) {
             this.mobPath = mobPath;
             this.entityType = entityType;
@@ -1340,6 +1363,7 @@ public final class RetoldPerMobTpsGameTests {
             this.arenaKind = arenaKind;
             this.originalDayTime = originalDayTime;
             this.originalMobGriefing = originalMobGriefing;
+            this.originalStage = originalStage;
         }
     }
 

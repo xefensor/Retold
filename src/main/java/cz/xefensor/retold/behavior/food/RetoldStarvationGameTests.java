@@ -8,6 +8,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
@@ -16,8 +17,10 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
@@ -50,6 +53,7 @@ public final class RetoldStarvationGameTests {
         var cow = helper.spawn(EntityTypes.COW, 2, 2, 2);
         var bat = helper.spawn(EntityTypes.BAT, 4, 3, 2);
         var villager = helper.spawn(EntityTypes.VILLAGER, 6, 2, 2);
+        ServerPlayer observer = makeLoadedWorldObserver(helper);
         long gameTime = helper.getLevel().getGameTime();
         RetoldMobState cowState = prepareForNextHungerTick(cow, gameTime, 99);
         RetoldMobState batState = prepareForNextHungerTick(bat, gameTime, 99);
@@ -93,6 +97,7 @@ public final class RetoldStarvationGameTests {
                     villagerHealth - RetoldStarvationBehavior.DAMAGE_PER_HUNGER_INTERVAL,
                     "Critical hunger must damage hunger-aware Villagers"
             );
+            discardObserver(observer);
         });
     }
 
@@ -134,6 +139,7 @@ public final class RetoldStarvationGameTests {
         helper.setTime(18_000L);
         var chicken = helper.spawn(EntityTypes.CHICKEN, 2, 2, 2);
         var skeleton = helper.spawn(EntityTypes.SKELETON, 5, 2, 2);
+        ServerPlayer observer = makeLoadedWorldObserver(helper);
         long gameTime = helper.getLevel().getGameTime();
         prepareForNextHungerTick(
                 chicken,
@@ -166,6 +172,7 @@ public final class RetoldStarvationGameTests {
                     skeletonHealth,
                     "A profile with no hunger interval must not receive starvation damage"
             );
+            discardObserver(observer);
         });
     }
 
@@ -192,6 +199,26 @@ public final class RetoldStarvationGameTests {
                 helper.setBlock(x, 1, z, Blocks.STONE);
             }
         }
+    }
+
+    private static ServerPlayer makeLoadedWorldObserver(GameTestHelper helper) {
+        ServerPlayer observer = (ServerPlayer) helper.makeMockServerPlayer(
+                GameType.CREATIVE
+        );
+        BlockPos position = helper.absolutePos(new BlockPos(2, 2, 2));
+        observer.snapTo(
+                position.getX() + 0.5D,
+                position.getY(),
+                position.getZ() + 0.5D,
+                0.0F,
+                0.0F
+        );
+        return observer;
+    }
+
+    private static void discardObserver(ServerPlayer observer) {
+        observer.level().players().remove(observer);
+        observer.discard();
     }
 
     private static void registerTest(

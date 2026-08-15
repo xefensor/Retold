@@ -38,16 +38,18 @@ Current position:
 - There are 82 data-driven mob profiles. Zombie Nautilus is the newest unmanaged
   `SPECIAL_VANILLA` profile; Skeleton Horse, Zombie Horse, and Camel Husk are the newest
   `UNDEAD_MOUNT` profiles.
-- Implemented work includes Creeper safety/awareness, passive damage fleeing, dropped-food priority,
-  active food search, predator disengagement, Wolf leadership transfer, weak barriers, complete
+- Implemented work includes Creeper safety/awareness, passive damage fleeing, ten-second
+  below-25%-health flight for wild ordinary predators, dropped-food priority, active food search,
+  fed-predator disengagement, Wolf leadership transfer, weak barriers, complete
   current Slime/Magma Cube behavior, Spider hunting/lairs, Bat colonies, defensive Axolotls, Polar
   Bear warnings, Dolphin collective pod defense, Stage 3 Enderman assistance, Witch raid support,
   Stage 3 raid gating, territory
   coverage, Snowball/Vex damage, Sniffer/Endermite survival removal, Villager stock refresh, shared
-  bovine/equine/llama range identities, exact-species fish schooling, exact-species Squid panic,
+  bovine/equine/llama range identities, exact-species fish schooling, tagged loaded fish grazing,
+  exact-species Squid panic, tagged dropped-raw-fish Squid feeding,
   the loaded-world Animal Feeder, the loaded Villager communal consumer/Farmer-supplier loop, and
   global loaded-world hunger-satisfaction breeding for all current vanilla breedable animals,
-  loaded starvation damage and a passing 41-species natural-feeding survival matrix for every
+  loaded starvation damage and a 47-species natural-feeding survival matrix for every
   active hunger profile, plus
   Stage 2+ staged Villager Iron Golem construction restricted to Clerics, Librarians, Armorers,
   Toolsmiths, and Weaponsmiths, plus all-stage ranged magical Villager torch maintenance with a
@@ -71,8 +73,8 @@ Current position:
   carried food first. Only an empty personal supply triggers storage; there they take up to 12 food
   points, eat one item, retain the remainder, and use the shared source-facing pose. Machine
   inventories are ignored; danger, sleep, and trading retain priority. Hunger and exact entity/
-  container inventories save normally. There is deliberately no unloaded-time simulation or
-  catch-up in this slice.
+  container inventories save normally. The bounded unloaded catch-up later in this handoff reuses
+  the same personal-first consumer and ownership transaction without loaded movement.
 - Adult Farmers retain vanilla crop harvesting, replanting, and wheat-to-Bread production. When
   their inventory exceeds a 24-food-point personal reserve, they path to the same village chests or
   barrels and deposit surplus Bread, Carrots, Potatoes, or Beetroot. Seeds and unrelated items stay
@@ -103,16 +105,18 @@ Current position:
   unverified.
 - All 26 current vanilla breedable entity types use `retold:automatic_breeders`. Feeding by a
   player, Villager, dropped item, forage, or feeder only relieves hunger. A living adult must remain
-  in the `FULL` hunger stage for 6,000 loaded ticks without panic, damage, or a live target; two
+  in the `FULL` hunger stage for 6,000 loaded or bounded reconciled ticks without panic, damage, or a live target; two
   compatible equally ready adults within eight blocks then enter vanilla mating automatically.
   A failed mate search retries after one minute. Vanilla retains movement, genetics, tame ownership,
   Horse/Donkey compatibility, Turtle eggs, Frog pregnancy, and special births. Successful parents
   gain 40 hunger and retain vanilla's age cooldown. Satisfaction/retry/armed state saves with each
-  entity, but unloaded time does not advance it.
+  entity; unloaded progress advances only through the bounded ecosystem reconciliation timeline.
 - Every mob profile with a positive hunger interval takes one point of starvation damage whenever
   its species-specific interval reaches or remains at 100 hunger. The rule can kill ordinary,
   hostile, named/tamed, Villager, and Bat mobs; feeding below 100 stops later pulses. Slimes and
-  Magma Cubes keep their separate critical split-or-die response. This is loaded behavior only.
+  Magma Cubes keep their separate critical split-or-die response. Unloaded reconciliation applies
+  accumulated critical damage in one bounded transaction, protects named/tamed and horse-family
+  mobs at one health, and permits only one real Cube Mob split-or-die transaction.
 - At Stage 2+, vanilla's exact wanting, five-agreeing-Villager, and local recent-golem checks still
   decide whether a golem may be created. Only a Cleric, Librarian, Armorer, Toolsmith, or
   Weaponsmith may convert an eligible instant spawn into a persisted visible build; Nitwits and
@@ -130,7 +134,9 @@ Current position:
   its village anchor. Most professions use a one-second ranged magical cast. Nitwits instead route
   to a supported adjacent cell and hold a temporary Flint and Steel throughout the full close-use
   interaction; active use reasserts the visual if vanilla clears it, but it never enters inventory
-  or consumes durability. Both preserve normal, soul, copper, floor, wall, and wall-
+  or consumes durability. Both active methods continuously face the Villager's body, head, and look
+  control toward the torch. A success immediately starts another eligible nearby indexed torch,
+  capped at eight relights per interruptible maintenance run. Both preserve normal, soul, copper, floor, wall, and wall-
   facing state, require `mobGriefing`, and yield to hunger, danger, targets, sleep, trading,
   incompatible activity, and higher ownership.
   Discovery uses the weather-owned loaded-chunk extinguished index, the shared block-search budget,
@@ -172,6 +178,15 @@ Current position:
   Both cross-family exact selectors pass, as do the latest affected Zoglin and Zombie Nautilus
   50-mob runs with 5.091 and 4.437 ms/tick peaks. Natural target switching, repeated allied damage,
   aquatic Brain combat, taming/riding, multiplayer, and dedicated servers remain unverified.
+- Stage 1 now uses a weaker short-range Undead coordination baseline: Zombie-family sharing/notice
+  radii are 10/12 blocks and Skeleton-family radii are 10/14. Stage 2 expands those to 22/18 and
+  24/22, and a stable one-in-three subset of the opposite family can answer a nearby incident it
+  hears or sees through bounded cached scans, sight, and source-owned faction assistance. The
+  exact stage test passes, as do all 40 affected Stage 2 benchmark phases with a 6.046 ms/tick
+  peak. Stage 2 also mirrors each already-present entry in the additive spawn-pressure tag at about
+  25% of its original weight; vanilla caps, placement, and pack sizes remain authoritative. Its
+  exact stage-boundary test passes. Stat buffs are intentionally absent; natural spawn composition
+  and mixed-crowd balance remain unverified.
 - Withers now use a specialized ten-tick bounded cached selector instead of Retold's generic
   forced-faction loop. Recent attackers and creatures actively targeting the Wither outrank merely
   nearby prey, current-target inertia limits churn, players receive no categorical bonus, and the
@@ -200,8 +215,8 @@ Current position:
   Horse, Zombie Horse, and Camel Husk focused runs pass their affected phases below 50 ms/tick,
   and the final 256-managed-animal budget test passes at 17.082 ms/tick;
   the complete expanded matrix was intentionally not rerun. After Farmer supply, only the affected `retold:mob_tps_villager` test was rerun per the
-  selection policy; the latest affected-only rerun after the sustained Nitwit tool-visual fix
-  passed all five phases and peaked at 7.102 ms/tick while
+  selection policy; the latest affected-only rerun after continuous action-facing was added
+  passed all five phases and peaked at 7.259 ms/tick while
   recording personal meals, batch restocking, and bounded supplier searches and paths.
 - Villager consumer transactions pass 4/4, the exact consumer route passes 1/1, and Farmer supply
   passes 2/2 through three isolated selectors. Together they cover exact one-item consumption,
@@ -242,9 +257,10 @@ Current position:
   eligibility, no instant spawn, staging, emerald conservation, final ownership, Survival/Creative
   XP costs, Snow Golem non-regression, invalid/obstructed no-charge placement, and the narrow
   Villager-animation advancement-suppression scope.
-- The focused `retold:villager_relight*` selection passes 3/3, and the directly related existing
+- The focused `retold:villager_relight*` selection passes 4/4, and the directly related existing
   extinguished-torch drop regression passes 1/1. Coverage includes all three stages, village and
-  eight-block bounds, hunger/danger priority, exact wall-facing restoration, and sustained Nitwit
+  eight-block bounds, hunger/danger priority, exact wall-facing restoration, continuous magical
+  body/head/look alignment, an eight-torch bounded consecutive maintenance run, and sustained Nitwit
   close-use fake Flint and Steel visibility without inventory mutation. Naturally verify the longer Nitwit route because
   vanilla paths at random multi-million-block GameTest coordinates were nondeterministic.
 - The latest complete GameTest suite passed 160/160 in 3.504 minutes before the two Farmer-supply,
@@ -252,7 +268,7 @@ Current position:
   complete-suite escalation condition applied.
 - The focused `retold:*feed*` selection passes 6/6 and `retold:*food*` passes 4/4. The shared pose
   covers dropped food, forage, feeder use, held food, flowers, bamboo, prey feeding, Bats, Sniffers,
-  and Cube Mob swallowing; its focused regression includes a non-pathfinding Bat and proves urgent
+  and Cube Mob swallowing; its focused regression includes the distinct Bat-colony path and proves urgent
   replacement ownership interrupts the active pose without being cleared.
 - The focused `retold:*bat*` selection passes 8/8, including the 64-Bat workload at 8.131 ms/tick in
   the latest run.
@@ -278,7 +294,7 @@ Current position:
   long-session, existing-world, or exhaustive automated per-species verification.
 - On 2026-08-04, the developer confirmed automatic hunger-satisfaction breeding in-game using a
   temporary 10-second readiness gate. The production constant was then restored to the confirmed
-  five loaded minutes; the complete five-minute wait and every-species coverage remain unverified.
+  five minutes; the complete natural loaded wait and every-species coverage remain unverified.
 - On 2026-08-04, the developer re-tested the reported enclosed-Sheep setup and confirmed exact
   feeder arrival and consumption, the visible two-second source-facing pose for feeder/dropped/
   forage food, immediate damage interruption, and several hungry Sheep using one trough.
@@ -288,14 +304,22 @@ Current position:
 - On 2026-08-04, the developer also reported that Farmer-crop provenance/reputation works in-game.
   Profession livestock tending, village-animal reputation, and global hunger-satisfaction breeding
   are implemented but have not yet received their natural acceptance passes.
-- The new herd/school batch deliberately does not implement exact fish diets, seagrass/kelp
-  consumption, Squid hunger, or a player-defined domesticated enclosure mechanism.
+- The loaded aquatic diet slice uses a deliberately conservative rule: all four school fish graze
+  tagged seagrass/kelp, while Squid and Glow Squid eat tagged dropped raw fish and never hunt living
+  fish. Loaded land herd, Pig, and exact-species fish-school ranges are now food-anchored: usable
+  local forage or a compatible land Animal Feeder holds the current range, while hungry depleted
+  groups migrate together. The developer explicitly rejected a separate domesticated tag or
+  player-defined enclosure mechanism.
 
-Immediate task: naturally verify loaded starvation with representative livestock, a Bat, a
-Villager, a hostile hunger profile, and a named/tamed animal. Confirm one damage point per
-species-specific metabolism interval at 100 hunger, eventual death and normal drops, and that
-feeding below 100 stops later damage. Separately confirm Slimes/Magma Cubes still split or die under
-their existing critical rule. Do not report unloaded starvation because catch-up remains absent.
+Immediate task: naturally verify the completed bounded unloaded ecosystem. Returning mobs reconcile
+persisted hunger through a seven-day-capped, 16-mob-per-tick queue with at most one real daily meal
+from compatible feeders, accessible forage, Villager supplies, or reachable wild prey. Breeding has
+no population-cap gate, and one proven-reachable foodless herd/Pig group/fish school may migrate per
+tick. Remaining critical pulses become one damage or Cube split transaction; protected mobs retain
+one health. One Farmer per tick can perform one reachable Farmer-owned crop harvest/replant/surplus
+deposit per unloaded day, and one deduplicated returning chunk per tick can delegate one daily pass
+to vanilla natural spawning. Verify crowded returns, Farmer crop/storage contention, natural spawn
+composition/caps, save/reload boundaries, multiplayer, dedicated servers, and existing worlds.
 
 Then naturally verify profession livestock tending in a normal loaded village. Give a
 Shepherd two Sheep/Goats and Wheat, a Leatherworker two Cows/Mooshrooms and Wheat, and a Butcher
@@ -375,11 +399,13 @@ Continue in this order:
 6. Keep the formerly failing Cube hop, aquatic route, and separated Bat-route assertions under
    observation in relevant focused runs without weakening their requirements. Use a complete run
    only when the test-selection escalation rules apply.
-7. Then choose a new implementation batch from Piglin/brute hiring, remaining
-   special creatures, stage rules, or the still-unspecified parts of
-   herd/school ecology.
-8. Leave unloaded ecosystem simulation until loaded behavior is stable. It must be bounded, queued,
-   persistent, population-aware, and must never break barriers while unloaded.
+7. Choose a new implementation batch from Piglin/brute hiring, remaining special creatures, other
+   stage rules, or the still-unspecified parts of herd/school ecology.
+8. Keep the completed unloaded ecosystem bounded and transaction-tested. Metabolism,
+   feeder/natural/Villager food, reachable wild-prey predation, food-satisfaction breeding,
+   land-herd/Pig/fish-school migration, starvation/Cube outcomes, Farmer production, and returning-
+   chunk spawning are implemented. Breeding deliberately has no population cap. Naturally verify
+   composition, contention, and persistence; the simulation must never break barriers offline.
 
 Important design boundaries:
 

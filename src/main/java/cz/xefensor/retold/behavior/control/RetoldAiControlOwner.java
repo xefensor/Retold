@@ -2,6 +2,7 @@ package cz.xefensor.retold.behavior.control;
 
 public enum RetoldAiControlOwner {
     SYSTEM,
+    UNLOADED_ECOLOGY,
     FOOD,
     VILLAGER_COMMUNAL,
     VILLAGER_ANIMAL_TENDING,

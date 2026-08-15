@@ -837,6 +837,10 @@ public final class RetoldMobRules {
             return isFishItem(stack);
         }
 
+        if (mobPath.equals("squid") || mobPath.equals("glow_squid")) {
+            return stack.is(RetoldTags.SQUID_FOODS);
+        }
+
         if (mobPath.equals("bat")) {
             return stack.is(RetoldTags.BAT_FOODS)
                     || itemPath.equals("spider_eye");
@@ -952,6 +956,10 @@ public final class RetoldMobRules {
         if (mobPath.equals("turtle")) {
             return state.is(RetoldTags.TURTLE_FORAGE_BLOCKS)
                     || blockPath.equals("seagrass");
+        }
+
+        if (isAquaticSchool(mob)) {
+            return state.is(RetoldTags.AQUATIC_SCHOOL_FORAGE_BLOCKS);
         }
 
         if (isParrotForager(mob)) {

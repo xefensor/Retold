@@ -3,9 +3,11 @@ package cz.xefensor.retold.behavior.food;
 import cz.xefensor.retold.behavior.performance.RetoldAiLod;
 import cz.xefensor.retold.behavior.performance.RetoldAiWorkBudget;
 import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
+import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -14,6 +16,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -69,6 +72,90 @@ public final class RetoldForageBlockSearch {
                 gameTime,
                 cacheTicks
         );
+    }
+
+    /**
+     * Performs one budgeted local scan for the real forage blocks that may be
+     * consumed during unloaded reconciliation. Unlike the loaded target cache,
+     * this returns several distinct blocks so a multi-day transaction never
+     * needs to mutate the world before asking for another search budget.
+     */
+    public static synchronized CatchUpFindResult findCatchUpForageBlocks(
+            ServerLevel level,
+            PathfinderMob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            double maxDistanceSquared,
+            long gameTime,
+            int maximumTargets
+    ) {
+        if (level == null
+                || mob == null
+                || mob.level() != level
+                || maximumTargets <= 0) {
+            return CatchUpFindResult.none();
+        }
+
+        if (!RetoldAiWorkBudget.tryUseFairBlockSearch(mob, gameTime)) {
+            RetoldBehaviorPerf.recordBlockSearchCache(false);
+            RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
+            return CatchUpFindResult.deferredResult();
+        }
+
+        RetoldBehaviorPerf.recordBlockSearchCache(false);
+        BlockPos center = mob.blockPosition();
+        List<BlockPos> targets = new ArrayList<>();
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+        long positionsChecked = 0L;
+
+        for (int dx = -horizontalRadius; dx <= horizontalRadius; dx++) {
+            for (int dy = -verticalRadius; dy <= verticalRadius; dy++) {
+                for (int dz = -horizontalRadius; dz <= horizontalRadius; dz++) {
+                    double distanceSquared = dx * dx + dy * dy + dz * dz;
+
+                    if (distanceSquared > maxDistanceSquared) {
+                        continue;
+                    }
+
+                    mutable.set(
+                            center.getX() + dx,
+                            center.getY() + dy,
+                            center.getZ() + dz
+                    );
+                    positionsChecked++;
+
+                    if (level.isOutsideBuildHeight(mutable)) {
+                        continue;
+                    }
+
+                    BlockState state = level.getBlockState(mutable);
+                    boolean renewable = RetoldMobRules
+                            .isRenewableEnvironmentalForage(mob, state);
+
+                    if (!RetoldMobRules.canForageBlock(mob, state)
+                            || !renewable
+                            && !RetoldMobGriefing.canBreakBlock(
+                            level,
+                            mob,
+                            mutable
+                    )
+                            || !hasCatchUpAccess(level, mob, mutable, state)) {
+                        continue;
+                    }
+
+                    targets.add(mutable.immutable());
+                }
+            }
+        }
+
+        targets.sort(Comparator.comparingDouble(center::distSqr));
+        RetoldBehaviorPerf.recordBlockTargetPositionsChecked(positionsChecked);
+
+        if (targets.size() > maximumTargets) {
+            targets = new ArrayList<>(targets.subList(0, maximumTargets));
+        }
+
+        return new CatchUpFindResult(List.copyOf(targets), false);
     }
 
     private static BlockPos findForageBlock(
@@ -153,6 +240,35 @@ public final class RetoldForageBlockSearch {
 
     public static synchronized boolean isSearchDeferred(PathfinderMob mob) {
         return mob != null && DEFERRED_SEARCHES.containsKey(mob);
+    }
+
+    private static boolean hasCatchUpAccess(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos foragePos,
+            BlockState state
+    ) {
+        if (state.getCollisionShape(level, foragePos).isEmpty()) {
+            return mob.getNavigation().isStableDestination(foragePos);
+        }
+
+        int accessDistance = mob.getBbWidth() > 1.0F ? 2 : 1;
+
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos candidate = foragePos.relative(direction, accessDistance);
+
+            if (mob.getNavigation().isStableDestination(candidate)
+                    && level.getBlockState(candidate)
+                    .getCollisionShape(level, candidate)
+                    .isEmpty()
+                    && level.getBlockState(candidate.above())
+                    .getCollisionShape(level, candidate.above())
+                    .isEmpty()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static int cacheLifetimeTicks(
@@ -259,5 +375,18 @@ public final class RetoldForageBlockSearch {
             long expiresAt,
             BlockPos target
     ) {
+    }
+
+    public record CatchUpFindResult(
+            List<BlockPos> targets,
+            boolean deferred
+    ) {
+        private static CatchUpFindResult none() {
+            return new CatchUpFindResult(List.of(), false);
+        }
+
+        private static CatchUpFindResult deferredResult() {
+            return new CatchUpFindResult(List.of(), true);
+        }
     }
 }

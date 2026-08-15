@@ -351,7 +351,7 @@ public final class RetoldAnimalBreedingGameTests {
             Consumer<GameTestHelper> function
     ) {
         TestData<Holder<TestEnvironmentDefinition<?>>> testData =
-                new TestData<>(environment, EMPTY_STRUCTURE, 200, 0, true);
+                new TestData<>(environment, EMPTY_STRUCTURE, 400, 0, true);
         event.registerTest(id(name), new InlineGameTest(testData, function));
     }
 

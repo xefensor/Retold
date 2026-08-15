@@ -13,6 +13,18 @@ Retold is still built around:
 - elytra remaining as an item but not being survival-obtainable through End Cities
 - recipe knowledge and villager teaching instead of a vanilla-style recipe-book restore
 - Retold mob AI driven by species, faction, profile, state, and nearby world situation
+- healthy ordinary predators defend themselves after successful damage; wild ordinary predators
+  instead abandon hunting or retaliation and flee their attacker for ten seconds after a real hit
+  leaves them below 25% health, while tamed defenders, Undead, bosses, and active territory duty
+  remain exempt from wounded flight
+- loaded school fish graze tagged seagrass/kelp, while Squid and Glow Squid consume tagged dropped
+  raw fish without hunting living prey
+- loaded land herds, Pig foraging groups, and exact-species fish schools keep their persisted range
+  while compatible local food remains, then migrate together under hunger after depletion; there is
+  no separate domesticated classification or player-defined enclosure flag
+- Stage 1 Undead using a weaker short-range coordination baseline, with Stage 2 escalating through
+  wider awareness, convergence, imperfect cross-family support, and a modest tagged natural-spawn
+  weight increase under vanilla caps rather than direct stat buffs
 - survival worldgen/spawn removal for some modern content instead of necessarily deleting all code support
 - beds not skipping night
 - rain extinguishing normal torches
@@ -32,8 +44,11 @@ These are the strongest next design-aligned areas:
    hostility in ordinary, multiplayer, dedicated-server, and existing villages.
 8. Naturally verify hunger-satisfaction breeding across representative ordinary, aquatic, Nether,
    egg-laying, pregnant, mixed-equine, and tamed animals, including population growth and save/load.
-9. Implement the confirmed mob/faction behavior contract in dependency order: global target safety and affiliations, existing species families, society/hiring features, then the bounded ecosystem simulation.
-10. Continue AI validation and performance profiling against real loaded-mob tests.
+9. Naturally verify the bounded unloaded ecosystem with crowded returns, starvation outcomes,
+   Farmer crop/storage contention, vanilla spawn composition, multiplayer, dedicated servers,
+   long sessions, and existing worlds.
+10. Continue implementing the remaining confirmed mob/faction contract and profiling real
+    loaded-mob tests.
 
 ## Planned Systems
 
@@ -56,7 +71,6 @@ These are still planned but need feature-specific design before implementation:
 - broader village society work beyond the implemented loaded-world communal food, Farmer supply,
   profession livestock tending, property reputation, golem construction, torch maintenance, and
   daily trade-stock refresh
-- bounded unloaded-ecosystem catch-up for hunger, feeding, predation, breeding, carrying capacity, migration, and spawning
 
 The detailed confirmed behavior contract is maintained in
 [`retold_mob_ai_system.md`](retold_mob_ai_system.md#confirmed-gameplay-contract). Implementation
@@ -333,7 +347,6 @@ Do not implement these without asking the developer first:
 - New Game+ / world ending ideas
 - exact path/road formation design and whether it becomes a confirmed Retold gameplay feature
 - exact Nether Remnant armor requirement (one qualifying piece or a full set)
-- exact time cap and calculation granularity for unloaded-ecosystem catch-up
 - whether feeding a Slime to the maximum supported size should transform it into or summon a
   Slime boss; the boss identity, exact trigger, encounter behavior, and rewards are not designed
 

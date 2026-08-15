@@ -21,6 +21,7 @@ public final class RetoldTags {
     );
     public static final TagKey<Item> MEAT_FOODS = itemTag("meat_foods");
     public static final TagKey<Item> FISH_FOODS = itemTag("fish_foods");
+    public static final TagKey<Item> SQUID_FOODS = itemTag("squid_foods");
     public static final TagKey<Item> BERRY_FOODS = itemTag("berry_foods");
     public static final TagKey<Item> GRAZER_FOODS = itemTag("grazer_foods");
     public static final TagKey<Item> SMALL_PASSIVE_FOODS = itemTag(
@@ -150,6 +151,9 @@ public final class RetoldTags {
     public static final TagKey<Block> TURTLE_FORAGE_BLOCKS = blockTag(
             "turtle_forage_blocks"
     );
+    public static final TagKey<Block> AQUATIC_SCHOOL_FORAGE_BLOCKS = blockTag(
+            "aquatic_school_forage_blocks"
+    );
     public static final TagKey<Block> HOGLIN_FORAGE_BLOCKS = blockTag(
             "hoglin_forage_blocks"
     );
@@ -182,6 +186,8 @@ public final class RetoldTags {
                             "automatic_breeders"
                     )
             );
+    public static final TagKey<EntityType<?>> STAGE_2_UNDEAD_SPAWN_PRESSURE =
+            entityTypeTag("stage_2_undead_spawn_pressure");
     public static final TagKey<EntityType<?>> FACTION_NETHER_REMNANTS =
             entityTypeTag("factions/nether_remnants");
     public static final TagKey<EntityType<?>> FACTION_ILLAGERS =

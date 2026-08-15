@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
@@ -232,6 +233,16 @@ public final class RetoldFoodBehaviorEvents {
             return true;
         }
 
+        if (RetoldUnloadedEcosystemCatchUp.deferLongGap(
+                (ServerLevel) mob.level(),
+                mob,
+                state,
+                gameTime,
+                interval
+        )) {
+            return false;
+        }
+
         state.addHunger(RetoldSlimeStarvationBehavior.hungerGain(mob));
         state.markHungerTick(gameTime);
 
@@ -285,6 +296,7 @@ public final class RetoldFoodBehaviorEvents {
                 || mob.level() != level
                 || !RetoldMobRules.hasActiveSearchDrive(state)
                 || RetoldMobRules.canUseNaturalPreyHuntingSystems(mob)
+                || RetoldMobRules.isAquaticSchool(mob)
                 || RetoldMobRules.isSnifferForager(mob)
                 || RetoldMobRules.isHiveColony(mob)) {
             stopOwnedFoodSearch(mob);
@@ -675,6 +687,81 @@ public final class RetoldFoodBehaviorEvents {
         );
     }
 
+    public static CatchUpForageResult findCatchUpForage(
+            ServerLevel level,
+            PathfinderMob mob,
+            long gameTime,
+            int maximumTargets
+    ) {
+        if (level == null
+                || mob == null
+                || mob.level() != level
+                || maximumTargets <= 0) {
+            return CatchUpForageResult.none();
+        }
+
+        double maxDistanceSquared = RetoldMobRules
+                .usesRenewableEnvironmentalForage(mob)
+                ? FORAGE_HORIZONTAL_RADIUS * FORAGE_HORIZONTAL_RADIUS
+                : 16.0D;
+        RetoldForageBlockSearch.CatchUpFindResult result =
+                RetoldForageBlockSearch.findCatchUpForageBlocks(
+                        level,
+                        mob,
+                        FORAGE_HORIZONTAL_RADIUS,
+                        FORAGE_VERTICAL_RADIUS,
+                        maxDistanceSquared,
+                        gameTime,
+                        maximumTargets
+                );
+
+        return new CatchUpForageResult(
+                result.targets(),
+                result.deferred()
+        );
+    }
+
+    /**
+     * Applies only the real forage mutation and reports its relief. Catch-up
+     * state and meal timestamps remain owned by the reconciliation queue.
+     */
+    public static CatchUpForageMeal consumeCatchUpForage(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos foragePos
+    ) {
+        if (level == null
+                || mob == null
+                || foragePos == null
+                || mob.level() != level) {
+            return CatchUpForageMeal.none();
+        }
+
+        BlockState blockState = level.getBlockState(foragePos);
+        boolean renewable = RetoldMobRules.isRenewableEnvironmentalForage(
+                mob,
+                blockState
+        );
+
+        if (!RetoldMobRules.canForageBlock(mob, blockState)
+                || !renewable
+                && !RetoldMobGriefing.canBreakBlock(level, mob, foragePos)) {
+            return CatchUpForageMeal.none();
+        }
+
+        int relief = RetoldMobRules.forageRelief(mob, blockState);
+
+        if (!renewable) {
+            destroyForageBlock(
+                    level,
+                    foragePos,
+                    RetoldMobRules.getBlockPath(blockState)
+            );
+        }
+
+        return new CatchUpForageMeal(relief, renewable);
+    }
+
     private static void handleForageBlock(
             ServerLevel level,
             PathfinderMob mob,
@@ -903,5 +990,23 @@ public final class RetoldFoodBehaviorEvents {
             BlockPos pos,
             long expiresAt
     ) {
+    }
+
+    public record CatchUpForageResult(
+            List<BlockPos> targets,
+            boolean deferred
+    ) {
+        private static CatchUpForageResult none() {
+            return new CatchUpForageResult(List.of(), false);
+        }
+    }
+
+    public record CatchUpForageMeal(
+            int relief,
+            boolean reusable
+    ) {
+        private static CatchUpForageMeal none() {
+            return new CatchUpForageMeal(0, false);
+        }
     }
 }

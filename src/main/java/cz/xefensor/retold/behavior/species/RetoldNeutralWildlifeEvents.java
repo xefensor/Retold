@@ -4,12 +4,13 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
-import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
-import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
+import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
 import net.minecraft.server.level.ServerLevel;
@@ -213,7 +214,7 @@ public final class RetoldNeutralWildlifeEvents {
             LivingEntity target,
             boolean playSound
     ) {
-        protector.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        RetoldActionFacing.face(protector, target.getEyePosition());
 
         if (protector instanceof PolarBear polarBear) {
             polarBear.setStanding(true);

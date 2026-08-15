@@ -2,6 +2,8 @@ package cz.xefensor.retold.behavior.flee;
 
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
+import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
+import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.home.RetoldAnimalHomeMemory;
@@ -9,11 +11,16 @@ import cz.xefensor.retold.behavior.home.RetoldAnimalHomeType;
 import cz.xefensor.retold.behavior.home.RetoldAnimalHomes;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.hunting.RetoldPreyTargeting;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.faction.RetoldFaction;
+import cz.xefensor.retold.faction.RetoldFactionMembers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +29,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -38,6 +46,8 @@ public final class RetoldControlledFleeEvents {
     private static final int FLEE_SCAN_CACHE_TICKS = 4;
     private static final int FLEE_PATH_INTERVAL_TICKS = 6;
     private static final int FLEE_CONTROL_TICKS = 20 * 3;
+    private static final String WOUNDED_PREDATOR_FLEE_REASON = "wounded_predator";
+    private static final float WOUNDED_PREDATOR_HEALTH_RATIO = 0.25F;
 
     /*
      * Direct predator fear memory.
@@ -134,12 +144,24 @@ public final class RetoldControlledFleeEvents {
     public static void onLivingDamage(LivingDamageEvent.Post event) {
         if (event.getHealthDamage() <= 0.0F
                 || !(event.getEntity() instanceof PathfinderMob prey)
-                || !(prey.level() instanceof ServerLevel level)
-                || !usesSharedFleeBehavior(prey)) {
+                || !(prey.level() instanceof ServerLevel level)) {
             return;
         }
 
         long gameTime = level.getGameTime();
+
+        if (tryBeginWoundedPredatorFlee(
+                prey,
+                event.getSource(),
+                gameTime
+        )) {
+            return;
+        }
+
+        if (!usesSharedFleeBehavior(prey)) {
+            return;
+        }
+
         rememberThreat(
                 prey,
                 getDamageOrigin(prey, event.getSource()),
@@ -208,12 +230,27 @@ public final class RetoldControlledFleeEvents {
             return;
         }
 
-        if (!isFleeingPrey(prey)) {
-            FLEE_MEMORIES.remove(prey);
+        long gameTime = level.getGameTime();
+        FleeMemory memory = getActiveFleeMemory(prey, gameTime);
+
+        if (memory != null && memory.woundedPredator()) {
+            if (!canContinueWoundedPredatorFlee(prey)) {
+                stopWoundedPredatorFlee(prey, gameTime);
+                return;
+            }
+
+            if (shouldThink(prey, gameTime)) {
+                fleeFromMemory(prey, memory, gameTime);
+            }
+
             return;
         }
 
-        long gameTime = level.getGameTime();
+        if (!isFleeingPrey(prey)) {
+            FLEE_MEMORIES.remove(prey);
+            stopWoundedPredatorFlee(prey, gameTime);
+            return;
+        }
 
         if (!shouldThink(prey, gameTime)) {
             return;
@@ -245,7 +282,7 @@ public final class RetoldControlledFleeEvents {
          * Important: do this BEFORE copying herd panic again, otherwise animals
          * can refresh each other forever.
          */
-        FleeMemory memory = getActiveFleeMemory(
+        memory = getActiveFleeMemory(
                 prey,
                 gameTime
         );
@@ -662,9 +699,164 @@ public final class RetoldControlledFleeEvents {
                         away,
                         gameTime,
                         gameTime + FLEE_MEMORY_TICKS,
+                        false,
                         false
                 )
         );
+    }
+
+    private static boolean tryBeginWoundedPredatorFlee(
+            PathfinderMob predator,
+            DamageSource source,
+            long gameTime
+    ) {
+        Entity sourceEntity = source == null ? null : source.getEntity();
+
+        if (!(sourceEntity instanceof LivingEntity)
+                || sourceEntity == predator
+                || !isEligibleWoundedPredator(predator)
+                || predator.getHealth() <= 0.0F
+                || predator.getHealth() >= predator.getMaxHealth() * WOUNDED_PREDATOR_HEALTH_RATIO
+                || hasActiveTerritoryDuty(predator)) {
+            return false;
+        }
+
+        LivingEntity target = predator.getTarget();
+
+        if (target != null) {
+            RetoldBehaviorTargets.clearTargetAndAggression(
+                    predator,
+                    target,
+                    true
+            );
+        }
+
+        RetoldAiControl.clear(predator);
+        predator.setSprinting(false);
+        predator.getNavigation().stop();
+
+        rememberWoundedPredatorThreat(
+                predator,
+                getDamageOrigin(predator, source),
+                gameTime
+        );
+
+        FleeMemory memory = getActiveFleeMemory(predator, gameTime);
+
+        if (memory == null) {
+            return false;
+        }
+
+        fleeFromMemory(predator, memory, gameTime);
+
+        return RetoldAiControl.isControlledAsByWithReason(
+                predator,
+                RetoldAiControlMode.FLEE,
+                RetoldAiControlOwner.FLEEING,
+                WOUNDED_PREDATOR_FLEE_REASON
+        );
+    }
+
+    private static void rememberWoundedPredatorThreat(
+            PathfinderMob predator,
+            Vec3 threatPosition,
+            long gameTime
+    ) {
+        markDanger(predator, gameTime, false);
+
+        Vec3 away = new Vec3(
+                predator.getX() - threatPosition.x,
+                0.0D,
+                predator.getZ() - threatPosition.z
+        );
+
+        if (away.lengthSqr() <= 0.0001D) {
+            away = randomHorizontalDirection(predator);
+        } else {
+            away = away.normalize();
+        }
+
+        FLEE_MEMORIES.put(
+                predator,
+                new FleeMemory(
+                        BlockPos.containing(threatPosition).immutable(),
+                        away,
+                        gameTime,
+                        gameTime + FLEE_MEMORY_TICKS,
+                        false,
+                        true
+                )
+        );
+    }
+
+    private static boolean isEligibleWoundedPredator(PathfinderMob predator) {
+        if (!RetoldMobRules.canUseOrdinaryPredatorSystems(predator)) {
+            return false;
+        }
+
+        if (predator instanceof TamableAnimal tamable && tamable.isTame()) {
+            return false;
+        }
+
+        RetoldFaction faction = RetoldFactionMembers.getFaction(predator);
+
+        if (faction == RetoldFaction.UNDEAD
+                || faction == RetoldFaction.BOSSES
+                || RetoldMobRules.isApexOrBoss(predator)) {
+            return false;
+        }
+
+        return !RetoldMobRules.isTerritoryGuard(predator);
+    }
+
+    private static boolean canContinueWoundedPredatorFlee(PathfinderMob predator) {
+        return isEligibleWoundedPredator(predator)
+                && !hasActiveTerritoryDuty(predator);
+    }
+
+    private static boolean hasActiveTerritoryDuty(PathfinderMob predator) {
+        if (RetoldAiControl.isControlledAs(predator, RetoldAiControlMode.TERRITORY)
+                || RetoldAiControl.isControlledBy(predator, RetoldAiControlOwner.TERRITORY)) {
+            return true;
+        }
+
+        LivingEntity target = predator.getTarget();
+
+        return target != null && RetoldFactionTargetMemory.isOwnedByAny(
+                predator,
+                target,
+                RetoldTargetSource.TERRITORY_ATTACK
+        );
+    }
+
+    public static boolean isWoundedPredatorFleeing(PathfinderMob predator) {
+        if (predator == null || !(predator.level() instanceof ServerLevel level)) {
+            return false;
+        }
+
+        FleeMemory memory = getActiveFleeMemory(predator, level.getGameTime());
+
+        return memory != null && memory.woundedPredator();
+    }
+
+    private static void stopWoundedPredatorFlee(
+            PathfinderMob predator,
+            long gameTime
+    ) {
+        FLEE_MEMORIES.remove(predator);
+
+        if (!RetoldAiControl.clearIfControlledAsByWithReason(
+                predator,
+                RetoldAiControlMode.FLEE,
+                RetoldAiControlOwner.FLEEING,
+                WOUNDED_PREDATOR_FLEE_REASON
+        )) {
+            return;
+        }
+
+        predator.setSprinting(false);
+        predator.getNavigation().stop();
+        markFleeEnded(predator, gameTime);
     }
 
     private static Vec3 getDamageOrigin(
@@ -761,7 +953,8 @@ public final class RetoldControlledFleeEvents {
                         finalDirection,
                         gameTime,
                         gameTime + HERD_PANIC_MEMORY_TICKS,
-                        true
+                        true,
+                        false
                 )
         );
     }
@@ -952,12 +1145,28 @@ public final class RetoldControlledFleeEvents {
             );
         }
 
-        RetoldAiControl.refresh(
-                prey,
-                RetoldAiControlMode.FLEE,
-                gameTime,
-                FLEE_CONTROL_TICKS
-        );
+        FleeMemory memory = getActiveFleeMemory(prey, gameTime);
+
+        if (memory != null && memory.woundedPredator()) {
+            if (!RetoldAiControl.tryClaim(
+                    prey,
+                    RetoldAiControlMode.FLEE,
+                    RetoldAiControlOwner.FLEEING,
+                    RetoldAiPriorities.FLEE,
+                    WOUNDED_PREDATOR_FLEE_REASON,
+                    gameTime,
+                    FLEE_CONTROL_TICKS
+            )) {
+                return;
+            }
+        } else {
+            RetoldAiControl.refresh(
+                    prey,
+                    RetoldAiControlMode.FLEE,
+                    gameTime,
+                    FLEE_CONTROL_TICKS
+            );
+        }
 
         prey.setSprinting(true);
 
@@ -1288,7 +1497,8 @@ public final class RetoldControlledFleeEvents {
             Vec3 awayDirection,
             long lastThreatSeenAt,
             long expiresAt,
-            boolean fromHerdPanic
+            boolean fromHerdPanic,
+            boolean woundedPredator
     ) {
         public boolean isExpired(long gameTime) {
             return gameTime > expiresAt;

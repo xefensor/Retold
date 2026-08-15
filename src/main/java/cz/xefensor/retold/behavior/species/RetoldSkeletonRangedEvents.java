@@ -28,14 +28,6 @@ public final class RetoldSkeletonRangedEvents {
     private static final int RANGED_CONTROL_TICKS = 20 * 4;
     private static final int RANGED_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 1);
 
-    private static final double SHARE_RADIUS_BLOCKS = 24.0D;
-    private static final double SHARE_RADIUS_SQUARED =
-            SHARE_RADIUS_BLOCKS * SHARE_RADIUS_BLOCKS;
-
-    private static final double NOTICE_RADIUS_BLOCKS = 22.0D;
-    private static final double NOTICE_RADIUS_SQUARED =
-            NOTICE_RADIUS_BLOCKS * NOTICE_RADIUS_BLOCKS;
-
     private static final double TOO_CLOSE_BLOCKS = 7.0D;
     private static final double TOO_CLOSE_SQUARED =
             TOO_CLOSE_BLOCKS * TOO_CLOSE_BLOCKS;
@@ -128,11 +120,12 @@ public final class RetoldSkeletonRangedEvents {
             ServerLevel level,
             PathfinderMob skeleton
     ) {
+        double shareRadius = RetoldUndeadStagePressure.skeletonShareRadius(level);
         List<PathfinderMob> sources = RetoldAiScanCache.nearby(
                 level,
                 skeleton,
                 PathfinderMob.class,
-                SHARE_RADIUS_BLOCKS,
+                shareRadius,
                 level.getGameTime(),
                 RANGED_SCAN_CACHE_TICKS
         );
@@ -141,7 +134,7 @@ public final class RetoldSkeletonRangedEvents {
         double bestScore = Double.MAX_VALUE;
 
         for (PathfinderMob source : sources) {
-            if (!isValidRangedSource(skeleton, source)) {
+            if (!isValidRangedSource(skeleton, source, shareRadius)) {
                 continue;
             }
 
@@ -174,11 +167,12 @@ public final class RetoldSkeletonRangedEvents {
             ServerLevel level,
             PathfinderMob skeleton
     ) {
+        double noticeRadius = RetoldUndeadStagePressure.skeletonNoticeRadius(level);
         List<LivingEntity> candidates = RetoldAiScanCache.nearby(
                 level,
                 skeleton,
                 LivingEntity.class,
-                NOTICE_RADIUS_BLOCKS,
+                noticeRadius,
                 level.getGameTime(),
                 RANGED_SCAN_CACHE_TICKS
         );
@@ -187,13 +181,13 @@ public final class RetoldSkeletonRangedEvents {
         double bestScore = Double.MAX_VALUE;
 
         for (LivingEntity candidate : candidates) {
-            if (!isValidVisibleEnemy(skeleton, candidate)) {
+            if (!isValidVisibleEnemy(skeleton, candidate, noticeRadius)) {
                 continue;
             }
 
             double distanceSquared = skeleton.distanceToSqr(candidate);
 
-            if (distanceSquared > NOTICE_RADIUS_SQUARED) {
+            if (distanceSquared > noticeRadius * noticeRadius) {
                 continue;
             }
 
@@ -214,15 +208,17 @@ public final class RetoldSkeletonRangedEvents {
             LivingEntity target,
             long gameTime
     ) {
+        double shareRadius = RetoldUndeadStagePressure.skeletonShareRadius(level);
+
         for (PathfinderMob ally : RetoldAiScanCache.nearby(
                 level,
                 source,
                 PathfinderMob.class,
-                SHARE_RADIUS_BLOCKS,
+                shareRadius,
                 gameTime,
                 RANGED_SCAN_CACHE_TICKS
         )) {
-            if (!isValidRangedRecruit(source, ally)) {
+            if (!isValidRangedRecruit(source, ally, shareRadius)) {
                 continue;
             }
 
@@ -232,6 +228,13 @@ public final class RetoldSkeletonRangedEvents {
                     gameTime
             );
         }
+
+        RetoldUndeadStagePressure.spreadCrossFamilyTarget(
+                level,
+                source,
+                target,
+                gameTime
+        );
     }
 
     private static void adoptTarget(
@@ -341,7 +344,8 @@ public final class RetoldSkeletonRangedEvents {
 
     private static boolean isValidRangedSource(
             PathfinderMob skeleton,
-            PathfinderMob source
+            PathfinderMob source,
+            double shareRadius
     ) {
         if (source == null || source == skeleton) {
             return false;
@@ -355,7 +359,7 @@ public final class RetoldSkeletonRangedEvents {
             return false;
         }
 
-        if (skeleton.distanceToSqr(source) > SHARE_RADIUS_SQUARED) {
+        if (skeleton.distanceToSqr(source) > shareRadius * shareRadius) {
             return false;
         }
 
@@ -367,7 +371,8 @@ public final class RetoldSkeletonRangedEvents {
 
     private static boolean isValidRangedRecruit(
             PathfinderMob source,
-            PathfinderMob recruit
+            PathfinderMob recruit,
+            double shareRadius
     ) {
         if (recruit == null || recruit == source) {
             return false;
@@ -381,7 +386,7 @@ public final class RetoldSkeletonRangedEvents {
             return false;
         }
 
-        if (source.distanceToSqr(recruit) > SHARE_RADIUS_SQUARED) {
+        if (source.distanceToSqr(recruit) > shareRadius * shareRadius) {
             return false;
         }
 
@@ -394,13 +399,14 @@ public final class RetoldSkeletonRangedEvents {
 
     private static boolean isValidVisibleEnemy(
             PathfinderMob skeleton,
-            LivingEntity candidate
+            LivingEntity candidate,
+            double noticeRadius
     ) {
         if (!isValidRangedTarget(skeleton, candidate)) {
             return false;
         }
 
-        if (skeleton.distanceToSqr(candidate) > NOTICE_RADIUS_SQUARED) {
+        if (skeleton.distanceToSqr(candidate) > noticeRadius * noticeRadius) {
             return false;
         }
 
@@ -443,11 +449,23 @@ public final class RetoldSkeletonRangedEvents {
         );
     }
 
-    private static boolean isRangedUndead(PathfinderMob mob) {
+    static boolean isRangedUndead(PathfinderMob mob) {
         String path = RetoldMobRules.getEntityTypePath(mob.getType());
 
         return path.equals("skeleton")
                 || path.equals("stray")
                 || path.equals("bogged");
+    }
+
+    static void adoptStagePressureTarget(
+            PathfinderMob skeleton,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (!canAdoptTarget(skeleton)) {
+            return;
+        }
+
+        adoptTarget(skeleton, target, gameTime);
     }
 }

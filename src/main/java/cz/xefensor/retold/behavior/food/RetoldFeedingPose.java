@@ -4,10 +4,10 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
-import cz.xefensor.retold.behavior.core.RetoldCubeMobMovement;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
+import cz.xefensor.retold.behavior.core.RetoldCubeMobMovement;
 
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.cubemob.AbstractCubeMob;
 import net.minecraft.world.phys.Vec3;
@@ -115,25 +115,7 @@ public final class RetoldFeedingPose {
             RetoldCubeMobMovement.stop(cubeMob);
         }
 
-        mob.getLookControl().setLookAt(
-                foodSource.x(),
-                foodSource.y(),
-                foodSource.z(),
-                90.0F,
-                90.0F
-        );
-
-        double dx = foodSource.x() - mob.getX();
-        double dz = foodSource.z() - mob.getZ();
-
-        if (dx * dx + dz * dz <= 0.0001D) {
-            return;
-        }
-
-        float yaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
-        mob.setYRot(yaw);
-        mob.yBodyRot = yaw;
-        mob.setYHeadRot(yaw);
+        RetoldActionFacing.face(mob, foodSource);
     }
 
     private record FeedingPose(

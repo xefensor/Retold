@@ -9,6 +9,7 @@ import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
 import cz.xefensor.retold.behavior.control.RetoldTamedDefenderGameTests;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreedingGameTests;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemGameTests;
 import cz.xefensor.retold.behavior.flee.RetoldCreeperAwareness;
 import cz.xefensor.retold.behavior.flee.RetoldDamageFleeGameTests;
 import cz.xefensor.retold.behavior.food.RetoldFoodBehaviorEvents;
@@ -31,6 +32,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.species.RetoldCommanderSupportGameTests;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianGameTests;
+import cz.xefensor.retold.behavior.species.RetoldAquaticEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldDolphinPodGameTests;
 import cz.xefensor.retold.behavior.species.RetoldHerdSchoolGameTests;
@@ -293,9 +295,11 @@ public final class RetoldGameTests {
         RetoldAnimalFeederGameTests.register(event);
         RetoldAnimalBreedingGameTests.register(event);
         RetoldStarvationGameTests.register(event);
+        RetoldUnloadedEcosystemGameTests.register(event);
         RetoldHungerSurvivalGameTests.register(event);
         RetoldNaturalFoodAcquisitionGameTests.register(event);
         RetoldCommanderSupportGameTests.register(event, environment);
+        RetoldAquaticEcologyGameTests.register(event);
         RetoldAxolotlGuardianGameTests.register(event);
         RetoldBatColonyGameTests.register(event);
         RetoldDolphinPodGameTests.register(event);
@@ -912,6 +916,7 @@ public final class RetoldGameTests {
         var undeadMount = helper.spawn(EntityTypes.SKELETON_HORSE, 1, 2, 1);
         var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
         var defender = helper.spawn(EntityTypes.IRON_GOLEM, 5, 2, 1);
+        var owner = helper.makeMockPlayer(GameType.SURVIVAL);
 
         undeadMount.setTamed(false);
         int untamedTargetGoalCount = undeadMount.targetSelector
@@ -965,6 +970,7 @@ public final class RetoldGameTests {
                 true
         );
         undeadMount.setTamed(true);
+        undeadMount.setOwner(owner);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(
                     RetoldFactionMembers.getFaction(undeadMount) == null,

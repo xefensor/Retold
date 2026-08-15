@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
@@ -24,6 +25,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
@@ -186,6 +188,8 @@ public final class RetoldSpiderLairEvents {
                 || !RetoldMobGriefing.canPlaceBlock(level, spider, placement)) {
             return false;
         }
+
+        RetoldActionFacing.face(spider, Vec3.atCenterOf(placement));
 
         if (!level.setBlock(
                 placement,

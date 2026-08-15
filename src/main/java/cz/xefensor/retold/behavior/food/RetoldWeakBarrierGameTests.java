@@ -17,10 +17,13 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.gamerules.GameRules;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
 import java.util.function.Consumer;
@@ -131,6 +134,7 @@ public final class RetoldWeakBarrierGameTests {
             RetoldAiControl.clear(cow);
 
             RetoldWeakBarrierBehavior.tick(level, cow, startTime);
+            assertFacesBlock(helper, cow, firstBarrier);
             RetoldWeakBarrierBehavior.tick(
                     level,
                     cow,
@@ -257,6 +261,27 @@ public final class RetoldWeakBarrierGameTests {
             wildWolf.discard();
             prey.discard();
         }
+    }
+
+    private static void assertFacesBlock(
+            GameTestHelper helper,
+            Mob mob,
+            BlockPos relativeTarget
+    ) {
+        Vec3 target = Vec3.atCenterOf(helper.absolutePos(relativeTarget));
+        double dx = target.x() - mob.getX();
+        double dz = target.z() - mob.getZ();
+        float expectedYaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
+
+        helper.assertTrue(
+                Math.abs(Mth.wrapDegrees(mob.getYRot() - expectedYaw)) < 0.1F
+                        && Math.abs(Mth.wrapDegrees(mob.yBodyRot - expectedYaw)) < 0.1F
+                        && Math.abs(Mth.wrapDegrees(mob.getYHeadRot() - expectedYaw)) < 0.1F
+                        && Math.abs(mob.getLookControl().getWantedX() - target.x()) < 0.001D
+                        && Math.abs(mob.getLookControl().getWantedY() - target.y()) < 0.001D
+                        && Math.abs(mob.getLookControl().getWantedZ() - target.z()) < 0.001D,
+                "A mob attacking a barrier must face the block with its body, head, and look control"
+        );
     }
 
     private static void registerTest(

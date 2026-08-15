@@ -7,6 +7,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.List;
+
 /** Owns persistent Farmer-crop provenance and player offense handling. */
 public final class RetoldVillageCropOwnership {
     private RetoldVillageCropOwnership() {
@@ -109,7 +111,7 @@ public final class RetoldVillageCropOwnership {
         return true;
     }
 
-    static boolean isOwned(ServerLevel level, BlockPos pos) {
+    public static boolean isOwned(ServerLevel level, BlockPos pos) {
         RetoldVillageCropOwnershipData data =
                 RetoldVillageCropOwnershipData.get(level);
 
@@ -131,5 +133,21 @@ public final class RetoldVillageCropOwnership {
 
     static void clear(ServerLevel level, BlockPos pos) {
         RetoldVillageCropOwnershipData.get(level).clear(level, pos);
+    }
+
+    static List<BlockPos> ownedCropsNear(
+            ServerLevel level,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius,
+            int limit
+    ) {
+        return RetoldVillageCropOwnershipData.get(level).nearby(
+                level,
+                center,
+                horizontalRadius,
+                verticalRadius,
+                limit
+        );
     }
 }

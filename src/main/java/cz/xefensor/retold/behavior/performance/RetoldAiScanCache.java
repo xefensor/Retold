@@ -89,6 +89,69 @@ public final class RetoldAiScanCache {
         return results;
     }
 
+    /**
+     * Takes a fresh, budgeted snapshot for callers that may mutate the returned
+     * entities. Ordinary sensing should continue to use {@link #nearby}; stale
+     * cached entities are unsafe for queued reconciliation transactions.
+     */
+    public static synchronized <T extends Entity> FreshScanResult<T> freshNearby(
+            ServerLevel level,
+            Entity center,
+            Class<T> type,
+            double radius,
+            long gameTime
+    ) {
+        if (level == null
+                || center == null
+                || center.level() != level
+                || type == null
+                || radius <= 0.0D) {
+            return FreshScanResult.complete(List.of());
+        }
+
+        if (!RetoldAiWorkBudget.tryUseEntityScan(gameTime)) {
+            RetoldBehaviorPerf.recordAiScanCache(false);
+            RetoldBehaviorPerf.recordAiScanBudgetSkip();
+            return FreshScanResult.deferredResult();
+        }
+
+        RetoldBehaviorPerf.recordAiScanCache(false);
+        return FreshScanResult.complete(level.getEntitiesOfClass(
+                type,
+                center.getBoundingBox().inflate(radius)
+        ));
+    }
+
+    /**
+     * Position-centered counterpart to {@link #freshNearby}. Queued world
+     * reconciliation must not use the ordinary position cache because its
+     * results can intentionally remain stale when the shared scan budget is
+     * exhausted.
+     */
+    public static synchronized <T extends Entity> FreshScanResult<T> freshNearbyAt(
+            ServerLevel level,
+            BlockPos center,
+            Class<T> type,
+            double radius,
+            long gameTime
+    ) {
+        if (level == null || center == null || type == null || radius <= 0.0D) {
+            return FreshScanResult.complete(List.of());
+        }
+
+        if (!RetoldAiWorkBudget.tryUseEntityScan(gameTime)) {
+            RetoldBehaviorPerf.recordAiScanCache(false);
+            RetoldBehaviorPerf.recordAiScanBudgetSkip();
+            return FreshScanResult.deferredResult();
+        }
+
+        RetoldBehaviorPerf.recordAiScanCache(false);
+        return FreshScanResult.complete(level.getEntitiesOfClass(
+                type,
+                new AABB(center).inflate(radius)
+        ));
+    }
+
     private static <T extends Entity> List<T> scanNearbyShared(
             ServerLevel level,
             Entity center,
@@ -362,5 +425,24 @@ public final class RetoldAiScanCache {
             BlockPos center,
             List<? extends Entity> results
     ) {
+    }
+
+    public record FreshScanResult<T extends Entity>(
+            List<T> entities,
+            boolean deferred
+    ) {
+        public FreshScanResult {
+            entities = List.copyOf(entities);
+        }
+
+        private static <T extends Entity> FreshScanResult<T> complete(
+                List<T> entities
+        ) {
+            return new FreshScanResult<>(entities, false);
+        }
+
+        private static <T extends Entity> FreshScanResult<T> deferredResult() {
+            return new FreshScanResult<>(List.of(), true);
+        }
     }
 }

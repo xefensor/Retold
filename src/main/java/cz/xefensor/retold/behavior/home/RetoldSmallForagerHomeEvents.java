@@ -4,14 +4,15 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
-import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.food.RetoldAnimalFeederBehavior;
+import cz.xefensor.retold.behavior.food.RetoldRangeForage;
+import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
-import cz.xefensor.retold.behavior.food.RetoldRangeForage;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -52,6 +53,7 @@ public final class RetoldSmallForagerHomeEvents {
     private static final int RANGE_MIGRATION_HUNGER = 45;
     private static final int RANGE_DEPLETED_FORAGE_SCORE = 5;
     private static final int RANGE_TARGET_FORAGE_SCORE = 12;
+    private static final int RANGE_FORAGE_CACHE_TICKS = 80;
     private static final int PANIC_RECOVERY_TICKS = 20 * 18;
 
     private static final double HOME_CREATION_RADIUS_BLOCKS = 14.0D;
@@ -503,12 +505,23 @@ public final class RetoldSmallForagerHomeEvents {
             return false;
         }
 
+        if (RetoldAnimalFeederBehavior.hasUsableFoodNearby(
+                level,
+                animal,
+                home.pos(),
+                gameTime
+        )) {
+            return false;
+        }
+
         int currentScore = RetoldRangeForage.forageScore(
                 level,
                 animal,
                 home.pos(),
                 RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
-                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS
+                RANGE_FORAGE_SCAN_VERTICAL_BLOCKS,
+                gameTime,
+                RANGE_FORAGE_CACHE_TICKS
         );
 
         if (currentScore > RANGE_DEPLETED_FORAGE_SCORE) {
@@ -522,7 +535,9 @@ public final class RetoldSmallForagerHomeEvents {
                 RANGE_FORAGE_SCAN_HORIZONTAL_BLOCKS,
                 RANGE_FORAGE_SCAN_VERTICAL_BLOCKS,
                 currentScore,
-                RANGE_TARGET_FORAGE_SCORE
+                RANGE_TARGET_FORAGE_SCORE,
+                gameTime,
+                RANGE_FORAGE_CACHE_TICKS
         );
 
         if (newRangeCenter == null) {

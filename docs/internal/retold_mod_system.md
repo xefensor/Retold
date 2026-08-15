@@ -554,9 +554,12 @@ Behavior:
 - Extinguished torches can be relit with firestarter actions or items in `retold:torch_igniters`.
 - In every world stage, an adult Villager with village context can relight the nearest dry weather-
   extinguished torch within eight horizontal and five vertical blocks. The torch must remain within
-  32 blocks of the Villager's village anchor. Most professions stop, face it, and use a one-second
-  ranged cast. Nitwits instead path to a supported adjacent cell and display a temporary fake Flint
-  and Steel for the close interaction. Both preserve normal/soul/copper and floor/wall state.
+  32 blocks of the Villager's village anchor. Most professions stop and use a one-second ranged
+  cast. Nitwits instead path to a supported adjacent cell and display a temporary fake Flint and
+  Steel for the close interaction. During either active cast, the Villager continuously aims its
+  body, head, and look control at the torch. After success it immediately searches for another
+  eligible nearby torch, up to eight relights in one interruptible maintenance run. Both methods
+  preserve normal/soul/copper and floor/wall state.
 - Villager maintenance requires `mobGriefing`, uses low-priority central AI ownership, and yields to
   hunger, danger, sleep, trading, targets, other activities, and higher-priority Villager work.
 - Aender is excluded.
@@ -566,9 +569,11 @@ Performance rules:
 - Chunk indexing is deferred and capped per tick.
 - Tracked torches are removed on chunk unload.
 - Villagers query the chunk index instead of scanning blocks, use the shared block-search/path
-  budgets, and apply LOD-scaled empty/success cooldowns. Nitwit routes have a bounded timeout. Only
-  an active Nitwit close-use animation receives per-tick dispatcher updates so its fake held tool
-  remains visible; idle discovery and routing retain the ordinary Villager cadence.
+  budgets, and apply LOD-scaled empty/success cooldowns. Nitwit routes have a bounded timeout.
+  Active magical and physical casts receive per-tick presentation updates so their facing and the
+  Nitwit's fake held tool remain stable; idle discovery and routing retain the ordinary Villager
+  cadence. Consecutive searches reuse the same extinguished index and shared block-search budget;
+  a failed, denied, interrupted, or eight-torch-complete run returns to the normal cooldown.
 - Runtime maps are cleared on server stop.
 
 ## Game Rules And Sleep
@@ -831,14 +836,16 @@ Behavior:
   Villager consumes its highest-value carried food before searching. When personally empty, it
   transfers up to 12 food points from storage, consumes one item, and retains the remainder. Only
   the accepted count is removed from the container. Villager hunger and inventory persist on the
-  entity and exact container contents persist through the vanilla block entity; there is no offline
-  elapsed-time simulation.
+  entity and exact container contents persist through the vanilla block entity. Bounded unloaded
+  reconciliation reuses this personal-first consumer transaction without synthesizing movement.
 - Adult loaded Farmers continue using vanilla crop harvesting, replanting, and wheat-to-Bread
   production. When they hold more than a 24-food-point personal reserve, they use the same storage
   search to deliver surplus Bread, Carrots, Potatoes, or Beetroot through low-priority
   `VILLAGER_COMMUNAL`/`SEARCH` ownership. Transfers conserve the exact accepted item count, preserve
   seeds and unrelated inventory, and yield to hunger, danger, sleep, and trading. Chests and barrels
-  save their contents normally; no separate producer state or unloaded catch-up is introduced.
+  save their contents normally. Bounded unloaded reconciliation can perform one real
+  Farmer-owned crop harvest/replant/deposit per simulated day without adding a fictional producer
+  inventory.
 - `RetoldVillageContainerOwnership` protects exact quantities originating from an unopened
   `chests/village/*` loot table or a future Villager-controlled deposit. The server-global
   `RetoldVillageContainerOwnershipData` ledger stores the dimension, physical chest/barrel
@@ -885,7 +892,7 @@ Behavior:
   players are excluded.
 - `RetoldAnimalBreeding` replaces direct item-triggered love mode for every entity type in the
   `retold:automatic_breeders` tag. A living adult must remain in the `FULL` hunger stage without
-  panic, damage, or an active target for 6,000 loaded ticks. A bounded cached scan then looks for a
+  panic, damage, or an active target for 6,000 loaded or reconciled ticks. A bounded cached scan then looks for a
   compatible equally ready adult within eight blocks; unsuccessful searches wait one minute before
   retrying. The pair is armed into vanilla love mode with no player cause so vanilla still owns
   mate movement, mixed Horse/Donkey compatibility, offspring/genetics, tame ownership, Turtle eggs,
@@ -894,8 +901,9 @@ Behavior:
 - `AnimalBreedingMixin` preserves the client interaction packet but redirects a server-side player
   breeding-food attempt into normal Retold hunger relief instead of love mode. Accumulated loaded
   satisfaction ticks plus retry and armed state live in versioned `RetoldMobState` entity data and
-  survive save/load; each dispatcher update is capped to its current loaded interval so elapsed
-  unloaded time cannot advance satisfaction. Armadillo, Turtle, Strider,
+  survive save/load. Loaded dispatcher progress remains interval-capped; the bounded unloaded
+  ecosystem timeline separately advances only continuous `FULL` time and resets on simulated
+  hunger. Armadillo, Turtle, Strider,
   and Nautilus have positive hunger intervals so all current vanilla breeders can participate.
 - At Stage 2+, `VillagerGolemConstructionMixin` preserves vanilla's wanting, five-Villager
   agreement, and local recent-golem checks, then replaces only the eligible instant spawn with a
@@ -914,10 +922,11 @@ Behavior:
   Golems are unaffected.
 - Loaded adult Villagers in every stage perform low-priority torch maintenance. They use remembered
   HOME, MEETING_POINT, or JOB_SITE context (or a live nearby village) and select one dry
-  extinguished torch within eight blocks. Most professions stop, face it, and cast from range;
+  extinguished torch within eight blocks. Most professions stop and cast from range;
   Nitwits instead path to a supported adjacent cell and display a temporary Flint and Steel for the
   full close-use interaction. The visual hand stack is reasserted if vanilla clears it, but never
-  enters inventory or loses durability. Both restore the exact torch
+  enters inventory or loses durability. Both active methods continuously face the Villager's body,
+  head, and look control toward the torch. Both restore the exact torch
   family and wall facing. Rain exposure, hunger, danger, sleep, trading, targets, incompatible
   activities, higher AI ownership, or disabled `mobGriefing` block or interrupt the action.
 
@@ -964,6 +973,8 @@ Technical owners:
 - `RetoldAttachments`
 - `RetoldChunkEditEvents`
 - `RetoldPatrolStageEvents`
+- `RetoldUndeadEvents`
+- `RetoldUndeadSpawnPressure`
 - `RetoldRetrogenDropBlocker`
 - `RetoldClientChunkTracker`
 - `DelayedStructurePlacementMixin`
@@ -976,6 +987,7 @@ Data:
 - `data/retold/neoforge/biome_modifier/stage3_piglins_nether.json`
 - `data/retold/neoforge/biome_modifier/wither_skeletons_soul_sand_valley.json`
 - `data/retold/neoforge/structure_modifier/stage3_piglins_structures.json`
+- `data/retold/tags/entity_type/stage_2_undead_spawn_pressure.json`
 
 Behavior:
 
@@ -986,6 +998,9 @@ Behavior:
 - Failed retrogen attempts can retry later.
 - Structure mob spawns can be suppressed while a structure is delayed.
 - Some spawn/structure behavior changes at Stage 3.
+- At Stage 2, the existing potential-spawn event mirrors already-present entries selected by the
+  additive Undead pressure tag with a rounded 25% bonus weight. Vanilla remains responsible for
+  biome/structure eligibility, monster caps, placement checks, and the original pack sizes.
 - Ruined Nether portal placement omits template chests while leaving all other structures and
   ordinary player-placed containers unchanged.
 - The warm-ocean-ruin archaeology override preserves normal ruin rewards but removes the Sniffer
@@ -1043,10 +1058,21 @@ High-level systems:
   return ownership, and shared mob-griefing enforcement
 - confirmed land social identities for shared bovine, equine, and llama ranges; other ordinary
   land herds remain species-specific
+- food-anchored loaded range migration for land herds and Pig foraging groups: compatible forage or
+  an accessible Animal Feeder around the persisted range holds the group, while hungry depleted
+  groups use the bounded cached range scorer to relocate without any domestication flag
 - centrally dispatched exact-species Cod, Salmon, Tropical Fish, and Pufferfish school cohesion
   through cached scans, owned regrouping, and aquatic navigation
+- persisted `AQUATIC_SCHOOL_RANGE` anchors shared across an exact-species school, with one
+  deterministic current member evaluating bounded plant-driven migration for the group
+- shared loaded hunger for those four school fish, with bounded destructive grazing through the
+  additive `retold:aquatic_school_forage_blocks` tag and the normal `mobGriefing` transaction guard
 - exact-species Squid and Glow Squid danger groups, with a bounded cached broadcast on successful
   damage and receiver-side panic fallback
+- loaded Squid/Glow Squid hunger and bounded dropped-food routing through the additive
+  `retold:squid_foods` tag; the default raw-fish diet does not enable living-prey hunting
+- ten-second serious-wound flight for wild ordinary predator profiles below 25% health, with
+  hunt/retaliation release plus explicit tamed, Undead, boss, and territory-duty exemptions
 - persisted broad Bat roost identity with upward personal ceiling-slot searches and staggered
   settling, plus dropped Spider Eye preference, night-only five-member directional hunting parties,
   shared arthropod detection, separated attack flight, fearless arthropod-combat dodges, and cached
@@ -1055,6 +1081,23 @@ High-level systems:
 - target ownership
 - invalid player target cleanup
 - AI performance scheduling, caches, LOD, and budgets
+- first-stage unloaded metabolism reconciliation through the existing persisted mob timestamp and a
+  server-lifecycle queue capped at seven Minecraft days, 4,096 pending mobs, and 16 tasks per tick;
+  each simulated day can consume at most one real meal after metabolism, with compatible Animal
+  Feeders preferred before accessible budgeted natural forage and Villagers using personal food
+  before provenance-aware village storage; hungry wild predators can then remove one compatible,
+  reachable wild prey without drops or XP, using a fresh entity-scan budget and a separate global
+  eight-path-probe reconciliation budget while protecting named/tamed animals and tamed hunters;
+  eligible adult breeders also advance their continuous food-satisfaction clock before returning
+  to the existing loaded mate/vanilla-birth path; after a full foodless unloaded day, an additional
+  queue physically migrates at most one eligible land herd, Pig group, or fish school per tick to a
+  better loaded range within 32 blocks, but only after a fresh scan, distinct safe landings, and up
+  to ten 64-block route probes validate the complete all-or-nothing transaction; food anchors the
+  existing range without a domestication state and there is no population-cap calculation;
+  accumulated critical pulses apply one real damage or Cube split-or-die transaction, one Farmer
+  per tick can complete one reachable owned-crop/replant/surplus-deposit cycle per simulated day,
+  and one deduplicated returning chunk per tick can receive one vanilla natural-spawn pass per
+  simulated day without force-loading; every daily debt is capped at seven
 - hunger-driven weak-barrier breaching through a data tag, shared griefing policy, and AI ownership
 - Retold-owned extension tags for Armadillo grub/scrub terrain, Panda bamboo, Turtle beaches,
   Nether-remnant/Ocean-Monument guard anchors, consumable Campfire igniters, and tools that

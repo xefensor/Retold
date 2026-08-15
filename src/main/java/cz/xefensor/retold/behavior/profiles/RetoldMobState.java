@@ -41,6 +41,48 @@ public final class RetoldMobState {
         markChanged();
     }
 
+    public void applyHungerCatchUp(
+            int reconciledHunger,
+            long simulatedThrough,
+            int mealsConsumed,
+            long lastMealAt
+    ) {
+        applyHungerCatchUp(
+                reconciledHunger,
+                simulatedThrough,
+                mealsConsumed,
+                lastMealAt,
+                0,
+                0L
+        );
+    }
+
+    public void applyHungerCatchUp(
+            int reconciledHunger,
+            long simulatedThrough,
+            int mealsConsumed,
+            long lastMealAt,
+            int successfulHunts,
+            long lastSuccessfulHuntAt
+    ) {
+        hunger = clampPercent(reconciledHunger);
+        lastHungerTickAt = Math.max(0L, simulatedThrough);
+
+        if (mealsConsumed > 0) {
+            stress = clampPercent(stress - 2 * mealsConsumed);
+            confidence = clampPercent(confidence + 2 * mealsConsumed);
+            lastAteAt = Math.max(0L, lastMealAt);
+        }
+
+        if (successfulHunts > 0) {
+            stress = clampPercent(stress - 3 * successfulHunts);
+            confidence = clampPercent(confidence + 4 * successfulHunts);
+            this.lastSuccessfulHuntAt = Math.max(0L, lastSuccessfulHuntAt);
+        }
+
+        markChanged();
+    }
+
     public int stress() {
         return stress;
     }
@@ -171,6 +213,15 @@ public final class RetoldMobState {
 
         breedingSatisfiedTicks += gained;
         lastBreedingProgressAt = updatedAt;
+        markChanged();
+    }
+
+    public void applyBreedingCatchUp(
+            long satisfiedTicks,
+            long simulatedThrough
+    ) {
+        breedingSatisfiedTicks = Math.max(0L, satisfiedTicks);
+        lastBreedingProgressAt = Math.max(0L, simulatedThrough);
         markChanged();
     }
 

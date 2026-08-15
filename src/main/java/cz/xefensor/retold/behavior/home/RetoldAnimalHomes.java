@@ -204,6 +204,10 @@ public final class RetoldAnimalHomes {
             return RetoldAnimalHomeType.DOLPHIN_POD_RANGE;
         }
 
+        if (RetoldMobRules.isAquaticSchool(mob)) {
+            return RetoldAnimalHomeType.AQUATIC_SCHOOL_RANGE;
+        }
+
         if (RetoldMobRules.isHungryGrazer(mob)) {
             return RetoldAnimalHomeType.HERD_RANGE;
         }
