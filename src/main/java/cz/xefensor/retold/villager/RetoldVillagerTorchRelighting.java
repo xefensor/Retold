@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
@@ -43,6 +44,7 @@ public final class RetoldVillagerTorchRelighting {
     private static final int CONTROL_TICKS = 40;
     private static final int SUCCESS_COOLDOWN_TICKS = 40;
     private static final int EMPTY_SEARCH_COOLDOWN_TICKS = 80;
+    static final int MAX_RELIGHTS_PER_RUN = 8;
     private static final int PATH_INTERVAL_TICKS = 8;
     private static final int PHYSICAL_ROUTE_TIMEOUT_TICKS = 200;
     private static final double MOVEMENT_SPEED = 0.5D;
@@ -61,8 +63,8 @@ public final class RetoldVillagerTorchRelighting {
     public static boolean requiresContinuousTick(Villager villager) {
         CastState cast = villager == null ? null : CASTS.get(villager);
         return cast != null
-                && cast.method() == RelightMethod.FLINT_AND_STEEL
-                && cast.actionAt() >= 0L;
+                && (cast.method() == RelightMethod.MAGIC
+                || cast.actionAt() >= 0L);
     }
 
     public static void tick(
@@ -95,25 +97,33 @@ public final class RetoldVillagerTorchRelighting {
             return;
         }
 
+        StartResult result = tryStartCast(level, villager, gameTime, 0);
+
+        if (result == StartResult.NO_TARGET) {
+            scheduleNextSearch(villager, gameTime, EMPTY_SEARCH_COOLDOWN_TICKS);
+        }
+    }
+
+    private static StartResult tryStartCast(
+            ServerLevel level,
+            Villager villager,
+            long gameTime,
+            int completedRelights
+    ) {
         BlockPos villageAnchor = RetoldVillagerCommunalFoodSearch.villageAnchor(
                 level,
                 villager
         );
 
-        if (villageAnchor == null) {
-            scheduleNextSearch(villager, gameTime, EMPTY_SEARCH_COOLDOWN_TICKS);
-            return;
-        }
-
-        if (!TorchWeatherEvents.hasTrackedExtinguishedTorches(level)) {
-            scheduleNextSearch(villager, gameTime, EMPTY_SEARCH_COOLDOWN_TICKS);
-            return;
+        if (villageAnchor == null
+                || !TorchWeatherEvents.hasTrackedExtinguishedTorches(level)) {
+            return StartResult.NO_TARGET;
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
             RetoldBehaviorPerf.recordBlockSearchCache(false);
             RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
-            return;
+            return StartResult.DEFERRED;
         }
 
         RetoldBehaviorPerf.recordBlockSearchCache(false);
@@ -131,12 +141,11 @@ public final class RetoldVillagerTorchRelighting {
         );
 
         if (target == null) {
-            scheduleNextSearch(villager, gameTime, EMPTY_SEARCH_COOLDOWN_TICKS);
-            return;
+            return StartResult.NO_TARGET;
         }
 
         if (!claimControl(villager, gameTime)) {
-            return;
+            return StartResult.DEFERRED;
         }
 
         if (usesFlintAndSteel) {
@@ -144,12 +153,7 @@ public final class RetoldVillagerTorchRelighting {
 
             if (access == null) {
                 cancel(villager);
-                scheduleNextSearch(
-                        villager,
-                        gameTime,
-                        EMPTY_SEARCH_COOLDOWN_TICKS
-                );
-                return;
+                return StartResult.NO_TARGET;
             }
 
             CastState physicalUse = new CastState(
@@ -158,11 +162,12 @@ public final class RetoldVillagerTorchRelighting {
                     RelightMethod.FLINT_AND_STEEL,
                     -1L,
                     gameTime + PHYSICAL_ROUTE_TIMEOUT_TICKS,
-                    ItemStack.EMPTY
+                    ItemStack.EMPTY,
+                    completedRelights
             );
             CASTS.put(villager, physicalUse);
             continueCast(level, villager, physicalUse, gameTime);
-            return;
+            return StartResult.STARTED;
         }
 
         villager.getNavigation().stop();
@@ -186,9 +191,11 @@ public final class RetoldVillagerTorchRelighting {
                         RelightMethod.MAGIC,
                         gameTime + CAST_TICKS,
                         gameTime + CONTROL_TICKS,
-                        ItemStack.EMPTY
+                        ItemStack.EMPTY,
+                        completedRelights
                 )
         );
+        return StartResult.STARTED;
     }
 
     private static void continueCast(
@@ -235,6 +242,7 @@ public final class RetoldVillagerTorchRelighting {
 
         villager.swing(InteractionHand.MAIN_HAND);
         finish(
+                level,
                 villager,
                 cast,
                 gameTime,
@@ -305,6 +313,7 @@ public final class RetoldVillagerTorchRelighting {
 
         villager.swing(InteractionHand.MAIN_HAND);
         finish(
+                level,
                 villager,
                 cast,
                 gameTime,
@@ -316,6 +325,7 @@ public final class RetoldVillagerTorchRelighting {
     }
 
     private static void finish(
+            ServerLevel level,
             Villager villager,
             CastState cast,
             long gameTime,
@@ -324,6 +334,21 @@ public final class RetoldVillagerTorchRelighting {
         CASTS.remove(villager);
         restoreVisual(villager, cast);
         clearOwnedMovement(villager);
+
+        if (relit) {
+            int completedRelights = cast.completedRelights() + 1;
+
+            if (completedRelights < MAX_RELIGHTS_PER_RUN
+                    && tryStartCast(
+                    level,
+                    villager,
+                    gameTime,
+                    completedRelights
+            ) == StartResult.STARTED) {
+                return;
+            }
+        }
+
         scheduleNextSearch(
                 villager,
                 gameTime,
@@ -449,7 +474,7 @@ public final class RetoldVillagerTorchRelighting {
     }
 
     private static void face(Villager villager, BlockPos target) {
-        villager.getLookControl().setLookAt(Vec3.atCenterOf(target));
+        RetoldActionFacing.face(villager, Vec3.atCenterOf(target));
     }
 
     private static void showFlintAndSteel(Villager villager) {
@@ -516,13 +541,20 @@ public final class RetoldVillagerTorchRelighting {
         FLINT_AND_STEEL
     }
 
+    private enum StartResult {
+        STARTED,
+        NO_TARGET,
+        DEFERRED
+    }
+
     private record CastState(
             BlockPos target,
             BlockPos access,
             RelightMethod method,
             long actionAt,
             long expiresAt,
-            ItemStack previousMainHand
+            ItemStack previousMainHand,
+            int completedRelights
     ) {
         private CastState startAction(
                 long newActionAt,
@@ -534,7 +566,8 @@ public final class RetoldVillagerTorchRelighting {
                     method,
                     newActionAt,
                     expiresAt,
-                    newPreviousMainHand.copy()
+                    newPreviousMainHand.copy(),
+                    completedRelights
             );
         }
     }

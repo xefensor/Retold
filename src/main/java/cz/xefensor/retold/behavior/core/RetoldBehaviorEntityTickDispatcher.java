@@ -27,6 +27,7 @@ import cz.xefensor.retold.behavior.species.RetoldNeutralWildlifeEvents;
 import cz.xefensor.retold.behavior.pack.RetoldPackHomeEvents;
 import cz.xefensor.retold.behavior.pack.RetoldPackHuntingEvents;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooEvents;
+import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerEvents;
 import cz.xefensor.retold.behavior.hunting.RetoldPredatorSearchEvents;
 import cz.xefensor.retold.behavior.species.RetoldSkeletonRangedEvents;
@@ -38,8 +39,10 @@ import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
 import cz.xefensor.retold.behavior.species.RetoldTerritoryGuardEvents;
 import cz.xefensor.retold.behavior.species.RetoldTurtleBeachEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadHordeEvents;
+import cz.xefensor.retold.behavior.species.RetoldUndeadMountEvents;
 import cz.xefensor.retold.behavior.control.RetoldVanillaAiBlockerEvents;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreeding;
+import cz.xefensor.retold.behavior.species.RetoldWitherThreatEvents;
 import cz.xefensor.retold.behavior.species.RetoldZoglinRampagerEvents;
 import cz.xefensor.retold.villager.RetoldVillagerTradeRefresh;
 import cz.xefensor.retold.villager.RetoldVillagerAnimalTending;
@@ -66,6 +69,22 @@ public final class RetoldBehaviorEntityTickDispatcher {
     public static void onEntityTickPost(EntityTickEvent.Post event) {
         Entity entity = event.getEntity();
 
+        // Bat is a PathfinderMob in 26.2, but its colony owner remains a distinct adapter. Dispatch
+        // it before the hierarchy split so future vanilla hierarchy changes cannot silently skip it.
+        if (entity instanceof Bat bat
+                && entity.level() instanceof ServerLevel batLevel) {
+            long batGameTime = batLevel.getGameTime();
+
+            if (RetoldMobRules.isBatColony(bat)
+                    && shouldDispatch(bat, batGameTime, 4)) {
+                RetoldBatColonyEvents.tick(
+                        batLevel,
+                        bat,
+                        batGameTime
+                );
+            }
+        }
+
         if (!(entity instanceof PathfinderMob mob)) {
             dispatchNonPathfinder(
                     event,
@@ -89,6 +108,11 @@ public final class RetoldBehaviorEntityTickDispatcher {
                 RetoldVillagerCommunalFood.tick(level, villager, gameTime);
                 RetoldVillagerCommunalSupply.tick(level, villager, gameTime);
                 RetoldVillagerAnimalTending.tick(level, villager, gameTime);
+            }
+
+            if (villagerCadence
+                    || RetoldVillagerGolemConstruction
+                    .requiresContinuousFacingTick(villager)) {
                 RetoldVillagerGolemConstruction.tick(level, villager, gameTime);
             }
 
@@ -138,6 +162,13 @@ public final class RetoldBehaviorEntityTickDispatcher {
             case NETHER_HUNGRY -> dispatchEvery(event, mob, gameTime, 7, RetoldNetherBehaviorEvents::onEntityTickPost);
             case UNDEAD_HUNGRY -> dispatchEvery(event, mob, gameTime, 6, RetoldUndeadHordeEvents::onEntityTickPost);
             case UNDEAD_TOLERANT -> dispatchEvery(event, mob, gameTime, 6, RetoldSkeletonRangedEvents::onEntityTickPost);
+            case UNDEAD_MOUNT -> dispatchEvery(
+                    event,
+                    mob,
+                    gameTime,
+                    6,
+                    ignored -> RetoldUndeadMountEvents.tick(level, mob, gameTime)
+            );
             case PHANTOM_STALKER -> dispatchEvery(event, mob, gameTime, 6, RetoldPhantomStalkerEvents::onEntityTickPost);
             case GHAST_ARTILLERY -> dispatchEvery(event, mob, gameTime, 8, RetoldGhastArtilleryEvents::onEntityTickPost);
             case ZOGLIN_RAMPAGER -> dispatchEvery(event, mob, gameTime, 5, RetoldZoglinRampagerEvents::onEntityTickPost);
@@ -155,10 +186,18 @@ public final class RetoldBehaviorEntityTickDispatcher {
                     10,
                     ignored -> RetoldAquaticSchoolEvents.tick(level, mob, gameTime)
             );
+            case PARROT_FORAGER -> dispatchEvery(
+                    event,
+                    mob,
+                    gameTime,
+                    10,
+                    ignored -> RetoldParrotForagerEvents.tick(level, mob, gameTime)
+            );
             case AQUATIC_TERRITORY_GUARD, TERRITORY_GUARD -> dispatchEvery(event, mob, gameTime, 10, RetoldTerritoryGuardEvents::onEntityTickPost);
             case COMMANDER_SUPPORT -> dispatchCommanderSupport(event, mob, gameTime);
             case ILLAGER_RAIDER -> dispatchIllagerRaider(event, mob, gameTime);
-            case NONE, LOOSE_AQUATIC_GROUP, VILLAGER_COMMUNAL, BAT_COLONY, SPECIAL_VANILLA, APEX_OR_BOSS -> {
+            case APEX_OR_BOSS -> RetoldWitherThreatEvents.onEntityTickPost(event);
+            case NONE, LOOSE_AQUATIC_GROUP, VILLAGER_COMMUNAL, BAT_COLONY, SPECIAL_VANILLA -> {
             }
         }
 
@@ -184,16 +223,6 @@ public final class RetoldBehaviorEntityTickDispatcher {
         }
 
         long gameTime = level.getGameTime();
-
-        if (entity instanceof Bat bat
-                && RetoldMobRules.isBatColony(bat)
-                && shouldDispatch(bat, gameTime, 4)) {
-            RetoldBatColonyEvents.tick(
-                    level,
-                    bat,
-                    gameTime
-            );
-        }
 
         if (shouldDispatch(entity, gameTime, 8)) {
             RetoldGhastArtilleryEvents.onEntityTickPost(event);

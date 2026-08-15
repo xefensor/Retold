@@ -247,6 +247,10 @@ public final class RetoldMobRules {
         return hasProfile(entity, RetoldMobProfileType.LOOSE_AQUATIC_GROUP);
     }
 
+    public static boolean isParrotForager(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.PARROT_FORAGER);
+    }
+
     public static boolean isHungryGrazer(Entity entity) {
         return hasProfile(entity, RetoldMobProfileType.HUNGRY_GRAZER);
     }
@@ -387,6 +391,10 @@ public final class RetoldMobRules {
 
     public static boolean isPhantomStalker(Entity entity) {
         return hasProfile(entity, RetoldMobProfileType.PHANTOM_STALKER);
+    }
+
+    public static boolean isUndeadMount(Entity entity) {
+        return hasProfile(entity, RetoldMobProfileType.UNDEAD_MOUNT);
     }
 
     public static boolean isGhastArtillery(Entity entity) {
@@ -829,9 +837,17 @@ public final class RetoldMobRules {
             return isFishItem(stack);
         }
 
+        if (mobPath.equals("squid") || mobPath.equals("glow_squid")) {
+            return stack.is(RetoldTags.SQUID_FOODS);
+        }
+
         if (mobPath.equals("bat")) {
             return stack.is(RetoldTags.BAT_FOODS)
                     || itemPath.equals("spider_eye");
+        }
+
+        if (isParrotForager(mob)) {
+            return isParrotForageItem(stack);
         }
 
         if (isPredator(mobPath)) {
@@ -940,6 +956,15 @@ public final class RetoldMobRules {
         if (mobPath.equals("turtle")) {
             return state.is(RetoldTags.TURTLE_FORAGE_BLOCKS)
                     || blockPath.equals("seagrass");
+        }
+
+        if (isAquaticSchool(mob)) {
+            return state.is(RetoldTags.AQUATIC_SCHOOL_FORAGE_BLOCKS);
+        }
+
+        if (isParrotForager(mob)) {
+            return state.is(RetoldTags.FORAGE_CROPS)
+                    || isCropBlock(blockPath);
         }
 
         if (isGrazer(mobPath)) {
@@ -1202,7 +1227,8 @@ public final class RetoldMobRules {
     }
 
     private static boolean isSmallPassive(String path) {
-        return RetoldMobProfiles.isType(path, RetoldMobProfileType.SMALL_FORAGER);
+        return RetoldMobProfiles.isType(path, RetoldMobProfileType.SMALL_FORAGER)
+                || RetoldMobProfiles.isType(path, RetoldMobProfileType.PARROT_FORAGER);
     }
 
     private static boolean isNetherHungry(String path) {
@@ -1315,6 +1341,17 @@ public final class RetoldMobRules {
     private static boolean isSmallPassiveFoodItem(ItemStack stack) {
         return stack.is(RetoldTags.SMALL_PASSIVE_FOODS)
                 || isSmallPassiveFoodItem(getItemPath(stack));
+    }
+
+    private static boolean isParrotForageItem(ItemStack stack) {
+        String itemPath = getItemPath(stack);
+
+        return stack.is(ItemTags.PARROT_FOOD)
+                || itemPath.equals("wheat")
+                || itemPath.equals("carrot")
+                || itemPath.equals("potato")
+                || itemPath.equals("beetroot")
+                || itemPath.equals("melon_slice");
     }
 
     private static boolean isNetherFungusItem(String itemPath) {

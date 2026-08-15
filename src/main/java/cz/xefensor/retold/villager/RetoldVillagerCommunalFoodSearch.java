@@ -29,7 +29,11 @@ final class RetoldVillagerCommunalFoodSearch {
     private static final double MAX_CENTER_DRIFT_SQUARED = 5.0D * 5.0D;
     private static final Map<Villager, StorageTarget> FOOD_TARGETS =
             new WeakHashMap<>();
+    private static final Map<Villager, Boolean> DEFERRED_FOOD_SEARCHES =
+            new WeakHashMap<>();
     private static final Map<Villager, DepositTarget> DEPOSIT_TARGETS =
+            new WeakHashMap<>();
+    private static final Map<Villager, Boolean> DEFERRED_DEPOSIT_SEARCHES =
             new WeakHashMap<>();
     private static final Map<Villager, ItemTarget> ITEM_TARGETS =
             new WeakHashMap<>();
@@ -47,6 +51,7 @@ final class RetoldVillagerCommunalFoodSearch {
 
         if (context == null) {
             FOOD_TARGETS.remove(villager);
+            DEFERRED_FOOD_SEARCHES.remove(villager);
             return null;
         }
 
@@ -58,16 +63,19 @@ final class RetoldVillagerCommunalFoodSearch {
                 && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
                 && context.anchor().equals(cached.villageAnchor())
                 && isValidForFood(level, villager, context, cached.target())) {
+            DEFERRED_FOOD_SEARCHES.remove(villager);
             RetoldBehaviorPerf.recordBlockSearchCache(true);
             return cached.target();
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
+            DEFERRED_FOOD_SEARCHES.put(villager, Boolean.TRUE);
             RetoldBehaviorPerf.recordBlockSearchCache(false);
             RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
             return null;
         }
 
+        DEFERRED_FOOD_SEARCHES.remove(villager);
         RetoldBehaviorPerf.recordBlockSearchCache(false);
         BlockPos target = scan(level, villager, context, center, null);
 
@@ -86,6 +94,10 @@ final class RetoldVillagerCommunalFoodSearch {
         return target;
     }
 
+    static synchronized boolean isFoodSearchDeferred(Villager villager) {
+        return villager != null && DEFERRED_FOOD_SEARCHES.containsKey(villager);
+    }
+
     static synchronized BlockPos findForDeposit(
             ServerLevel level,
             Villager villager,
@@ -95,6 +107,7 @@ final class RetoldVillagerCommunalFoodSearch {
     ) {
         if (offered == null || offered.isEmpty()) {
             DEPOSIT_TARGETS.remove(villager);
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
             return null;
         }
 
@@ -102,6 +115,7 @@ final class RetoldVillagerCommunalFoodSearch {
 
         if (context == null) {
             DEPOSIT_TARGETS.remove(villager);
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
             return null;
         }
 
@@ -120,16 +134,19 @@ final class RetoldVillagerCommunalFoodSearch {
                 cached.target(),
                 offered
         )) {
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
             RetoldBehaviorPerf.recordBlockSearchCache(true);
             return cached.target();
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
+            DEFERRED_DEPOSIT_SEARCHES.put(villager, Boolean.TRUE);
             RetoldBehaviorPerf.recordBlockSearchCache(false);
             RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
             return null;
         }
 
+        DEFERRED_DEPOSIT_SEARCHES.remove(villager);
         RetoldBehaviorPerf.recordBlockSearchCache(false);
         BlockPos target = scan(level, villager, context, center, offered);
 
@@ -149,10 +166,17 @@ final class RetoldVillagerCommunalFoodSearch {
         return target;
     }
 
+    static synchronized boolean isDepositSearchDeferred(Villager villager) {
+        return villager != null
+                && DEFERRED_DEPOSIT_SEARCHES.containsKey(villager);
+    }
+
     static synchronized void forget(Villager villager) {
         if (villager != null) {
             FOOD_TARGETS.remove(villager);
+            DEFERRED_FOOD_SEARCHES.remove(villager);
             DEPOSIT_TARGETS.remove(villager);
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
             ITEM_TARGETS.remove(villager);
         }
     }

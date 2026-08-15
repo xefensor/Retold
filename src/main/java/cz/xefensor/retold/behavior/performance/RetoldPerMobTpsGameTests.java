@@ -5,8 +5,11 @@ import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfile;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfileType;
 import cz.xefensor.retold.behavior.profiles.RetoldMobProfiles;
+import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
+import cz.xefensor.retold.stage.RetoldWorldData;
+import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.villager.RetoldVillagerCommunalSupply;
 
 import net.minecraft.core.BlockPos;
@@ -20,6 +23,7 @@ import net.minecraft.gametest.framework.TestData;
 import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
@@ -30,6 +34,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.animal.polarbear.PolarBear;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.cubemob.AbstractCubeMob;
@@ -43,6 +48,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
@@ -67,7 +73,10 @@ import java.util.function.Consumer;
  * subject so existing retaliation and danger systems are exercised. Mobs using
  * the shared passive-flee behavior additionally take one point of real mob damage,
  * which includes the production damage event, immediate movement claim, and
- * remembered flee follow-through in the measured workload.</p>
+ * remembered flee follow-through in the measured workload. Wild ordinary predators
+ * are lowered through their 25% health threshold so their ten-second wounded-flight
+ * continuation is measured. Bee and undead-mount damage-triggered defense paths
+ * receive the same treatment.</p>
  *
  * <p>Every test owns a separate GameTest environment. This is intentional: two
  * 50-mob samples running in the same server tick would contaminate one another's
@@ -102,6 +111,7 @@ public final class RetoldPerMobTpsGameTests {
             "bogged",
             "breeze",
             "camel",
+            "camel_husk",
             "cat",
             "cave_spider",
             "chicken",
@@ -135,6 +145,7 @@ public final class RetoldPerMobTpsGameTests {
             "nautilus",
             "ocelot",
             "panda",
+            "parrot",
             "phantom",
             "pig",
             "piglin",
@@ -149,6 +160,7 @@ public final class RetoldPerMobTpsGameTests {
             "shulker",
             "silverfish",
             "skeleton",
+            "skeleton_horse",
             "slime",
             "sniffer",
             "snow_golem",
@@ -169,6 +181,8 @@ public final class RetoldPerMobTpsGameTests {
             "wolf",
             "zoglin",
             "zombie",
+            "zombie_horse",
+            "zombie_nautilus",
             "zombie_villager",
             "zombified_piglin"
     );
@@ -237,8 +251,14 @@ public final class RetoldPerMobTpsGameTests {
                 profile,
                 arenaKind,
                 currentClockTime(helper.getLevel()),
-                helper.getLevel().getGameRules().get(GameRules.MOB_GRIEFING)
+                helper.getLevel().getGameRules().get(GameRules.MOB_GRIEFING),
+                RetoldWorldData.get(helper.getLevel()).getStage()
         );
+
+        if (profile.type() == RetoldMobProfileType.UNDEAD_HUNGRY
+                || profile.type() == RetoldMobProfileType.UNDEAD_TOLERANT) {
+            RetoldWorldData.get(helper.getLevel()).setStage(RetoldWorldStage.STAGE_2);
+        }
 
         helper.getLevel().getGameRules().set(
                 GameRules.MOB_GRIEFING,
@@ -518,6 +538,31 @@ public final class RetoldPerMobTpsGameTests {
                 .map(LivingEntity.class::cast)
                 .filter(entity -> !(entity instanceof AgeableMob ageable) || !ageable.isBaby())
                 .toList();
+        ServerPlayer parrotOwner = null;
+
+        if (run.mobPath.equals("parrot")) {
+            parrotOwner = (ServerPlayer) helper.makeMockServerPlayer(GameType.SURVIVAL);
+            Vec3 ownerPosition = helper.absoluteVec(new Vec3(7.5D, 2.0D, 7.5D));
+            parrotOwner.snapTo(
+                    ownerPosition.x(),
+                    ownerPosition.y(),
+                    ownerPosition.z(),
+                    0.0F,
+                    0.0F
+            );
+            run.stimuli.add(parrotOwner);
+
+            for (LivingEntity threat : threats) {
+                if (threat instanceof Mob threatMob) {
+                    threatMob.setTarget(parrotOwner);
+                    // Mock server players have no network connection. Keep the threats
+                    // target-bearing for Parrot sensing without letting melee AI invoke
+                    // connection-dependent player damage code in this clientless fixture.
+                    threatMob.setNoAi(true);
+                }
+            }
+        }
+
         long gameTime = helper.getLevel().getGameTime();
 
         for (int index = 0; index < run.subjects.size(); index++) {
@@ -526,6 +571,11 @@ public final class RetoldPerMobTpsGameTests {
             state.setStress(100);
             state.setConfidence(20);
             state.markDanger(gameTime);
+
+            if (subject instanceof Parrot parrot && parrotOwner != null) {
+                parrot.setTame(true, true);
+                parrot.setOwner(parrotOwner);
+            }
 
             if (subject instanceof Warden warden) {
                 preventWardenBurrowing(warden);
@@ -536,12 +586,21 @@ public final class RetoldPerMobTpsGameTests {
                 subject.setLastHurtByMob(threat);
 
                 // Benchmark subjects are normally invulnerable so the 50-mob sample remains
-                // stable. Temporarily allow one real hit for shared passive-flee profiles: a
-                // last-hurt marker alone would bypass the production damage-event entry point.
+                // stable. Temporarily allow one real hit where production behavior begins from
+                // the successful-damage event: shared passive flight, badly wounded
+                // wild-predator flight, Bee colony defense, and undead-mount retaliation.
                 if (subject instanceof PathfinderMob pathfinderMob
-                        && RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)) {
+                        && (RetoldControlledFleeEvents.usesSharedFleeBehavior(pathfinderMob)
+                        || RetoldMobRules.canUseOrdinaryPredatorSystems(pathfinderMob)
+                        || run.mobPath.equals("bee")
+                        || RetoldMobRules.isUndeadMount(pathfinderMob))) {
                     subject.setInvulnerable(false);
                     subject.invulnerableTime = 0;
+
+                    if (RetoldMobRules.canUseOrdinaryPredatorSystems(pathfinderMob)) {
+                        subject.setHealth(subject.getMaxHealth() * 0.25F + 0.5F);
+                    }
+
                     subject.hurtServer(
                             helper.getLevel(),
                             helper.getLevel().damageSources().mobAttack(threat),
@@ -922,6 +981,7 @@ public final class RetoldPerMobTpsGameTests {
                 run.originalMobGriefing,
                 helper.getLevel().getServer()
         );
+        RetoldWorldData.get(helper.getLevel()).setStage(run.originalStage);
         clearStimuli(run);
 
         for (Mob subject : run.subjects) {
@@ -1002,8 +1062,10 @@ public final class RetoldPerMobTpsGameTests {
     ) {
         Block feature = switch (mobPath) {
             case "panda" -> Blocks.BAMBOO;
+            case "parrot" -> Blocks.WHEAT;
             case "bee" -> Blocks.DANDELION;
             case "hoglin", "piglin" -> Blocks.CRIMSON_FUNGUS;
+            case "cod", "salmon", "tropical_fish", "pufferfish" -> Blocks.SEAGRASS;
             default -> Blocks.SHORT_GRASS;
         };
 
@@ -1157,9 +1219,9 @@ public final class RetoldPerMobTpsGameTests {
 
     private static ArenaKind arenaKind(String mobPath) {
         return switch (mobPath) {
-            case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish" -> ArenaKind.AQUATIC;
+            case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish", "zombie_nautilus" -> ArenaKind.AQUATIC;
             case "frog", "turtle" -> ArenaKind.WETLAND;
-            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
+            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "parrot", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
             case "cave_spider", "creaking", "enderman", "endermite", "shulker", "silverfish", "spider", "warden" -> ArenaKind.CAVE;
             case "hoglin", "magma_cube", "piglin", "piglin_brute", "strider", "wither_skeleton", "zoglin", "zombified_piglin" -> ArenaKind.NETHER;
             default -> ArenaKind.LAND;
@@ -1185,6 +1247,10 @@ public final class RetoldPerMobTpsGameTests {
             return Items.COD;
         }
 
+        if (mobPath.equals("squid") || mobPath.equals("glow_squid")) {
+            return Items.COD;
+        }
+
         if (mobPath.equals("strider")) {
             return Items.WARPED_FUNGUS;
         }
@@ -1192,6 +1258,7 @@ public final class RetoldPerMobTpsGameTests {
         return switch (profileType) {
             case HUNGRY_GRAZER -> Items.WHEAT;
             case SMALL_FORAGER -> Items.WHEAT_SEEDS;
+            case PARROT_FORAGER -> Items.WHEAT_SEEDS;
             case PACK_PREDATOR, AQUATIC_PREDATOR, HUNGRY_SWARM_PREDATOR, SOLO_OPPORTUNIST -> Items.BEEF;
             case HIVE_COLONY -> Items.DANDELION;
             case NETHER_HUNGRY -> Items.CRIMSON_FUNGUS;
@@ -1211,6 +1278,7 @@ public final class RetoldPerMobTpsGameTests {
             case "cat", "ocelot" -> EntityTypes.RABBIT;
             case "spider", "cave_spider" -> EntityTypes.COW;
             case "dolphin", "axolotl" -> EntityTypes.COD;
+            case "zombie_nautilus" -> EntityTypes.COD;
             case "bat" -> EntityTypes.SPIDER;
             case "frog" -> EntityTypes.SLIME;
             case "guardian", "elder_guardian" -> EntityTypes.SQUID;
@@ -1222,7 +1290,7 @@ public final class RetoldPerMobTpsGameTests {
 
     private static EntityType<?> dangerTargetType(String mobPath) {
         return switch (mobPath) {
-            case "cow", "sheep", "pig", "chicken", "rabbit", "horse", "donkey", "mule", "llama", "trader_llama", "camel", "goat", "mooshroom", "sniffer", "panda", "armadillo", "turtle", "frog", "axolotl", "dolphin", "polar_bear", "bee", "wolf", "fox", "cat", "ocelot", "iron_golem", "snow_golem", "villager" -> EntityTypes.ZOMBIE;
+            case "cow", "sheep", "pig", "chicken", "rabbit", "horse", "donkey", "mule", "llama", "trader_llama", "camel", "goat", "mooshroom", "sniffer", "panda", "parrot", "armadillo", "turtle", "frog", "axolotl", "dolphin", "polar_bear", "bee", "wolf", "fox", "cat", "ocelot", "iron_golem", "snow_golem", "villager" -> EntityTypes.ZOMBIE;
             default -> EntityTypes.IRON_GOLEM;
         };
     }
@@ -1270,6 +1338,7 @@ public final class RetoldPerMobTpsGameTests {
         private final ArenaKind arenaKind;
         private final long originalDayTime;
         private final boolean originalMobGriefing;
+        private final RetoldWorldStage originalStage;
         private final List<Mob> subjects = new ArrayList<>(SUBJECT_COUNT);
         private final List<Entity> stimuli = new ArrayList<>();
         private final Map<BenchmarkPhase, PhaseResult> results =
@@ -1285,7 +1354,8 @@ public final class RetoldPerMobTpsGameTests {
                 RetoldMobProfile profile,
                 ArenaKind arenaKind,
                 long originalDayTime,
-                boolean originalMobGriefing
+                boolean originalMobGriefing,
+                RetoldWorldStage originalStage
         ) {
             this.mobPath = mobPath;
             this.entityType = entityType;
@@ -1293,6 +1363,7 @@ public final class RetoldPerMobTpsGameTests {
             this.arenaKind = arenaKind;
             this.originalDayTime = originalDayTime;
             this.originalMobGriefing = originalMobGriefing;
+            this.originalStage = originalStage;
         }
     }
 

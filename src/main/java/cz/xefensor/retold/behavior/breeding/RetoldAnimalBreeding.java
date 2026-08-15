@@ -17,8 +17,9 @@ import java.util.List;
 
 /**
  * Replaces item-triggered love mode with reproduction earned by sustained
- * access to food. Vanilla remains responsible for mate movement, offspring,
- * genetics, ownership, eggs, and species-specific birth behavior.
+ * access to food while loaded or during bounded catch-up. Vanilla remains
+ * responsible for mate movement, offspring, genetics, ownership, eggs, and
+ * species-specific birth behavior.
  */
 public final class RetoldAnimalBreeding {
     public static final int SATISFIED_TICKS = 20 * 60 * 5;
@@ -85,6 +86,29 @@ public final class RetoldAnimalBreeding {
                 && animal.getType().builtInRegistryHolder().is(
                         RetoldTags.AUTOMATIC_BREEDERS
                 );
+    }
+
+    public static boolean supportsUnloadedProgress(
+            ServerLevel level,
+            Animal animal
+    ) {
+        return isSupported(level, animal);
+    }
+
+    public static boolean canAccumulateUnloadedProgress(
+            Animal animal,
+            RetoldMobState state
+    ) {
+        return animal != null
+                && state != null
+                && animal.isAlive()
+                && !animal.isRemoved()
+                && !animal.isBaby()
+                && animal.getAge() == 0
+                && !animal.isPanicking()
+                && !RetoldBehaviorCoordinator.hasLiveTarget(animal)
+                && !animal.isInLove()
+                && state.automaticBreedingArmedAt() == 0L;
     }
 
     public static boolean canAcceptPlayerBreedingFood(Animal animal) {

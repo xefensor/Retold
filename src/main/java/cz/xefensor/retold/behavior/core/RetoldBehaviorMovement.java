@@ -22,6 +22,9 @@ import java.util.WeakHashMap;
 
 public final class RetoldBehaviorMovement {
     private static final int MAX_PATH_STARTS_PER_TICK = 16;
+    private static final int MAX_RECONCILIATION_PATH_PROBES_PER_TICK = 8;
+    private static final int MAX_MIGRATION_PATH_PROBES_PER_TICK = 10;
+    private static final int MAX_MIGRATION_PATH_LENGTH = 64;
     private static final int MAX_FLYING_PATH_LENGTH = 64;
     private static final double FLYING_WAYPOINT_REACHED_SQUARED = 0.85D * 0.85D;
 
@@ -29,6 +32,10 @@ public final class RetoldBehaviorMovement {
     private static final Map<Mob, FlyingPathMemory> FLYING_PATH_MEMORIES = new WeakHashMap<>();
     private static long pathBudgetTick = Long.MIN_VALUE;
     private static int pathStartsThisTick;
+    private static long reconciliationPathBudgetTick = Long.MIN_VALUE;
+    private static int reconciliationPathProbesThisTick;
+    private static long migrationPathBudgetTick = Long.MIN_VALUE;
+    private static int migrationPathProbesThisTick;
 
     private RetoldBehaviorMovement() {
     }
@@ -55,6 +62,101 @@ public final class RetoldBehaviorMovement {
                 minIntervalTicks,
                 repathDistanceSquared
         );
+    }
+
+    /**
+     * Performs a bounded path probe without starting movement. This is for
+     * episodic reconciliation that must prove a target was accessible before
+     * mutating real world state.
+     */
+    public static ReachabilityResult probeReachability(
+            PathfinderMob mob,
+            Entity target,
+            long gameTime
+    ) {
+        if (mob == null
+                || target == null
+                || mob.level() != target.level()
+                || !mob.isAlive()
+                || !target.isAlive()) {
+            return ReachabilityResult.UNREACHABLE;
+        }
+
+        if (!tryUseReconciliationPathBudget(gameTime)) {
+            RetoldBehaviorPerf.recordPathRequest(true);
+            return ReachabilityResult.DEFERRED;
+        }
+
+        RetoldBehaviorPerf.recordPathRequest(false);
+        Path path = mob.getNavigation().createPath(target, 1);
+        return path != null && path.canReach()
+                ? ReachabilityResult.REACHABLE
+                : ReachabilityResult.UNREACHABLE;
+    }
+
+    /** Proves a block target is reachable without starting movement. */
+    public static ReachabilityResult probeReachability(
+            PathfinderMob mob,
+            BlockPos target,
+            long gameTime
+    ) {
+        if (mob == null
+                || target == null
+                || !mob.isAlive()
+                || mob.isRemoved()) {
+            return ReachabilityResult.UNREACHABLE;
+        }
+
+        if (!tryUseReconciliationPathBudget(gameTime)) {
+            RetoldBehaviorPerf.recordPathRequest(true);
+            return ReachabilityResult.DEFERRED;
+        }
+
+        RetoldBehaviorPerf.recordPathRequest(false);
+        Path path = mob.getNavigation().createPath(target, 1);
+        return path != null
+                && (path.canReach()
+                || path.getEndNode() != null
+                && path.getEndNode().distanceTo(target) <= 1.5F)
+                ? ReachabilityResult.REACHABLE
+                : ReachabilityResult.UNREACHABLE;
+    }
+
+    /**
+     * Proves that an unloaded-migration landing is reachable without starting
+     * movement. This budget is separate from predation reconciliation so one
+     * returning maximum-size herd cannot starve unrelated kill validation.
+     */
+    public static ReachabilityResult probeMigrationReachability(
+            PathfinderMob mob,
+            BlockPos target,
+            long gameTime
+    ) {
+        if (mob == null
+                || target == null
+                || !mob.isAlive()
+                || mob.isRemoved()) {
+            return ReachabilityResult.UNREACHABLE;
+        }
+
+        if (!tryUseMigrationPathBudget(gameTime)) {
+            RetoldBehaviorPerf.recordPathRequest(true);
+            return ReachabilityResult.DEFERRED;
+        }
+
+        RetoldBehaviorPerf.recordPathRequest(false);
+        Path path = mob.getNavigation().createPath(
+                target,
+                1,
+                MAX_MIGRATION_PATH_LENGTH
+        );
+        boolean reachesLanding = path != null
+                && (path.canReach()
+                || path.getEndNode() != null
+                && path.getEndNode().distanceTo(target) <= 1.5F);
+        return reachesLanding
+                ? ReachabilityResult.REACHABLE
+                : ReachabilityResult.UNREACHABLE;
     }
 
     public static boolean throttledMoveTo(
@@ -430,6 +532,36 @@ public final class RetoldBehaviorMovement {
         return true;
     }
 
+    private static boolean tryUseReconciliationPathBudget(long gameTime) {
+        if (reconciliationPathBudgetTick != gameTime) {
+            reconciliationPathBudgetTick = gameTime;
+            reconciliationPathProbesThisTick = 0;
+        }
+
+        if (reconciliationPathProbesThisTick
+                >= MAX_RECONCILIATION_PATH_PROBES_PER_TICK) {
+            return false;
+        }
+
+        reconciliationPathProbesThisTick++;
+        return true;
+    }
+
+    private static boolean tryUseMigrationPathBudget(long gameTime) {
+        if (migrationPathBudgetTick != gameTime) {
+            migrationPathBudgetTick = gameTime;
+            migrationPathProbesThisTick = 0;
+        }
+
+        if (migrationPathProbesThisTick
+                >= MAX_MIGRATION_PATH_PROBES_PER_TICK) {
+            return false;
+        }
+
+        migrationPathProbesThisTick++;
+        return true;
+    }
+
     private static double distanceSquared(
             double firstX,
             double firstY,
@@ -464,5 +596,11 @@ public final class RetoldBehaviorMovement {
             double z,
             long nextPathAt
     ) {
+    }
+
+    public enum ReachabilityResult {
+        REACHABLE,
+        UNREACHABLE,
+        DEFERRED
     }
 }

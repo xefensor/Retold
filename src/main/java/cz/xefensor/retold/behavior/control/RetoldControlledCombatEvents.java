@@ -6,9 +6,11 @@ import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTiming;
+import cz.xefensor.retold.behavior.flee.RetoldControlledFleeEvents;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldMobTargetPolicy;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 
 import net.minecraft.server.level.ServerLevel;
@@ -29,6 +31,7 @@ public final class RetoldControlledCombatEvents {
     private static final int COMBAT_SCAN_CACHE_TICKS = 5;
     private static final int COMBAT_PATH_INTERVAL_TICKS = 6;
     private static final int ATTACK_CONTROL_TICKS = 20 * 4;
+    private static final int RETALIATION_MEMORY_TICKS = 20 * 5;
     private static final int OWNER_THREAT_MEMORY_TICKS = 20 * 5;
 
     private static final double OWNER_THREAT_RADIUS_BLOCKS = 28.0D;
@@ -90,6 +93,7 @@ public final class RetoldControlledCombatEvents {
                         || mob == null
                         || mob.level() != level
                         || !RetoldMobRules.canUseOrdinaryPredatorSystems(mob)
+                        || RetoldControlledFleeEvents.isWoundedPredatorFleeing(mob)
         ) {
             return;
         }
@@ -154,7 +158,8 @@ public final class RetoldControlledCombatEvents {
 
         /*
          * Do not let autonomous enemy combat interrupt eating or hunting.
-         * Owner defense above is allowed to override because it is higher priority.
+         * Retaliation and owner defense above are allowed to override because
+         * immediate safety is higher priority.
          * Hostile spider player aggression above is also ATTACK work and must be
          * able to replace a lower-priority food hunt.
          */
@@ -402,13 +407,22 @@ public final class RetoldControlledCombatEvents {
     }
 
     private static LivingEntity findRetaliationThreat(PathfinderMob mob) {
-        if (!isSpider(mob)) {
+        LivingEntity attacker = mob.getLastHurtByMob();
+
+        if (attacker == mob
+                || !RetoldBehaviorCoordinator.isValidAssignmentTarget(mob, attacker)
+                || !mob.canAttack(attacker)
+                || RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
+                        mob,
+                        attacker,
+                        RetoldTargetSource.RETALIATION
+                )) {
             return null;
         }
 
-        LivingEntity attacker = mob.getLastHurtByMob();
+        int age = mob.tickCount - mob.getLastHurtByMobTimestamp();
 
-        if (!RetoldBehaviorCoordinator.isValidAssignmentTarget(mob, attacker)) {
+        if (age < 0 || age > RETALIATION_MEMORY_TICKS) {
             return null;
         }
 
@@ -558,12 +572,26 @@ public final class RetoldControlledCombatEvents {
             return;
         }
 
-        RetoldAiControl.refresh(
+        if (RetoldMobRules.isDolphin(attacker)
+                && RetoldAiControl.isControlledBy(
                 attacker,
-                RetoldAiControlMode.ATTACK,
-                gameTime,
-                ATTACK_CONTROL_TICKS
-        );
+                RetoldAiControlOwner.AQUATIC_POD
+        )) {
+            RetoldAiControl.refreshIfOwnedBy(
+                    attacker,
+                    RetoldAiControlMode.ATTACK,
+                    RetoldAiControlOwner.AQUATIC_POD,
+                    gameTime,
+                    ATTACK_CONTROL_TICKS
+            );
+        } else {
+            RetoldAiControl.refresh(
+                    attacker,
+                    RetoldAiControlMode.ATTACK,
+                    gameTime,
+                    ATTACK_CONTROL_TICKS
+            );
+        }
 
         RetoldBehaviorTargets.setAggression(attacker, true);
 
@@ -603,17 +631,15 @@ public final class RetoldControlledCombatEvents {
             return false;
         }
 
-        if (isSpider(attacker)) {
-            if (
-                    RetoldFactionTargetMemory.isOwnedByAny(
-                            attacker,
-                            target,
-                            RetoldTargetSource.RETALIATION
-                    )
-            ) {
-                return true;
-            }
+        if (RetoldFactionTargetMemory.isOwnedByAny(
+                attacker,
+                target,
+                RetoldTargetSource.RETALIATION
+        )) {
+            return true;
+        }
 
+        if (isSpider(attacker)) {
             if (
                     target instanceof Player
                             && RetoldFactionTargetMemory.isOwnedByAny(
@@ -627,6 +653,16 @@ public final class RetoldControlledCombatEvents {
         }
 
         if (isWolf(attacker) && RetoldMobRules.isWolfEnemyButNotFood(target)) {
+            return true;
+        }
+
+        if (RetoldMobRules.isDolphin(attacker)
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                attacker,
+                target,
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST
+        )) {
             return true;
         }
 

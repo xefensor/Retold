@@ -23,6 +23,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -257,7 +258,7 @@ public final class RetoldVillagerGolemConstructionGameTests {
         RetoldVillagerGolemConstruction.BuildState initial =
                 RetoldVillagerGolemConstruction.constructionState(builder);
         helper.assertTrue(initial != null, "An emerald in village storage must qualify");
-        boolean[] observations = new boolean[3];
+        boolean[] observations = new boolean[4];
         helper.onEachTick(() -> {
             RetoldVillagerGolemConstruction.BuildState state =
                     RetoldVillagerGolemConstruction.constructionState(builder);
@@ -290,6 +291,9 @@ public final class RetoldVillagerGolemConstructionGameTests {
                         && level.getBlockState(advanced.top()).is(Blocks.PUMPKIN);
                 observations[2] |= advanced.step() == 6
                         && builder.getMainHandItem().is(Items.EMERALD);
+                observations[3] |= RetoldVillagerGolemConstruction
+                        .requiresContinuousFacingTick(builder)
+                        && faces(builder, Vec3.atCenterOf(advanced.center()));
             }
         });
 
@@ -342,6 +346,10 @@ public final class RetoldVillagerGolemConstructionGameTests {
             helper.assertTrue(observations[0], "Construction must expose staged iron placement");
             helper.assertTrue(observations[1], "Construction must visibly place the pumpkin");
             helper.assertTrue(observations[2], "The builder must visibly hold the paid emerald");
+            helper.assertTrue(
+                    observations[3],
+                    "A builder at the work site must continuously face the Golem structure"
+            );
             helper.assertValueEqual(
                     countItem(chest, Items.EMERALD.getDefaultInstance()),
                     0,
@@ -665,6 +673,18 @@ public final class RetoldVillagerGolemConstructionGameTests {
         }
 
         return count;
+    }
+
+    private static boolean faces(Villager villager, Vec3 target) {
+        double dx = target.x() - villager.getX();
+        double dz = target.z() - villager.getZ();
+        float expectedYaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
+        return Math.abs(Mth.wrapDegrees(villager.getYRot() - expectedYaw)) < 0.1F
+                && Math.abs(Mth.wrapDegrees(villager.yBodyRot - expectedYaw)) < 0.1F
+                && Math.abs(Mth.wrapDegrees(villager.getYHeadRot() - expectedYaw)) < 0.1F
+                && Math.abs(villager.getLookControl().getWantedX() - target.x()) < 0.001D
+                && Math.abs(villager.getLookControl().getWantedY() - target.y()) < 0.001D
+                && Math.abs(villager.getLookControl().getWantedZ() - target.z()) < 0.001D;
     }
 
     private static void placeFloor(

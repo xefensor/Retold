@@ -43,6 +43,7 @@ The following block and item tags are supported extension points:
 | `retold:grazer_forage_plants` | Other plant blocks grazers may consume, including the default grasses and ferns. |
 | `retold:small_passive_forage_plants` | Other plant blocks small passive animals may consume. |
 | `retold:turtle_forage_blocks` | Blocks hungry Turtles may consume. |
+| `retold:aquatic_school_forage_blocks` | Plants hungry school fish may consume. Defaults are seagrass, tall seagrass, kelp, and kelp plants. |
 | `retold:hoglin_forage_blocks` | Blocks hungry Hoglins may consume. |
 | `retold:piglin_forage_blocks` | Blocks hungry Piglins may consume. |
 | `retold:strider_forage_blocks` | Blocks hungry Striders may consume. |
@@ -56,6 +57,7 @@ The following block and item tags are supported extension points:
 | `retold:leaf_preserving_tools` | Tools that suppress Retold's supplemental Stick drops from leaves and woody bushes. Ordinary block loot remains unchanged. |
 | `retold:meat_foods` | Meat accepted by Retold predators, hungry Nether mobs, hungry undead, and Animal Feeders. It includes `minecraft:meat`. |
 | `retold:fish_foods` | Fish accepted by Retold predators, Nautiluses, Guardians, and Animal Feeders. It includes `minecraft:fishes`. |
+| `retold:squid_foods` | Dropped items accepted by hungry Squid and Glow Squid. Defaults contain raw fish only. |
 | `retold:berry_foods` | Berries accepted by Foxes and Animal Feeders. It includes `c:foods/berry`. |
 | `retold:grazer_foods` | Dropped or feeder food accepted by Retold grazers. |
 | `retold:small_passive_foods` | Dropped or feeder food accepted by Retold small passive animals. |
@@ -162,8 +164,10 @@ and full membership takes precedence. Classification caches and installed factio
 updated after server tag reloads, including for already-loaded mobs.
 
 Players and a tamed Wolf that is actively defending are dynamic identities and are not represented
-by entity-type tags. Tamed entities covered by the standard Undead tag, such as Skeleton Horses,
-do not inherit generic hostile Undead behavior while tamed; their untamed forms do. Tags classify
+by entity-type tags. Undead mounts covered by the standard Undead tag stop inheriting generic
+hostile Undead behavior only after they have a persisted owner reference. Retold deliberately does
+not trust the vanilla tame flag here because Camel always reports itself as tamed and Skeleton-trap
+horses can be marked tamed before a player owns them. Tags classify
 identity only: entity classes that cannot target, retaliate, assist, or use territory behavior do
 not gain those capabilities merely from membership.
 

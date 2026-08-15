@@ -1,5 +1,6 @@
 package cz.xefensor.retold.behavior.species;
 
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
@@ -509,6 +510,16 @@ public final class RetoldBatColonyEvents {
         if (interval <= 0
                 || gameTime - state.lastHungerTickAt() < interval) {
             return true;
+        }
+
+        if (RetoldUnloadedEcosystemCatchUp.deferLongGap(
+                level,
+                bat,
+                state,
+                gameTime,
+                interval
+        )) {
+            return false;
         }
 
         state.addHunger(1);

@@ -4,6 +4,7 @@ import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
@@ -68,6 +69,13 @@ public final class RetoldVillagerCommunalFoodGameTests {
                 "villager_communal_food_uses_personal_stock_before_storage",
                 80,
                 RetoldVillagerCommunalFoodGameTests::villagerUsesPersonalFoodBeforeStorage
+        );
+        registerTest(
+                event,
+                environment,
+                "unloaded_villager_food_catch_up_conserves_communal_provenance",
+                80,
+                RetoldVillagerCommunalFoodGameTests::unloadedVillagerFoodConservesCommunalProvenance
         );
         registerTest(
                 event,
@@ -238,6 +246,98 @@ public final class RetoldVillagerCommunalFoodGameTests {
         chest.clearContent();
         villager.discard();
         helper.succeed();
+    }
+
+    private static void unloadedVillagerFoodConservesCommunalProvenance(
+            GameTestHelper helper
+    ) {
+        placeFloor(helper, 1, 5, 1, 3);
+        BlockPos chestPos = new BlockPos(4, 2, 2);
+        BlockPos absoluteChestPos = helper.absolutePos(chestPos);
+        helper.setBlock(chestPos, Blocks.CHEST);
+        Container chest = containerAt(helper, chestPos);
+        ItemStack villageBread = new ItemStack(Items.BREAD, 4);
+        chest.setItem(0, villageBread.copy());
+        chest.setChanged();
+        RetoldVillageContainerOwnership.clear(
+                helper.getLevel(),
+                absoluteChestPos
+        );
+        RetoldVillageContainerOwnership.markVillageOwned(
+                helper.getLevel(),
+                absoluteChestPos,
+                villageBread,
+                4
+        );
+
+        Villager villager = helper.spawn(EntityTypes.VILLAGER, 3, 2, 2);
+        setVillageHome(helper, villager, new BlockPos(2, 2, 2));
+        villager.getInventory().setItem(0, new ItemStack(Items.BREAD));
+        long lastSimulatedAt = Math.max(1L, helper.getLevel().getGameTime());
+        long catchUpAt = lastSimulatedAt + 2L * 24_000L;
+        RetoldMobState state = RetoldMobStates.getOrCreate(
+                villager,
+                lastSimulatedAt
+        );
+
+        try {
+            state.setHunger(0);
+            state.markHungerTick(lastSimulatedAt);
+            helper.assertTrue(
+                    RetoldUnloadedEcosystemCatchUp.deferLongGap(
+                            helper.getLevel(),
+                            villager,
+                            state,
+                            catchUpAt,
+                            RetoldMobRules.hungerInterval(villager)
+                    ),
+                    "The Villager's two-day food gap must be queued"
+            );
+            helper.assertValueEqual(
+                    RetoldUnloadedEcosystemCatchUp.processPending(
+                            RetoldUnloadedEcosystemCatchUp.MAX_TASKS_PER_TICK
+                    ),
+                    1,
+                    "The queued Villager transaction must reconcile once"
+            );
+            helper.assertTrue(
+                    chest.getItem(0).is(Items.BREAD)
+                            && chest.getItem(0).getCount() == 1,
+                    "The communal transaction must withdraw one exact 12-point Bread stock"
+            );
+            helper.assertValueEqual(
+                    villager.getInventory().countItem(Items.BREAD),
+                    2,
+                    "Personal Bread must be eaten first and unused communal stock retained"
+            );
+            helper.assertValueEqual(
+                    RetoldVillageContainerOwnership.ownedCount(
+                            helper.getLevel(),
+                            absoluteChestPos,
+                            villageBread
+                    ),
+                    1,
+                    "Village-owned provenance must follow the three-item communal withdrawal"
+            );
+            helper.assertValueEqual(
+                    state.hunger(),
+                    61,
+                    "Two daily Bread meals must interleave exact Villager metabolism and relief"
+            );
+            helper.assertValueEqual(
+                    state.lastAteAt(),
+                    catchUpAt,
+                    "The second Villager meal must persist the final daily timestamp"
+            );
+            helper.succeed();
+        } finally {
+            RetoldVillageContainerOwnership.clear(
+                    helper.getLevel(),
+                    absoluteChestPos
+            );
+            chest.clearContent();
+            villager.discard();
+        }
     }
 
     private static void villagerCommunalFoodSupportsBarrelsButRejectsOtherInventories(

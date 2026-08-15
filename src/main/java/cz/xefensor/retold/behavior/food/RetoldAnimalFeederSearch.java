@@ -29,27 +29,71 @@ final class RetoldAnimalFeederSearch {
             long gameTime,
             int cacheTicks
     ) {
+        return findAt(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                horizontalRadius,
+                verticalRadius,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    static synchronized BlockPos findAt(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findAtResult(
+                level,
+                mob,
+                center,
+                horizontalRadius,
+                verticalRadius,
+                gameTime,
+                cacheTicks
+        ).target();
+    }
+
+    static synchronized FindResult findAtResult(
+            ServerLevel level,
+            PathfinderMob mob,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
         if (level == null || mob == null) {
-            return null;
+            return FindResult.none();
         }
 
-        BlockPos center = mob.blockPosition();
+        if (center == null) {
+            return FindResult.none();
+        }
+
+        BlockPos immutableCenter = center.immutable();
         FeederTarget cached = TARGETS.get(mob);
 
         if (cached != null
                 && gameTime < cached.expiresAt()
                 && cached.horizontalRadius() == horizontalRadius
                 && cached.verticalRadius() == verticalRadius
-                && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
+                && immutableCenter.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
                 && isValid(level, mob, cached.target())) {
             RetoldBehaviorPerf.recordBlockSearchCache(true);
-            return cached.target();
+            return FindResult.found(cached.target());
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
             RetoldBehaviorPerf.recordBlockSearchCache(false);
             RetoldBehaviorPerf.recordBlockSearchBudgetSkip();
-            return null;
+            return FindResult.deferredResult();
         }
 
         RetoldBehaviorPerf.recordBlockSearchCache(false);
@@ -57,7 +101,7 @@ final class RetoldAnimalFeederSearch {
         BlockPos target = scan(
                 level,
                 mob,
-                center,
+                immutableCenter,
                 horizontalRadius,
                 verticalRadius
         );
@@ -65,7 +109,7 @@ final class RetoldAnimalFeederSearch {
         TARGETS.put(
                 mob,
                 new FeederTarget(
-                        center.immutable(),
+                        immutableCenter,
                         horizontalRadius,
                         verticalRadius,
                         gameTime + Math.max(
@@ -76,7 +120,7 @@ final class RetoldAnimalFeederSearch {
                 )
         );
 
-        return target;
+        return FindResult.found(target);
     }
 
     private static BlockPos scan(
@@ -150,5 +194,19 @@ final class RetoldAnimalFeederSearch {
             long expiresAt,
             BlockPos target
     ) {
+    }
+
+    record FindResult(BlockPos target, boolean deferred) {
+        private static FindResult found(BlockPos target) {
+            return new FindResult(target, false);
+        }
+
+        private static FindResult none() {
+            return found(null);
+        }
+
+        private static FindResult deferredResult() {
+            return new FindResult(null, true);
+        }
     }
 }

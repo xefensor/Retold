@@ -9,6 +9,7 @@ import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
 import cz.xefensor.retold.behavior.control.RetoldTamedDefenderGameTests;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreedingGameTests;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemGameTests;
 import cz.xefensor.retold.behavior.flee.RetoldCreeperAwareness;
 import cz.xefensor.retold.behavior.flee.RetoldDamageFleeGameTests;
 import cz.xefensor.retold.behavior.food.RetoldFoodBehaviorEvents;
@@ -31,9 +32,17 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.species.RetoldCommanderSupportGameTests;
 import cz.xefensor.retold.behavior.species.RetoldAxolotlGuardianGameTests;
+import cz.xefensor.retold.behavior.species.RetoldAquaticEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldBatColonyGameTests;
+import cz.xefensor.retold.behavior.species.RetoldDolphinPodGameTests;
 import cz.xefensor.retold.behavior.species.RetoldHerdSchoolGameTests;
+import cz.xefensor.retold.behavior.species.RetoldHiveColonyGameTests;
+import cz.xefensor.retold.behavior.species.RetoldUndeadTargetParityGameTests;
+import cz.xefensor.retold.behavior.species.RetoldUndeadMountGameTests;
+import cz.xefensor.retold.behavior.species.RetoldWitherThreatGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPandaBambooGameTests;
+import cz.xefensor.retold.behavior.species.RetoldParrotForagerGameTests;
+import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerGameTests;
 import cz.xefensor.retold.behavior.species.RetoldPolarBearWarningGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderLairGameTests;
@@ -71,6 +80,7 @@ import cz.xefensor.retold.villager.RetoldVillagerTorchRelightingGameTests;
 import cz.xefensor.retold.villager.RetoldVillageContainerOwnershipGameTests;
 import cz.xefensor.retold.villager.RetoldVillageCropReputationGameTests;
 import cz.xefensor.retold.villager.RetoldVillageAnimalReputationGameTests;
+import cz.xefensor.retold.worldgen.RetoldNetherMobSpawnGameTests;
 import cz.xefensor.retold.worldgen.RetoldRuinedPortalGameTests;
 import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
@@ -275,6 +285,7 @@ public final class RetoldGameTests {
         RetoldAenderGameTests.register(event, environment);
         RetoldWorldProtectionGameTests.register(event, environment);
         RetoldMobAvailabilityGameTests.register(event, environment);
+        RetoldNetherMobSpawnGameTests.register(event);
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
         RetoldAiSightCacheGameTests.register(event, environment);
@@ -284,13 +295,22 @@ public final class RetoldGameTests {
         RetoldAnimalFeederGameTests.register(event);
         RetoldAnimalBreedingGameTests.register(event);
         RetoldStarvationGameTests.register(event);
+        RetoldUnloadedEcosystemGameTests.register(event);
         RetoldHungerSurvivalGameTests.register(event);
         RetoldNaturalFoodAcquisitionGameTests.register(event);
         RetoldCommanderSupportGameTests.register(event, environment);
+        RetoldAquaticEcologyGameTests.register(event);
         RetoldAxolotlGuardianGameTests.register(event);
         RetoldBatColonyGameTests.register(event);
+        RetoldDolphinPodGameTests.register(event);
         RetoldHerdSchoolGameTests.register(event);
+        RetoldHiveColonyGameTests.register(event);
+        RetoldUndeadTargetParityGameTests.register(event);
+        RetoldUndeadMountGameTests.register(event);
+        RetoldWitherThreatGameTests.register(event);
         RetoldPandaBambooGameTests.register(event);
+        RetoldParrotForagerGameTests.register(event);
+        RetoldPhantomStalkerGameTests.register(event);
         RetoldPolarBearWarningGameTests.register(event, environment);
         RetoldWolfPackHungerGameTests.register(event, environment);
         RetoldTamedDefenderGameTests.register(event, environment);
@@ -506,7 +526,7 @@ public final class RetoldGameTests {
     private static void mobProfilesLoadFromDatapack(GameTestHelper helper) {
         helper.assertValueEqual(
                 RetoldMobProfiles.loadedProfileCount(),
-                77,
+                78,
                 "Every bundled mob profile must load"
         );
 
@@ -726,6 +746,11 @@ public final class RetoldGameTests {
         var cow = helper.spawn(EntityTypes.COW, 3, 2, 3);
         var creeper = helper.spawn(EntityTypes.CREEPER, 4, 2, 3);
 
+        RetoldMobStates.getOrCreate(
+                slime,
+                helper.getLevel().getGameTime()
+        ).setHunger(RetoldMobRules.huntThreshold(slime));
+
         helper.assertTrue(
                 RetoldFactionRelations.shouldAttack(zombie, cow),
                 "Undead must consider unfactioned living animals hostile"
@@ -757,6 +782,41 @@ public final class RetoldGameTests {
         helper.assertFalse(
                 RetoldFactionRelations.shouldAttack(zombie, creeper),
                 "Even indiscriminate Undead must not deliberately attack creepers"
+        );
+        slime.setTarget(magmaCube);
+        guardian.setTarget(elderGuardian);
+        helper.assertTrue(
+                slime.getTarget() == null && guardian.getTarget() == null,
+                "Vanilla target writes must preserve Cube Mob and monument-Guardian tolerance"
+        );
+        slime.setTarget(cow);
+        guardian.setTarget(cow);
+        helper.assertTrue(
+                slime.getTarget() == cow && guardian.getTarget() == cow,
+                "Internal tolerance must not block valid outsider targets"
+        );
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                slime,
+                cow,
+                false
+        );
+        RetoldCombatTargets.clearTargetReferencesAndAggression(
+                guardian,
+                cow,
+                false
+        );
+        helper.assertTrue(
+                RetoldCombatTargets.applyAttackTarget(
+                        slime,
+                        magmaCube,
+                        RetoldTargetSource.RETALIATION
+                )
+                        && RetoldCombatTargets.applyAttackTarget(
+                        guardian,
+                        elderGuardian,
+                        RetoldTargetSource.RETALIATION
+                ),
+                "Explicit Retold retaliation must remain available across tolerant families"
         );
         helper.succeed();
     }
@@ -856,6 +916,7 @@ public final class RetoldGameTests {
         var undeadMount = helper.spawn(EntityTypes.SKELETON_HORSE, 1, 2, 1);
         var cow = helper.spawn(EntityTypes.COW, 3, 2, 1);
         var defender = helper.spawn(EntityTypes.IRON_GOLEM, 5, 2, 1);
+        var owner = helper.makeMockPlayer(GameType.SURVIVAL);
 
         undeadMount.setTamed(false);
         int untamedTargetGoalCount = undeadMount.targetSelector
@@ -909,6 +970,7 @@ public final class RetoldGameTests {
                 true
         );
         undeadMount.setTamed(true);
+        undeadMount.setOwner(owner);
         helper.runAfterDelay(2, () -> {
             helper.assertTrue(
                     RetoldFactionMembers.getFaction(undeadMount) == null,

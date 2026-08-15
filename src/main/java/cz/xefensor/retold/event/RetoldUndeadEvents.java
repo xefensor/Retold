@@ -4,6 +4,7 @@ import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.undead.RetoldUndead;
 import cz.xefensor.retold.undead.RetoldUndeadCleansing;
+import cz.xefensor.retold.undead.RetoldUndeadSpawnPressure;
 import cz.xefensor.retold.undead.RetoldUndeadSunFear;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -13,6 +14,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.PathfinderMob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 public final class RetoldUndeadEvents {
@@ -50,6 +52,11 @@ public final class RetoldUndeadEvents {
         if (stage == RetoldWorldStage.STAGE_3) {
             RetoldUndeadCleansing.cleanse(entity);
         }
+    }
+
+    @SubscribeEvent
+    public static void onPotentialSpawns(LevelEvent.PotentialSpawns event) {
+        RetoldUndeadSpawnPressure.apply(event);
     }
 
     @SubscribeEvent

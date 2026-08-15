@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.food.RetoldFeedingPose;
@@ -176,8 +177,46 @@ public final class RetoldVillagerCommunalSupply {
         villager.getNavigation().stop();
         clearOwnedMovement(villager);
         RetoldVillagerCommunalFoodSearch.forget(villager);
-        villager.getLookControl().setLookAt(Vec3.atCenterOf(storagePos));
+        RetoldActionFacing.face(villager, Vec3.atCenterOf(storagePos));
         villager.swing(InteractionHand.MAIN_HAND);
+        return moved;
+    }
+
+    /** Deposits proven-reachable catch-up surplus without loaded presentation. */
+    static int depositCatchUp(
+            ServerLevel level,
+            Villager villager,
+            BlockPos storagePos
+    ) {
+        if (!isCatchUpUsable(level, villager)) {
+            return 0;
+        }
+
+        ItemStack surplus = firstSurplus(villager);
+
+        if (surplus.isEmpty()
+                || !RetoldVillagerCommunalFoodSearch.isVillageStorageWithSpace(
+                level,
+                villager,
+                storagePos,
+                surplus
+        )) {
+            return 0;
+        }
+
+        Container storage = RetoldVillagerCommunalFoodSearch.containerAt(
+                level,
+                storagePos
+        );
+        RetoldVillageContainerOwnership.SystemMutation ownershipMutation =
+                RetoldVillageContainerOwnership.beginSystemMutation(storage);
+        int moved = moveSurplus(villager.getInventory(), storage);
+        RetoldVillageContainerOwnership.finishSystemMutation(
+                level,
+                ownershipMutation,
+                true
+        );
+        RetoldVillagerCommunalFoodSearch.forget(villager);
         return moved;
     }
 
@@ -200,7 +239,7 @@ public final class RetoldVillagerCommunalSupply {
         return points;
     }
 
-    private static int moveSurplus(
+    static int moveSurplus(
             SimpleContainer inventory,
             Container storage
     ) {
@@ -250,7 +289,7 @@ public final class RetoldVillagerCommunalSupply {
         return movedTotal;
     }
 
-    private static int foodPointsInInventory(SimpleContainer inventory) {
+    static int foodPointsInInventory(SimpleContainer inventory) {
         int points = 0;
 
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
@@ -323,13 +362,21 @@ public final class RetoldVillagerCommunalSupply {
     }
 
     private static ItemStack firstSurplus(Villager villager) {
-        int foodPoints = foodPointsInInventory(villager);
+        return villager == null
+                ? ItemStack.EMPTY
+                : firstSurplus(villager.getInventory());
+    }
+
+    static ItemStack firstSurplus(SimpleContainer inventory) {
+        if (inventory == null) {
+            return ItemStack.EMPTY;
+        }
+
+        int foodPoints = foodPointsInInventory(inventory);
 
         if (foodPoints <= PERSONAL_FOOD_RESERVE) {
             return ItemStack.EMPTY;
         }
-
-        SimpleContainer inventory = villager.getInventory();
 
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
@@ -356,6 +403,21 @@ public final class RetoldVillagerCommunalSupply {
                 && !villager.isBaby()
                 && !villager.isSleeping()
                 && villager.getTradingPlayer() == null
+                && villager.getVillagerData()
+                .profession()
+                .is(VillagerProfession.FARMER);
+    }
+
+    private static boolean isCatchUpUsable(
+            ServerLevel level,
+            Villager villager
+    ) {
+        return level != null
+                && villager != null
+                && villager.level() == level
+                && villager.isAlive()
+                && !villager.isRemoved()
+                && !villager.isBaby()
                 && villager.getVillagerData()
                 .profession()
                 .is(VillagerProfession.FARMER);

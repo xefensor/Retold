@@ -8,11 +8,16 @@ import cz.xefensor.retold.Retold;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Persistent positions of crops planted or replanted by Farmers. */
@@ -56,16 +61,21 @@ final class RetoldVillageCropOwnershipData extends SavedData {
             );
 
     private final Set<CropKey> crops;
+    private final Map<CropChunkKey, Set<Long>> cropsByChunk;
 
     RetoldVillageCropOwnershipData() {
         crops = new HashSet<>();
+        cropsByChunk = new HashMap<>();
     }
 
     private RetoldVillageCropOwnershipData(SerializedState state) {
         crops = new HashSet<>();
+        cropsByChunk = new HashMap<>();
 
         for (OwnedCrop crop : state.crops()) {
-            crops.add(new CropKey(crop.dimension(), crop.position()));
+            CropKey key = new CropKey(crop.dimension(), crop.position());
+            crops.add(key);
+            index(key);
         }
     }
 
@@ -78,15 +88,74 @@ final class RetoldVillageCropOwnershipData extends SavedData {
     }
 
     synchronized void mark(ServerLevel level, BlockPos pos) {
-        if (crops.add(key(level, pos))) {
+        CropKey key = key(level, pos);
+
+        if (crops.add(key)) {
+            index(key);
             setDirty();
         }
     }
 
     synchronized void clear(ServerLevel level, BlockPos pos) {
-        if (crops.remove(key(level, pos))) {
+        CropKey key = key(level, pos);
+
+        if (crops.remove(key)) {
+            unindex(key);
             setDirty();
         }
+    }
+
+    synchronized List<BlockPos> nearby(
+            ServerLevel level,
+            BlockPos center,
+            int horizontalRadius,
+            int verticalRadius,
+            int limit
+    ) {
+        if (level == null || center == null || limit <= 0) {
+            return List.of();
+        }
+
+        Identifier dimension = level.dimension().identifier();
+        int radius = Math.max(0, horizontalRadius);
+        int yRadius = Math.max(0, verticalRadius);
+        int minChunkX = Math.floorDiv(center.getX() - radius, 16);
+        int maxChunkX = Math.floorDiv(center.getX() + radius, 16);
+        int minChunkZ = Math.floorDiv(center.getZ() - radius, 16);
+        int maxChunkZ = Math.floorDiv(center.getZ() + radius, 16);
+        List<BlockPos> found = new ArrayList<>();
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                Set<Long> indexed = cropsByChunk.get(new CropChunkKey(
+                        dimension,
+                        ChunkPos.pack(chunkX, chunkZ)
+                ));
+
+                if (indexed == null) {
+                    continue;
+                }
+
+                for (long packedPos : indexed) {
+                    BlockPos pos = BlockPos.of(packedPos);
+                    int dx = pos.getX() - center.getX();
+                    int dz = pos.getZ() - center.getZ();
+
+                    if (Math.abs(pos.getY() - center.getY()) <= yRadius
+                            && dx * dx + dz * dz <= radius * radius
+                            && level.hasChunkAt(pos)) {
+                        found.add(pos);
+                    }
+                }
+            }
+        }
+
+        found.sort(Comparator
+                .comparingDouble((BlockPos pos) -> center.distSqr(pos))
+                .thenComparingLong(BlockPos::asLong));
+        return found.size() <= limit
+                ? List.copyOf(found)
+                : List.copyOf(found.subList(0, limit));
     }
 
     synchronized SerializedState serializeState() {
@@ -161,6 +230,33 @@ final class RetoldVillageCropOwnershipData extends SavedData {
         );
     }
 
+    private void index(CropKey crop) {
+        BlockPos pos = BlockPos.of(crop.position());
+        cropsByChunk.computeIfAbsent(
+                new CropChunkKey(crop.dimension(), ChunkPos.pack(pos)),
+                ignored -> new HashSet<>()
+        ).add(crop.position());
+    }
+
+    private void unindex(CropKey crop) {
+        BlockPos pos = BlockPos.of(crop.position());
+        CropChunkKey chunk = new CropChunkKey(
+                crop.dimension(),
+                ChunkPos.pack(pos)
+        );
+        Set<Long> indexed = cropsByChunk.get(chunk);
+
+        if (indexed == null) {
+            return;
+        }
+
+        indexed.remove(crop.position());
+
+        if (indexed.isEmpty()) {
+            cropsByChunk.remove(chunk);
+        }
+    }
+
     record SerializedState(int version, List<OwnedCrop> crops) {
     }
 
@@ -168,5 +264,8 @@ final class RetoldVillageCropOwnershipData extends SavedData {
     }
 
     private record CropKey(Identifier dimension, long position) {
+    }
+
+    private record CropChunkKey(Identifier dimension, long chunk) {
     }
 }

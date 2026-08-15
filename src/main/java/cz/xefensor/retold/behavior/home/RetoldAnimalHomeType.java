@@ -8,6 +8,7 @@ public enum RetoldAnimalHomeType {
     NONE,
     WOLF_DEN,
     DOLPHIN_POD_RANGE,
+    AQUATIC_SCHOOL_RANGE,
     HERD_RANGE,
     FORAGING_RANGE,
     ROOST,

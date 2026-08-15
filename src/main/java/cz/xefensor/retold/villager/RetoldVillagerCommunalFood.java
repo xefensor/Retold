@@ -1,5 +1,6 @@
 package cz.xefensor.retold.villager;
 
+import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
@@ -153,6 +154,88 @@ public final class RetoldVillagerCommunalFood {
         );
     }
 
+    public static int personalMealCount(Villager villager) {
+        if (villager == null) {
+            return 0;
+        }
+
+        int meals = 0;
+        var inventory = villager.getInventory();
+
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+
+            if (!stack.isEmpty()
+                    && Villager.FOOD_POINTS.getOrDefault(stack.getItem(), 0) > 0) {
+                meals += stack.getCount();
+            }
+        }
+
+        return meals;
+    }
+
+    public static CatchUpStorageResult findCatchUpStorage(
+            ServerLevel level,
+            Villager villager,
+            long gameTime
+    ) {
+        if (!isCatchUpUsable(level, villager)) {
+            return CatchUpStorageResult.none();
+        }
+
+        BlockPos storagePos = RetoldVillagerCommunalFoodSearch.find(
+                level,
+                villager,
+                gameTime,
+                CACHE_TICKS
+        );
+
+        return new CatchUpStorageResult(
+                storagePos,
+                RetoldVillagerCommunalFoodSearch.isFoodSearchDeferred(villager)
+        );
+    }
+
+    /**
+     * Removes exactly one real Villager meal without loaded movement, sound,
+     * or pose state. Personal inventory keeps priority; communal restocking
+     * uses the same provenance-aware transaction as the loaded behavior.
+     */
+    public static int consumeCatchUpMeal(
+            ServerLevel level,
+            Villager villager,
+            BlockPos storagePos
+    ) {
+        if (!isCatchUpUsable(level, villager)) {
+            return 0;
+        }
+
+        ItemStack consumed = takeBestPersonalFood(villager);
+
+        if (consumed.isEmpty() && storagePos != null) {
+            int stocked = RetoldVillagerCommunalFoodSearch.stockPersonalFood(
+                    level,
+                    villager,
+                    storagePos,
+                    PERSONAL_FOOD_STOCK_POINTS
+            );
+
+            if (stocked > 0) {
+                consumed = takeBestPersonalFood(villager);
+            }
+        }
+
+        if (consumed.isEmpty()) {
+            return 0;
+        }
+
+        int foodPoints = Villager.FOOD_POINTS.getOrDefault(
+                consumed.getItem(),
+                0
+        );
+        return Math.max(12, foodPoints * 6);
+    }
+
     private static boolean consumePersonalFood(
             Villager villager,
             RetoldMobState state,
@@ -172,6 +255,28 @@ public final class RetoldVillagerCommunalFood {
             long gameTime,
             Vec3 foodSource
     ) {
+        ItemStack consumed = takeBestPersonalFood(villager);
+
+        if (consumed.isEmpty()) {
+            return false;
+        }
+
+        int foodPoints = Villager.FOOD_POINTS.getOrDefault(consumed.getItem(), 0);
+        state.addHunger(-Math.max(12, foodPoints * 6));
+        state.markFed(gameTime);
+        villager.playSound(SoundEvents.GENERIC_EAT.value(), 1.0F, 1.0F);
+        villager.getNavigation().stop();
+        clearOwnedMovement(villager);
+        RetoldVillagerCommunalFoodSearch.forget(villager);
+        RetoldFeedingPose.begin(
+                villager,
+                foodSource,
+                gameTime
+        );
+        return true;
+    }
+
+    private static ItemStack takeBestPersonalFood(Villager villager) {
         var inventory = villager.getInventory();
         int bestSlot = -1;
         int bestPoints = 0;
@@ -189,29 +294,16 @@ public final class RetoldVillagerCommunalFood {
         }
 
         if (bestSlot < 0) {
-            return false;
+            return ItemStack.EMPTY;
         }
 
         ItemStack consumed = inventory.removeItem(bestSlot, 1);
 
-        if (consumed.isEmpty()) {
-            return false;
+        if (!consumed.isEmpty()) {
+            inventory.setChanged();
         }
 
-        inventory.setChanged();
-        int foodPoints = Villager.FOOD_POINTS.getOrDefault(consumed.getItem(), 0);
-        state.addHunger(-Math.max(12, foodPoints * 6));
-        state.markFed(gameTime);
-        villager.playSound(SoundEvents.GENERIC_EAT.value(), 1.0F, 1.0F);
-        villager.getNavigation().stop();
-        clearOwnedMovement(villager);
-        RetoldVillagerCommunalFoodSearch.forget(villager);
-        RetoldFeedingPose.begin(
-                villager,
-                foodSource,
-                gameTime
-        );
-        return true;
+        return consumed;
     }
 
     private static Vec3 carriedFoodSource(Villager villager) {
@@ -267,6 +359,19 @@ public final class RetoldVillagerCommunalFood {
                 == RetoldMobProfileType.VILLAGER_COMMUNAL;
     }
 
+    private static boolean isCatchUpUsable(
+            ServerLevel level,
+            Villager villager
+    ) {
+        return level != null
+                && villager != null
+                && villager.level() == level
+                && villager.isAlive()
+                && !villager.isRemoved()
+                && RetoldMobRules.profileType(villager)
+                == RetoldMobProfileType.VILLAGER_COMMUNAL;
+    }
+
     static boolean hasUrgentVanillaActivity(Villager villager) {
         var brain = villager.getBrain();
 
@@ -288,6 +393,16 @@ public final class RetoldVillagerCommunalFood {
         if (interval <= 0
                 || gameTime - state.lastHungerTickAt() < interval) {
             return true;
+        }
+
+        if (RetoldUnloadedEcosystemCatchUp.deferLongGap(
+                level,
+                villager,
+                state,
+                gameTime,
+                interval
+        )) {
+            return false;
         }
 
         state.addHunger(1);
@@ -330,5 +445,14 @@ public final class RetoldVillagerCommunalFood {
                 villager,
                 RetoldAiControlOwner.FOOD
         );
+    }
+
+    public record CatchUpStorageResult(
+            BlockPos storagePos,
+            boolean deferred
+    ) {
+        private static CatchUpStorageResult none() {
+            return new CatchUpStorageResult(null, false);
+        }
     }
 }

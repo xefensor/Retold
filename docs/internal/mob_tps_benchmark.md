@@ -4,12 +4,12 @@
 
 ## Coverage
 
-`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 77 mob types; the latest complete baseline covers 75, while the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
+`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 82 mob types; the latest complete baseline covers 75, while focused runs cover the seven later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
 2. `dropped_food_forage`: dropped food plus profile-appropriate forage blocks.
 3. `hunt_targeting`: profile-appropriate prey or combat targets.
-4. `danger_social`: threats and nearby entities that exercise retaliation, assistance, flock, pack, or swarm behavior. Shared passive-flee profiles also take one real point of threat damage so this phase measures immediate damage flight and its remembered follow-through.
+4. `danger_social`: threats and nearby entities that exercise retaliation, assistance, flock, pack, or swarm behavior. Shared passive-flee profiles, Bees, and Undead mounts take one real point of threat damage. Wild ordinary predators are first lowered far enough for that hit to cross below 25% health, so the phase measures their ten-second wounded-flight continuation instead of full-health combat.
 5. `habitat_day_night`: the opposite time-of-day/habitat condition, including special species stimuli where needed.
 
 The fixture supplies water, caves, ceiling space, Nether ground, hives, flowers, bamboo, mud, sand, cobwebs, prey, threats, or Warden disturbances as appropriate. It disables `mobGriefing` during measurement so 50 destructive mobs cannot erase the shared fixture; behavior decisions and searches still run. Bosses and special mobs retain their relevant vanilla behavior, while the test-only Warden prevents distance despawning long enough to measure all phases.
@@ -74,13 +74,37 @@ host-load-dependent peak at 6.982 ms/tick. Because these fixtures contain no fee
 that distinguishing exact route precision did not regress ordinary managed movement; the focused
 real-Sheep fixture covers the zero-reach-range feeder path itself.
 
+### Loaded Aquatic Diet Focused Rerun
+
+After enabling the shared loaded hunger/food path for four school fish and both Squid species, the
+six exact affected selectors passed all 30 phases below 50 ms/tick on 2026-08-14. Cod peaked at
+5.374, Salmon at 4.988, Tropical Fish at 5.472, Pufferfish at 4.859, Squid at 5.524, and Glow Squid
+at 5.389 ms/tick. The fish food fixtures add tagged seagrass, exercising bounded block searches and
+aquatic paths; the Squid fixtures add raw Cod, exercising cached item scans, sight checks, and
+throttled aquatic paths. The complete 82-profile matrix was not selected because no other profile
+entered these newly enabled routes.
+
+### Food-Anchored Range Migration Focused Rerun
+
+After land ranges began recognizing compatible local Animal Feeders and exact-species fish schools
+gained shared persisted plant-driven ranges, the six exact affected selectors passed all 30 phases
+at a sustainable 20 TPS on 2026-08-14. Cow measured 5.161 idle/rest, 5.443 food/forage, 3.655
+hunt/targeting, 7.916 danger/social, and 4.214 habitat/day-night. Pig measured 5.369, 5.397,
+5.849, 5.706, and 2.914 ms/tick. Cod measured 5.127, 2.849, 5.011, 4.178, and 2.255;
+Salmon 4.353, 3.678, 4.846, 4.686, and 2.314; Tropical Fish 5.898, 3.520, 13.022,
+6.780, and 4.426; and Pufferfish 5.521, 3.983, 5.300, 5.268, and 2.999 ms/tick.
+The 13.022 ms/tick Tropical Fish hunt/targeting phase was the focused peak. School range evaluation
+is restricted to one deterministic current member, while shared forage and feeder lookups remain
+cached and bounded. The complete 82-profile matrix was not selected because no other profile enters
+the new repeated migration paths.
+
 ### Shared Feeding Pose Rerun
 
 After every Retold consumption path was routed through the two-second stationary source-facing
 pose, the matrix passed 74/74 and 370/370 again in 1.746 minutes on 2026-08-04. Every phase remained
 below 50 ms/tick; Bat danger/social was the host-load-dependent peak at 9.692 ms/tick. The
 dropped-food/forage fixtures exercise real consumption for applicable profiles, while focused tests
-cover exact source memory, zero movement, body/look orientation, a feeder, and a non-pathfinding Bat.
+cover exact source memory, zero movement, body/look orientation, a feeder, and the distinct Bat-colony path.
 
 ### Villager Communal Food Rerun
 
@@ -175,6 +199,179 @@ dropped-food/forage, 6.771 hunt/targeting, 3.662 danger/social, and 2.368 habita
 6.771 ms/tick hunt/targeting phase was the peak. The complete matrix was not selected because the
 focused natural-food and survival tests cover the transaction and only this species-local tick path
 changed.
+
+### Parrot Forage And Owner-Warning Focused Run
+
+The new `PARROT_FORAGER` profile expands registration to 78 tests and 390 phases. The exact
+`retold:mob_tps_parrot` selector was run on 2026-08-14 because the species adds shared flying
+food paths, crop block searches, and a staggered cached owner-threat scan. Its clientless danger
+fixture keeps eight Zombies target-bearing but disables their melee AI so the real warning scan is
+measured without invoking mock-player network-dependent damage code.
+
+All five 50-Parrot phases passed below 50 ms/tick: 3.669 idle/rest, 3.327 dropped-food/forage,
+4.005 hunt/targeting, 3.439 danger/social, and 1.976 habitat/day-night. The complete 78-profile
+matrix was not selected because the other 77 species and shared performance primitives were
+unchanged.
+
+### Dolphin Pod-Defense Focused Rerun
+
+Collective defense adds one successful-damage entry path for Dolphins and bounded continuation
+under their existing species dispatcher. The exact `retold:mob_tps_dolphin` selector was rerun on
+2026-08-14; its danger fixture deals real damage so the measured phase includes cached pod
+recruitment, source-aware targets, movement ownership, and follow-through.
+
+All five 50-Dolphin phases passed below 50 ms/tick: 5.131 idle/rest, 4.435
+dropped-food/forage, 5.675 hunt/targeting, 3.690 danger/social, and 2.498 habitat/day-night. The
+5.675 ms/tick hunt/targeting phase was the peak. The complete matrix was not selected because the
+change is confined to Dolphin damage handling and its existing species tick path.
+
+### Bee Colony-Defense Focused Rerun
+
+Explicit damage, hive-break, and unsmoked-harvest handling adds one bounded cached colony scan and
+source-owned continuation to the existing Bee dispatcher. The exact `retold:mob_tps_bee` selector
+was rerun on 2026-08-14; its danger fixture deals real damage so the production event, recruitment,
+target ownership, and staggered movement follow-through are measured.
+
+All five 50-Bee phases passed below 50 ms/tick: 7.103 idle/rest, 4.099
+dropped-food/forage, 4.554 hunt/targeting, 6.661 danger/social, and 4.538 habitat/day-night. The
+7.103 ms/tick idle/rest phase was the peak. The complete matrix was not selected because the change
+is confined to explicit Bee incident handling and its existing species tick path.
+
+### Undead-Mount Focused Runs
+
+The new `UNDEAD_MOUNT` profiles expand registration from 78 tests/390 phases to 81 tests/405
+phases. The exact `retold:mob_tps_skeleton_horse`, `retold:mob_tps_zombie_horse`, and
+`retold:mob_tps_camel_husk` selectors were run on 2026-08-14 because the family adds a six-tick
+dispatcher route, bounded cached target scans, sight checks, controlled pathing, and damage-event
+retaliation. The danger fixture deals one real Iron Golem hit to exercise the production event.
+
+All fifteen 50-mob phases passed below 50 ms/tick. Skeleton Horse measured 3.805 idle/rest, 2.885
+dropped-food/forage, 5.628 hunt/targeting, 3.072 danger/social, and 1.671 habitat/day-night. Zombie
+Horse measured 3.816, 3.344, 4.593, 3.696, and 1.835 ms/tick. Camel Husk measured 5.843, 4.026,
+5.686, 4.635, and 2.764 ms/tick. Camel Husk idle/rest was the 5.843 ms/tick overall peak. The
+complete 81-profile matrix was not selected because the shared scan, sight, path, and ownership
+primitives were unchanged and the new work is confined to these three profiles.
+
+### Undead Target-Parity Focused Runs
+
+Adding Zoglin and Zombie Nautilus to the data-driven Undead faction activates existing repeated
+faction-goal and forced-target work. Zombie Nautilus also adds an unmanaged `SPECIAL_VANILLA`
+profile and expands current registration to 82 tests/410 phases. The exact
+`retold:mob_tps_zoglin` and `retold:mob_tps_zombie_nautilus` selectors were run on 2026-08-14.
+
+All ten 50-mob phases passed below 50 ms/tick. Zoglin measured 5.147 idle/rest, 3.064
+dropped-food/forage, 4.775 hunt/targeting, 4.392 danger/social, and 2.272 habitat/day-night.
+Zombie Nautilus measured 5.676, 3.327, 4.769, 3.925, and 2.582 ms/tick. Zombie Nautilus idle/rest
+was the 5.676 ms/tick overall peak. The complete expanded matrix was not selected because only
+these two species gained repeated work; removing constant player-score branches from Zombie,
+Skeleton, and Ghast selection does not increase their hot-path work.
+
+The same exact selectors were rerun after the shared target policy began rejecting and cleaning up
+same-Undead Mob/Brain targets. Zoglin measured 5.091 idle/rest, 3.441 dropped-food/forage, 5.017
+hunt/targeting, 4.139 danger/social, and 2.906 habitat/day-night. Zombie Nautilus measured 4.437,
+2.831, 3.632, 3.288, and 1.698 ms/tick. All ten phases remained below 50 ms/tick, with Zoglin
+idle/rest the 5.091 ms/tick rerun peak. The complete matrix remained unnecessary because faction
+classification caching and the scan/path budgets did not change.
+
+### Stage 2 Undead-Pressure Focused Runs
+
+The Stage 1/Stage 2 coordination split changes repeated scans, sight checks, target sharing, and
+movement ownership for all `UNDEAD_HUNGRY` and `UNDEAD_TOLERANT` species. Their benchmark fixtures
+now force the saved world stage to Stage 2 so the widest production path is measured, then restore
+the original stage during cleanup. The eight exact selectors were run on 2026-08-14; the other 74
+profiles and shared cache/budget implementations were unchanged, so the complete matrix was not
+selected.
+
+| Mob | Idle/rest | Dropped food/forage | Hunt/targeting | Danger/social | Habitat/day-night | Peak |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Zombie | 4.547 | 4.446 | 6.046 | 4.191 | 1.845 | 6.046 |
+| Zombie Villager | 4.310 | 3.622 | 4.499 | 3.761 | 1.917 | 4.499 |
+| Husk | 4.467 | 3.487 | 4.964 | 3.322 | 1.735 | 4.964 |
+| Drowned | 4.464 | 4.370 | 4.714 | 3.753 | 2.135 | 4.714 |
+| Zombified Piglin | 3.901 | 3.639 | 4.200 | 3.652 | 1.751 | 4.200 |
+| Skeleton | 3.927 | 2.268 | 3.600 | 3.105 | 1.364 | 3.927 |
+| Stray | 4.952 | 2.554 | 4.901 | 3.183 | 1.635 | 4.952 |
+| Bogged | 3.759 | 2.529 | 4.332 | 2.767 | 1.254 | 4.332 |
+
+All 40 phases sustained 20 TPS below the 50 ms/tick gate. Zombie hunt/targeting was the
+6.046 ms/tick overall peak. Absolute wall-clock values remain host-load-dependent; the production
+work stayed bounded and most repeated entity scans were served by the shared scan cache.
+The later Stage 2 natural-spawn weight hook changes only NeoForge's potential-spawn-list event and
+does not add loaded-mob tick work, so these eight exact coordination benchmarks were not repeated.
+Its separate exact test covers the stage, tag, category, weight, and preserved-spawn-data boundaries.
+
+### Wounded-Predator Flight Focused Runs
+
+The damage phase now lowers all seven wild ordinary predator profiles through their strict 25%
+health boundary with one real attacker hit. This measures the same ten-second reasoned `FLEEING`
+continuation used in production, including repeated bounded path requests and the Dolphin/Spider
+combat-suppression boundary. The seven exact selectors were run on 2026-08-14; the other 75
+profiles and shared cache/budget primitives were unchanged, so the complete matrix was not selected.
+
+| Mob | Idle/rest | Dropped food/forage | Hunt/targeting | Danger/social | Habitat/day-night | Peak |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Wolf | 6.867 | 5.102 | 6.886 | 5.990 | 3.040 | 6.886 |
+| Fox | 8.048 | 4.103 | 7.518 | 6.730 | 4.370 | 8.048 |
+| Cat | 6.237 | 5.945 | 6.189 | 7.879 | 3.123 | 7.879 |
+| Ocelot | 4.128 | 4.843 | 5.317 | 6.270 | 3.481 | 6.270 |
+| Dolphin | 7.861 | 6.415 | 9.499 | 10.320 | 3.705 | 10.320 |
+| Spider | 6.976 | 4.553 | 6.610 | 6.127 | 2.952 | 6.976 |
+| Cave Spider | 5.318 | 4.168 | 6.365 | 4.613 | 2.516 | 6.365 |
+
+All 35 phases sustained 20 TPS below the 50 ms/tick gate. Dolphin danger/social was the
+10.320 ms/tick overall peak. The habitat phase intentionally still observes the remembered flight
+because its ten-second production lifetime is longer than one 80-tick measurement phase.
+
+### Internally Tolerant Target-Safety Focused Run
+
+The exact Slime, Magma Cube, Guardian, and Elder Guardian selectors were run on 2026-08-14 after
+the shared live-faction target policy began rejecting ordinary allied Mob/Brain targets for Cube
+Mobs and monument Guardians. Explicit Retold-owned retaliation remains allowed by this boundary.
+
+Slime measured 4.373 idle/rest, 3.533 dropped-food/forage, 4.435 hunt/targeting, 4.488
+danger/social, and 2.525 habitat/day-night ms/tick. Magma Cube measured 3.709, 3.466, 5.665,
+4.614, and 2.435. Guardian measured 4.580, 3.136, 3.519, 3.184, and 1.620. Elder Guardian
+measured 5.040, 3.637, 3.774, 3.655, and 2.200 ms/tick. All twenty phases remained below 50
+ms/tick, with Magma Cube hunt/targeting the 5.665 ms/tick peak. The complete matrix was not
+selected because faction classification caching and the shared scan/path budgets did not change.
+
+### Wither Threat-Selection Focused Run
+
+The exact `retold:mob_tps_wither` selector was run on 2026-08-14 because the Wither's formerly
+no-op `APEX_OR_BOSS` dispatch now performs a ten-tick bounded cached threat scan with sight and
+score evaluation plus constant-time validation of its two alternative heads. The generic faction
+loop no longer duplicates forced-target work for Withers.
+
+All five 50-Wither phases passed below 50 ms/tick: 4.757 idle/rest, 2.674 dropped-food/forage,
+5.710 hunt/targeting, 3.225 danger/social, and 1.915 habitat/day-night ms/tick. Hunt/targeting was
+the 5.710 ms/tick peak. The complete 82-profile matrix was not selected because this change is
+confined to one existing profile and does not alter the shared cache or work-budget primitives.
+
+### Stationary Action-Facing Villager Focused Rerun
+
+The exact `retold:mob_tps_villager` selector was rerun on 2026-08-15 because active magical torch
+casts and staged golem work can now request brief per-tick presentation updates. Idle Villagers
+still pay only constant-time active-action checks; discovery, storage scans, and travel retain their
+existing cadence and budgets.
+
+All five 50-Villager phases passed below 50 ms/tick: 9.147 idle/rest, 5.636
+dropped-food/forage, 6.102 hunt/targeting, 7.632 danger/social, and 3.735 habitat/day-night
+ms/tick. Idle/rest was the 9.147 ms/tick peak. The complete profile matrix was not selected because
+the cadence change is confined to active Villager presentation and does not alter shared scan,
+path, sight, or work-budget primitives.
+
+### Consecutive Torch-Maintenance Villager Focused Rerun
+
+The exact `retold:mob_tps_villager` selector was rerun again on 2026-08-15 after a successful
+torch relight began an immediate, separately work-budgeted indexed search for the next eligible
+torch, with a maximum of eight relights per run. The focused batch GameTest supplies the positive
+multi-torch route; the TPS fixture continues to guard the ordinary 50-Villager dispatcher and
+negative/isolated search workload.
+
+All five phases passed below 50 ms/tick: 7.259 idle/rest, 4.626 dropped-food/forage, 5.528
+hunt/targeting, 6.569 danger/social, and 3.378 habitat/day-night ms/tick. Idle/rest was the 7.259
+ms/tick peak. The complete matrix was not selected because only Villager torch-success behavior
+changed and the shared index and work-budget implementations remain unchanged.
 
 ## Results
 

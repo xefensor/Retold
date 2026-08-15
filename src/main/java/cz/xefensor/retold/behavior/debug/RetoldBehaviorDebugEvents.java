@@ -1511,6 +1511,7 @@ public final class RetoldBehaviorDebugEvents {
         return switch (type) {
             case WOLF_DEN, FOX_DEN -> "den";
             case DOLPHIN_POD_RANGE -> "pod range";
+            case AQUATIC_SCHOOL_RANGE -> "school range";
             case HERD_RANGE -> "grazing range";
             case FORAGING_RANGE -> "foraging range";
             case ROOST -> "roost";

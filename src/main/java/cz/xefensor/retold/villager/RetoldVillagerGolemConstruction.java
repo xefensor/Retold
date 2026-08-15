@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
@@ -147,7 +148,7 @@ public final class RetoldVillagerGolemConstruction {
         }
 
         builder.getNavigation().stop();
-        builder.getLookControl().setLookAt(Vec3.atCenterOf(state.center()));
+        RetoldActionFacing.face(builder, Vec3.atCenterOf(state.center()));
 
         if (!claimControl(builder, gameTime) || gameTime < state.nextStepAt()) {
             showNextMaterial(builder, state.step());
@@ -183,6 +184,13 @@ public final class RetoldVillagerGolemConstruction {
 
     static boolean isBuilding(Villager villager) {
         return loadState(villager) != null;
+    }
+
+    public static boolean requiresContinuousFacingTick(Villager villager) {
+        BuildState state = villager == null ? null : loadState(villager);
+        return state != null
+                && villager.distanceToSqr(Vec3.atBottomCenterOf(state.access()))
+                <= ACCESS_DISTANCE_SQUARED;
     }
 
     static boolean canConstructGolems(Villager villager) {

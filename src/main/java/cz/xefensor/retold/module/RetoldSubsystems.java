@@ -18,6 +18,7 @@ public final class RetoldSubsystems {
         RetoldFoundationModule.registerModBus(modEventBus);
         RetoldWorldgenModule.registerModBus(modEventBus);
         RetoldAenderModule.registerModBus(modEventBus);
+        RetoldBehaviorModule.registerModBus(modEventBus);
     }
 
     private static void registerGameBus(IEventBus gameEventBus) {

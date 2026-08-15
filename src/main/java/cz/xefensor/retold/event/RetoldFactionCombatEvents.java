@@ -9,6 +9,7 @@ import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -93,7 +94,8 @@ public final class RetoldFactionCombatEvents {
         updateFactionGoals(mob);
         RetoldFactionTargetMemory.cleanupTargetState(mob);
 
-        if (!RetoldFactionRelations.hasPotentialFactionTarget(mob)) {
+        if (!RetoldFactionRelations.hasPotentialFactionTarget(mob)
+                || usesSpecializedFactionTargeting(mob)) {
             clearForcedTarget(mob);
             return;
         }
@@ -115,7 +117,8 @@ public final class RetoldFactionCombatEvents {
     }
 
     private static void updateFactionGoals(Mob mob) {
-        boolean needsFactionTargetGoal = RetoldFactionRelations.hasPotentialFactionTarget(mob);
+        boolean needsFactionTargetGoal = RetoldFactionRelations.hasPotentialFactionTarget(mob)
+                && !usesSpecializedFactionTargeting(mob);
         UUID entityId = mob.getUUID();
         Goal factionTargetGoal = getGoal(FACTION_TARGET_GOALS.get(entityId));
 
@@ -173,6 +176,10 @@ public final class RetoldFactionCombatEvents {
 
     private static Goal getGoal(WeakReference<Goal> reference) {
         return reference == null ? null : reference.get();
+    }
+
+    private static boolean usesSpecializedFactionTargeting(Mob mob) {
+        return mob.getType() == EntityTypes.WITHER;
     }
 
     private static boolean isValidFactionTarget(Mob mob, LivingEntity target) {

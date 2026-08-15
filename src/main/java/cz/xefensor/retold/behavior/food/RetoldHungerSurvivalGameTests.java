@@ -76,6 +76,7 @@ public final class RetoldHungerSurvivalGameTests {
             prey("cat", Habitat.WETLAND, "frog"),
             prey("cave_spider", Habitat.CAVE, "bat"),
             source("chicken", Habitat.LAND, FoodSource.SMALL_PLANT),
+            source("cod", Habitat.AQUATIC, FoodSource.SEAGRASS),
             source("cow", Habitat.LAND, FoodSource.GRASS),
             prey("dolphin", Habitat.AQUATIC, "cod"),
             source("donkey", Habitat.LAND, FoodSource.GRASS),
@@ -83,6 +84,7 @@ public final class RetoldHungerSurvivalGameTests {
             prey("fox", Habitat.LAND, "chicken"),
             prey("frog", Habitat.WETLAND, "slime"),
             source("goat", Habitat.MOUNTAIN, FoodSource.ALPINE_FORAGE),
+            item("glow_squid", Habitat.AQUATIC, "salmon"),
             source("hoglin", Habitat.NETHER, FoodSource.CRIMSON_FUNGUS),
             source("horse", Habitat.LAND, FoodSource.GRASS),
             prey("husk", Habitat.DESERT, "rabbit"),
@@ -93,15 +95,20 @@ public final class RetoldHungerSurvivalGameTests {
             prey("nautilus", Habitat.AQUATIC, "cod"),
             prey("ocelot", Habitat.LAND, "chicken"),
             source("panda", Habitat.LAND, FoodSource.BAMBOO),
+            source("parrot", Habitat.LAND, FoodSource.CROP),
             source("pig", Habitat.LAND, FoodSource.SMALL_PLANT),
             source("piglin", Habitat.NETHER, FoodSource.NETHER_MUSHROOM),
+            source("pufferfish", Habitat.AQUATIC, FoodSource.SEAGRASS),
             source("rabbit", Habitat.DESERT, FoodSource.DESERT_BROWSE),
+            source("salmon", Habitat.AQUATIC, FoodSource.SEAGRASS),
             source("sheep", Habitat.LAND, FoodSource.GRASS),
             prey("slime", Habitat.CAVE, "zombie"),
             source("sniffer", Habitat.LAND, FoodSource.SNIFFER_GROUND),
             prey("spider", Habitat.CAVE, "bat"),
             source("strider", Habitat.LAVA, FoodSource.LAVA_ENVIRONMENT),
+            item("squid", Habitat.AQUATIC, "cod"),
             source("trader_llama", Habitat.LAND, FoodSource.CARAVAN_FODDER),
+            source("tropical_fish", Habitat.AQUATIC, FoodSource.SEAGRASS),
             source("turtle", Habitat.WETLAND, FoodSource.SEAGRASS),
             source("villager", Habitat.LAND, FoodSource.VILLAGE_STORAGE),
             prey("wolf", Habitat.LAND, "sheep"),
@@ -355,7 +362,12 @@ public final class RetoldHungerSurvivalGameTests {
         }
 
         if (habitat == Habitat.AQUATIC) {
-            fillWater(helper, 1, 13, 1, 9, 2, 5);
+            /*
+             * Fill through the solid roof so naturally rising aquatic mobs cannot
+             * enter an air layer and turn this feeding fixture into a damage/flee
+             * test before their first food cadence.
+             */
+            fillWater(helper, 1, 13, 1, 9, 2, 6);
         } else if (habitat == Habitat.WETLAND) {
             for (int x = 1; x <= 8; x++) {
                 for (int z = 1; z <= 9; z++) {
@@ -408,11 +420,31 @@ public final class RetoldHungerSurvivalGameTests {
             List<Entity> fixtures
     ) {
         switch (survivalCase.foodSource) {
-            case DROPPED_ITEM -> fixtures.add(spawnItem(
-                    helper,
-                    survivalCase.sourcePath,
-                    foodPosition(helper, survivalCase)
-            ));
+            case DROPPED_ITEM -> {
+                Vec3 position = foodPosition(helper, survivalCase);
+                ItemEntity item = spawnItem(
+                        helper,
+                        survivalCase.sourcePath,
+                        position
+                );
+                fixtures.add(item);
+
+                if (survivalCase.mobPath.equals("squid")
+                        || survivalCase.mobPath.equals("glow_squid")) {
+                    helper.onEachTick(() -> {
+                        if (item.isAlive() && !item.isRemoved()) {
+                            item.snapTo(
+                                    position.x(),
+                                    position.y(),
+                                    position.z(),
+                                    0.0F,
+                                    0.0F
+                            );
+                            item.setDeltaMovement(Vec3.ZERO);
+                        }
+                    });
+                }
+            }
             case LIVE_PREY -> fixtures.add(spawnPrey(
                     helper,
                     subject,
@@ -448,6 +480,10 @@ public final class RetoldHungerSurvivalGameTests {
             case BAMBOO -> {
                 helper.setBlock(5, 1, 5, Blocks.DIRT);
                 helper.setBlock(5, 2, 5, Blocks.BAMBOO);
+            }
+            case CROP -> {
+                helper.setBlock(6, 1, 5, Blocks.FARMLAND);
+                helper.setBlock(6, 2, 5, Blocks.WHEAT);
             }
             case SNIFFER_GROUND -> fillGroundPatch(helper, Blocks.DIRT);
             case SEAGRASS -> helper.setBlock(5, 2, 5, Blocks.SEAGRASS);
@@ -674,6 +710,17 @@ public final class RetoldHungerSurvivalGameTests {
             return helper.absoluteVec(new Vec3(9.5D, 2.0D, 5.5D));
         }
 
+        if (survivalCase.mobPath.equals("squid")
+                || survivalCase.mobPath.equals("glow_squid")) {
+            /*
+             * Dropped items rise through water while Squid also wander vertically.
+             * Begin within transaction range so this habitat case measures whether
+             * the production food owner accepts and consumes the source. Longer
+             * pursuit remains covered by the exact 50-mob food phase.
+             */
+            return helper.absoluteVec(new Vec3(3.5D, 3.0D, 5.5D));
+        }
+
         double y = survivalCase.habitat == Habitat.AQUATIC
                 ? 3.0D
                 : survivalCase.habitat == Habitat.WETLAND ? 3.0D : 2.0D;
@@ -830,6 +877,7 @@ public final class RetoldHungerSurvivalGameTests {
         AMBIENT_CAVE_INSECTS,
         CARAVAN_FODDER,
         BAMBOO,
+        CROP,
         SNIFFER_GROUND,
         SEAGRASS,
         VILLAGE_STORAGE

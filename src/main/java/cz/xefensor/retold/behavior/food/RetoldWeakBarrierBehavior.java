@@ -4,6 +4,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
+import cz.xefensor.retold.behavior.core.RetoldActionFacing;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
@@ -127,10 +128,7 @@ public final class RetoldWeakBarrierBehavior {
 
         mob.setSprinting(false);
         mob.getNavigation().stop();
-        mob.lookAt(
-                net.minecraft.commands.arguments.EntityAnchorArgument.Anchor.EYES,
-                Vec3.atCenterOf(target)
-        );
+        RetoldActionFacing.face(mob, Vec3.atCenterOf(target));
 
         if (breach.startedAt == Long.MIN_VALUE) {
             breach.startedAt = gameTime;

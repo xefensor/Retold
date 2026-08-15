@@ -29,6 +29,9 @@ bin/
 ### VS Code ###
 .vscode/
 
+### Editor Backups ###
+*~
+
 ### Mac OS ###
 .DS_Store
 

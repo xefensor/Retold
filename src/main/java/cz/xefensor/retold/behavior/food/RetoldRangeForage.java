@@ -1,5 +1,6 @@
 package cz.xefensor.retold.behavior.food;
 
+import cz.xefensor.retold.behavior.core.RetoldMobGriefing;
 import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 
@@ -63,6 +64,7 @@ public final class RetoldRangeForage {
 
         BlockPos immutableCenter = center.immutable();
         Identifier mobType = BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
+        boolean canModifyBlocks = RetoldMobGriefing.canModifyBlocks(level, mob);
         List<ForageScoreEntry> entries = FORAGE_SCORES.computeIfAbsent(
                 level,
                 ignored -> new ArrayList<>()
@@ -76,6 +78,7 @@ public final class RetoldRangeForage {
                             && entry.center.equals(immutableCenter)
                             && entry.horizontalRadius == horizontalRadius
                             && entry.verticalRadius == verticalRadius
+                            && entry.canModifyBlocks == canModifyBlocks
             ) {
                 RetoldBehaviorPerf.recordBlockSearchCache(true);
                 return entry.score;
@@ -105,7 +108,11 @@ public final class RetoldRangeForage {
                         continue;
                     }
 
-                    if (RetoldMobRules.canForageBlock(mob, level.getBlockState(mutable))) {
+                    var blockState = level.getBlockState(mutable);
+
+                    if (RetoldMobRules.canForageBlock(mob, blockState)
+                            && (canModifyBlocks
+                            || RetoldMobRules.isRenewableEnvironmentalForage(mob, blockState))) {
                         score++;
                     }
                 }
@@ -117,6 +124,7 @@ public final class RetoldRangeForage {
                 immutableCenter,
                 horizontalRadius,
                 verticalRadius,
+                canModifyBlocks,
                 gameTime + Math.max(1, cacheTicks),
                 score
         ));
@@ -214,6 +222,7 @@ public final class RetoldRangeForage {
             BlockPos center,
             int horizontalRadius,
             int verticalRadius,
+            boolean canModifyBlocks,
             long expiresAt,
             int score
     ) {

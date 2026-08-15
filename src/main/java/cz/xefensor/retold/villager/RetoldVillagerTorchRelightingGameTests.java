@@ -23,6 +23,7 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
@@ -31,6 +32,7 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WallTorchBlock;
@@ -75,6 +77,13 @@ public final class RetoldVillagerTorchRelightingGameTests {
                 260,
                 RetoldVillagerTorchRelightingGameTests::nitwitUsesFakeToolUpClose
         );
+        registerTest(
+                event,
+                environment,
+                "villager_relights_nearby_torches_in_one_maintenance_run",
+                230,
+                RetoldVillagerTorchRelightingGameTests::relightsNearbyBatch
+        );
     }
 
     private static void relightsInEveryStage(GameTestHelper helper) {
@@ -83,9 +92,11 @@ public final class RetoldVillagerTorchRelightingGameTests {
         RetoldWorldStage originalStage = worldData.getStage();
         RetoldWorldStage[] stages = RetoldWorldStage.values();
         int[] stageIndex = {0};
+        boolean[] observedContinuousFacing = {false};
         BlockPos torchPos = new BlockPos(6, 2, 6);
 
         placeFloor(helper, 1, 11, 1, 11);
+        var observer = helper.makeMockPlayer(GameType.SURVIVAL);
         Villager villager = helper.spawn(EntityTypes.VILLAGER, 6, 2, 9);
         villager.setPersistenceRequired();
         setVillageHome(helper, villager, torchPos);
@@ -100,25 +111,54 @@ public final class RetoldVillagerTorchRelightingGameTests {
                     villager,
                     level.getGameTime()
             ).setHunger(0);
+            boolean continuingCast = RetoldAiControl.isControlledBy(
+                    villager,
+                    RetoldAiControlOwner.VILLAGER_TORCH_RELIGHT
+            );
+
+            if (continuingCast) {
+                float wrongYaw = villager.getYRot() + 120.0F;
+                villager.setYRot(wrongYaw);
+                villager.yBodyRot = wrongYaw;
+                villager.setYHeadRot(wrongYaw);
+            }
+
             RetoldVillagerTorchRelighting.tick(
                     level,
                     villager,
                     level.getGameTime()
             );
 
+            if (continuingCast) {
+                assertFacesBlock(helper, villager, torchPos);
+                helper.assertTrue(
+                        RetoldVillagerTorchRelighting.requiresContinuousTick(villager)
+                                || helper.getBlockState(torchPos).is(Blocks.TORCH),
+                        "An unfinished magical relight must request continuous visual ticks"
+                );
+                observedContinuousFacing[0] = true;
+            }
+
             if (!helper.getBlockState(torchPos).is(Blocks.TORCH)) {
                 return;
             }
+
+            helper.assertTrue(
+                    observedContinuousFacing[0],
+                    "Each stage's relighting cast must visibly face its torch throughout the action"
+            );
 
             stageIndex[0]++;
 
             if (stageIndex[0] >= stages.length) {
                 villager.discard();
+                observer.discard();
                 worldData.setStage(originalStage);
                 helper.succeed();
                 return;
             }
 
+            observedContinuousFacing[0] = false;
             worldData.setStage(stages[stageIndex[0]]);
             placeExtinguishedFloorTorch(helper, torchPos);
         });
@@ -386,6 +426,83 @@ public final class RetoldVillagerTorchRelightingGameTests {
         });
     }
 
+    private static void relightsNearbyBatch(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        long startedAt = level.getGameTime();
+        BlockPos villagerPos = new BlockPos(6, 2, 11);
+        BlockPos villageAnchor = new BlockPos(6, 2, 7);
+        BlockPos[] torches = {
+                new BlockPos(4, 2, 5),
+                new BlockPos(6, 2, 5),
+                new BlockPos(8, 2, 5),
+                new BlockPos(3, 2, 7),
+                new BlockPos(6, 2, 7),
+                new BlockPos(9, 2, 7),
+                new BlockPos(4, 2, 9),
+                new BlockPos(6, 2, 9),
+                new BlockPos(8, 2, 9)
+        };
+
+        placeFloor(helper, 1, 11, 1, 12);
+
+        for (BlockPos torch : torches) {
+            placeExtinguishedFloorTorch(helper, torch);
+        }
+
+        var observer = helper.makeMockPlayer(GameType.SURVIVAL);
+        Villager villager = helper.spawn(
+                EntityTypes.VILLAGER,
+                villagerPos.getX(),
+                villagerPos.getY(),
+                villagerPos.getZ()
+        );
+        villager.setPersistenceRequired();
+        setVillageHome(helper, villager, villageAnchor);
+        var state = RetoldMobStates.getOrCreate(villager, startedAt);
+        state.setHunger(0);
+
+        helper.onEachTick(() -> {
+            pinIdleVillager(helper, villager, villagerPos);
+            setVillageHome(helper, villager, villageAnchor);
+            state.setHunger(0);
+            RetoldVillagerTorchRelighting.tick(
+                    level,
+                    villager,
+                    level.getGameTime()
+            );
+
+            int relit = 0;
+
+            for (BlockPos torch : torches) {
+                relit += helper.getBlockState(torch).is(Blocks.TORCH) ? 1 : 0;
+            }
+
+            if (relit < RetoldVillagerTorchRelighting.MAX_RELIGHTS_PER_RUN) {
+                return;
+            }
+
+            helper.assertValueEqual(
+                    relit,
+                    RetoldVillagerTorchRelighting.MAX_RELIGHTS_PER_RUN,
+                    "One maintenance run must stop at its bounded nearby-torch limit"
+            );
+            helper.assertTrue(
+                    level.getGameTime() - startedAt < 190L,
+                    "Nearby torches must be relit consecutively without a success cooldown"
+            );
+            helper.assertTrue(
+                    !RetoldAiControl.isControlledBy(
+                            villager,
+                            RetoldAiControlOwner.VILLAGER_TORCH_RELIGHT
+                    ),
+                    "The Villager must release action ownership after the bounded run"
+            );
+            villager.discard();
+            observer.discard();
+            helper.succeed();
+        });
+    }
+
     private static void placeExtinguishedFloorTorch(
             GameTestHelper helper,
             BlockPos pos
@@ -454,6 +571,31 @@ public final class RetoldVillagerTorchRelightingGameTests {
         );
         villager.getNavigation().stop();
         villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
+    }
+
+    private static void assertFacesBlock(
+            GameTestHelper helper,
+            Villager villager,
+            BlockPos relativeTarget
+    ) {
+        Vec3 target = Vec3.atCenterOf(helper.absolutePos(relativeTarget));
+        double dx = target.x() - villager.getX();
+        double dz = target.z() - villager.getZ();
+        float expectedYaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90.0F;
+
+        helper.assertTrue(
+                Math.abs(Mth.wrapDegrees(villager.getYRot() - expectedYaw)) < 0.1F
+                        && Math.abs(Mth.wrapDegrees(villager.yBodyRot - expectedYaw)) < 0.1F
+                        && Math.abs(Mth.wrapDegrees(villager.getYHeadRot() - expectedYaw)) < 0.1F
+                        && Math.abs(villager.getLookControl().getWantedX() - target.x()) < 0.001D
+                        && Math.abs(villager.getLookControl().getWantedY() - target.y()) < 0.001D
+                        && Math.abs(villager.getLookControl().getWantedZ() - target.z()) < 0.001D,
+                "A relighting Villager must turn its body, head, and look control toward the torch"
+                        + "; yaw=" + villager.getYRot()
+                        + ", bodyYaw=" + villager.yBodyRot
+                        + ", headYaw=" + villager.getYHeadRot()
+                        + ", expectedYaw=" + expectedYaw
+        );
     }
 
     private static void placeFloor(

@@ -233,7 +233,7 @@ public final class RetoldVillageContainerOwnership {
         return protectedItems;
     }
 
-    static int ownedCount(
+    public static int ownedCount(
             ServerLevel level,
             BlockPos pos,
             ItemStack item
