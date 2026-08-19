@@ -373,6 +373,19 @@ hunt/targeting, 6.569 danger/social, and 3.378 habitat/day-night ms/tick. Idle/r
 ms/tick peak. The complete matrix was not selected because only Villager torch-success behavior
 changed and the shared index and work-budget implementations remain unchanged.
 
+### Shared Village Storage Knowledge Villager Focused Rerun
+
+The exact `retold:mob_tps_villager` selector was rerun on 2026-08-15 because communal food,
+Farmer deposits, livestock tending, and golem currency now consult a persistent chunk-indexed
+storage-knowledge layer before falling back to the existing budgeted block-entity scan. Storage
+change observation is event-time and does not add a Villager or block-entity polling cadence.
+
+All five 50-Villager phases passed below 50 ms/tick: 7.915 idle/rest, 5.074
+dropped-food/forage, 5.895 hunt/targeting, 6.903 danger/social, and 3.672 habitat/day-night
+ms/tick. Idle/rest was the 7.915 ms/tick peak. Positive storage work recorded 96 cache hits from 97
+searches in dropped-food/forage, while the other active phases recorded no broad block-position
+work. The complete profile matrix was not selected because only the Villager storage owner changed.
+
 ## Results
 
 The table below records the original clean baseline described above; later rerun summaries are

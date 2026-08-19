@@ -296,7 +296,13 @@ an implementation claim. The completion matrix below and
   near their remembered home, meeting point, or job site, regardless of its placement origin. They
   first eat the highest-value vanilla food already in their inventory. A Villager with no personal
   food walks to storage, withdraws up to 12 food points while preferring higher-value items, eats
-  one, and carries the remainder for later meals. Machine inventories are ignored. Adult Farmers
+  one, and carries the remainder for later meals. Observed chest/barrel positions, slot capacity,
+  and exact contents form persistent shared village knowledge, so another Villager can directly
+  resolve food, emeralds, livestock feed, or any other requested item without repeating the world
+  scan. Container changes by players, hoppers, Villagers, or other systems refresh known or
+  active-village storage at event time. Knowledge is advisory: the chunk, storage type, contents,
+  village boundary, supported access cell, and exact count are revalidated before use, and stale
+  entries are refreshed or removed. Machine inventories are ignored. Adult Farmers
   use vanilla crop harvesting, replanting, and bread
   making, then deliver only surplus Bread, Carrots, Potatoes, and Beetroot to the same stores while
   retaining 24 vanilla food points for themselves. Delivery uses low-priority communal search
@@ -741,8 +747,15 @@ operation rather than terrain modification, so it remains available with `mobGri
 The Animal Feeder remains animal-only. Villagers instead use `RetoldVillagerCommunalFood` and
 `RetoldVillagerCommunalFoodSearch`: a 16-horizontal/four-vertical loaded-chunk block-entity scan,
 bounded to accessible chests and barrels within 32 blocks of a remembered HOME, MEETING_POINT, or
-JOB_SITE. A live vanilla village near the Villager is the fallback context. The scan is cached,
-LOD-aware, and charged to the shared block-search budget. The Villager claims ordinary
+JOB_SITE. A live vanilla village near the Villager is the fallback context. Each scan observes all
+eligible storage it encounters into the chunk-indexed, server-global
+`RetoldVillageStorageKnowledge` SavedData. Later food, arbitrary exact-item/count, and deposit-space
+requests consult that shared index before spending a world-search budget. Generated village loot,
+Villager/player transactions, and chest/barrel `setChanged` calls for known or active-village
+storage keep it current without an always-on tick subscriber. Lookups never force-load chunks and
+must still pass the existing live container/access validation before movement or transfer. A miss
+falls back to the original scan, which remains cached, LOD-aware, and charged to the shared
+block-search budget. The Villager claims ordinary
 `FOOD`/`FEED` movement, and first consumes the highest-value Bread, Carrot, Potato, or Beetroot
 already in its inventory. Only an empty personal food supply starts a storage route. At a supported
 adjacent cell, the Villager transfers the highest-value available items up to a 12-food-point stock,

@@ -10,6 +10,7 @@ import cz.xefensor.retold.client.render.GaleCoreRenderer;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
+import cz.xefensor.retold.client.render.RetoldHorizonAmbientClient;
 import cz.xefensor.retold.client.sky.RetoldClientEndSky;
 import cz.xefensor.retold.client.sky.RetoldEndSkyPatcher;
 import cz.xefensor.retold.client.texture.AenderPortalSpriteSource;
@@ -57,6 +58,7 @@ public final class RetoldClientEvents {
         modEventBus.addListener(RetoldClientEvents::addEntityRenderLayers);
         modEventBus.addListener(RetoldClientEvents::registerSpriteSources);
         RetoldChronolithBeamClient.register(modEventBus);
+        RetoldHorizonAmbientClient.register();
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientTick);
         NeoForge.EVENT_BUS.addListener(RetoldClientEvents::onClientLogout);
         NeoForge.EVENT_BUS.addListener(RetoldEnchantmentTooltip::onItemTooltip);
@@ -66,6 +68,7 @@ public final class RetoldClientEvents {
         RetoldClientEnchantmentCatalog.clear();
         RetoldClientEnchantmentKnowledge.clear();
         RetoldClientRecipeKnowledge.clear();
+        RetoldHorizonAmbientClient.clear();
     }
 
     private static void registerSpriteSources(RegisterSpriteSourcesEvent event) {

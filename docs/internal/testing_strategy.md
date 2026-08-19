@@ -46,6 +46,7 @@ Use the exact `retold:` test ID for the changed contract. For example:
 
 ```bash
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:villager_paths_to_communal_food_storage"
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:villagers_share_persistent_knowledge_of_village_storage"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:farmer_communal_supply_paths_to_storage"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:golem_construction_stages_and_conserves_village_emerald"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:villager_relights_extinguished_torches_in_every_stage"
@@ -96,6 +97,13 @@ mutation routing changed broadly enough to justify it.
 
 The Villager consumer transaction, consumer route, and Farmer supply tests intentionally use
 separate isolated GameTest environments. Run only the exact route or transaction test changed.
+For shared village-storage knowledge, run
+`retold:villagers_share_persistent_knowledge_of_village_storage`; it proves one Villager's scan is
+shared under an exhausted world-search budget, persists exact food/emerald/arbitrary-item contents
+and counts through SavedData, and updates after a physical withdrawal. Add the one exact food,
+Farmer-deposit, livestock-feed, or golem-emerald route whose consumer contract changed. Run
+`retold:mob_tps_villager` when the repeated lookup, candidate validation, or storage-discovery path
+changes; event-time container refresh alone does not justify a TPS selector.
 
 For village-container provenance or witnessed theft, select the one exact
 `retold:village_container_ownership_...` test for the changed transaction. The available tests cover

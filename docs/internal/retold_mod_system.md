@@ -69,6 +69,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `aender/generation` | Aender floating island terrain and volatility |
 | `aender/portal` | horizontal Aender portal shapes, indexing, destination logic, and countdown warm-up |
 | `aender/stability` | Aender stabilizer chunks, regeneration, forcefield visuals |
+| `ambient` | dimension-independent, globally scheduled atmosphere state |
 | `behavior` | Retold mob AI system |
 | `block` | custom blocks and block interaction behavior |
 | `chronolith` | Aender chronolith time-acceleration system |
@@ -77,6 +78,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `client/render` | entity/beam/enderman rendering hooks |
 | `client/sky` | End/Aender sky seed and generated sky texture |
 | `client/stage` | client-side current world stage |
+| `client/texture` | runtime-generated client textures and resource-derived sprites |
 | `combat` | Retold-owned target source/memory helpers |
 | `command` | `/retold` command tree |
 | `effect` | ritual visual/audio effects |
@@ -126,6 +128,7 @@ split into these modules:
 | `RetoldMobModule` | undead, piglin, golem, enderman, and elder guardian events |
 | `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, and delayed structures |
 | `RetoldAenderModule` | Aender registries, stability events, world ticks, and Chronolith events |
+| `RetoldAtmosphereModule` | global server-authoritative atmosphere scheduling across dimensions |
 | `RetoldFactionModule` | invalid-target cleanup, faction combat, and faction assist |
 | `RetoldTerritoryModule` | territory runtime, illegal actions, and reputation diagnostics |
 | `RetoldBehaviorModule` | AI dispatcher, food, hunting, combat control, stamina, and behavior diagnostics |
@@ -838,6 +841,16 @@ Behavior:
   the accepted count is removed from the container. Villager hunger and inventory persist on the
   entity and exact container contents persist through the vanilla block entity. Bounded unloaded
   reconciliation reuses this personal-first consumer transaction without synthesizing movement.
+- `RetoldVillageStorageKnowledge` persists every observed village chest/barrel position, slot
+  capacity, and exact stack/component snapshot in server-global SavedData, with a secondary
+  dimension/chunk index rebuilt on load. Communal food, Farmer deposits, livestock feed, golem
+  emeralds, and future arbitrary-item consumers query this shared knowledge before a world scan.
+  Loot unpacking and completed player/Villager transactions refresh it directly; a narrow
+  `BlockEntity.setChanged` hook also refreshes already-known or live-village chest/barrel contents,
+  covering hopper and compatible mod mutations without polling. Candidate lookup checks only the
+  relevant loaded chunks and the existing search/village bounds. The physical container, exact
+  contents/count, capacity, supported access cell, and path remain authoritative; stale entries are
+  repaired or removed and an index miss falls back to the existing budgeted loaded-chunk scan.
 - Adult loaded Farmers continue using vanilla crop harvesting, replanting, and wheat-to-Bread
   production. When they hold more than a 24-food-point personal reserve, they use the same storage
   search to deliver surplus Bread, Carrots, Potatoes, or Beetroot through low-priority
@@ -936,7 +949,9 @@ Teaching data is resource-driven by profession. Add or tune teaching through `vi
 JSON before changing code. Daily stock refresh is routed through the central entity dispatcher
 and stored per villager rather than implemented as another always-on event subscriber. Communal
 consumption and Farmer supply share that dispatcher and one storage-discovery owner instead of
-adding parallel scans or a second persistence format. Golem construction owns its saved state on
+adding parallel scans. Persistent shared storage knowledge belongs to that discovery owner; keep
+it advisory and chunk-indexed, update it from storage transactions/change events, and never use it
+to force-load a chunk or bypass live content/access validation. Golem construction owns its saved state on
 the builder, reuses that storage discovery and central AI budgets, and intercepts vanilla's spawn
 decision rather than introducing a parallel village-cap system.
 Container provenance is a transaction-time persisted ledger shared by loot unpacking, Villager
@@ -1354,6 +1369,7 @@ Payloads:
 | `RetoldRequestTeachingPreviewPayload` | client -> server | request teaching preview refresh |
 | `RetoldTeachingPreviewPayload` | server -> client | update teaching UI state |
 | `RetoldChronolithBeamPayload` | server -> client | start/stop chronolith beam rendering |
+| `RetoldHorizonCuePayload` | server -> client | trigger a player-scoped ambient horizon presentation |
 
 Design rule:
 
@@ -1392,7 +1408,7 @@ Main mixin groups:
 | Area | Mixins |
 | --- | --- |
 | Recipe/progression | `ServerRecipeBookMixin`, `AdvancementVisibilityEvaluatorMixin`, `AbstractFurnaceBlockEntityMixin` |
-| Villager teaching/storage/reputation | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker`, `AbstractContainerMenuMixin`, `RandomizableContainerMixin`, `CompoundContainerAccessor`, `HarvestFarmlandMixin` |
+| Villager teaching/storage/reputation | `MerchantMenuAccessor`, `MerchantMenuTeachingSlotMixin`, `MerchantScreenMixin`, `VillagerInvoker`, `AbstractContainerMenuMixin`, `RandomizableContainerMixin`, `BlockEntityVillageStorageKnowledgeMixin`, `CompoundContainerAccessor`, `HarvestFarmlandMixin` |
 | World/stage/worldgen | `DelayedStructurePlacementMixin`, `RuinedPortalPieceMixin`, `NoVillageNearWorldSpawnMixin`, `EndDragonFightMixin`, `EndGatewayGenerationMixin`, `EndPortalBlockMixin` |
 | Aender physics/rendering | `AenderBucketItemMixin`, `AenderFlowingFluidMixin`, `AenderWaterFluidMixin`, `AenderWeatherMixin`, `AenderEntityLightingMixin`, `AenderRenderSectionRegionLightingMixin` |
 | Mob AI/targeting | `MobTargetMixin`, `MobAggressiveMixin`, `MobBrainMemoryOwnerMixin`, `BrainMemoryMixin`, `PiglinAiMixin`, `PathNavigationMixin`, `MobHurtTargetMixin`, `AbstractCubeMobPushMixin` |
@@ -1461,6 +1477,7 @@ Main performance-sensitive systems:
 - Aender portal-ticket warm-up with a TPS-aware 12 ms/32-chunk per-player maximum and an indefinite safe-core gate
 - section-level Aender regeneration instead of full-height per-block clearing
 - chronolith active channel map
+- once-per-second staggered player atmosphere scheduling
 - recipe/villager preview server checks
 
 General performance rules:

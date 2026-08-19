@@ -6,6 +6,7 @@ import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantingScreenFeedback;
 import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
+import cz.xefensor.retold.client.render.RetoldHorizonAmbientClient;
 import cz.xefensor.retold.client.stage.RetoldClientStage;
 import cz.xefensor.retold.enchanting.RetoldEnchantingMenuActions;
 import cz.xefensor.retold.stage.RetoldWorldStage;
@@ -124,6 +125,12 @@ public final class RetoldNetworking {
                 RetoldChronolithBeamPayload.TYPE,
                 RetoldChronolithBeamPayload.STREAM_CODEC,
                 (payload, context) -> RetoldChronolithBeamClient.handleSync(payload)
+        );
+
+        registrar.playToClient(
+                RetoldHorizonCuePayload.TYPE,
+                RetoldHorizonCuePayload.STREAM_CODEC,
+                (payload, context) -> RetoldHorizonAmbientClient.handleCue(payload)
         );
 
         registrar.playToClient(
