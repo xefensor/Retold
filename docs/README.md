@@ -5,6 +5,7 @@ This directory separates player-facing design information from detailed develope
 ## Public Project Documents
 
 - [`design-overview.md`](design-overview.md) — world premise and design pillars
+- [`element-ritual.md`](element-ritual.md) — current Dragon Egg ritual, six sacrifices, and guardian direction
 - [`../ROADMAP.md`](../ROADMAP.md) — concise public priorities
 - [`../CHANGELOG.md`](../CHANGELOG.md) — released and unreleased changes
 - [`../SUPPORT.md`](../SUPPORT.md) — help and problem reporting

@@ -33,10 +33,10 @@ The Aender is the dimension of change: an unstable, bright, strange, and dangero
 ## World Stages
 
 1. **Stage 1:** the player works toward Nether access, the stronghold, and the Ender Dragon.
-2. **Stage 2:** defeating the dragon makes the world more dangerous and begins the four-element ritual.
-3. **Stage 3:** hatching the egg redirects normal End access to the Aender and begins returning the Nether toward balance.
+2. **Stage 2:** defeating the dragon makes the world more dangerous and begins the Dragon Egg ritual built around four classical elements plus Life and Death.
+3. **Stage 3:** completing the ritual hatches the egg, redirects normal End access to the Aender, and begins returning the Nether toward balance.
 
-The current implementation temporarily requires Water and Air while Fire and Earth remain unfinished.
+The intended ritual uses six consumed artifacts: Heavy Core (Air), Heart of the Sea (Water), Nether Reactor Core (Fire), Lodestone (Earth), Nether Star (Death), and Totem of Undying (Life). The current implementation temporarily requires only Water and Air while the remaining paths are unfinished. See [`element-ritual.md`](element-ritual.md) for the current guardian and encounter direction.
 
 ## The Aender
 
@@ -50,6 +50,7 @@ Recipe knowledge and villager teaching replace a recipe-book-first experience. S
 
 ## Further Reading
 
+- [`element-ritual.md`](element-ritual.md) — Dragon Egg ritual, sacrifices, and guardian direction
 - [`../ROADMAP.md`](../ROADMAP.md) — public priorities
 - [`internal/retold_mod_system.md`](internal/retold_mod_system.md) — technical implementation
 - [`internal/design_implementation_status.md`](internal/design_implementation_status.md) — detailed status
