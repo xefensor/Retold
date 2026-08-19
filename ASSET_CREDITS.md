@@ -8,6 +8,7 @@ This record complements [`LICENSE`](LICENSE) and [`LICENSE-ASSETS.md`](LICENSE-A
 | --- | --- | --- |
 | Jesse Schramm | Extinguished-torch textures | Included |
 | Xefensor | Gameplay screenshots dated 2026-07-18 | Repository documentation |
+| Xefensor | Runtime-generated horizon-figure skin encoded from a developer-supplied and approved visual source | Included; 2026-08-19 |
 | Xefensor, with drawing instruction and review from Codex | Hand-drawn Aender Sand texture created in Krita | Original replacement included; 2026-08-14 |
 | OpenAI image generation, directed and processed by Codex | Aender wood-family placeholder textures: planks, stripped log, sapling, door, trapdoor, signs, boats, and derived model atlases | AI-generated placeholder; 2026-07-22 |
 | OpenAI image generation, directed and processed by Codex | Aender Chronolith block and Aender Eye/Gale Core spawn-egg placeholder textures | AI-generated placeholder; 2026-07-22 |

@@ -59,6 +59,7 @@ final class RetoldVillagerCommunalFoodSearch {
         StorageTarget cached = FOOD_TARGETS.get(villager);
 
         if (cached != null
+                && cached.target() != null
                 && gameTime < cached.expiresAt()
                 && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
                 && context.anchor().equals(cached.villageAnchor())
@@ -66,6 +67,34 @@ final class RetoldVillagerCommunalFoodSearch {
             DEFERRED_FOOD_SEARCHES.remove(villager);
             RetoldBehaviorPerf.recordBlockSearchCache(true);
             return cached.target();
+        }
+
+        BlockPos known = knownFoodTarget(level, villager, context, center);
+
+        if (known != null) {
+            DEFERRED_FOOD_SEARCHES.remove(villager);
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            FOOD_TARGETS.put(
+                    villager,
+                    new StorageTarget(
+                            center.immutable(),
+                            context.anchor(),
+                            cacheExpiry(villager, gameTime, cacheTicks),
+                            known
+                    )
+            );
+            return known;
+        }
+
+        if (isReusableNegativeTarget(
+                cached,
+                center,
+                context.anchor(),
+                gameTime
+        )) {
+            DEFERRED_FOOD_SEARCHES.remove(villager);
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            return null;
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
@@ -84,10 +113,7 @@ final class RetoldVillagerCommunalFoodSearch {
                 new StorageTarget(
                         center.immutable(),
                         context.anchor(),
-                        gameTime + Math.max(
-                                MIN_CACHE_TICKS,
-                                RetoldAiLod.cacheTicks(villager, cacheTicks)
-                        ),
+                        cacheExpiry(villager, gameTime, cacheTicks),
                         target
                 )
         );
@@ -123,6 +149,7 @@ final class RetoldVillagerCommunalFoodSearch {
         DepositTarget cached = DEPOSIT_TARGETS.get(villager);
 
         if (cached != null
+                && cached.target() != null
                 && ItemStack.isSameItemSameComponents(cached.offered(), offered)
                 && gameTime < cached.expiresAt()
                 && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
@@ -137,6 +164,41 @@ final class RetoldVillagerCommunalFoodSearch {
             DEFERRED_DEPOSIT_SEARCHES.remove(villager);
             RetoldBehaviorPerf.recordBlockSearchCache(true);
             return cached.target();
+        }
+
+        BlockPos known = knownDepositTarget(
+                level,
+                villager,
+                context,
+                center,
+                offered
+        );
+
+        if (known != null) {
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            DEPOSIT_TARGETS.put(
+                    villager,
+                    new DepositTarget(
+                            center.immutable(),
+                            context.anchor(),
+                            cacheExpiry(villager, gameTime, cacheTicks),
+                            known,
+                            offered.copyWithCount(1)
+                    )
+            );
+            return known;
+        }
+
+        if (cached != null
+                && cached.target() == null
+                && ItemStack.isSameItemSameComponents(cached.offered(), offered)
+                && gameTime < cached.expiresAt()
+                && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
+                && context.anchor().equals(cached.villageAnchor())) {
+            DEFERRED_DEPOSIT_SEARCHES.remove(villager);
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            return null;
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
@@ -155,10 +217,7 @@ final class RetoldVillagerCommunalFoodSearch {
                 new DepositTarget(
                         center.immutable(),
                         context.anchor(),
-                        gameTime + Math.max(
-                                MIN_CACHE_TICKS,
-                                RetoldAiLod.cacheTicks(villager, cacheTicks)
-                        ),
+                        cacheExpiry(villager, gameTime, cacheTicks),
                         target,
                         offered.copyWithCount(1)
                 )
@@ -232,6 +291,7 @@ final class RetoldVillagerCommunalFoodSearch {
         ItemTarget cached = ITEM_TARGETS.get(villager);
 
         if (cached != null
+                && cached.target() != null
                 && ItemStack.isSameItemSameComponents(cached.wanted(), wanted)
                 && cached.minimumCount() == required
                 && gameTime < cached.expiresAt()
@@ -247,6 +307,42 @@ final class RetoldVillagerCommunalFoodSearch {
         )) {
             RetoldBehaviorPerf.recordBlockSearchCache(true);
             return cached.target();
+        }
+
+        BlockPos known = knownItemTarget(
+                level,
+                villager,
+                context,
+                center,
+                wanted,
+                required
+        );
+
+        if (known != null) {
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            ITEM_TARGETS.put(
+                    villager,
+                    new ItemTarget(
+                            center.immutable(),
+                            context.anchor(),
+                            cacheExpiry(villager, gameTime, cacheTicks),
+                            known,
+                            wanted.copyWithCount(1),
+                            required
+                    )
+            );
+            return known;
+        }
+
+        if (cached != null
+                && cached.target() == null
+                && ItemStack.isSameItemSameComponents(cached.wanted(), wanted)
+                && cached.minimumCount() == required
+                && gameTime < cached.expiresAt()
+                && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
+                && context.anchor().equals(cached.villageAnchor())) {
+            RetoldBehaviorPerf.recordBlockSearchCache(true);
+            return null;
         }
 
         if (!RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
@@ -270,10 +366,7 @@ final class RetoldVillagerCommunalFoodSearch {
                 new ItemTarget(
                         center.immutable(),
                         context.anchor(),
-                        gameTime + Math.max(
-                                MIN_CACHE_TICKS,
-                                RetoldAiLod.cacheTicks(villager, cacheTicks)
-                        ),
+                        cacheExpiry(villager, gameTime, cacheTicks),
                         target,
                         wanted.copyWithCount(1),
                         required
@@ -462,8 +555,13 @@ final class RetoldVillagerCommunalFoodSearch {
                 for (BlockPos pos : level.getChunk(chunkX, chunkZ).getBlockEntities().keySet()) {
                     positionsChecked++;
 
-                    if (!isInsideSearch(center, pos)
-                            || !isValidForPurpose(
+                    if (!isInsideSearch(center, pos)) {
+                        continue;
+                    }
+
+                    observeStorage(level, context, pos);
+
+                    if (!isValidForPurpose(
                             level,
                             villager,
                             context,
@@ -513,8 +611,13 @@ final class RetoldVillagerCommunalFoodSearch {
                         .getBlockEntities().keySet()) {
                     positionsChecked++;
 
-                    if (!isInsideSearch(center, pos)
-                            || !isValidForItem(
+                    if (!isInsideSearch(center, pos)) {
+                        continue;
+                    }
+
+                    observeStorage(level, context, pos);
+
+                    if (!isValidForItem(
                             level,
                             villager,
                             context,
@@ -548,6 +651,144 @@ final class RetoldVillagerCommunalFoodSearch {
                 && dx * dx + dz * dz <= HORIZONTAL_RADIUS * HORIZONTAL_RADIUS;
     }
 
+    private static BlockPos knownFoodTarget(
+            ServerLevel level,
+            Villager villager,
+            VillageContext context,
+            BlockPos center
+    ) {
+        for (BlockPos pos : RetoldVillageStorageKnowledge.foodCandidates(
+                level,
+                center,
+                context.anchor(),
+                HORIZONTAL_RADIUS,
+                VERTICAL_RADIUS,
+                VILLAGE_RADIUS
+        )) {
+            if (isValidForFood(level, villager, context, pos)) {
+                return pos;
+            }
+
+            refreshKnowledge(level, pos);
+        }
+
+        return null;
+    }
+
+    private static BlockPos knownDepositTarget(
+            ServerLevel level,
+            Villager villager,
+            VillageContext context,
+            BlockPos center,
+            ItemStack offered
+    ) {
+        for (BlockPos pos : RetoldVillageStorageKnowledge.depositCandidates(
+                level,
+                center,
+                context.anchor(),
+                HORIZONTAL_RADIUS,
+                VERTICAL_RADIUS,
+                VILLAGE_RADIUS,
+                offered
+        )) {
+            if (isValidForDeposit(level, villager, context, pos, offered)) {
+                return pos;
+            }
+
+            refreshKnowledge(level, pos);
+        }
+
+        return null;
+    }
+
+    private static BlockPos knownItemTarget(
+            ServerLevel level,
+            Villager villager,
+            VillageContext context,
+            BlockPos center,
+            ItemStack wanted,
+            int minimumCount
+    ) {
+        for (BlockPos pos : RetoldVillageStorageKnowledge.itemCandidates(
+                level,
+                center,
+                context.anchor(),
+                HORIZONTAL_RADIUS,
+                VERTICAL_RADIUS,
+                VILLAGE_RADIUS,
+                wanted,
+                minimumCount
+        )) {
+            if (isValidForItem(
+                    level,
+                    villager,
+                    context,
+                    pos,
+                    wanted,
+                    minimumCount
+            )) {
+                return pos;
+            }
+
+            refreshKnowledge(level, pos);
+        }
+
+        return null;
+    }
+
+    private static void observeStorage(
+            ServerLevel level,
+            VillageContext context,
+            BlockPos pos
+    ) {
+        if (pos.distSqr(context.anchor())
+                > VILLAGE_RADIUS * VILLAGE_RADIUS
+                || !isStorageBlock(level, pos)) {
+            return;
+        }
+
+        refreshKnowledge(level, pos);
+    }
+
+    private static void refreshKnowledge(ServerLevel level, BlockPos pos) {
+        if (!level.hasChunkAt(pos) || !isStorageBlock(level, pos)) {
+            RetoldVillageStorageKnowledge.forget(level, pos);
+            return;
+        }
+
+        Container container = containerAt(level, pos);
+
+        if (container == null) {
+            RetoldVillageStorageKnowledge.forget(level, pos);
+        } else {
+            RetoldVillageStorageKnowledge.observe(level, pos, container);
+        }
+    }
+
+    private static boolean isReusableNegativeTarget(
+            StorageTarget cached,
+            BlockPos center,
+            BlockPos villageAnchor,
+            long gameTime
+    ) {
+        return cached != null
+                && cached.target() == null
+                && gameTime < cached.expiresAt()
+                && center.distSqr(cached.center()) <= MAX_CENTER_DRIFT_SQUARED
+                && villageAnchor.equals(cached.villageAnchor());
+    }
+
+    private static long cacheExpiry(
+            Villager villager,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return gameTime + Math.max(
+                MIN_CACHE_TICKS,
+                RetoldAiLod.cacheTicks(villager, cacheTicks)
+        );
+    }
+
     private static boolean isValidForPurpose(
             ServerLevel level,
             Villager villager,
@@ -579,6 +820,7 @@ final class RetoldVillagerCommunalFoodSearch {
         }
 
         if (level.isOutsideBuildHeight(pos)
+                || !level.hasChunkAt(pos)
                 || pos.distSqr(context.anchor()) > VILLAGE_RADIUS * VILLAGE_RADIUS
                 || !isSupportedStorage(level, pos)
                 || !hasVillagerFood(containerAt(level, pos))) {
@@ -602,6 +844,7 @@ final class RetoldVillagerCommunalFoodSearch {
         if (offered == null
                 || offered.isEmpty()
                 || level.isOutsideBuildHeight(pos)
+                || !level.hasChunkAt(pos)
                 || pos.distSqr(context.anchor())
                 > VILLAGE_RADIUS * VILLAGE_RADIUS
                 || !isSupportedStorage(level, pos)
@@ -648,6 +891,7 @@ final class RetoldVillagerCommunalFoodSearch {
         if (wanted == null
                 || wanted.isEmpty()
                 || level.isOutsideBuildHeight(pos)
+                || !level.hasChunkAt(pos)
                 || pos.distSqr(context.anchor())
                 > VILLAGE_RADIUS * VILLAGE_RADIUS
                 || !isSupportedStorage(level, pos)
@@ -674,6 +918,11 @@ final class RetoldVillagerCommunalFoodSearch {
         }
 
         return state.getBlock() instanceof BarrelBlock;
+    }
+
+    private static boolean isStorageBlock(ServerLevel level, BlockPos pos) {
+        var block = level.getBlockState(pos).getBlock();
+        return block instanceof ChestBlock || block instanceof BarrelBlock;
     }
 
     static Container containerAt(ServerLevel level, BlockPos pos) {

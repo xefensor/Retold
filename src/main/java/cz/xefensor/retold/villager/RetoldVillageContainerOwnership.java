@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BarrelBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.loot.LootTable;
 
 import java.util.ArrayList;
@@ -97,6 +98,34 @@ public final class RetoldVillageContainerOwnership {
                 storage.getBlockPos(),
                 snapshot(storage).items()
         );
+        RetoldVillageStorageKnowledge.observe(
+                level,
+                storage.getBlockPos(),
+                storage
+        );
+    }
+
+    /**
+     * Keeps already-known or village-local storage knowledge current when
+     * vanilla, players, hoppers, or another mod changes a chest or barrel.
+     */
+    public static void onContainerChanged(BlockEntity blockEntity) {
+        if (!(blockEntity instanceof BaseContainerBlockEntity storage)
+                || !(storage.getLevel() instanceof ServerLevel level)
+                || !isVillageStorage(storage)) {
+            return;
+        }
+
+        BlockPos pos = storage.getBlockPos();
+        RetoldVillageStorageKnowledge knowledge =
+                RetoldVillageStorageKnowledge.get(level);
+
+        if (knowledge.knowsStorage(level, pos)
+                || RetoldVillageContainerOwnershipData.get(level)
+                .totalOwned(level, pos) > 0
+                || level.isCloseToVillage(pos, 1)) {
+            RetoldVillageStorageKnowledge.observe(level, pos, storage);
+        }
     }
 
     public static PlayerTransaction beginPlayerTransaction(
@@ -141,11 +170,17 @@ public final class RetoldVillageContainerOwnership {
                 continue;
             }
 
+            InventorySnapshot after = snapshot(storage);
             stolen += applyPlayerChanges(
                     level,
                     storage.getBlockPos(),
                     entry.getValue(),
-                    snapshot(storage)
+                    after
+            );
+            RetoldVillageStorageKnowledge.observe(
+                    level,
+                    storage.getBlockPos(),
+                    storage
             );
         }
 
@@ -187,12 +222,18 @@ public final class RetoldVillageContainerOwnership {
                 continue;
             }
 
+            InventorySnapshot after = snapshot(storage);
             applySystemChanges(
                     level,
                     storage.getBlockPos(),
                     entry.getValue(),
-                    snapshot(storage),
+                    after,
                     additionsAreVillageOwned
+            );
+            RetoldVillageStorageKnowledge.observe(
+                    level,
+                    storage.getBlockPos(),
+                    storage
             );
         }
     }
@@ -208,6 +249,7 @@ public final class RetoldVillageContainerOwnership {
 
         RetoldVillageContainerOwnershipData data =
                 RetoldVillageContainerOwnershipData.get(level);
+        RetoldVillageStorageKnowledge.forget(level, pos);
         if (level.getBlockEntity(pos)
                 instanceof BaseContainerBlockEntity storage
                 && isVillageStorage(storage)) {

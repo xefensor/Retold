@@ -4,6 +4,7 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Now
 
+- Focus the next development pass on Villager and village systems: verify the implemented communal storage, farming, livestock, reputation, Iron Golem construction, torch-maintenance, and trade-stock loops in natural villages, then design the next coherent village-society slice.
 - Verify and refine the initial Stage 2 cartographer explorer-map path for finding Air Temples in fresh and upgraded worlds.
 - Continue tuning and testing the Gale Core encounter and Air Element reward.
 - Verify Aender portals, terrain regeneration, stabilizers, and progression in fresh worlds, upgraded worlds, dedicated servers, and multiplayer.
@@ -19,7 +20,6 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Later
 
-- Naturally verify the completed village-property reputation loop, including tended livestock, trade-price effects, witnesses, and Iron Golem hostility in multiplayer and existing villages.
 - Tool, armor, ore, station, enchanting, and combat progression reworks.
 - Stage 3 piglin or pigman cooperation.
 - Nether portal environmental effects and broader world-reactivity work.

@@ -5,6 +5,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemCatchUp;
+import cz.xefensor.retold.behavior.performance.RetoldAiWorkBudget;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
@@ -24,6 +25,7 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -90,6 +92,13 @@ public final class RetoldVillagerCommunalFoodGameTests {
                 "villager_communal_food_stays_inside_its_village_and_yields_to_panic",
                 80,
                 RetoldVillagerCommunalFoodGameTests::villagerCommunalFoodStaysInsideItsVillageAndYieldsToPanic
+        );
+        registerTest(
+                event,
+                environment,
+                "villagers_share_persistent_knowledge_of_village_storage",
+                80,
+                RetoldVillagerCommunalFoodGameTests::villagersSharePersistentStorageKnowledge
         );
         registerTest(
                 event,
@@ -192,6 +201,148 @@ public final class RetoldVillagerCommunalFoodGameTests {
 
         chest.clearContent();
         villager.discard();
+        helper.succeed();
+    }
+
+    private static void villagersSharePersistentStorageKnowledge(
+            GameTestHelper helper
+    ) {
+        placeFloor(helper, 1, 6, 1, 4);
+        BlockPos chestPos = new BlockPos(4, 2, 2);
+        BlockPos absoluteChest = helper.absolutePos(chestPos);
+        helper.setBlock(chestPos, Blocks.CHEST);
+        Container chest = containerAt(helper, chestPos);
+        chest.setItem(0, new ItemStack(Items.BREAD, 2));
+        chest.setItem(1, new ItemStack(Items.EMERALD));
+        chest.setItem(2, new ItemStack(Items.NAUTILUS_SHELL, 3));
+        chest.setChanged();
+
+        Villager scout = helper.spawn(EntityTypes.VILLAGER, 2, 2, 2);
+        Villager informed = helper.spawn(EntityTypes.VILLAGER, 3, 2, 2);
+        setVillageHome(helper, scout, new BlockPos(2, 2, 3));
+        setVillageHome(helper, informed, new BlockPos(2, 2, 3));
+        long gameTime = helper.getLevel().getGameTime();
+
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.findWithItem(
+                        helper.getLevel(),
+                        scout,
+                        Items.EMERALD.getDefaultInstance(),
+                        gameTime,
+                        100
+                ),
+                absoluteChest,
+                "The first Villager must discover the emerald storage"
+        );
+        RetoldVillagerCommunalFoodSearch.forget(scout);
+        RetoldVillagerCommunalFoodSearch.forget(informed);
+
+        RetoldVillageStorageKnowledge saved =
+                RetoldVillageStorageKnowledge.get(helper.getLevel());
+        RetoldVillageStorageKnowledge restored =
+                RetoldVillageStorageKnowledge.fromSerializedState(
+                        saved.serializeState()
+                );
+        helper.assertTrue(
+                restored.knowsItem(
+                        helper.getLevel(),
+                        absoluteChest,
+                        Items.EMERALD.getDefaultInstance(),
+                        1
+                )
+                        && restored.knowsItem(
+                        helper.getLevel(),
+                        absoluteChest,
+                        Items.NAUTILUS_SHELL.getDefaultInstance(),
+                        3
+                ),
+                "Shared knowledge must preserve exact arbitrary item contents across saves"
+        );
+
+        chest.setItem(3, Items.DIAMOND.getDefaultInstance());
+        chest.setChanged();
+        helper.assertTrue(
+                RetoldVillageStorageKnowledge.get(helper.getLevel()).knowsItem(
+                        helper.getLevel(),
+                        absoluteChest,
+                        Items.DIAMOND.getDefaultInstance(),
+                        1
+                ),
+                "A known chest change must refresh shared knowledge without polling"
+        );
+
+        while (RetoldAiWorkBudget.tryUseBlockSearch(gameTime)) {
+            // Exhaust this tick's world-search allowance. Knowledge lookups must still work.
+        }
+
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.find(
+                        helper.getLevel(),
+                        informed,
+                        gameTime,
+                        100
+                ),
+                absoluteChest,
+                "An informed Villager must locate food without another world scan"
+        );
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.findWithItem(
+                        helper.getLevel(),
+                        informed,
+                        Items.EMERALD.getDefaultInstance(),
+                        gameTime,
+                        100
+                ),
+                absoluteChest,
+                "Shared knowledge must locate emeralds without another world scan"
+        );
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.findWithItemCount(
+                        helper.getLevel(),
+                        informed,
+                        Items.NAUTILUS_SHELL.getDefaultInstance(),
+                        3,
+                        gameTime,
+                        100
+                ),
+                absoluteChest,
+                "Shared knowledge must locate any requested stored item and count"
+        );
+
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.takeOne(
+                        helper.getLevel(),
+                        informed,
+                        absoluteChest,
+                        Items.EMERALD.getDefaultInstance()
+                ),
+                1,
+                "The informed Villager must take the physical emerald"
+        );
+        helper.assertFalse(
+                RetoldVillageStorageKnowledge.get(helper.getLevel()).knowsItem(
+                        helper.getLevel(),
+                        absoluteChest,
+                        Items.EMERALD.getDefaultInstance(),
+                        1
+                ),
+                "Shared knowledge must update immediately after a Villager withdrawal"
+        );
+        helper.assertTrue(
+                RetoldVillagerCommunalFoodSearch.findWithItem(
+                        helper.getLevel(),
+                        informed,
+                        Items.EMERALD.getDefaultInstance(),
+                        gameTime,
+                        100
+                ) == null,
+                "Villagers must not route to an emerald that is no longer present"
+        );
+
+        RetoldVillageStorageKnowledge.forget(helper.getLevel(), absoluteChest);
+        chest.clearContent();
+        scout.discard();
+        informed.discard();
         helper.succeed();
     }
 
@@ -690,6 +841,18 @@ public final class RetoldVillagerCommunalFoodGameTests {
                 helper.getLevel().getGameTime()
         );
         state.setHunger(0);
+        helper.assertValueEqual(
+                RetoldVillagerCommunalFoodSearch.findForDeposit(
+                        helper.getLevel(),
+                        farmer,
+                        Items.BREAD.getDefaultInstance(),
+                        helper.getLevel().getGameTime(),
+                        100
+                ),
+                helper.absolutePos(barrelPos),
+                "The Farmer must resolve its village storage before routing"
+        );
+        RetoldVillagerCommunalFoodSearch.forget(farmer);
         driveCommunalSupplyUntilStocked(helper, farmer, barrel, 48);
 
         helper.succeedWhen(() -> {
@@ -791,6 +954,7 @@ public final class RetoldVillagerCommunalFoodGameTests {
             return;
         }
 
+        farmer.getBrain().setActiveActivityIfPossible(Activity.IDLE);
         RetoldVillagerCommunalSupply.tick(
                 helper.getLevel(),
                 farmer,

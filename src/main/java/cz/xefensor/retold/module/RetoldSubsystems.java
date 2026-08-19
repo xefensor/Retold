@@ -27,6 +27,7 @@ public final class RetoldSubsystems {
         RetoldMobModule.registerGameBus(gameEventBus);
         RetoldWorldgenModule.registerGameBus(gameEventBus);
         RetoldAenderModule.registerGameBus(gameEventBus);
+        RetoldAtmosphereModule.registerGameBus(gameEventBus);
         RetoldFactionModule.registerGameBus(gameEventBus);
         RetoldTerritoryModule.registerGameBus(gameEventBus);
         RetoldBehaviorModule.registerGameBus(gameEventBus);

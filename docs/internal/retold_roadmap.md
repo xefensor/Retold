@@ -33,15 +33,17 @@ Retold is still built around:
 
 These are the strongest next design-aligned areas:
 
-1. Finish the four-element progression model.
-2. Add missing Fire and Earth element item/challenge paths, verify the initial cartographer Air Temple discovery map, and continue tuning the Air Temple/Gale Core path.
-3. Decide whether Stage 1 needs Wither/Nether star End portal activation.
-4. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
-5. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
-6. Audit and verify survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, and Trial Chambers; keep Trail Ruins and fossils, and keep the implemented Sniffer and Endermite removals regression-tested.
-7. Naturally verify the implemented village-reputation loop: generated/Villager-produced storage,
-   Farmer-planted crops, profession-tended livestock, witness sight, trade prices, and Iron Golem
-   hostility in ordinary, multiplayer, dedicated-server, and existing villages.
+1. Focus the next development pass on Villager and village systems. Naturally verify the current
+   communal storage, Farmer supply, livestock tending, property reputation, Iron Golem construction,
+   torch-maintenance, and trade-stock loops in ordinary, multiplayer, dedicated-server, and existing
+   villages; identify remaining coordination and survival gaps; then design and implement the next
+   coherent village-society slice.
+2. Finish the four-element progression model.
+3. Add missing Fire and Earth element item/challenge paths, verify the initial cartographer Air Temple discovery map, and continue tuning the Air Temple/Gale Core path.
+4. Decide whether Stage 1 needs Wither/Nether star End portal activation.
+5. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
+6. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
+7. Audit and verify survival removal for End Cities, outer End progression, Ancient Cities, Deep Dark/Warden, and Trial Chambers; keep Trail Ruins and fossils, and keep the implemented Sniffer and Endermite removals regression-tested.
 8. Naturally verify hunger-satisfaction breeding across representative ordinary, aquatic, Nether,
    egg-laying, pregnant, mixed-equine, and tamed animals, including population growth and save/load.
 9. Naturally verify the bounded unloaded ecosystem with crowded returns, starvation outcomes,
@@ -319,7 +321,6 @@ Examples of the intended distinction:
 
 These areas are not finished forever, but the current direction is acceptable for now:
 
-- villages only need current distance/scarcity work for now
 - current Stage 3 illager behavior, including the Stage 3-only raid-start gate, is enough for now
 - Stage 3 should only remove/cleanse undead and zombified piglins for now, not broadly make the Overworld easier
 - mansions and outposts should stay delayed to Stage 2 as currently designed

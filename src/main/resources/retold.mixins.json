@@ -20,6 +20,7 @@
     "CompoundContainerAccessor",
     "HarvestFarmlandMixin",
     "RandomizableContainerMixin",
+    "BlockEntityVillageStorageKnowledgeMixin",
     "VillagerInvoker",
     "VillagerGolemConstructionMixin",
     "DelayedStructurePlacementMixin",
