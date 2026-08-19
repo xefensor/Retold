@@ -5,17 +5,20 @@ This concise public roadmap may change as features are designed and tested. Deta
 ## Now
 
 - Verify and refine the initial Stage 2 cartographer explorer-map path for finding Air Temples in fresh and upgraded worlds.
-- Continue tuning and testing the Gale Core encounter and Air Element reward.
+- Continue tuning and testing the Gale Core encounter while migrating the Air reward toward the intended Heavy Core sacrifice.
 - Verify Aender portals, terrain regeneration, stabilizers, and progression in fresh worlds, upgraded worlds, dedicated servers, and multiplayer.
 - Replace provisional Aender naming and visual assets as final designs become available.
 
 ## Next
 
-- Design and implement the Fire Element path.
-- Design and implement the Earth Element path.
-- Complete the intended four-element ritual in any order.
+- Design and implement the Fire path around the Wildfire and the current working Nether Reactor Core sacrifice.
+- Design and implement the Earth path around a custom terrain-building guardian and the current working Lodestone sacrifice.
+- Replace the temporary Water Element reward with Heart of the Sea and complete the intended six-sacrifice Dragon Egg ritual in any order: Air, Water, Fire, Earth, Life, and Death.
+- Design the Life path around the Evoker and Totem of Undying, and the Death path around the Wither and Nether Star.
 - Add Aender in-dimension transportation and meaningful late-game building or travel rewards.
 - Audit survival removal or replacement of incompatible modern structures and progression.
+
+See [`docs/element-ritual.md`](docs/element-ritual.md) for the current ritual, artifact, and guardian design.
 
 ## Later
 
@@ -26,7 +29,8 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Open Decisions
 
-- Whether Stage 1 should require the Wither or a Nether Star before End access.
+- Whether Stage 1 should require the Wither or a Nether Star before End access, given the Nether Star's intended Stage 2 Death-sacrifice role.
+- Whether Nether Reactor Core and Lodestone remain the final Fire and Earth sacrifices.
 - The final roles of Nether and Aender dragons.
 - Whether pyramid boss tombs, a world ending, or New Game+ belong in Retold.
 
