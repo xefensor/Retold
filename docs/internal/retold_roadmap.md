@@ -7,7 +7,7 @@
 Retold is still built around:
 
 - three world stages
-- four-element progression in any order
+- four classical element paths plus Life and Death, with all six sacrifices completable in any order
 - Aender replacing normal late End access while vanilla End remains command-accessible
 - horizontal Aender portals using implemented 8:1 Overworld/Aender travel scaling
 - elytra remaining as an item but not being survival-obtainable through End Cities
@@ -38,8 +38,10 @@ These are the strongest next design-aligned areas:
    torch-maintenance, and trade-stock loops in ordinary, multiplayer, dedicated-server, and existing
    villages; identify remaining coordination and survival gaps; then design and implement the next
    coherent village-society slice.
-2. Finish the four-element progression model.
-3. Add missing Fire and Earth element item/challenge paths, verify the initial cartographer Air Temple discovery map, and continue tuning the Air Temple/Gale Core path.
+2. Finish the six-sacrifice Dragon Egg ritual after all paths are survival-obtainable.
+3. Add the missing Earth item/challenge path; verify and tune the initial roaming Wildfire Fire
+   path, implemented Life and Death acquisition boundaries, cartographer Air Temple discovery map,
+   and Air Temple/Gale Core path.
 4. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 5. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
 6. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.

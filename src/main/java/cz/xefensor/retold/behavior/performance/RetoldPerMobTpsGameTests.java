@@ -175,6 +175,7 @@ public final class RetoldPerMobTpsGameTests {
             "villager",
             "vindicator",
             "warden",
+            "wildfire",
             "witch",
             "wither",
             "wither_skeleton",
@@ -227,7 +228,9 @@ public final class RetoldPerMobTpsGameTests {
             GameTestHelper helper,
             String mobPath
     ) {
-        Identifier entityId = Identifier.withDefaultNamespace(mobPath);
+        Identifier entityId = mobPath.equals("wildfire")
+                ? Identifier.fromNamespaceAndPath(Retold.MODID, mobPath)
+                : Identifier.withDefaultNamespace(mobPath);
 
         if (!BuiltInRegistries.ENTITY_TYPE.containsKey(entityId)) {
             helper.fail("Profiled TPS mob is absent from the entity registry: " + entityId);
@@ -247,6 +250,7 @@ public final class RetoldPerMobTpsGameTests {
 
         BenchmarkRun run = new BenchmarkRun(
                 mobPath,
+                entityId,
                 entityType,
                 profile,
                 arenaKind,
@@ -317,7 +321,7 @@ public final class RetoldPerMobTpsGameTests {
 
             if (!(entity instanceof Mob mob)) {
                 throw new IllegalStateException(
-                        "Profiled entity is not a Mob: minecraft:" + run.mobPath
+                        "Profiled entity is not a Mob: " + run.entityId
                 );
             }
 
@@ -338,7 +342,7 @@ public final class RetoldPerMobTpsGameTests {
 
             if (!level.addFreshEntity(mob)) {
                 throw new IllegalStateException(
-                        "Could not add TPS subject minecraft:" + run.mobPath
+                        "Could not add TPS subject " + run.entityId
                 );
             }
 
@@ -715,11 +719,11 @@ public final class RetoldPerMobTpsGameTests {
                 }
 
                 Retold.LOGGER.info(
-                        "MOB_TPS_RESULT mob=minecraft:{} profile={} managed={} subjects={} phase={} "
+                        "MOB_TPS_RESULT mob={} profile={} managed={} subjects={} phase={} "
                                 + "serverTicks={} avgTickMs={} sustainableTps={} scans={} scanHits={} "
                                 + "positionScans={} paths={} pathSkips={} sight={} sightHits={} "
                                 + "blockSearches={} blockSearchHits={} blockPositions={}",
-                        run.mobPath,
+                        run.entityId,
                         run.profile.type().serializedName(),
                         run.profile.managed(),
                         SUBJECT_COUNT,
@@ -1221,7 +1225,7 @@ public final class RetoldPerMobTpsGameTests {
         return switch (mobPath) {
             case "axolotl", "cod", "dolphin", "drowned", "elder_guardian", "glow_squid", "guardian", "nautilus", "pufferfish", "salmon", "squid", "tropical_fish", "zombie_nautilus" -> ArenaKind.AQUATIC;
             case "frog", "turtle" -> ArenaKind.WETLAND;
-            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "parrot", "phantom", "vex", "wither" -> ArenaKind.FLYING_CAVE;
+            case "bat", "bee", "blaze", "breeze", "ender_dragon", "ghast", "parrot", "phantom", "vex", "wildfire", "wither" -> ArenaKind.FLYING_CAVE;
             case "cave_spider", "creaking", "enderman", "endermite", "shulker", "silverfish", "spider", "warden" -> ArenaKind.CAVE;
             case "hoglin", "magma_cube", "piglin", "piglin_brute", "strider", "wither_skeleton", "zoglin", "zombified_piglin" -> ArenaKind.NETHER;
             default -> ArenaKind.LAND;
@@ -1333,6 +1337,7 @@ public final class RetoldPerMobTpsGameTests {
 
     private static final class BenchmarkRun {
         private final String mobPath;
+        private final Identifier entityId;
         private final EntityType<?> entityType;
         private final RetoldMobProfile profile;
         private final ArenaKind arenaKind;
@@ -1350,6 +1355,7 @@ public final class RetoldPerMobTpsGameTests {
 
         private BenchmarkRun(
                 String mobPath,
+                Identifier entityId,
                 EntityType<?> entityType,
                 RetoldMobProfile profile,
                 ArenaKind arenaKind,
@@ -1358,6 +1364,7 @@ public final class RetoldPerMobTpsGameTests {
                 RetoldWorldStage originalStage
         ) {
             this.mobPath = mobPath;
+            this.entityId = entityId;
             this.entityType = entityType;
             this.profile = profile;
             this.arenaKind = arenaKind;

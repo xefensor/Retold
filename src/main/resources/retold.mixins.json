@@ -48,10 +48,12 @@
     "CubeMobMoveControlInvoker",
     "CubeMobRandomDirectionGoalMixin",
     "ElderGuardianInvulnerableHitMixin",
+    "ZombifiedPiglinFireImmunityMixin",
     "FoxInvoker",
     "BedBlockMixin",
     "ServerLevelSleepMixin",
-    "ElderGuardianMixin"
+    "ElderGuardianMixin",
+    "StageTwoUndeadSunBurnMixin"
   ],
   "client": [
     "AenderEntityLightingMixin",

@@ -13,13 +13,19 @@ import java.util.Optional;
 import java.util.Set;
 
 public class RetoldWorldData extends SavedData {
-    private static final Set<RetoldElementType> REQUIRED_EGG_ELEMENTS = Set.of(
-            RetoldElementType.WATER,
-            RetoldElementType.AIR
+    /*
+     * Keep the hatch threshold on the four implemented acquisition paths until
+     * Fire and Earth make the full six-offering ritual survival-obtainable.
+     */
+    private static final Set<RetoldRitualOffering> CURRENT_REQUIRED_EGG_OFFERINGS = Set.of(
+            RetoldRitualOffering.WATER,
+            RetoldRitualOffering.AIR,
+            RetoldRitualOffering.LIFE,
+            RetoldRitualOffering.DEATH
     );
-    private static final int REQUIRED_EGG_ELEMENT_MASK = REQUIRED_EGG_ELEMENTS
+    private static final int CURRENT_REQUIRED_EGG_OFFERING_MASK = CURRENT_REQUIRED_EGG_OFFERINGS
             .stream()
-            .mapToInt(RetoldElementType::mask)
+            .mapToInt(RetoldRitualOffering::mask)
             .reduce(0, (left, right) -> left | right);
 
     public static final SavedDataType<RetoldWorldData> TYPE =
@@ -32,7 +38,8 @@ public class RetoldWorldData extends SavedData {
                                     .forGetter(data -> data.stage.getId()),
                             Codec.INT
                                     .optionalFieldOf("offered_elements", 0)
-                                    .forGetter(data -> data.offeredElementsMask),
+                                    // Retain the old field name for saved-world compatibility.
+                                    .forGetter(data -> data.offeredOfferingsMask),
                             Codec.BOOL
                                     .optionalFieldOf("water_element_offered", false)
                                     .forGetter(data -> false),
@@ -43,7 +50,7 @@ public class RetoldWorldData extends SavedData {
             );
 
     private RetoldWorldStage stage = RetoldWorldStage.STAGE_1;
-    private int offeredElementsMask;
+    private int offeredOfferingsMask;
     private BlockPos dragonEggPos;
 
     public RetoldWorldData() {
@@ -51,16 +58,16 @@ public class RetoldWorldData extends SavedData {
 
     private RetoldWorldData(
             int stageId,
-            int offeredElementsMask,
+            int offeredOfferingsMask,
             boolean oldWaterElementOffered,
             Optional<BlockPos> dragonEggPos
     ) {
         this.stage = RetoldWorldStage.getStageFromId(stageId);
-        this.offeredElementsMask = offeredElementsMask;
+        this.offeredOfferingsMask = offeredOfferingsMask;
         this.dragonEggPos = dragonEggPos.orElse(null);
 
         if (oldWaterElementOffered) {
-            this.offeredElementsMask |= RetoldElementType.WATER.mask();
+            this.offeredOfferingsMask |= RetoldRitualOffering.WATER.mask();
         }
     }
 
@@ -79,30 +86,32 @@ public class RetoldWorldData extends SavedData {
         }
     }
 
-    public boolean hasElementOffered(RetoldElementType element) {
-        return (offeredElementsMask & element.mask()) != 0;
+    public boolean hasOffering(RetoldRitualOffering offering) {
+        return (offeredOfferingsMask & offering.mask()) != 0;
     }
 
-    public boolean offerElement(RetoldElementType element) {
-        if (hasElementOffered(element)) {
+    public boolean offer(RetoldRitualOffering offering) {
+        if (hasOffering(offering)) {
             return false;
         }
 
-        offeredElementsMask |= element.mask();
+        offeredOfferingsMask |= offering.mask();
         setDirty();
         return true;
     }
 
-    public int offeredElementCount() {
-        return Integer.bitCount(offeredElementsMask);
+    public int offeredOfferingCount() {
+        return Integer.bitCount(offeredOfferingsMask);
     }
 
-    public int offeredRequiredElementCount() {
-        return Integer.bitCount(offeredElementsMask & REQUIRED_EGG_ELEMENT_MASK);
+    public int offeredRequiredOfferingCount() {
+        return Integer.bitCount(
+                offeredOfferingsMask & CURRENT_REQUIRED_EGG_OFFERING_MASK
+        );
     }
 
-    public int requiredElementCount() {
-        return REQUIRED_EGG_ELEMENTS.size();
+    public int requiredOfferingCount() {
+        return CURRENT_REQUIRED_EGG_OFFERINGS.size();
     }
 
     public BlockPos getDragonEggPos() {
@@ -123,13 +132,14 @@ public class RetoldWorldData extends SavedData {
         }
     }
 
-    public boolean hasAllElements() {
-        return (offeredElementsMask & REQUIRED_EGG_ELEMENT_MASK) == REQUIRED_EGG_ELEMENT_MASK;
+    public boolean hasAllRequiredOfferings() {
+        return (offeredOfferingsMask & CURRENT_REQUIRED_EGG_OFFERING_MASK)
+                == CURRENT_REQUIRED_EGG_OFFERING_MASK;
     }
 
-    public void clearOfferedElements() {
-        if (offeredElementsMask != 0) {
-            offeredElementsMask = 0;
+    public void clearOfferings() {
+        if (offeredOfferingsMask != 0) {
+            offeredOfferingsMask = 0;
             setDirty();
         }
     }

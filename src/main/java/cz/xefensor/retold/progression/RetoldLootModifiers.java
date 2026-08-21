@@ -23,6 +23,13 @@ public final class RetoldLootModifiers {
                     "more_leaf_sticks",
                     () -> RetoldLeafStickLootModifier.CODEC
             );
+    public static final DeferredHolder<
+            MapCodec<? extends IGlobalLootModifier>,
+            MapCodec<RetoldRemoveHeartOfTheSeaLootModifier>
+            > REMOVE_HEART_OF_THE_SEA = SERIALIZERS.register(
+                    "remove_heart_of_the_sea",
+                    () -> RetoldRemoveHeartOfTheSeaLootModifier.CODEC
+            );
 
     private RetoldLootModifiers() {
     }

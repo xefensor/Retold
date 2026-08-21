@@ -1,6 +1,7 @@
 package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
+import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
@@ -34,6 +35,16 @@ public final class RetoldInvalidTargetEvents {
         cleared = clearInvalidBrainTarget(level, mob) || cleared;
 
         if (!cleared) {
+            return;
+        }
+
+        // Wildfire recovery deliberately invalidates and clears combat targets while retaining
+        // its higher-priority shelter route into lava.
+        if (RetoldAiControl.isControlledBy(
+                mob,
+                RetoldAiControlOwner.WILDFIRE_RECOVERY
+        )) {
+            RetoldAiTargets.setAggression(mob, false);
             return;
         }
 

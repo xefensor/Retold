@@ -7,6 +7,8 @@ import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
+import cz.xefensor.retold.client.render.WildfireRenderer;
+import cz.xefensor.retold.client.render.WildfireModel;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
 import cz.xefensor.retold.client.render.RetoldEndermanEyesLayer;
 import cz.xefensor.retold.client.render.RetoldChronolithBeamClient;
@@ -34,6 +36,10 @@ import net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 public final class RetoldClientEvents {
+    public static final ModelLayerLocation WILDFIRE_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "wildfire"),
+            "main"
+    );
     private static final ModelLayerLocation AENDER_BOAT_LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(Retold.MODID, "boat/aender"),
             "main"
@@ -88,6 +94,10 @@ public final class RetoldClientEvents {
                 GaleCoreRenderer::new
         );
         event.registerEntityRenderer(
+                RetoldEntityTypes.WILDFIRE.get(),
+                WildfireRenderer::new
+        );
+        event.registerEntityRenderer(
                 RetoldEntityTypes.AENDER_BOAT.get(),
                 context -> new BoatRenderer(context, AENDER_BOAT_LAYER)
         );
@@ -98,6 +108,7 @@ public final class RetoldClientEvents {
     }
 
     private static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(WILDFIRE_LAYER, WildfireModel::createBodyLayer);
         event.registerLayerDefinition(AENDER_BOAT_LAYER, BoatModel::createBoatModel);
         event.registerLayerDefinition(AENDER_CHEST_BOAT_LAYER, BoatModel::createChestBoatModel);
     }

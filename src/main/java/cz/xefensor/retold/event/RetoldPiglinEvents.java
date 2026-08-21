@@ -94,6 +94,10 @@ public final class RetoldPiglinEvents {
         return ZOMBIFIED_PIGLIN.equals(id);
     }
 
+    public static boolean shouldRemoveFireImmunity(Entity entity) {
+        return isZombifiedPiglin(entity);
+    }
+
     private static void makeImmuneToZombification(Entity entity) {
         if (entity instanceof AbstractPiglin piglin) {
             piglin.setImmuneToZombification(true);

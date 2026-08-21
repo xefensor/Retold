@@ -72,7 +72,7 @@ public final class RetoldRitualEffects {
         );
     }
 
-    public static void playDragonEggElementAccepted(ServerLevel level, BlockPos pos) {
+    public static void playDragonEggOfferingAccepted(ServerLevel level, BlockPos pos) {
         double x = pos.getX() + 0.5;
         double y = pos.getY() + 0.8;
         double z = pos.getZ() + 0.5;

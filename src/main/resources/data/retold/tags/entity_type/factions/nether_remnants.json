@@ -3,6 +3,7 @@
   "values": [
     "minecraft:piglin",
     "minecraft:piglin_brute",
-    "minecraft:blaze"
+    "minecraft:blaze",
+    "retold:wildfire"
   ]
 }

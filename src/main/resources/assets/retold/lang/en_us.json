@@ -67,6 +67,7 @@
   "entity.retold.aender_boat": "Aender Boat",
   "entity.retold.aender_chest_boat": "Aender Chest Boat",
   "entity.retold.gale_core": "Gale Core",
+  "entity.retold.wildfire": "Wildfire",
   "filled_map.retold.air_temple": "Air Temple Explorer Map",
   "item.retold.air_element": "Air Element",
   "item.retold.air_element.tooltip": "A restless breath bound into form.",
@@ -89,6 +90,8 @@
   "item.retold.raw_aenderite": "Raw Aenderite",
   "item.retold.aenderite_ingot": "Aenderite Ingot",
   "item.retold.gale_core_spawn_egg": "Gale Core Spawn Egg",
+  "item.retold.nether_reactor_core": "Nether Reactor Core",
+  "item.retold.wildfire_spawn_egg": "Wildfire Spawn Egg",
   "item.retold.water_element": "Water Element",
   "item.retold.water_element.tooltip": "A condensed current of living energy."
 }

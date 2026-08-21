@@ -11,6 +11,7 @@ import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent;
@@ -40,8 +41,6 @@ public final class RetoldUndeadEvents {
         RetoldWorldStage stage = RetoldWorldData.get(serverLevel).getStage();
 
         if (stage == RetoldWorldStage.STAGE_2) {
-            entity.clearFire();
-
             if (entity instanceof PathfinderMob pathfinderMob) {
                 RetoldUndeadSunFear.removeSunFearGoalsOnce(pathfinderMob);
             }
@@ -52,6 +51,16 @@ public final class RetoldUndeadEvents {
         if (stage == RetoldWorldStage.STAGE_3) {
             RetoldUndeadCleansing.cleanse(entity);
         }
+    }
+
+    public static boolean shouldPreventSunBurn(Mob mob) {
+        if (!(mob.level() instanceof ServerLevel serverLevel)
+                || !isRetoldUndead(mob)) {
+            return false;
+        }
+
+        return RetoldWorldData.get(serverLevel).getStage()
+                == RetoldWorldStage.STAGE_2;
     }
 
     @SubscribeEvent

@@ -3,6 +3,8 @@ package cz.xefensor.retold.combat;
 import cz.xefensor.retold.behavior.species.RetoldSlimeHungerCombat;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
+import cz.xefensor.retold.faction.RetoldFactionRelations;
+import cz.xefensor.retold.worldgen.fire.WildfireEncounterTargets;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
@@ -32,6 +34,10 @@ public final class RetoldMobTargetPolicy {
             return false;
         }
 
+        if (WildfireEncounterTargets.shouldBlockTarget(attacker, target)) {
+            return true;
+        }
+
         if (RetoldSlimeHungerCombat.shouldBlockHostility(attacker)) {
             return true;
         }
@@ -52,6 +58,22 @@ public final class RetoldMobTargetPolicy {
          * Players can still attack them normally.
          */
         return target.getType() == EntityTypes.CREEPER;
+    }
+
+    /**
+     * Vanilla rejects Ghasts from {@link Mob#canAttack(LivingEntity)} for every Mob. Retold's
+     * faction combat deliberately gives Ghasts an Undead identity, so enemies of the Undead need
+     * this narrow exception before a Ghast can become an observable Mob target.
+     */
+    public static boolean shouldAllowFactionGhastTarget(
+            Mob attacker,
+            LivingEntity target
+    ) {
+        return target != null
+                && target.getType() == EntityTypes.GHAST
+                && RetoldAiTargets.isAliveInSameLevel(attacker, target)
+                && target.canBeSeenAsEnemy()
+                && RetoldFactionRelations.shouldAttack(attacker, target);
     }
 
     private static boolean shouldBlockToleratedFactionHostility(

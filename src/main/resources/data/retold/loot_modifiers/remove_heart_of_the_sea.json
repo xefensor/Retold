@@ -1,0 +1,9 @@
+{
+  "type": "retold:remove_heart_of_the_sea",
+  "conditions": [
+    {
+      "condition": "neoforge:loot_table_id",
+      "loot_table_id": "minecraft:chests/buried_treasure"
+    }
+  ]
+}
