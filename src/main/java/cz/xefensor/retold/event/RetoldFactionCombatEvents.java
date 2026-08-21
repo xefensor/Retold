@@ -2,11 +2,12 @@ package cz.xefensor.retold.event;
 
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
-import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
-import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.worldgen.fire.Wildfire;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
@@ -38,6 +39,9 @@ public final class RetoldFactionCombatEvents {
 
     private static final int FORCED_TARGET_RADIUS_BLOCKS = 40;
     private static final double FORCED_TARGET_RELEASE_DISTANCE_SQUARED = 48.0D * 48.0D;
+    private static final int WILDFIRE_GHAST_TARGET_RADIUS_BLOCKS = 64;
+    private static final double WILDFIRE_GHAST_TARGET_DISTANCE_SQUARED =
+            WILDFIRE_GHAST_TARGET_RADIUS_BLOCKS * WILDFIRE_GHAST_TARGET_RADIUS_BLOCKS;
 
     private static final Map<Entity, LivingEntity> FORCED_TARGETS = new WeakHashMap<>();
     private static final Map<Entity, Long> NEXT_FORCED_TARGET_CHECK_AT = new WeakHashMap<>();
@@ -191,7 +195,7 @@ public final class RetoldFactionCombatEvents {
             return false;
         }
 
-        if (mob.distanceToSqr(target) > FORCED_TARGET_RADIUS_BLOCKS * FORCED_TARGET_RADIUS_BLOCKS) {
+        if (mob.distanceToSqr(target) > acquisitionDistanceSquared(mob, target)) {
             return false;
         }
 
@@ -261,7 +265,7 @@ public final class RetoldFactionCombatEvents {
     }
 
     private static LivingEntity findNearestFactionTarget(ServerLevel level, Mob mob) {
-        AABB area = mob.getBoundingBox().inflate(FORCED_TARGET_RADIUS_BLOCKS);
+        AABB area = mob.getBoundingBox().inflate(targetSearchRadius(mob));
 
         LivingEntity nearest = null;
         double nearestDistance = Double.MAX_VALUE;
@@ -297,7 +301,29 @@ public final class RetoldFactionCombatEvents {
             return false;
         }
 
-        return mob.distanceToSqr(target) <= FORCED_TARGET_RELEASE_DISTANCE_SQUARED;
+        return mob.distanceToSqr(target) <= releaseDistanceSquared(mob, target);
+    }
+
+    private static int targetSearchRadius(Mob mob) {
+        return mob instanceof Wildfire
+                ? WILDFIRE_GHAST_TARGET_RADIUS_BLOCKS
+                : FORCED_TARGET_RADIUS_BLOCKS;
+    }
+
+    private static double acquisitionDistanceSquared(Mob mob, LivingEntity target) {
+        return isWildfireGhastEngagement(mob, target)
+                ? WILDFIRE_GHAST_TARGET_DISTANCE_SQUARED
+                : FORCED_TARGET_RADIUS_BLOCKS * FORCED_TARGET_RADIUS_BLOCKS;
+    }
+
+    private static double releaseDistanceSquared(Mob mob, LivingEntity target) {
+        return isWildfireGhastEngagement(mob, target)
+                ? WILDFIRE_GHAST_TARGET_DISTANCE_SQUARED
+                : FORCED_TARGET_RELEASE_DISTANCE_SQUARED;
+    }
+
+    private static boolean isWildfireGhastEngagement(Mob mob, LivingEntity target) {
+        return mob instanceof Wildfire && target.getType() == EntityTypes.GHAST;
     }
 
     private static void forceTarget(Mob mob, LivingEntity target, long gameTime) {

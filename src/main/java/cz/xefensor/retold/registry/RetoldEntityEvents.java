@@ -2,6 +2,7 @@ package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.aender.entity.AenderEye;
 import cz.xefensor.retold.worldgen.air.GaleCore;
+import cz.xefensor.retold.worldgen.fire.Wildfire;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
@@ -14,6 +15,7 @@ public final class RetoldEntityEvents {
     public static void registerAttributes(EntityAttributeCreationEvent event) {
         event.put(RetoldEntityTypes.AENDER_EYE.get(), AenderEye.createAttributes().build());
         event.put(RetoldEntityTypes.GALE_CORE.get(), GaleCore.createAttributes().build());
+        event.put(RetoldEntityTypes.WILDFIRE.get(), Wildfire.createAttributes().build());
     }
 
     public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
@@ -22,6 +24,13 @@ public final class RetoldEntityEvents {
                 SpawnPlacementTypes.NO_RESTRICTIONS,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 AenderEye::checkAenderEyeSpawnRules,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE
+        );
+        event.register(
+                RetoldEntityTypes.WILDFIRE.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                Wildfire::checkWildfireSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE
         );
     }

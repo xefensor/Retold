@@ -80,6 +80,37 @@ public final class RetoldProgressionAcquisitionGameTests {
                                 ::alternativeAcquisitionRespectsTiers
                 )
         );
+        event.registerTest(
+                retoldId("buried_treasure_excludes_heart_of_the_sea"),
+                new InlineGameTest(
+                        testData,
+                        RetoldProgressionAcquisitionGameTests
+                                ::buriedTreasureExcludesHeartOfTheSea
+                )
+        );
+    }
+
+    private static void buriedTreasureExcludesHeartOfTheSea(
+            GameTestHelper helper
+    ) {
+        for (long seed = 1L; seed <= 8L; seed++) {
+            List<ItemStack> loot = chestLoot(
+                    helper,
+                    "chests/buried_treasure",
+                    seed
+            );
+            helper.assertFalse(
+                    loot.isEmpty(),
+                    "Buried treasure must retain its non-ritual rewards"
+            );
+            helper.assertFalse(
+                    loot.stream().anyMatch(stack -> stack.is(
+                            Items.HEART_OF_THE_SEA
+                    )),
+                    "Buried treasure must not bypass the Elder Guardian path"
+            );
+        }
+        helper.succeed();
     }
 
     private static void alternativeAcquisitionRespectsTiers(

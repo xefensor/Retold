@@ -223,6 +223,14 @@ public final class RetoldBlocks {
                     .rarity(Rarity.EPIC)
     );
 
+    public static final DeferredItem<Item> NETHER_REACTOR_CORE = ITEMS.registerItem(
+            "nether_reactor_core",
+            Item::new,
+            properties -> properties
+                    .stacksTo(1)
+                    .rarity(Rarity.EPIC)
+    );
+
     public static final DeferredItem<SpawnEggItem> AENDER_EYE_SPAWN_EGG = ITEMS.registerItem(
             "aender_eye_spawn_egg",
             properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.AENDER_EYE.get()))
@@ -231,6 +239,11 @@ public final class RetoldBlocks {
     public static final DeferredItem<SpawnEggItem> GALE_CORE_SPAWN_EGG = ITEMS.registerItem(
             "gale_core_spawn_egg",
             properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.GALE_CORE.get()))
+    );
+
+    public static final DeferredItem<SpawnEggItem> WILDFIRE_SPAWN_EGG = ITEMS.registerItem(
+            "wildfire_spawn_egg",
+            properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.WILDFIRE.get()))
     );
 
     public static final DeferredBlock<AnimalFeederBlock> ANIMAL_FEEDER = BLOCKS.register(

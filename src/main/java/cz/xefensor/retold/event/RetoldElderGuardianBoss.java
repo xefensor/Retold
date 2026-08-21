@@ -1,6 +1,5 @@
 package cz.xefensor.retold.event;
 
-import cz.xefensor.retold.registry.RetoldBlocks;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -11,6 +10,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -85,7 +86,7 @@ public final class RetoldElderGuardianBoss {
     static void onLivingDrops(LivingDropsEvent event, ElderGuardian elderGuardian) {
         LAST_BLOCK_FEEDBACK_TICK_BY_GUARDIAN.remove(elderGuardian.getUUID());
         RetoldGuardianMiningPressure.removeGuardianAlert(elderGuardian.getUUID());
-        addGuaranteedWaterElementDrop(event, elderGuardian);
+        addGuaranteedHeartOfTheSeaDrop(event, elderGuardian);
     }
 
     static void onIncomingDamage(LivingIncomingDamageEvent event, ElderGuardian elderGuardian) {
@@ -144,15 +145,18 @@ public final class RetoldElderGuardianBoss {
         event.setCanceled(true);
     }
 
-    private static void addGuaranteedWaterElementDrop(LivingDropsEvent event, ElderGuardian elderGuardian) {
+    private static void addGuaranteedHeartOfTheSeaDrop(
+            LivingDropsEvent event,
+            ElderGuardian elderGuardian
+    ) {
         if (!(elderGuardian.level() instanceof ServerLevel level)) {
             return;
         }
 
-        boolean alreadyDroppingWaterElement = event.getDrops().stream()
-                .anyMatch(drop -> drop.getItem().is(RetoldBlocks.WATER_ELEMENT));
+        boolean alreadyDroppingHeart = event.getDrops().stream()
+                .anyMatch(drop -> drop.getItem().is(Items.HEART_OF_THE_SEA));
 
-        if (alreadyDroppingWaterElement) {
+        if (alreadyDroppingHeart) {
             return;
         }
 
@@ -161,7 +165,7 @@ public final class RetoldElderGuardianBoss {
                 elderGuardian.getX(),
                 elderGuardian.getY(),
                 elderGuardian.getZ(),
-                RetoldBlocks.WATER_ELEMENT.toStack()
+                new ItemStack(Items.HEART_OF_THE_SEA)
         );
 
         drop.setDefaultPickUpDelay();

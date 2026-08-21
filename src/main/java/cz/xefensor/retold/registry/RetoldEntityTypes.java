@@ -3,6 +3,7 @@ package cz.xefensor.retold.registry;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.entity.AenderEye;
 import cz.xefensor.retold.worldgen.air.GaleCore;
+import cz.xefensor.retold.worldgen.fire.Wildfire;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.vehicle.boat.Boat;
@@ -33,6 +34,18 @@ public final class RetoldEntityTypes {
                     MobCategory.MONSTER,
                     builder -> builder
                             .sized(1.35F, 3.98F)
+                            .clientTrackingRange(10)
+                            .updateInterval(3)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<Wildfire>> WILDFIRE =
+            ENTITY_TYPES.registerEntityType(
+                    "wildfire",
+                    Wildfire::new,
+                    MobCategory.MONSTER,
+                    builder -> builder
+                            .fireImmune()
+                            .sized(1.0F, 3.0F)
                             .clientTrackingRange(10)
                             .updateInterval(3)
             );

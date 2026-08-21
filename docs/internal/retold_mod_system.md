@@ -247,26 +247,59 @@ Technical owner:
 
 - `RetoldEndProgressionEvents`
 - `RetoldRitualEffects`
-- `RetoldElementType`
+- `RetoldRitualOffering`
 - `WaterElementItem`
 - `AirElementItem`
 
 Current ritual model:
 
 - Dragon kill advances the world to Stage 2.
-- In Stage 2, the dragon egg accepts element items.
-- `water_element` and `air_element` are currently implemented element items.
-- Element acquisition order should be free; no element path should require being completed first unless the developer changes the design.
-- Offered elements are saved in `RetoldWorldData`.
-- The dragon egg crack overlay reflects offered element count.
-- When all currently required element values are offered, currently Water and Air, the egg is removed and Stage 3 starts. Fire and Earth can be added to the requirement when their paths exist.
+- In Stage 2, the dragon egg accepts implemented ritual artifacts by item identity.
+- Heavy Core represents Air, Heart of the Sea represents Water, Totem of Undying represents Life,
+  and Nether Star represents Death. The registered `air_element` and `water_element` items are
+  legacy aliases retained for existing-world compatibility and are hidden from the ordinary
+  Creative ingredients tab.
+- Acquisition order should be free; no path should require another path first unless the developer changes the design.
+- `RetoldRitualOffering` reserves stable bit positions for Air, Water, Fire, Earth, Life, and Death.
+  `RetoldWorldData` persists the mask under the legacy `offered_elements` field so old saves retain
+  offered Water/Air progress.
+- The dragon egg crack overlay reflects the currently required offering count.
+- The egg accepts Fire as well, but is currently removed and Stage 3 starts when Water, Air, Life,
+  and Death are offered. Change that threshold to all six only when Earth is survival-obtainable.
+- Ritual stacks do not carry hidden source provenance. Unwanted alternative acquisition routes are
+  removed or stage-gated instead; Trial Chambers are disabled and buried treasure no longer yields
+  a Heart of the Sea.
 
 Current limitation:
 
-- `water_element` has the most complete challenge-to-reward path.
-- `air_element` now has a WIP Air Temple/Gale Core acquisition path: locate the Air Temple in peak biomes, fight through the wind/tower encounter, defeat the Gale Core, and obtain the Air Element drop. The encounter is not final and still needs tuning/testing.
-- Fire and earth still need items and acquisition paths.
-- Because the temporary Nether Star shortcut has been removed, normal survival reaches Stage 3 through the currently implemented Water and Air element paths.
+- Water uses the Ocean Monument/Elder Guardian path and the Heart of the Sea reward.
+- Air uses the WIP Air Temple/Gale Core path and the Heavy Core reward. The encounter is not final and still needs tuning/testing.
+- Life uses the Evoker/Totem of Undying path, and Death uses the Wither/Nether Star path.
+- Fire uses a Stage 2+ Nether Wildfire roaming miniboss with three to five Blaze escorts,
+  boss-tier attributes, four reinforced regenerating shields, stronger fireballs, and a close
+  shockwave, plus its guaranteed Nether Reactor Core. Persisted numbered escort identities support
+  a low-priority obstacle-aware airborne patrol in which the Wildfire climbs clear terrain routes
+  and leads the Blazes along routed single-file positions. Combat releases the patrol owner, then
+  a flagless `WILDFIRE_ESCORT_COMBAT` owner brings every escort into a compact staggered screen
+  around the leader, shares its valid target, and climbs an immediately blocked forward corridor
+  without replacing vanilla Blaze fireballs. Higher-priority lava recovery releases both group
+  movement modes. A persistent escort marker narrows
+  the Wildfire and its encounter Blazes to targetable players and Retold-tagged Undead across
+  ordinary targets, retaliation, and `canAttack`; ordinary Blazes remain unchanged. During ranged combat, a separate
+  `WILDFIRE_COMBAT` owner selects bounded loaded, collision-free orbit destinations while the
+  vanilla Blaze fireball cycle continues; recovery has higher movement priority. Healthy Wildfires
+  keep their heads above lava. At half health, the recovery owner seeks the cached exposed surface
+  of a lava column at least three blocks deep, flies into it, clears combat, persists a submerged
+  recovery state, restores all health and shields only while its eyes remain below the surface in
+  that qualifying column, and rises again. Ordinary Fire, Soul Fire, shallow lava, and mere lava
+  contact do not restore either recovery path. A dedicated 600-tick Nether encounter
+  owner makes up to 16 loaded-ground probes 48 to 96 blocks from one active player, independently
+  of biome mob weights and the ordinary monster cap. It retains Peaceful, `doMobSpawning`, normal
+  placement/despawn, player-distance, and 128-horizontal/64-vertical Wildfire-exclusion rules. The
+  core is accepted and persisted but deliberately remains outside the hatch threshold.
+- Earth still needs a completed acquisition path and egg wiring.
+- Normal survival reaches Stage 3 through the currently implemented Water, Air, Life, and Death
+  paths.
 
 End crystal behavior:
 
@@ -309,7 +342,7 @@ Current behavior:
 - Creative players, spectators, no-physics entities, Breezes, and the Gale Core are immune to temple wind.
 - Upwind blocks can shield entities, but only close enough behind the blocker to avoid infinite wall protection.
 - Breezes spawn on the island/tower at runtime and are immune to the temple wind.
-- The Gale Core spawns near the tower top and drops `air_element` on death.
+- The Gale Core spawns near the tower top and drops a Heavy Core on death.
 
 Gale Core state:
 
@@ -486,8 +519,7 @@ Technical owner:
 
 Registered items/blocks include:
 
-- `water_element`
-- `air_element`
+- legacy `water_element` and `air_element` items, retained for existing worlds
 - `aender_eye_spawn_egg`
 - `gale_core_spawn_egg`
 - `aender_grass_block`
@@ -1251,7 +1283,7 @@ Behavior:
 - Duplicate elder guardian spawns in the same monument are blocked.
 - Elder guardians in water can block incoming damage.
 - Blocked hits apply feedback, knockback/bounce, and mining fatigue.
-- Elder guardians guarantee a `water_element` drop if one is not already dropping.
+- Elder guardians guarantee a Heart of the Sea drop if one is not already dropping.
 - Guardians pressure players mining protected monument blocks.
 - Protected monument materials are selected through `retold:ocean_monument_protected_blocks`;
   compatibility packs may append equivalent blocks without patching Guardian code.

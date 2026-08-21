@@ -287,9 +287,46 @@ an implementation claim. The completion matrix below and
   half of their otherwise calculated damage. Raids are Stage 3 content: before Stage 3,
   `RetoldRaidProgression` prevents Bad Omen from converting into Raid Omen and rejects vanilla
   raid creation. This start gate does not cancel a raid already in progress.
-- Blazes can fight Wither Skeletons when they meet in fortresses. Wildfires remain a planned
-  Nether Remnant elite that commands only Blazes; a Stage 2 fire-element role is possible but is
-  not confirmed.
+- Blazes can fight fire-immune Undead rivals when they meet in the Nether. A faction-scoped target
+  exception lets mobs attack enemy Ghasts despite vanilla's blanket Mob-versus-Ghast rejection,
+  without admitting allied or unrelated attackers. Wildfire-to-Ghast acquisition and retention use
+  the leader's full 64-block follow range; other faction matchups keep the shared 40-block acquire
+  and 48-block release boundaries. A narrow invulnerability hook lets Blaze- and
+  Wildfire-owned Small Fireballs inflict their direct damage on Wither Skeletons and Ghasts while
+  both retain ordinary fire and lava immunity. The Wildfire is a Stage 2+ Nether Remnant roaming
+  miniboss that naturally arrives with three to five Blazes. Its dedicated 600-tick encounter
+  owner makes bounded loaded-ground probes near one active Nether player independently of biome
+  spawn weights and the ordinary monster cap, while rejecting another Wildfire within 128
+  horizontal and 64 vertical blocks. Outside combat, persisted numbered escort identities let it
+  lead those Blazes along sustained collision-checked airborne destinations in a
+  2.25-block-spaced single-file line. The leader chooses a clear climb corridor before crossing
+  raised terrain, and each escort follows a bounded three-dimensional path to its moving slot. This
+  low-priority `REGROUP` movement uses the `WILDFIRE_FORMATION` owner. Combat releases that patrol
+  owner but activates a flagless `ATTACK`/`WILDFIRE_ESCORT_COMBAT` owner: escorts inherit the
+  leader's valid target, climb an immediately blocked forward corridor, and use budgeted flight
+  paths to a compact staggered screen around it without replacing vanilla Blaze fireballs.
+  Higher-priority lava recovery releases the group. A persisted encounter marker limits the leader and its
+  escorts to targetable players and live `UNDEAD` faction members through every target-assignment,
+  retaliation, and `canAttack` path; ordinary Blazes are not narrowed. A flagless companion goal coexists with the private
+  vanilla Blaze attack goal and uses the `ATTACK`/`WILDFIRE_COMBAT` owner to select up to six
+  loaded, collision-free orbit destinations every 40 ticks. It therefore keeps moving during its
+  unchanged ranged-fire cycle without overriding higher-priority shelter recovery. Healthy idle
+  Wildfires keep their heads above lava. A half-health leader instead prefers a bounded cached
+  `DEEP_LAVA_SOURCE`: the exposed surface of a lava column at least three blocks deep. It uses
+  higher-priority owned collision-aware flight, clears combat, submerges, restores six health per
+  second plus every missing shield only while its eyes remain below the surface in that qualifying
+  column, and rises only after both are full. The submerged state persists across saves; ordinary
+  Fire, Soul Fire, shallow lava, and mere lava contact restore neither shields nor health. It preserves Blaze ranged combat, but carries boss-tier health, armor,
+  knockback resistance, stronger direct fireball damage, remains allied with Blazes, uses the shared
+  faction-owned targeting path against Undead, and guarantees
+  the Nether Reactor Core Fire offering. Zombified Piglins deliberately lose vanilla fire immunity
+  so both Blaze and Wildfire fireballs can damage and continue burning their priority Undead target.
+  Stage 2's Undead sunlight protection suppresses only vanilla sunlight ignition and does not clear
+  combat fire. The Wildfire entity type is explicitly fire-immune. Four reinforced synchronized
+  shields gate health damage, close hostiles trigger a larger three-second cached-scan shockwave,
+  and wounded Wildfires use bounded lava-source search plus movement ownership to retreat and
+  recover shields. A dedicated model uses
+  the credited Minecraft Dungeons texture; natural balance and client presentation need verification.
 - Villagers are absolute pacifists. They communicate danger, alert golems, remember attackers,
   use local reputation, have hunger and communal food, and refresh trade inventory daily to
   simulate new stock. In loaded villages, hungry Villagers use every accessible chest or barrel
@@ -482,6 +519,54 @@ an implementation claim. The completion matrix below and
   Breezes attack every living non-Breeze/non-Gale-Core intruder except creepers, and the Gale Core
   can command them to assist. The Gale Core pressures every participating player and destroys
   suitable blocks without drops, subject to `mobGriefing`.
+- Wildfires are Stage 2+ Nether roaming minibosses rather than boss-room mobs. Their dedicated
+  600-tick encounter owner selects one active player and makes up to 16 loaded-ground probes 48 to
+  96 blocks away, bypassing biome spawn weights and the ordinary monster cap while retaining
+  Peaceful, `doMobSpawning`, placement, player-distance, normal despawn, and 128-horizontal/
+  64-vertical Wildfire-exclusion rules. A successful attempt finalizes with three to five Blaze escorts.
+  The leader persists those escort UUIDs in numbered slots and, while idle, selects sustained
+  open airborne patrol destinations. A bounded collision probe chooses any required vertical
+  clearance, then budgeted three-dimensional routes move the leader and each Blaze toward its
+  current slot at 2.25-block spacing, producing one line instead of independent random roaming.
+  The low-priority `REGROUP`/`WILDFIRE_FORMATION` claim releases for any combat target. A separate
+  flagless `ATTACK`/`WILDFIRE_ESCORT_COMBAT` claim then shares the leader's valid target and routes
+  every escort into a compact staggered combat screen. Its immediate-corridor collision check
+  forces ascent before the budgeted flying route resumes, preventing walls or depressions from
+  leaving rear escorts behind. Both group modes yield to higher-priority shelter recovery. Loaded escort goals are restored from the bounded list every
+  20 ticks without an entity scan. Installation also writes a persistent encounter marker used by
+  the central hostility gate, so the leader and its escorts accept only targetable players and the
+  datapack-extensible `UNDEAD` faction. Retaliation cannot bypass this limit, while ordinary Blazes
+  retain the broader Nether Remnant defaults.
+  The leader's no-flag combat goal runs alongside vanilla's private Blaze attack goal and claims
+  `ATTACK` movement through `WILDFIRE_COMBAT` below shelter priority. Every 40 ticks it considers at
+  most six loaded, collision-free orbit destinations 7 to 20 blocks from its target, keeping the
+  leader mobile without replacing fireball timing or blocking wounded fire retreat. A constant,
+  scan-free lava lift keeps a healthy leader's eyes above the surface when idle. At half health,
+  `WILDFIRE_RECOVERY` prefers the cached `DEEP_LAVA_SOURCE` block-search mode, which accepts only an
+  exposed lava surface with two further lava blocks directly below it. It owns collision-aware
+  flying approach, clears its target, and persists a submerged state. It restores six body-health
+  points every 20 ticks alongside the existing shield cadence, then releases recovery and applies
+  surface lift only when health and all four shields are full. A live deep-site plus eye-level
+  submersion check gates both shield and body regeneration; Fire, Soul Fire, shallow lava, and
+  surface contact do not qualify.
+  Invalid-target cleanup preserves this recovery owner and
+  route when the recovery transition deliberately clears the former combat target.
+  Their unmanaged `SPECIAL_VANILLA` profile preserves Blaze ranged combat, while
+  boss-tier attributes and stronger direct fireball damage make the leader the encounter's main
+  threat. Nether Remnant tag
+  membership supplies bounded faction-owned targeting against Undead, including Ghasts, and
+  alliance with Blazes. Ghasts are the one extended pairing: Wildfires acquire and retain them at
+  up to 64 blocks, matching the leader's ranged-combat envelope, while non-Ghast faction targets
+  keep the shared 40/48-block bounds.
+  They guarantee the Nether Reactor Core Fire offering. Zombified Piglins are no longer fire-immune,
+  allowing Blaze and Wildfire fireballs to damage and continue burning them, while Wildfires are
+  explicitly fire-immune themselves. Four reinforced persisted shields absorb damage independently,
+  a bounded cached hostile scan drives the six-block, three-second knockback shockwave, and wounded
+  shield-damaged Wildfires claim shelter movement toward a cached lava target. Lava recovery
+  restores the complete boss only while submerged and visibly resurfaces it; ordinary fire and
+  surface lava contact restore nothing. The
+  dedicated model uses the credited Minecraft Dungeons texture; natural encounter balance and
+  client presentation remain to be verified.
 - The Elder Guardian is the single monument sentinel and guaranteed Water Element source. It is
   invulnerable while in water. Monument/water progression remains available in Stage 1.
 - Sniffers and Endermites are unavailable through normal survival acquisition/spawning but remain
@@ -1153,7 +1238,7 @@ dedicated-server observation, or profiler/JFR evidence.
 
 ### Per-Mob TPS Matrix
 
-`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 82 loaded
+`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 83 loaded
 mob profiles. Every species is measured through idle/rest, dropped-food/forage, hunt/target,
 danger/social, and habitat/day-night phases. Profile-appropriate fixtures provide water, caves,
 Nether ground, prey, threats, forage, hives, and other required stimuli. Each phase records real
@@ -1184,6 +1269,25 @@ five-phase run and the affected Zoglin rerun passed below 50 ms/tick, peaking at
 ms/tick. After adding same-Undead Mob/Brain target enforcement, both exact selectors passed again,
 peaking at 4.437 and 5.091 ms/tick respectively; the complete expanded matrix was intentionally
 not selected.
+Wildfire expands current registration to 83 tests/415 phases. After extending only its Ghast
+faction scan and retention boundary to 64 blocks, its exact five-phase 50-mob run passes below
+50 ms/tick with a 5.967 ms/tick peak; the complete expanded matrix was intentionally not selected
+because this unmanaged profile reuses existing faction and work-budget primitives.
+After adding its scan-free lava lift and bounded combat repositioning, the exact selector still
+sustains 20 TPS in all five phases with a 4.081 ms/tick peak. The complete matrix remains
+unnecessary because both repeated paths are Wildfire-local.
+After adding lava-first recovery routing, persisted submersion, full health healing, and resurfacing,
+the exact selector still sustains 20 TPS in all five phases with a 5.092 ms/tick peak. The complete
+matrix remains unnecessary because the active path is Wildfire-local and retains the shared
+block-search budget/cache.
+After adding obstacle-aware climb corridors and budgeted formation flight routes, the exact selector
+still sustains 20 TPS in all five phases with a 5.026 ms/tick peak. That fixture contains leaders
+without natural escorts; the focused wall-crossing formation test exercises the active group route,
+so the complete matrix remains unnecessary.
+After restricting recovery to cached lava columns at least three blocks deep, the exact selector
+still sustains 20 TPS in all five phases with a 4.876 ms/tick peak. The complete matrix remains
+unnecessary because the additional constant-depth validation stays inside the existing bounded,
+cached Wildfire block search.
 The Stage 2 Undead-pressure rerun forces `UNDEAD_HUNGRY` and `UNDEAD_TOLERANT` benchmark fixtures
 to Stage 2, restores the previous saved stage during cleanup, and covers all eight affected species.
 All 40 exact phases passed below 50 ms/tick; Zombie hunt/targeting was the 6.046 ms/tick overall

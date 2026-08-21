@@ -3,6 +3,7 @@ package cz.xefensor.retold.worldgen.air;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.registry.RetoldBlocks;
 import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindSource;
 import net.minecraft.core.BlockPos;
@@ -19,6 +20,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
@@ -91,6 +93,12 @@ public final class RetoldGaleCoreGameTests {
                 environment,
                 "gale_core_block_damage_respects_mob_griefing",
                 RetoldGaleCoreGameTests::blockDamageRespectsMobGriefing
+        );
+        registerTest(
+                event,
+                environment,
+                "gale_core_drops_heavy_core",
+                RetoldGaleCoreGameTests::dropsHeavyCore
         );
     }
 
@@ -441,6 +449,44 @@ public final class RetoldGaleCoreGameTests {
                     originalMobGriefing,
                     level.getServer()
             );
+            boss.discard();
+        }
+    }
+
+    private static void dropsHeavyCore(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Vec3 position = helper.absoluteVec(new Vec3(4.5D, 3.0D, 4.5D));
+        GaleCore boss = createBoss(level, position, helper.getBounds());
+
+        try {
+            boss.dropCustomDeathLoot(
+                    level,
+                    level.damageSources().generic(),
+                    true
+            );
+            List<ItemEntity> drops = level.getEntitiesOfClass(
+                    ItemEntity.class,
+                    new AABB(position, position).inflate(2.0D)
+            );
+            helper.assertValueEqual(
+                    drops.stream()
+                            .filter(drop -> drop.getItem().is(Items.HEAVY_CORE))
+                            .count(),
+                    1L,
+                    "A defeated Gale Core must drop exactly one Heavy Core"
+            );
+            helper.assertFalse(
+                    drops.stream().anyMatch(drop -> drop.getItem().is(
+                            RetoldBlocks.AIR_ELEMENT
+                    )),
+                    "A Gale Core must no longer drop the legacy Air Element"
+            );
+            helper.succeed();
+        } finally {
+            level.getEntitiesOfClass(
+                    ItemEntity.class,
+                    new AABB(position, position).inflate(2.0D)
+            ).forEach(Entity::discard);
             boss.discard();
         }
     }

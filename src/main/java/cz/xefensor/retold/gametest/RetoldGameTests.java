@@ -58,14 +58,17 @@ import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
 import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
+import cz.xefensor.retold.event.RetoldElderGuardianEvents;
+import cz.xefensor.retold.event.RetoldEndProgressionEvents;
 import cz.xefensor.retold.event.RetoldSnowballGameTests;
 import cz.xefensor.retold.event.RetoldVexGameTests;
 import cz.xefensor.retold.progression.RetoldToolProgressionGameTests;
 import cz.xefensor.retold.recipe.RetoldRecipeCompatibilityGameTests;
 import cz.xefensor.retold.progression.RetoldProgressionAcquisitionGameTests;
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldEntityTypes;
 import cz.xefensor.retold.registry.RetoldTags;
-import cz.xefensor.retold.stage.RetoldElementType;
+import cz.xefensor.retold.stage.RetoldRitualOffering;
 import cz.xefensor.retold.stage.RetoldRaidProgression;
 import cz.xefensor.retold.stage.RetoldStageManager;
 import cz.xefensor.retold.stage.RetoldStageRuntime;
@@ -85,7 +88,9 @@ import cz.xefensor.retold.worldgen.RetoldRuinedPortalGameTests;
 import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
+import cz.xefensor.retold.worldgen.fire.RetoldWildfireGameTests;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
@@ -97,10 +102,13 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.ElderGuardian;
 import net.minecraft.world.entity.monster.Guardian;
 import net.minecraft.world.entity.monster.spider.Spider;
 import net.minecraft.world.entity.monster.zombie.Drowned;
@@ -115,9 +123,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.BlockHitResult;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -160,6 +173,18 @@ public final class RetoldGameTests {
                 environment,
                 "world_data_tracks_ritual_progress",
                 RetoldGameTests::worldDataTracksRitualProgress
+        );
+        registerTest(
+                event,
+                environment,
+                "dragon_egg_accepts_final_and_legacy_offerings",
+                RetoldGameTests::dragonEggAcceptsFinalAndLegacyOfferings
+        );
+        registerTest(
+                event,
+                environment,
+                "elder_guardian_drops_heart_of_the_sea",
+                RetoldGameTests::elderGuardianDropsHeartOfTheSea
         );
         registerTest(
                 event,
@@ -334,6 +359,7 @@ public final class RetoldGameTests {
         RetoldVillagerTeachingGameTests.register(event, environment);
         RetoldAirTempleDiscoveryGameTests.register(event, environment);
         RetoldGaleCoreGameTests.register(event, environment);
+        RetoldWildfireGameTests.register(event, environment);
         RetoldRuinedPortalGameTests.register(event, environment);
         RetoldStructureRemovalGameTests.register(event, environment);
     }
@@ -461,41 +487,90 @@ public final class RetoldGameTests {
 
     private static void worldDataTracksRitualProgress(GameTestHelper helper) {
         RetoldWorldData data = RetoldWorldData.get(helper.getLevel());
-        EnumSet<RetoldElementType> originalElements =
-                EnumSet.noneOf(RetoldElementType.class);
-        for (RetoldElementType element : RetoldElementType.values()) {
-            if (data.hasElementOffered(element)) {
-                originalElements.add(element);
+        EnumSet<RetoldRitualOffering> originalOfferings =
+                EnumSet.noneOf(RetoldRitualOffering.class);
+        for (RetoldRitualOffering offering : RetoldRitualOffering.values()) {
+            if (data.hasOffering(offering)) {
+                originalOfferings.add(offering);
             }
         }
         BlockPos originalEggPos = data.getDragonEggPos();
 
         try {
-            data.clearOfferedElements();
+            data.clearOfferings();
             data.clearDragonEggPos();
 
-            helper.assertTrue(
-                    data.offerElement(RetoldElementType.WATER),
-                    "A new element must be accepted"
-            );
-            helper.assertFalse(
-                    data.offerElement(RetoldElementType.WATER),
-                    "A duplicate element must be rejected"
-            );
-            helper.assertFalse(
-                    data.hasAllElements(),
-                    "One required element must not complete the ritual"
-            );
-
-            data.offerElement(RetoldElementType.AIR);
-            helper.assertTrue(
-                    data.hasAllElements(),
-                    "Water and air must complete the current ritual"
+            helper.assertValueEqual(
+                    RetoldRitualOffering.WATER.mask(),
+                    1,
+                    "Water must retain its original saved bit"
             );
             helper.assertValueEqual(
-                    data.offeredRequiredElementCount(),
-                    data.requiredElementCount(),
-                    "All required elements must be counted"
+                    RetoldRitualOffering.FIRE.mask(),
+                    2,
+                    "Fire must retain its original saved bit"
+            );
+            helper.assertValueEqual(
+                    RetoldRitualOffering.EARTH.mask(),
+                    4,
+                    "Earth must retain its original saved bit"
+            );
+            helper.assertValueEqual(
+                    RetoldRitualOffering.AIR.mask(),
+                    8,
+                    "Air must retain its original saved bit"
+            );
+
+            helper.assertTrue(
+                    data.offer(RetoldRitualOffering.FIRE),
+                    "A new ritual offering must be accepted"
+            );
+            helper.assertFalse(
+                    data.offer(RetoldRitualOffering.FIRE),
+                    "A duplicate ritual offering must be rejected"
+            );
+            data.offer(RetoldRitualOffering.EARTH);
+            data.offer(RetoldRitualOffering.LIFE);
+            data.offer(RetoldRitualOffering.DEATH);
+            helper.assertValueEqual(
+                    data.offeredOfferingCount(),
+                    4,
+                    "Fire, Earth, Life, and Death must retain distinct save bits"
+            );
+            helper.assertValueEqual(
+                    data.offeredRequiredOfferingCount(),
+                    2,
+                    "Life and Death must count toward the temporary hatch threshold"
+            );
+            helper.assertValueEqual(
+                    data.requiredOfferingCount(),
+                    4,
+                    "The temporary hatch threshold must require four offerings"
+            );
+            helper.assertFalse(
+                    data.hasAllRequiredOfferings(),
+                    "Life and Death alone must not complete the current ritual"
+            );
+
+            data.offer(RetoldRitualOffering.AIR);
+            helper.assertFalse(
+                    data.hasAllRequiredOfferings(),
+                    "Air alone must not complete the current ritual"
+            );
+            data.offer(RetoldRitualOffering.WATER);
+            helper.assertTrue(
+                    data.hasAllRequiredOfferings(),
+                    "Water, Air, Life, and Death must complete the current ritual"
+            );
+            helper.assertValueEqual(
+                    data.offeredRequiredOfferingCount(),
+                    data.requiredOfferingCount(),
+                    "All currently required offerings must be counted"
+            );
+            helper.assertValueEqual(
+                    data.offeredOfferingCount(),
+                    RetoldRitualOffering.values().length,
+                    "The saved ritual model must represent all six offerings"
             );
 
             BlockPos.MutableBlockPos mutableEggPos =
@@ -510,9 +585,9 @@ public final class RetoldGameTests {
 
             helper.succeed();
         } finally {
-            data.clearOfferedElements();
-            for (RetoldElementType element : originalElements) {
-                data.offerElement(element);
+            data.clearOfferings();
+            for (RetoldRitualOffering offering : originalOfferings) {
+                data.offer(offering);
             }
 
             if (originalEggPos == null) {
@@ -523,11 +598,242 @@ public final class RetoldGameTests {
         }
     }
 
+    private static void dragonEggAcceptsFinalAndLegacyOfferings(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        RetoldWorldData data = RetoldWorldData.get(level);
+        RetoldWorldStage originalStage = data.getStage();
+        EnumSet<RetoldRitualOffering> originalOfferings =
+                EnumSet.noneOf(RetoldRitualOffering.class);
+        for (RetoldRitualOffering offering : RetoldRitualOffering.values()) {
+            if (data.hasOffering(offering)) {
+                originalOfferings.add(offering);
+            }
+        }
+        BlockPos originalEggPos = data.getDragonEggPos();
+        BlockPos relativeEggPos = new BlockPos(1, 2, 1);
+        BlockPos eggPos = helper.absolutePos(relativeEggPos);
+        ServerPlayer player = (ServerPlayer) helper.makeMockServerPlayer(
+                GameType.SURVIVAL
+        );
+
+        try {
+            data.clearOfferings();
+            data.clearDragonEggPos();
+            data.setStage(RetoldWorldStage.STAGE_2);
+            helper.setBlock(relativeEggPos, Blocks.DRAGON_EGG);
+
+            ItemStack heavyCore = new ItemStack(Items.HEAVY_CORE);
+            PlayerInteractEvent.RightClickBlock heavyCoreUse = useOnEgg(
+                    player,
+                    heavyCore,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(heavyCoreUse);
+            helper.assertTrue(
+                    heavyCoreUse.isCanceled()
+                            && heavyCoreUse.getCancellationResult()
+                            == InteractionResult.SUCCESS,
+                    "A Heavy Core must be accepted as the Air offering"
+            );
+            helper.assertTrue(
+                    heavyCore.isEmpty()
+                            && data.hasOffering(RetoldRitualOffering.AIR),
+                    "The accepted Heavy Core must be consumed and record Air"
+            );
+
+            ItemStack legacyAir = RetoldBlocks.AIR_ELEMENT.toStack();
+            PlayerInteractEvent.RightClickBlock duplicateAirUse = useOnEgg(
+                    player,
+                    legacyAir,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(duplicateAirUse);
+            helper.assertTrue(
+                    duplicateAirUse.getCancellationResult()
+                            == InteractionResult.FAIL
+                            && legacyAir.getCount() == 1,
+                    "A legacy Air Element must map to Air without consuming a duplicate"
+            );
+
+            data.clearOfferings();
+            data.clearDragonEggPos();
+            ItemStack heart = new ItemStack(Items.HEART_OF_THE_SEA);
+            PlayerInteractEvent.RightClickBlock heartUse = useOnEgg(
+                    player,
+                    heart,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(heartUse);
+            helper.assertTrue(
+                    heart.isEmpty()
+                            && data.hasOffering(RetoldRitualOffering.WATER),
+                    "A Heart of the Sea must be consumed and record Water"
+            );
+
+            ItemStack legacyWater = RetoldBlocks.WATER_ELEMENT.toStack();
+            PlayerInteractEvent.RightClickBlock duplicateWaterUse = useOnEgg(
+                    player,
+                    legacyWater,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(
+                    duplicateWaterUse
+            );
+            helper.assertTrue(
+                    duplicateWaterUse.getCancellationResult()
+                            == InteractionResult.FAIL
+                            && legacyWater.getCount() == 1,
+                    "A legacy Water Element must map to Water without consuming a duplicate"
+            );
+            helper.assertTrue(
+                    data.getStage() == RetoldWorldStage.STAGE_2
+                            && level.getBlockState(eggPos).is(Blocks.DRAGON_EGG),
+                    "One current offering must not hatch the egg"
+            );
+
+            data.clearOfferings();
+            data.clearDragonEggPos();
+            ItemStack totem = new ItemStack(Items.TOTEM_OF_UNDYING);
+            PlayerInteractEvent.RightClickBlock totemUse = useOnEgg(
+                    player,
+                    totem,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(totemUse);
+            helper.assertTrue(
+                    totem.isEmpty()
+                            && data.hasOffering(RetoldRitualOffering.LIFE),
+                    "A Totem of Undying must be consumed and record Life"
+            );
+
+            ItemStack netherStar = new ItemStack(Items.NETHER_STAR);
+            PlayerInteractEvent.RightClickBlock netherStarUse = useOnEgg(
+                    player,
+                    netherStar,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(netherStarUse);
+            helper.assertTrue(
+                    netherStar.isEmpty()
+                            && data.hasOffering(RetoldRitualOffering.DEATH),
+                    "A Nether Star must be consumed and record Death"
+            );
+            helper.assertTrue(
+                    data.getStage() == RetoldWorldStage.STAGE_2
+                            && level.getBlockState(eggPos).is(Blocks.DRAGON_EGG),
+                    "Life and Death without Air and Water must not hatch the egg"
+            );
+
+            ItemStack reactorCore = RetoldBlocks.NETHER_REACTOR_CORE.toStack();
+            PlayerInteractEvent.RightClickBlock reactorCoreUse = useOnEgg(
+                    player,
+                    reactorCore,
+                    eggPos
+            );
+            RetoldEndProgressionEvents.onDragonEggRightClick(reactorCoreUse);
+            helper.assertTrue(
+                    reactorCore.isEmpty()
+                            && data.hasOffering(RetoldRitualOffering.FIRE),
+                    "A Nether Reactor Core must be consumed and record Fire"
+            );
+            helper.assertTrue(
+                    data.getStage() == RetoldWorldStage.STAGE_2
+                            && level.getBlockState(eggPos).is(Blocks.DRAGON_EGG),
+                    "Fire must remain outside the hatch threshold until Earth exists"
+            );
+            helper.succeed();
+        } finally {
+            player.discard();
+            helper.setBlock(relativeEggPos, Blocks.AIR);
+            data.clearOfferings();
+            for (RetoldRitualOffering offering : originalOfferings) {
+                data.offer(offering);
+            }
+            if (originalEggPos == null) {
+                data.clearDragonEggPos();
+            } else {
+                data.setDragonEggPos(originalEggPos);
+            }
+            data.setStage(originalStage);
+        }
+    }
+
+    private static PlayerInteractEvent.RightClickBlock useOnEgg(
+            ServerPlayer player,
+            ItemStack stack,
+            BlockPos eggPos
+    ) {
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        return new PlayerInteractEvent.RightClickBlock(
+                player,
+                InteractionHand.MAIN_HAND,
+                eggPos,
+                new BlockHitResult(
+                        Vec3.atCenterOf(eggPos),
+                        Direction.UP,
+                        eggPos,
+                        false
+                )
+        );
+    }
+
+    private static void elderGuardianDropsHeartOfTheSea(
+            GameTestHelper helper
+    ) {
+        ElderGuardian guardian = helper.spawn(
+                EntityTypes.ELDER_GUARDIAN,
+                1,
+                2,
+                1
+        );
+        Collection<ItemEntity> drops = new ArrayList<>();
+        LivingDropsEvent dropsEvent = new LivingDropsEvent(
+                guardian,
+                helper.getLevel().damageSources().generic(),
+                drops,
+                true
+        );
+
+        try {
+            RetoldElderGuardianEvents.onLivingDrops(dropsEvent);
+            RetoldElderGuardianEvents.onLivingDrops(dropsEvent);
+            helper.assertValueEqual(
+                    drops.stream()
+                            .filter(drop -> drop.getItem().is(
+                                    Items.HEART_OF_THE_SEA
+                            ))
+                            .count(),
+                    1L,
+                    "An Elder Guardian must guarantee exactly one Heart of the Sea"
+            );
+            helper.assertFalse(
+                    drops.stream().anyMatch(drop -> drop.getItem().is(
+                            RetoldBlocks.WATER_ELEMENT
+                    )),
+                    "An Elder Guardian must no longer drop the legacy Water Element"
+            );
+            helper.succeed();
+        } finally {
+            guardian.discard();
+        }
+    }
+
     private static void mobProfilesLoadFromDatapack(GameTestHelper helper) {
         helper.assertValueEqual(
                 RetoldMobProfiles.loadedProfileCount(),
-                78,
+                83,
                 "Every bundled mob profile must load"
+        );
+
+        RetoldMobProfile wildfire = RetoldMobProfiles.get(
+                RetoldEntityTypes.WILDFIRE.get()
+        );
+        helper.assertValueEqual(
+                wildfire.type(),
+                RetoldMobProfileType.SPECIAL_VANILLA,
+                "Wildfire must preserve Blaze movement and combat through its special profile"
         );
 
         RetoldMobProfile wolf = RetoldMobProfiles.get("minecraft:wolf");
@@ -828,6 +1134,7 @@ public final class RetoldGameTests {
                 Map.entry(EntityTypes.PIGLIN, RetoldFaction.NETHER_REMNANTS),
                 Map.entry(EntityTypes.PIGLIN_BRUTE, RetoldFaction.NETHER_REMNANTS),
                 Map.entry(EntityTypes.BLAZE, RetoldFaction.NETHER_REMNANTS),
+                Map.entry(RetoldEntityTypes.WILDFIRE.get(), RetoldFaction.NETHER_REMNANTS),
                 Map.entry(EntityTypes.PILLAGER, RetoldFaction.ILLAGERS),
                 Map.entry(EntityTypes.VINDICATOR, RetoldFaction.ILLAGERS),
                 Map.entry(EntityTypes.EVOKER, RetoldFaction.ILLAGERS),

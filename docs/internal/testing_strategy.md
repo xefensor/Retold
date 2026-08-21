@@ -72,6 +72,54 @@ Generic push, pull-request, and release workflows run `./gradlew build` but do n
 automatically because the correct exact test depends on the changed behavior. The developer or
 implementer records the exact GameTest command and result for the change before handoff.
 
+For Dragon Egg ritual changes, select the exact contract affected:
+`retold:world_data_tracks_ritual_progress` covers distinct offering bits and the current hatch
+threshold; `retold:dragon_egg_accepts_final_and_legacy_offerings` covers the four active item
+identities, Survival consumption, duplicate rejection, and upgraded-world aliases;
+`retold:gale_core_drops_heavy_core` and `retold:elder_guardian_drops_heart_of_the_sea` cover the two
+implemented guardian rewards; and `retold:buried_treasure_excludes_heart_of_the_sea` covers the
+removed alternative acquisition route. Run only the exact changed contracts, then verify a real
+Stage 2 egg interaction in-game when the hatch threshold, crack presentation, or Stage 3 transition
+flow changes.
+
+For the Fire path, `retold:wildfire_uses_independent_stage_two_spawner` covers the dedicated
+Stage 2 Nether owner, ordinary-monster-cap independence, and normal placement boundary;
+`retold:wildfire_targets_undead_and_drops_fire_artifact` covers boss-tier attributes,
+Nether Remnant/Blaze alignment, owned Undead targeting, and the guaranteed core;
+`retold:zombified_piglins_take_blaze_and_wildfire_fire_damage` covers the narrow fire-immunity
+exception, both fireball owners, continued Stage 2 burning, and preserved attacker immunity;
+`retold:wither_skeletons_take_remnant_fireball_damage` covers direct damage from both Remnant
+attackers while preserving ordinary Wither Skeleton fire immunity;
+`retold:wildfire_targets_and_damages_visible_ghast` covers the faction-scoped override of vanilla's
+Mob-versus-Ghast rejection, acquisition and 40-tick retention at 56 blocks, the unchanged ordinary
+40-block faction boundary, direct Small Fireball damage, and preserved ordinary Ghast fire
+immunity; and the exact
+`retold:natural_wildfire_spawns_with_blaze_escort`,
+`retold:wildfire_encounter_targets_only_undead_and_players`,
+`retold:wildfire_patrols_with_single_file_blaze_escort`,
+`retold:wildfire_blaze_escorts_follow_into_combat`,
+`retold:wildfire_rises_out_of_lava_when_idle`,
+`retold:wildfire_repositions_during_ranged_combat`,
+`retold:wildfire_submerges_heals_fully_and_resurfaces`,
+`retold:wildfire_shields_gate_damage_and_shockwave_hostiles`, and
+`retold:wildfire_requires_deep_lava_submersion_for_recovery`, and
+`retold:wounded_wildfire_retreats_toward_lava` selectors cover the local spawn exclusion,
+three-to-five escort count, persistent encounter-only target gating across ordinary acquisition,
+retaliation, Undead, targetable-player, and ordinary-Blaze boundaries, obstacle-clearing ordered
+formation movement for both leader and escort, patrol-to-combat handoff, whole-group combat
+following across blocked terrain, shared-target reacquisition, idle lava buoyancy,
+owned ranged-combat repositioning, lava-first recovery routing under an active target, combat
+rejection, full submersion, complete health and shield restoration, and resurfacing,
+independent shield gate/body transition, hostile-only shockwave, rejection of ordinary fire and
+shallow or surface lava for both recovery paths, three-block lava-column selection, submerged
+regeneration cadence, and owned shelter movement. Run
+`retold:mob_tps_wildfire` whenever faction-target range/cadence, shield scanning, shockwave
+range/cadence, lava-source search, or retreat, formation, or combat-movement cadence changes.
+Verify the custom model, disappearing shields, texture mapping, shockwave feedback, and natural
+single-file spacing/turning, healthy lava-surface height, wounded dive/recovery/resurfacing, and
+combat orbiting in a normal client; GameTests do not establish visual correctness or Nether terrain
+fit.
+
 For faction classification changes, run
 `retold:faction_tags_preserve_defaults_and_standard_undead` for the registry contract and
 `retold:faction_tags_drive_targeting_and_retaliation` for live relationships, target ownership,

@@ -24,6 +24,17 @@ These assets are explicitly **placeholders** and do not represent the intended f
 
 The provisional portal frame uses the development identifier `retold:dev_aender_portal_frame`. Its name and visuals are planned to change when the final design is chosen.
 
+The Wildfire entity packages Mojang Studios' 64x64 Minecraft Dungeons Wildfire texture as
+`textures/entity/wildfire.png`, sourced from the Minecraft Wiki file
+[`T HoveringInferno.png`](https://minecraft.wiki/w/File:T_HoveringInferno.png). It is third-party
+material, remains copyright Mojang Studios/Microsoft, is not relicensed under Retold's asset
+license, and is included for this Minecraft mod subject to the
+[Minecraft Usage Guidelines](https://www.minecraft.net/usage-guidelines). The separate Dungeons
+shadow texture is not packaged because Java renders entity shadows itself. Retold's dedicated Java
+model and animation code map the texture without modifying its pixels. The Nether Reactor Core and
+Wildfire Spawn Egg item definitions still reference Minecraft's Magma Cream and Blaze Spawn Egg
+models at runtime and package no copied item texture pixels.
+
 The Aender wood-family placeholders were generated specifically for Retold from prompts describing original purple pixel-art wood components. Mechanical post-processing removed backgrounds, resized the sources to Minecraft texture dimensions, split the door sheet, and assembled sign and boat model textures from the generated material. No Minecraft texture pixels were used in those derived files.
 
 The Aender Chronolith and spawn-egg placeholders were generated specifically for Retold from prompts describing original purple time-rune stone, a green-eyed Aender egg, and a pale cyan/gold Gale Core egg. Mechanical post-processing removed chroma-key backgrounds and reduced the sources to 16x16 game textures. No Minecraft texture pixels were used in these files.
@@ -46,6 +57,9 @@ The active PNG textures explicitly credited as OpenAI-generated were audited aga
 ## Third-Party Material
 
 Minecraft, NeoForge, and other third-party names, APIs, templates, or materials remain subject to their own terms. NeoForge MDK template files identified by `TEMPLATE_LICENSE.txt` retain that license.
+
+The packaged Minecraft Dungeons Wildfire texture is credited above and is excluded from the Retold
+Asset License. Minecraft and the Wildfire texture are copyright Mojang Studios/Microsoft.
 
 The Aender portal references the installed `minecraft:block/nether_portal` texture and creates a green sprite at resource-load time. Retold does not package a copied or modified Minecraft portal texture.
 

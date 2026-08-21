@@ -871,6 +871,12 @@ public final class RetoldAenderGameTests {
         assertConsecutiveItems(
                 helper,
                 CreativeModeTabs.INGREDIENTS,
+                Items.BLAZE_ROD,
+                RetoldBlocks.NETHER_REACTOR_CORE.get()
+        );
+        assertConsecutiveItems(
+                helper,
+                CreativeModeTabs.INGREDIENTS,
                 Items.RAW_GOLD,
                 RetoldBlocks.RAW_AENDERITE.get()
         );
@@ -880,12 +886,17 @@ public final class RetoldAenderGameTests {
                 Items.NETHERITE_INGOT,
                 RetoldBlocks.AENDERITE_INGOT.get()
         );
-        assertConsecutiveItems(
+        assertCreativeTabExcludes(
                 helper,
                 CreativeModeTabs.INGREDIENTS,
-                Items.NETHER_STAR,
                 RetoldBlocks.WATER_ELEMENT.get(),
                 RetoldBlocks.AIR_ELEMENT.get()
+        );
+        assertConsecutiveItems(
+                helper,
+                CreativeModeTabs.SPAWN_EGGS,
+                Items.BLAZE_SPAWN_EGG,
+                RetoldBlocks.WILDFIRE_SPAWN_EGG.get()
         );
         assertConsecutiveItems(
                 helper,
@@ -903,6 +914,13 @@ public final class RetoldAenderGameTests {
                 helper,
                 CreativeModeTabs.OP_BLOCKS,
                 RetoldBlocks.DEV_AENDER_PORTAL_FRAME_ITEM.get()
+        );
+        helper.assertTrue(
+                SpawnEggItem.spawnsEntity(
+                        new ItemStack(RetoldBlocks.WILDFIRE_SPAWN_EGG.get()),
+                        RetoldEntityTypes.WILDFIRE.get()
+                ),
+                "The Wildfire spawn egg must spawn Wildfires"
         );
         helper.assertTrue(
                 SpawnEggItem.spawnsEntity(
@@ -933,6 +951,21 @@ public final class RetoldAenderGameTests {
             helper.assertTrue(
                     creativeTabIndex(tab, expected) >= 0,
                     expected.asItem() + " must appear in its vanilla creative tab"
+            );
+        }
+    }
+
+    private static void assertCreativeTabExcludes(
+            GameTestHelper helper,
+            ResourceKey<CreativeModeTab> tabKey,
+            ItemLike... excludedItems
+    ) {
+        CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB
+                .getValueOrThrow(tabKey);
+        for (ItemLike excluded : excludedItems) {
+            helper.assertTrue(
+                    creativeTabIndex(tab, excluded) < 0,
+                    excluded.asItem() + " must remain hidden from Creative tabs"
             );
         }
     }

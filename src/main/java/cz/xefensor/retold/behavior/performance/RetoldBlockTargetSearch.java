@@ -305,6 +305,69 @@ public final class RetoldBlockTargetSearch {
         );
     }
 
+    public static synchronized BlockPos findFireSource(
+            ServerLevel level,
+            Mob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                BlockSearchMode.FIRE_SOURCE,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findLavaSource(
+            ServerLevel level,
+            Mob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                BlockSearchMode.LAVA_SOURCE,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
+    public static synchronized BlockPos findDeepLavaSource(
+            ServerLevel level,
+            Mob mob,
+            int horizontalRadius,
+            int verticalRadius,
+            long gameTime,
+            int cacheTicks
+    ) {
+        return findTarget(
+                level,
+                mob,
+                mob != null ? mob.blockPosition() : null,
+                BlockSearchMode.DEEP_LAVA_SOURCE,
+                horizontalRadius,
+                verticalRadius,
+                Double.MAX_VALUE,
+                gameTime,
+                cacheTicks
+        );
+    }
+
     public static synchronized BlockPos findBatRoost(
             ServerLevel level,
             Mob bat,
@@ -556,6 +619,9 @@ public final class RetoldBlockTargetSearch {
             case WEAK_BARRIER -> RetoldWeakBarriers.isBreakable(level.getBlockState(pos));
             case COBWEB_PLACEMENT -> canPlaceCobwebAt(level, pos);
             case BAT_ROOST -> isBatRoostAt(level, pos);
+            case FIRE_SOURCE -> isFireSourceAt(level, pos);
+            case LAVA_SOURCE -> isLavaSourceAt(level, pos);
+            case DEEP_LAVA_SOURCE -> isDeepLavaSourceAt(level, pos);
         };
     }
 
@@ -581,7 +647,34 @@ public final class RetoldBlockTargetSearch {
             case WEAK_BARRIER -> dx * dx + dy * dy * 1.5D + dz * dz;
             case COBWEB_PLACEMENT -> dx * dx + dy * dy * 1.25D + dz * dz;
             case BAT_ROOST -> batRoostScore(mob, dx, dy, dz);
+            case FIRE_SOURCE, LAVA_SOURCE, DEEP_LAVA_SOURCE ->
+                    dx * dx + dy * dy * 1.25D + dz * dz;
         };
+    }
+
+    public static boolean isFireSourceAt(ServerLevel level, BlockPos pos) {
+        if (level == null || pos == null || level.isOutsideBuildHeight(pos)) {
+            return false;
+        }
+
+        return level.getFluidState(pos).is(FluidTags.LAVA)
+                || level.getBlockState(pos).is(Blocks.FIRE)
+                || level.getBlockState(pos).is(Blocks.SOUL_FIRE);
+    }
+
+    public static boolean isLavaSourceAt(ServerLevel level, BlockPos pos) {
+        return level != null
+                && pos != null
+                && !level.isOutsideBuildHeight(pos)
+                && level.getFluidState(pos).is(FluidTags.LAVA);
+    }
+
+    /** Returns whether {@code pos} is the surface of a lava column at least three blocks deep. */
+    public static boolean isDeepLavaSourceAt(ServerLevel level, BlockPos pos) {
+        return isLavaSourceAt(level, pos)
+                && !isLavaSourceAt(level, pos.above())
+                && isLavaSourceAt(level, pos.below())
+                && isLavaSourceAt(level, pos.below(2));
     }
 
     private static double batRoostScore(
@@ -821,7 +914,10 @@ public final class RetoldBlockTargetSearch {
         ARMADILLO_GRUB,
         WEAK_BARRIER,
         COBWEB_PLACEMENT,
-        BAT_ROOST
+        BAT_ROOST,
+        FIRE_SOURCE,
+        LAVA_SOURCE,
+        DEEP_LAVA_SOURCE
     }
 
     private record BlockTargetEntry(

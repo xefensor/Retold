@@ -5,6 +5,8 @@ import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.worldgen.air.AirTempleDiscoveryEvents;
 import cz.xefensor.retold.worldgen.air.GaleCoreAttackEvents;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindEvents;
+import cz.xefensor.retold.worldgen.fire.RetoldRemnantFireDamage;
+import cz.xefensor.retold.worldgen.fire.WildfireSpawnEvents;
 import cz.xefensor.retold.worldgen.delayed.RetoldAttachments;
 import cz.xefensor.retold.worldgen.delayed.RetoldChunkEditEvents;
 import cz.xefensor.retold.worldgen.delayed.RetoldClientChunkTracker;
@@ -27,6 +29,8 @@ public final class RetoldWorldgenModule {
         gameEventBus.register(AirTempleDiscoveryEvents.class);
         gameEventBus.register(AirTempleWindEvents.class);
         gameEventBus.register(GaleCoreAttackEvents.class);
+        gameEventBus.register(RetoldRemnantFireDamage.class);
+        gameEventBus.register(WildfireSpawnEvents.class);
         gameEventBus.register(RetoldChunkEditEvents.class);
         gameEventBus.register(RetoldDelayedStructureRetrogen.class);
         gameEventBus.register(RetoldDelayedStructureMobBlocker.class);

@@ -4,7 +4,7 @@
 
 ## Coverage
 
-`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 82 mob types; the latest complete baseline covers 75, while focused runs cover the seven later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
+`RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 83 mob types; the latest complete baseline covers 75, while focused runs cover the eight later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
 2. `dropped_food_forage`: dropped food plus profile-appropriate forage blocks.
@@ -272,6 +272,73 @@ hunt/targeting, 4.139 danger/social, and 2.906 habitat/day-night. Zombie Nautilu
 2.831, 3.632, 3.288, and 1.698 ms/tick. All ten phases remained below 50 ms/tick, with Zoglin
 idle/rest the 5.091 ms/tick rerun peak. The complete matrix remained unnecessary because faction
 classification caching and the scan/path budgets did not change.
+
+### Wildfire Fire-Path Focused Run
+
+Adding `retold:wildfire` as an unmanaged `SPECIAL_VANILLA` profile expands current registration to
+83 tests/415 phases. Its exact 50-mob selector was run on 2026-08-19 because the initial Fire-path
+MVP adds only this profile and reuses the existing faction scan, sight, path, and ownership
+primitives.
+
+All five phases sustained 20 TPS below the 50 ms/tick gate: 4.089 idle/rest, 2.659
+dropped-food/forage, 3.720 hunt/targeting, 2.870 danger/social, and 1.678 habitat/day-night
+ms/tick. Idle/rest was the 4.089 ms/tick peak. The complete expanded matrix was not selected
+because no shared hot-path primitive changed and the new repeated work is confined to Wildfire.
+
+The exact selector was rerun on 2026-08-20 after adding four-shield state, the bounded hostile
+shockwave scan, and the cached/budgeted fire-retreat search. All five phases again sustained 20 TPS:
+4.386 idle/rest, 2.348 dropped-food/forage, 3.409 hunt/targeting, 2.444 danger/social, and 1.522
+habitat/day-night ms/tick. Idle/rest was the 4.386 ms/tick peak. The complete matrix remained
+unnecessary because the changed repeated work is confined to Wildfire and continues to use the
+shared bounded cache, search, and movement-ownership primitives.
+
+The exact selector was rerun again on 2026-08-20 after boss-tier tuning widened the shockwave and
+increased its cadence. All five 50-mob phases sustained 20 TPS: 6.466 idle/rest, 3.519
+dropped-food/forage, 4.832 hunt/targeting, 3.587 danger/social, and 1.802 habitat/day-night ms/tick.
+Idle/rest was the 6.466 ms/tick peak. The complete matrix remained unnecessary because the changed
+repeated work is confined to Wildfire and still uses the existing bounded scan cache.
+
+The exact selector was rerun after adding persisted numbered Blaze escorts, low-priority airborne
+formation movement, and a bounded five-UUID maintenance pass every 20 ticks. All five 50-mob phases
+sustained 20 TPS: 5.076 idle/rest, 2.810 dropped-food/forage, 4.550 hunt/targeting, 3.222
+danger/social, and 1.607 habitat/day-night ms/tick. Idle/rest was the 5.076 ms/tick peak. The
+complete matrix remained unnecessary because the new work is Wildfire-local, the 50-Wildfire
+fixture covers leaders without natural escorts, and the focused formation GameTest exercises the
+bounded leader-plus-escort path.
+
+The exact selector was rerun after extending only Wildfire-to-Ghast faction acquisition and
+retention to the leader's 64-block follow range. All five 50-mob phases sustained 20 TPS: 5.860
+idle/rest, 3.385 dropped-food/forage, 5.967 hunt/targeting, 4.084 danger/social, and 1.911
+habitat/day-night ms/tick. Hunt/targeting was the 5.967 ms/tick peak. The complete matrix remained
+unnecessary because every other faction pairing keeps its previous scan and release bounds.
+
+The exact selector was rerun on 2026-08-21 after adding constant lava buoyancy and bounded ranged-
+combat repositioning. All five 50-mob phases sustained 20 TPS: 3.999 idle/rest, 2.550
+dropped-food/forage, 4.081 hunt/targeting, 3.464 danger/social, and 1.782 habitat/day-night ms/tick.
+Hunt/targeting was the 4.081 ms/tick peak. The complete matrix remained unnecessary because the
+scan-free buoyancy and six-candidate combat goal are confined to Wildfire; the exact movement and
+formation/recovery regression tests cover their ownership interactions.
+
+The exact selector was rerun after adding lava-first source search, owned recovery flight, persisted
+submersion, full health restoration, and resurfacing. All five 50-mob phases sustained 20 TPS:
+4.694 idle/rest, 2.876 dropped-food/forage, 5.092 hunt/targeting, 3.024 danger/social, and 1.487
+habitat/day-night ms/tick. Hunt/targeting was the 5.092 ms/tick peak. The complete matrix remained
+unnecessary because the new state and search mode are confined to wounded Wildfires and retain the
+shared block-search budget/cache; the exact full-cycle test covers the active recovery path.
+
+The exact selector was rerun on 2026-08-21 after formation patrols gained bounded climb-corridor
+checks and budgeted three-dimensional route refreshes. All five 50-mob phases sustained 20 TPS:
+5.026 idle/rest, 3.570 dropped-food/forage, 4.962 hunt/targeting, 4.348 danger/social, and 2.764
+habitat/day-night ms/tick. Idle/rest was the 5.026 ms/tick peak. The fixture intentionally covers
+leaders without naturally spawned escorts, so the focused wall-crossing formation GameTest covers
+the active leader-plus-escort flight paths; the complete profile matrix remained unnecessary.
+
+The exact selector was rerun on 2026-08-22 after Wildfire recovery began requiring a lava column at
+least three blocks deep. All five 50-mob phases sustained 20 TPS: 4.876 idle/rest, 2.823
+dropped-food/forage, 3.970 hunt/targeting, 3.121 danger/social, and 1.689 habitat/day-night ms/tick.
+Idle/rest was the 4.876 ms/tick peak. The complete matrix remained unnecessary because the extra
+three-block validity check is constant work inside the existing bounded cached source search; the
+focused shallow-rejection, deep-source selection, and full-cycle GameTests cover active recovery.
 
 ### Stage 2 Undead-Pressure Focused Runs
 

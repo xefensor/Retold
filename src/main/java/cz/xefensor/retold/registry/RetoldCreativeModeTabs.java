@@ -133,17 +133,13 @@ public final class RetoldCreativeModeTabs {
 
     private static void addIngredients(BuildCreativeModeTabContentsEvent event) {
         insertAfter(event, Items.IRON_INGOT, RetoldBlocks.STEEL_INGOT.get());
+        insertAfter(event, Items.BLAZE_ROD, RetoldBlocks.NETHER_REACTOR_CORE.get());
         insertAfter(event, Items.RAW_GOLD, RetoldBlocks.RAW_AENDERITE.get());
         insertAfter(event, Items.NETHERITE_INGOT, RetoldBlocks.AENDERITE_INGOT.get());
-        insertAfter(
-                event,
-                Items.NETHER_STAR,
-                RetoldBlocks.WATER_ELEMENT.get(),
-                RetoldBlocks.AIR_ELEMENT.get()
-        );
     }
 
     private static void addSpawnEggs(BuildCreativeModeTabContentsEvent event) {
+        insertAfter(event, Items.BLAZE_SPAWN_EGG, RetoldBlocks.WILDFIRE_SPAWN_EGG.get());
         insertAfter(event, Items.BREEZE_SPAWN_EGG, RetoldBlocks.GALE_CORE_SPAWN_EGG.get());
         insertAfter(event, Items.ENDERMAN_SPAWN_EGG, RetoldBlocks.AENDER_EYE_SPAWN_EGG.get());
     }

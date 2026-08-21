@@ -19,7 +19,7 @@ Retold is independently developed and is not an official Minecraft product or so
 ## What Retold Changes
 
 - **Connected progression:** defeating the Ender Dragon changes the world instead of ending the game.
-- **Element paths:** Water and Air currently lead through the ocean monument and Air Temple; Fire and Earth are planned.
+- **Element paths:** Water and Air lead through the ocean monument and Air Temple, while boss-tier Stage 2 Wildfires provide the Nether Reactor Core for Fire. Earth remains planned.
 - **The Aender:** a bright, unstable late-game dimension that replaces normal survival End progression after the dragon egg ritual.
 - **Living mobs:** hunger, homes, ranges, factions, territory, hunting, fleeing, warnings, and group behavior.
 - **Discovery-first crafting:** recipe knowledge and villager teaching replace a recipe-book-first experience.
@@ -56,7 +56,7 @@ Only the locations linked above are official downloads. Version settings are def
 The current build includes the survival spine, Water and Air progression, staged world changes, Aender foundations, recipe discovery, and the Retold mob-behavior framework. Major unfinished areas include:
 
 - wider seed, upgraded-world, server, and multiplayer verification of the cartographer Air Temple map, plus further Gale Core tuning
-- Fire and Earth element paths
+- the Earth element path and natural-world Wildfire presentation/balance verification
 - original replacements for provisional Aender assets and naming
 - Aender travel networks and late-game rewards
 - broader progression, combat, village, and world-generation work
