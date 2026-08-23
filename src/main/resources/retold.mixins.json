@@ -11,6 +11,9 @@
     "AdvancementVisibilityEvaluatorMixin",
     "NoVillageNearWorldSpawnMixin",
     "OverworldBiomeBuilderMixin",
+    "NetherFossilDriedGhastMixin",
+    "NetherFossilPieceInvoker",
+    "NetherPortalDrainTravelMixin",
     "EndDragonFightMixin",
     "EndGatewayGenerationMixin",
     "MerchantMenuAccessor",
@@ -63,6 +66,8 @@
     "EndermanParticleMixin",
     "LivingEntityTeleportParticleMixin",
     "MerchantScreenMixin",
+    "NetherFogColorMixin",
+    "NetherLightmapMixin",
     "EnchantmentScreenMixin",
     "PortalParticleMixin"
   ],

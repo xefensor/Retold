@@ -140,6 +140,23 @@ public final class RetoldWorldProtection {
         ));
     }
 
+    public static boolean canDrainAroundNetherPortal(
+            ServerLevel level,
+            BlockPos pos
+    ) {
+        return canModify(new RetoldWorldMutationContext(
+                level,
+                pos,
+                RetoldWorldMutationBounds.single(pos),
+                RetoldWorldMutationType.NETHER_PORTAL_DRAIN,
+                null,
+                Identifier.fromNamespaceAndPath(
+                        Retold.MODID,
+                        "nether_portal_drain"
+                )
+        ));
+    }
+
     public static boolean canRetrogenStructure(
             ServerLevel level,
             ChunkPos chunkPos,

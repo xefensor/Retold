@@ -127,7 +127,12 @@ Other useful commands:
 | Worldgen or structures | Test multiple seeds and chunk borders in fresh worlds; check existing-world behavior when applicable |
 | Dimension, portal, or progression | Test both directions, repeated travel, death/reconnect, fresh and existing worlds, and relevant stages |
 | Networking | Test a dedicated server with a separate client; include multiple players when state can diverge |
-| Visual or asset change | Provide screenshots or video and verify attribution/license records |
+| Visual or asset change | Run applicable non-visual checks, then leave subjective in-game visual testing and approval to the developer; verify attribution/license records for asset changes |
+
+AI agents must not operate the game client or desktop UI to perform subjective visual tests. Start
+the client only when needed for a technical startup or rendering-hook check, stop it afterward, and
+state exactly what was not visually verified. The developer owns screenshots, video, comparison
+across visual settings, and final visual approval.
 
 If a relevant check cannot be run, state exactly what was not verified and why. Never claim an in-game, dedicated-server, multiplayer, or existing-world result that was not actually tested.
 

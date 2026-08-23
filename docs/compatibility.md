@@ -66,12 +66,24 @@ The following block and item tags are supported extension points:
 | `retold:bat_foods` | Dropped food accepted by hungry Bats. |
 | `retold:feline_scavenge_foods` | Extra scavenged food accepted by Cats and Ocelots in addition to meat and fish. |
 | `retold:torch_igniters` | Items players may use to relight Retold's extinguished torches. |
+| `retold:nether_portal_drain/immune` | Blocks that Overworld Nether-portal drain must never replace. Block entities are always immune independently of this tag. |
+| `retold:nether_portal_drain/stable` | Native Nether materials and other final results that neither drain front may replace. Water can still evaporate from a waterlogged stable block in the inner zone. |
+| `retold:nether_portal_drain/outer_ground` | Living ground that becomes Coarse Dirt in the outer zone and Netherrack in the inner zone. |
+| `retold:nether_portal_drain/vegetation` | Vegetation that permanently withers to air in either drain zone. |
+| `retold:nether_portal_drain/to_dead_bush` | Small plants that become a Dead Bush when it can survive at that position, otherwise air. |
+| `retold:nether_portal_drain/melts` | Snow and frozen blocks that melt to air when reached by the death front. |
+| `retold:nether_portal_drain/to_gravel` | Sand-like inner-zone blocks that become Gravel. |
+| `retold:nether_portal_drain/to_netherrack` | Soil-like inner-zone blocks that become Netherrack. |
+| `retold:nether_portal_drain/to_blackstone` | Stone and masonry inner-zone blocks that become shape-aware Blackstone or polished Blackstone forms. |
+| `retold:nether_portal_drain/to_crimson_wood` | Wooden inner-zone blocks that become a compatible Crimson wood form when one exists. |
 
 Only add content whose behavior matches the tag's complete meaning. For example, a block added to
 `retold:panda_bamboo_blocks` must be safe to remove when consumed; a decorative prismarine-like
 block should not enter `retold:ocean_monument_protected_blocks` unless it should participate in
 monument mining pressure. An item added to `retold:campfire_consumable_igniters` must be safe to
 consume one at a time; durability-based tools belong in their own interaction path instead.
+Portal drain intentionally has no generic mining-tool or full-block fallback. A modded block remains
+unchanged unless its author or a datapack explicitly assigns it to one of the semantic drain tags.
 
 The three renewable habitat-forage tags do not remove their blocks. They remain usable when
 `mobGriefing=false`, use Retold's normal bounded forage search, and observe the existing 600-tick
@@ -206,8 +218,8 @@ bounds, mutation category, optional responsible entity, and optional subject ide
 block actions use one-block bounds; portals and whole-chunk operations expose their full possible
 area so an adapter can reject overlaps rather than checking only the center. Current categories
 distinguish mob breaking and placement, other entity breaking, Aender portal creation,
-delayed-structure retrogen, Aender chunk regeneration, and generic Retold world changes. Retold
-currently routes the following owned operations through this layer:
+delayed-structure retrogen, Aender chunk regeneration, Overworld Nether-portal drain, and generic
+Retold world changes. Retold currently routes the following owned operations through this layer:
 
 - destructive animal forage, Panda bamboo consumption, weak-barrier breaking, Spider lair webs,
   and Villager torch maintenance
@@ -215,6 +227,8 @@ currently routes the following owned operations through this layer:
 - Aender stale-chunk blanking and regeneration
 - generated Aender counterpart portals and player-built portal activation
 - delayed structure retrogen
+- permanent Overworld Nether-portal drain, categorized as `NETHER_PORTAL_DRAIN` and checked once for
+  every individual block immediately before it changes
 
 The normal NeoForge entity-griefing hook and `mobGriefing` rule still apply before Retold's
 position-aware mob checks. Protection rules supplement those standard checks; they do not replace
