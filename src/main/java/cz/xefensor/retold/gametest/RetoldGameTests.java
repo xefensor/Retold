@@ -89,6 +89,7 @@ import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
 import cz.xefensor.retold.worldgen.fire.RetoldWildfireGameTests;
+import cz.xefensor.retold.worldgen.portal.RetoldNetherPortalDrainGameTests;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -311,6 +312,7 @@ public final class RetoldGameTests {
         RetoldWorldProtectionGameTests.register(event, environment);
         RetoldMobAvailabilityGameTests.register(event, environment);
         RetoldNetherMobSpawnGameTests.register(event);
+        RetoldNetherPortalDrainGameTests.register(event, environment);
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
         RetoldAiSightCacheGameTests.register(event, environment);

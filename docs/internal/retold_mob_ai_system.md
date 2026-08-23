@@ -573,8 +573,10 @@ an implementation claim. The completion matrix below and
   functional through commands/creative; existing entities and their Retold AI are retained.
   Wardens/Ancient Cities/Deep Dark and Trial Chambers are removed from survival. Shulkers and End
   Cities are outside the active mob design because End Cities do not exist in Retold survival.
-- Happy Ghasts, ghastlings, and dried ghast corpses do not exist. Only the ordinary hostile Ghast
-  remains. The Creaking/Pale Garden can stay vanilla for now.
+- Dried Ghasts do not generate with Nether fossils. Their crafting recipe, existing and
+  player-placed blocks, hydration into Ghastlings, and growth into Happy Ghasts remain available;
+  only the natural Nether acquisition route is removed. The ordinary hostile Ghast remains
+  unchanged. The Creaking/Pale Garden can stay vanilla for now.
 - Planned additions retain these identities: Killer Bunny as a rare natural hostile creature;
   Iceologer as an Illager guarding an isolated igloo with a warning; the original one-block,
   stackable Mojang Tuff Golem display-statue concept; and the music-disc monster. Fire, Earth,

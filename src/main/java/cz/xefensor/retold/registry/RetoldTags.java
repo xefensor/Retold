@@ -178,6 +178,36 @@ public final class RetoldTags {
     public static final TagKey<Block> OCEAN_MONUMENT_PROTECTED_BLOCKS = blockTag(
             "ocean_monument_protected_blocks"
     );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_IMMUNE = blockTag(
+            "nether_portal_drain/immune"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_STABLE = blockTag(
+            "nether_portal_drain/stable"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_OUTER_GROUND = blockTag(
+            "nether_portal_drain/outer_ground"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_VEGETATION = blockTag(
+            "nether_portal_drain/vegetation"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_TO_DEAD_BUSH = blockTag(
+            "nether_portal_drain/to_dead_bush"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_MELTS = blockTag(
+            "nether_portal_drain/melts"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_TO_GRAVEL = blockTag(
+            "nether_portal_drain/to_gravel"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_TO_NETHERRACK = blockTag(
+            "nether_portal_drain/to_netherrack"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_TO_BLACKSTONE = blockTag(
+            "nether_portal_drain/to_blackstone"
+    );
+    public static final TagKey<Block> NETHER_PORTAL_DRAIN_TO_CRIMSON_WOOD = blockTag(
+            "nether_portal_drain/to_crimson_wood"
+    );
     public static final TagKey<EntityType<?>> AUTOMATIC_BREEDERS =
             TagKey.create(
                     Registries.ENTITY_TYPE,

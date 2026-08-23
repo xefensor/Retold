@@ -33,6 +33,8 @@ The core ideas are:
 - mobs use Retold faction/territory/behavior systems
 - torch weather and extinguished torch blocks add environmental pressure
 - client visuals are synchronized for stage, sky, teaching UI, and chronolith beams
+- the vanilla Nether uses the Nether Wastes' classic dark-red fog and a Minecraft 1.0-style dark ambient-light floor across all biomes
+- Crimson and Warped Forest vegetation is sparsified into open fungal-desert scenery without replacing the biomes, their nylium surfaces, or their gameplay registries
 
 ## Design Direction Source
 
@@ -101,6 +103,68 @@ The main event registration is intentionally explicit. When adding a new system,
 | `worldgen` | worldgen registry and structure tags |
 | `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
+
+`NetherFogColorMixin` is a client-only atmospheric base-color hook. In the vanilla Nether dimension,
+it substitutes the Nether Wastes `#330808` fog color before vanilla sky blending, darkness, and
+vision adjustments. It does not replace biome definitions and does not affect water, lava, or
+powder-snow fog, allowing vanilla and datapack-added Nether biomes to retain their other effects.
+`NetherLightmapMixin` complements it by replacing the modern `#302821` Nether ambient-light color
+with the approximately 10% neutral `#1A1A1A` floor used by the classic lighting curve. It leaves
+block-light values, the brightness option, vision effects, mob spawning, and server lighting rules
+unchanged.
+
+The Crimson and Warped Forest desert treatment is owned by data-driven NeoForge biome modifiers.
+They remove only the vanilla dense vegetation placements and add Retold-owned placed features that
+reuse the same vanilla configured features at lower frequency. Giant fungi use one attempt per
+cavern layer instead of eight; mixed roots and small-fungus scrub uses one instead of six in Crimson
+and five in Warped; vines use two attempts instead of ten; and Warped sprouts use one instead of
+four. Surface rules, terrain density, ores, springs, structures, biome effects, and spawn lists are
+not replaced. The change therefore affects newly generated chunks, while existing vegetation stays
+where it was generated. Datapacks can replace or tune the Retold placed features and biome
+modifiers without a Java hook.
+
+Overworld Nether-portal drain is owned by `RetoldNetherPortalDrainEvents`,
+`RetoldNetherPortalDrainTransforms`, and the narrow `NetherPortalDrainTravelMixin`. Loaded-chunk and
+portal-spawn events index active portal rectangles without forcing terrain to load. Each portal has
+a pair of runtime cursors over one immutable candidate list sorted by squared distance. Fair bounded
+background work and successful-travel pulses prefer alternating `DRAIN` and `CORRUPT` work. The
+death cursor advances toward the portal-specific outer edge and can only remove vegetation or turn
+living ground into Coarse Dirt. The outer radius is `min(48, 16 + width * height - 6)`, preserving
+16 blocks for the standard six-block interior while counting every additional portal block. The
+corruption radius is half, rounded down. Its cursor follows continuously through that inner prefix, but its
+next squared distance must be no more than one quarter of the inspected death-front distance. It can
+therefore never exceed half the death radius. Corruption applies Nether material mappings or
+evaporates water. If newly loaded or placed living ground missed the earlier death cursor, the
+corruption resolver makes it Coarse Dirt and defers its Netherrack conversion to a later cycle rather
+than bypassing the intermediate state. Both cursors reset only after reaching their respective edges
+so later construction remains eligible.
+Each portal also maintains a runtime snapshot of loaded lava source blocks throughout its full outer
+sphere. One fair queue scans at most two intersecting chunks every five ticks globally and never
+loads a chunk. Until the initial snapshot completes, that portal does not advance. Thereafter a
+fractional work-credit limiter applies
+`max(0, (portal block count - lava source count) / portal block count)` equally to background and
+traveler-pulse attempts. Flowing lava is excluded, matching or exceeding the portal block count
+halts both fronts, and later snapshots allow the spread to slow, stop, or resume without consuming
+the lava.
+The shared ordered offsets through radius 48 are stored as packed primitive longs and decoded only
+for a bounded probe, avoiding a permanent object allocation for every possible position.
+Completed block transformations themselves persist normally, while a reloaded portal cheaply skips
+already transformed candidates. The successful
+Overworld/Nether transition adds capped work after the original post-teleport callback, so players,
+mobs, and items share the same rule. A standard 2×3 portal has a 16-block death sphere and an
+eight-block inner corruption zone; additional interior portal blocks expand the outer radius one for
+one through 48, and the corruption radius remains half. Explicit semantic block tags select stable
+Nether results, disappearing vegetation, small plants, melting blocks, outer ground, Gravel,
+Netherrack, Blackstone, Crimson wood, and immunity mappings. There are no generic mining-tool or
+full-collision fallbacks, so unmatched blocks remain unchanged. Compatible stairs, slabs, walls,
+doors, fences, logs, and similar blocks retain shared state. Living coral becomes its exact dead
+variant. Inner water evaporates, including by clearing `WATERLOGGED` without deleting the host
+block. No Soul Sand, Soul Soil, fire, magma, or lava is generated. Block entities and
+tagged portals, valuables, ores, storage blocks, Obsidian, Crying Obsidian, and Aender infrastructure
+are immune. Every actual edit uses the `NETHER_PORTAL_DRAIN` world-protection category immediately
+before changing the block. The system is stage-independent and keeps no persistence of its own
+because completed transformations are ordinary saved block state; the current scan phase and cursor
+are intentionally reconstructed when a portal is indexed again.
 
 The mob AI package is split by behavior ownership:
 
@@ -785,9 +849,10 @@ The context exposes the server level, representative position, immutable inclusi
 mutation type, optional responsible entity, and optional subject id. Single-block actions use exact
 one-block bounds; portal and chunk operations expose their complete possible area. Current routed
 owners are destructive forage and bamboo, weak barriers, Spider webs, Villager torch maintenance,
-Gale Core breaking, Aender stale-chunk replacement, Aender portal creation, and delayed
-structure retrogen. `RetoldMobGriefing` continues to invoke NeoForge's normal entity-griefing hook
-first, then the position-aware Retold rule immediately before destructive or placement actions.
+Gale Core breaking, Aender stale-chunk replacement, Aender portal creation, delayed structure
+retrogen, and Overworld Nether-portal drain. `RetoldMobGriefing` continues to invoke NeoForge's
+normal entity-griefing hook first, then the position-aware Retold rule immediately before destructive
+or placement actions.
 
 Do not call a claim mod from gameplay classes. Add an optional adapter that translates a
 `RetoldWorldMutationContext` into that mod's permission query. No adapter may be required for Retold

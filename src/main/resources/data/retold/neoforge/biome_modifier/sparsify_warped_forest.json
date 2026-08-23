@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "minecraft:warped_forest",
+  "features": [
+    "minecraft:warped_fungi",
+    "minecraft:warped_forest_vegetation",
+    "minecraft:nether_sprouts",
+    "minecraft:twisting_vines"
+  ],
+  "steps": "vegetal_decoration"
+}

@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "minecraft:crimson_forest",
+  "features": [
+    "minecraft:crimson_fungi",
+    "minecraft:crimson_forest_vegetation",
+    "minecraft:weeping_vines"
+  ],
+  "steps": "vegetal_decoration"
+}

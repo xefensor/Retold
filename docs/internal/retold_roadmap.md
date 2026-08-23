@@ -26,6 +26,8 @@ Retold is still built around:
   wider awareness, convergence, imperfect cross-family support, and a modest tagged natural-spawn
   weight increase under vanilla caps rather than direct stat buffs
 - survival worldgen/spawn removal for some modern content instead of necessarily deleting all code support
+- Crimson and Warped Forests remaining distinct biomes but generating as open fungal deserts, with
+  colored nylium and rare fungal landmarks instead of dense trees and undergrowth
 - beds not skipping night
 - rain extinguishing normal torches
 
@@ -63,7 +65,6 @@ These are still planned but need feature-specific design before implementation:
 - broader enchanting acquisition changes beyond the implemented removal of Mending from new random loot and Librarian trades
 - sword/shield combat rework
 - Stage 3 piglin/pigman hiring or follower behavior
-- Nether portal spread as portal energy draining surroundings
 - longer death-drop despawn timer than vanilla
 - bed healing that consumes hunger
 - water torches, glowstone torches, rainbows, pet doors, and glow improvements
@@ -259,9 +260,10 @@ This is also a maintenance rule. Native Retold systems move forward with Retold'
   - If villages maintain roads in the future, connect that to actual village activity rather than generating decorative roads with no simulated cause.
   - Exact design, block transitions, rates, and whether this becomes a confirmed Retold feature remain undecided until a focused design pass.
 
-- [ ] Keep Nether portal environmental corruption/spread native to Retold.
+- [x] Keep Nether portal environmental corruption/spread native to Retold.
   - It is part of Retold's energy/dimension lore rather than a generic visual effect.
-  - Let Retold control affected blocks, spread rate, portal-use influence, world-stage interaction, reversibility, and performance limits.
+  - Implemented as permanent, stage-independent Overworld drain around loaded active portals: a deterministic nearest-to-farthest death front advances toward 16 blocks for a standard 2×3 portal while a material-aware Nether-corruption front follows continuously at no more than half its radius. Each extra interior portal block adds one outer-radius block, capped at 48; the inner radius remains half. Slow background progress and a capped pulse after every successful traveler advance the two fronts. Loaded lava sources throughout the full outer sphere linearly reduce both forms of work, reaching zero when their count matches or exceeds the portal's interior area; flowing lava does not count.
+  - Retold controls affected and immune blocks through semantic tags, uses only vanilla Coarse Dirt/Netherrack/Blackstone/Crimson targets, never creates Soul Sand, Soul Soil, fire, magma, or lava, and routes every edit through world protection without force-loading chunks.
 
 - [ ] Prefer native Retold logic for environmental changes that interact with world state or society.
   - candidate examples: limited block aging/weathering, vegetation reclaiming abandoned areas, village maintenance/repair, persistent animal traces, dens/nests, and meaningful snow accumulation

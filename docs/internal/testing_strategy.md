@@ -37,6 +37,11 @@ Record the exact commands and results.
 | Resources, recipes, loot, tags, or profiles | Focused loader/registration test and the affected behavior test when one exists; `./gradlew build` once before handoff | Unrelated gameplay suites |
 | Worldgen, dimension, networking, persistence, or visuals | Focused automated coverage plus only the relevant manual environments described in `AGENTS.md` | Unrelated mob and TPS suites |
 
+For visual changes, agents run applicable build and technical startup checks but leave subjective
+in-game inspection to the developer. Do not drive the game or desktop UI to produce screenshots or
+claim visual approval. Record the exact technical checks performed and hand off the remaining
+visual scenarios to the developer.
+
 `./gradlew build` runs compilation, JUnit tests, PMD, and assembly; it does not run NeoForge
 GameTests. It is the normal final code-quality check, not something to repeat after every edit.
 
@@ -427,6 +432,50 @@ For the rare Soul Sand Valley Wither Skeleton spawn, run the exact
 modified biome registry and guards the exact biome, smallest-positive weight, solitary pack, and
 absence from ordinary Nether Wastes. This data-only spawn-list change does not justify a per-mob
 TPS run; naturally verify spawn frequency and placement in fresh Soul Sand Valley terrain.
+
+For Dried Ghast natural availability, run the exact
+`retold:nether_fossils_omit_dried_ghasts` selector. It invokes the vanilla Nether-fossil placement
+path at a deterministic successful candidate, verifies that no Dried Ghast is generated, and
+confirms that the block itself remains placeable. This narrow worldgen hook does not justify mob or
+TPS selectors; naturally verify fresh Nether fossils across multiple seeds.
+
+For sparse Nether forests, run the exact
+`retold:nether_forests_use_sparse_desert_vegetation` selector. It reads the modified biome registry,
+verifies that both forests replaced every targeted dense vanilla placement with the Retold sparse
+variants, and guards representative retained lava-spring and quartz features. This data-only
+vegetation-density change does not justify mob or TPS selectors. The developer should visually
+verify Crimson and Warped Forest density, sightlines, transitions, and resource availability in
+fresh chunks across multiple seeds; existing generated vegetation should remain unchanged.
+
+For Overworld Nether-portal drain mappings or protection, run the exact
+`retold:nether_portal_drain_maps_materials_and_protects_valuable_blocks` selector. It covers the
+required living-ground-to-Coarse-Dirt intermediate state, proves the death phase cannot directly
+corrupt stone, proves even living ground first encountered by the corruption resolver cannot skip
+Coarse Dirt, then covers final soil/stone/masonry/wood state-preserving mappings, permanent water
+evaporation, the valuable/container/portal-frame boundary, and a denying world-protection rule. For
+palette membership changes, also run
+`retold:nether_portal_drain_uses_explicit_palette`. It guards stable Netherrack, Blackstone, Warped
+wood, Soul Soil, and Gravel; representative unchanged crafted/decorative blocks; Sand, Clay,
+Sandstone, and brick conversions; frozen-block melting; small-plant and cactus death; exact coral
+death; and the different outer/inner handling of waterlogged blocks. For
+lava-resistance changes, run
+`retold:nether_portal_lava_sources_linearly_resist_spread`. It proves that only source blocks inside
+the full affected sphere count—excluding flowing lava and sources outside the radius—and guards
+full, five-sixths, half, one-sixth, stopped, and over-saturated linear work rates. For
+successful-travel triggering or work caps, run the separate exact
+`retold:nether_portal_travel_pulses_are_bounded` selector. When candidate selection or the radial
+front changes, run `retold:nether_portal_drain_advances_outward`, which requires every ordered
+candidate distance to be monotonically nondecreasing and verifies that the corruption radius can
+never exceed half the death radius, including both final 8/16-block shells. Do not substitute a
+client wait for the bounded automated checks. When portal-size scaling, portal rectangle detection,
+or the maximum offset index changes, run `retold:nether_portal_drain_scales_with_portal_area`; it
+guards the standard 2×3 radius, per-block area growth, representative width/height composition, the
+48-block cap, and complete maximum-radius index coverage. Naturally verify the
+intended 30–45-minute visible outward maturation around outdoor and underground portals, unusual
+frame sizes, adjacent portals, chunk borders and unloads,
+save/reload, existing worlds, entities/items traveling both directions, real claim adapters,
+multiplayer, and dedicated-server behavior. Subjective appearance and pacing approval belongs to
+the developer.
 
 For Strider lava sustenance specifically, the natural-food case must also assert that relief does
 not consume the lava; pair it with `retold:hunger_survival_strider` and `retold:mob_tps_strider`.

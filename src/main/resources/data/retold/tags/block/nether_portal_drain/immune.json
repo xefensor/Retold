@@ -1,0 +1,14 @@
+{
+  "values": [
+    "#minecraft:dragon_immune",
+    "#minecraft:portals",
+    "#c:ores",
+    "#c:storage_blocks",
+    "minecraft:ancient_debris",
+    "retold:aenderite_ore",
+    "retold:aender_stabilizer",
+    "retold:aender_chronolith",
+    "retold:dev_aender_portal_frame",
+    "retold:aender_portal"
+  ]
+}

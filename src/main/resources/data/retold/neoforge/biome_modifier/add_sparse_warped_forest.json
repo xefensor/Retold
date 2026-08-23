@@ -1,0 +1,11 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "minecraft:warped_forest",
+  "features": [
+    "retold:sparse_warped_fungi",
+    "retold:sparse_warped_scrub",
+    "retold:sparse_nether_sprouts",
+    "retold:sparse_twisting_vines"
+  ],
+  "step": "vegetal_decoration"
+}
