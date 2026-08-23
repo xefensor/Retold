@@ -102,6 +102,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `villager` | villager teaching, trade refresh, communal food/supply, livestock tending, property reputation, golem construction, and torch maintenance |
 | `worldgen` | worldgen registry and structure tags |
 | `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
+| `worldgen/earth` | composite Jungle Pyramid generation, deterministic Earth Labyrinth planning and placement; guardian remains planned |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
 
 `NetherFogColorMixin` is a client-only atmospheric base-color hook. In the vanilla Nether dimension,
@@ -190,7 +191,7 @@ split into these modules:
 | `RetoldFoundationModule` | blocks, entities, game rules, networking, client bootstrap, commands, player lifecycle, opening tool progression, reload listeners, and GameTests |
 | `RetoldStageModule` | stage runtime, End progression, recipe gating, and stage-gated patrols |
 | `RetoldMobModule` | undead, piglin, golem, enderman, and elder guardian events |
-| `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, and delayed structures |
+| `RetoldWorldgenModule` | worldgen registries, attachments, spawn cache, Air Temple, Earth Labyrinth, and delayed structures |
 | `RetoldAenderModule` | Aender registries, stability events, world ticks, and Chronolith events |
 | `RetoldAtmosphereModule` | global server-authoritative atmosphere scheduling across dimensions |
 | `RetoldFactionModule` | invalid-target cleanup, faction combat, and faction assist |
@@ -361,7 +362,24 @@ Current limitation:
   of biome mob weights and the ordinary monster cap. It retains Peaceful, `doMobSpawning`, normal
   placement/despawn, player-distance, and 128-horizontal/64-vertical Wildfire-exclusion rules. The
   core is accepted and persisted but deliberately remains outside the hatch threshold.
-- Earth still needs a completed acquisition path and egg wiring.
+- Earth is confirmed as a deterministic randomized two-level labyrinth beneath every newly
+  generated Jungle Pyramid, entered through the existing lever-puzzle room. Already-generated
+  pyramids remain untouched. The `minecraft:jungle_pyramid` data definition retains its registry id
+  but selects `EarthJungleTempleStructure` for new starts; each start serializes an
+  `EarthJungleTemplePiece` compatible with vanilla placement plus an `EarthLabyrinthPiece`. The
+  latter regenerates its layout from a stable world/structure-position seed and performs
+  chunk-bounded placement through `EarthLabyrinthGenerator`. The initial carved-cave network is 41
+  or 53 blocks wide, with its floors 64 and 71 blocks below the pyramid base. Its logical nodes use
+  six-block spacing but receive deterministic inward-bounded X/Z offsets, and each open graph edge
+  becomes a bent cardinal path through a clamped intermediate point. Stone-lined passage shells
+  preserve closed barriers while irregular three-block-wide interiors, junction caverns, and the
+  depth-aware Stone/Deepslate/Andesite/Tuff palette avoid a regular cobblestone-grid appearance. It
+  has fixed entrance and guardian anchors, extra loops, a
+  protected long switchback route from the lever room, and two or three ladder connections. Room
+  modules, the statue, and the blind guardian remain unimplemented. The guardian is designed to
+  awaken on a Stage 2 chamber visit, roam by vibration, and permanently relocate a bounded reserve
+  of maze-owned blocks while respecting griefing and world-protection policy. Its artifact and egg
+  wiring remain undecided.
 - Normal survival reaches Stage 3 through the currently implemented Water, Air, Life, and Death
   paths.
 

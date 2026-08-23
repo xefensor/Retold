@@ -30,6 +30,11 @@ Retold is still built around:
   colored nylium and rare fungal landmarks instead of dense trees and undergrowth
 - beds not skipping night
 - rain extinguishing normal torches
+- every newly generated Jungle Pyramid containing a deterministic randomized two-level Earth
+  Labyrinth reached through its lever-puzzle room, while already-generated pyramids remain untouched
+- the Earth Guardian beginning as an indestructible Stage 1 statue, awakening on a Stage 2 chamber
+  visit, sensing players through vibrations, roaming the whole maze, and permanently relocating
+  maze-owned blocks to open its own paths and build defenses
 
 ## High Priority
 
@@ -41,9 +46,11 @@ These are the strongest next design-aligned areas:
    villages; identify remaining coordination and survival gaps; then design and implement the next
    coherent village-society slice.
 2. Finish the six-sacrifice Dragon Egg ritual after all paths are survival-obtainable.
-3. Add the missing Earth item/challenge path; verify and tune the initial roaming Wildfire Fire
-   path, implemented Life and Death acquisition boundaries, cartographer Air Temple discovery map,
-   and Air Temple/Gale Core path.
+3. Complete the missing Earth path from its initial generated labyrinth: add themed room modules,
+   the dormant/blind terrain-relocating guardian, decide its artifact, and wire the offering. Also
+   naturally verify the maze across seeds, borders, and upgraded worlds, and verify and tune the
+   initial roaming Wildfire Fire path, implemented Life and Death acquisition boundaries,
+   cartographer Air Temple discovery map, and Air Temple/Gale Core path.
 4. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 5. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
 6. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
@@ -346,7 +353,8 @@ These areas are not finished forever, but the current direction is acceptable fo
 Do not implement these without asking the developer first:
 
 - Stage 1 Wither/Nether star requirement before End access
-- jungle/desert pyramids as boss tombs
+- Desert Pyramids or additional pyramid boss tombs beyond the confirmed Jungle Pyramid Earth
+  Labyrinth
 - Nether dragon role in the ending
 - Aender dragon role in the ending
 - New Game+ / world ending ideas

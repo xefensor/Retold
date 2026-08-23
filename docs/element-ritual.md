@@ -1,6 +1,6 @@
 # Dragon Egg Ritual And Sacrifices
 
-> Current design direction as of 2026-08-19. This document records the intended player-facing design; several parts are not implemented yet.
+> Current design direction as of 2026-08-23. This document records the intended player-facing design; several parts are not implemented yet.
 
 ## Role In Progression
 
@@ -13,11 +13,13 @@ The ritual uses **six artifact sacrifices**. Four represent the classical elemen
 | Air | **Heavy Core** | **Gale Core** | Air Temple / Gale Core path exists and now rewards the Heavy Core. |
 | Water | **Heart of the Sea** | **Elder Guardian** | Ocean Monument / Elder Guardian path exists and now rewards the Heart of the Sea. |
 | Fire | **Nether Reactor Core** | **Wildfire** | Initial path implemented: a rare Stage 2+ Nether guardian roams, attacks undead, and guarantees the core. |
-| Earth | **Lodestone** | **Custom Earth Guardian** | Working item choice. The guardian's defining mechanic is terrain construction: it places/builds blocks between itself and the player, forcing the player to mine through its defenses. |
+| Earth | **Undecided** | **Custom Earth Guardian** | Confirmed Jungle Pyramid labyrinth path. The blind guardian permanently excavates and relocates maze-owned blocks while hunting players through the structure. |
 | Death | **Nether Star** | **Wither** | The Wither is the Death-associated challenge and the Nether Star is its sacrifice. |
 | Life | **Totem of Undying** | **Evoker** | The Evoker/Totem connection matches Retold's existing illager lore around avoiding death. |
 
-The **Nether Reactor Core** is the confirmed Fire artifact. The **Lodestone** remains a working Earth choice and may still change.
+The **Nether Reactor Core** is the confirmed Fire artifact. The Earth artifact remains undecided;
+Lodestone is still a candidate, but the design must prevent its ordinary acquisition from bypassing
+the guardian path if it is retained.
 
 ## Ritual Rules
 
@@ -65,9 +67,53 @@ need in-game verification.
 
 Earth uses a new Retold mob rather than repurposing an existing Minecraft boss.
 
-Its defining combat behavior is **building with the terrain**. The guardian creates block barriers and defenses between itself and the player. Reaching it requires the player to mine through those defenses, making mining itself a central part of the encounter rather than using an ordinary combat boss with an Earth visual theme.
+Every newly generated Jungle Pyramid contains a deterministic, seed-randomized **Earth
+Labyrinth** beneath it. Solving the pyramid's existing lever puzzle reveals the staircase into the
+maze. Already-generated Jungle Pyramids remain untouched; upgraded worlds must explore newly
+generated terrain to find the enhanced structure. The intended footprint is approximately 40–60
+blocks wide across two connected levels. The upper maze floor lies 64 blocks below the pyramid
+base, and the lower floor lies another seven blocks down. A long walkable switchback staircase
+connects the secret room to the fixed entrance; the maze has a fixed central guardian chamber,
+multiple stairs, loops, alternate routes, and randomized room modules. The exact trap, puzzle, and
+treasure-room contents remain to be designed.
 
-The current Earth sacrifice is the **Lodestone**. The guardian's final name, appearance, location, exact block-placement rules, and acquisition flow are still to be designed.
+The labyrinth should read as an ancient cave network that was cut, reinforced, and occupied rather
+than as a regular block-built grid. Its implemented base geometry offsets junctions from their
+logical cells, bends connecting tunnels through deterministic intermediate points, and uses
+separated rough tunnels, irregular junction caverns, and a depth-aware Stone, Deepslate, Andesite,
+and Tuff palette. Cobblestone and Mossy Cobblestone are limited to ruined structural accents and
+the access stairs.
+
+Before Stage 2, the guardian is an immovable, indestructible ancient jungle stone statue in the
+central chamber. It has no AI, boss bar, damage, knockback, pushing, or portal movement. Reaching
+Stage 2 makes it eligible to awaken, but it remains dormant until a player returns to the chamber.
+Its persisted encounter lifecycle is `DORMANT → AWAKENING → ROAMING/COMBAT → DEFEATED`. A defeated
+labyrinth remains permanently cleared and its guardian does not respawn.
+
+The guardian is blind. It patrols and navigates through its knowledge of the labyrinth while mining,
+movement, block placement, containers, projectiles, explosions, direct damage, and very close
+ground contact provide differently weighted vibration clues. Sneaking reduces movement noise, and
+the guardian investigates a remembered vibration position instead of receiving perfect awareness
+through walls. In multiplayer it chooses among actual vibration sources rather than automatically
+knowing every player's position.
+
+Its defining combat behavior is **permanently reshaping the maze**. The guardian excavates only
+maze-owned blocks to create paths for itself, retains the removed material as a bounded reserve,
+and relocates that material into persistent barriers elsewhere. It may roam and fight throughout
+the labyrinth before withdrawing toward the central chamber under pressure. It never edits the
+entrance staircase, containers, puzzle mechanisms, player-placed blocks, block entities, unrelated
+cave terrain, or positions outside the labyrinth. Every edit must obey `mobGriefing`, NeoForge's
+entity-griefing hook, and `RetoldWorldProtection`. Relocation rather than unlimited creation avoids
+an infinite block farm while leaving a permanent physical record of the encounter.
+
+The guardian's final name, exact model and palette, attacks, room-module contents, and Earth
+sacrifice are still to be designed. The initial implementation replaces new Jungle Pyramid starts
+with a compatible composite structure under the same registry id, attaches a serialized labyrinth
+piece, and places the deterministic two-level maze, safe secret-room staircase, carved cave
+tunnels, irregular junction caverns, and ladder connections using a provisional natural-stone
+palette. The statue,
+guardian behavior, encounter persistence, room modules, reward, ritual wiring, and final visual
+treatment are not implemented yet.
 
 ### Death — Wither
 
@@ -98,6 +144,9 @@ The current implementation is intentionally behind this design:
   survival-obtainable while the other acquisition paths are unfinished.
 - Fire is accepted and persisted but is not yet required for hatching. Earth is represented in
   saved ritual state but is not yet accepted or required.
+- `RetoldRitualOffering.EARTH` still carries `Lodestone` as its unexposed working label. Because no
+  Earth item is accepted yet and the saved mask stores only the stable Earth bit, the final artifact
+  can remain undecided without changing current survival behavior or moving that save-format bit.
 
 Implementation should turn on the complete six-sacrifice hatch requirement only when Earth is
 survival-obtainable.

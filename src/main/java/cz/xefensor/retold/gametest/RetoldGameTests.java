@@ -94,6 +94,7 @@ import cz.xefensor.retold.worldgen.RetoldRuinedPortalGameTests;
 import cz.xefensor.retold.worldgen.RetoldStructureRemovalGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldAirTempleDiscoveryGameTests;
 import cz.xefensor.retold.worldgen.air.RetoldGaleCoreGameTests;
+import cz.xefensor.retold.worldgen.earth.RetoldEarthLabyrinthGameTests;
 import cz.xefensor.retold.worldgen.fire.RetoldWildfireGameTests;
 import cz.xefensor.retold.worldgen.portal.RetoldNetherPortalDrainGameTests;
 import net.minecraft.core.BlockPos;
@@ -386,6 +387,7 @@ public final class RetoldGameTests {
         RetoldVillagerTeachingGameTests.register(event, environment);
         RetoldAirTempleDiscoveryGameTests.register(event, environment);
         RetoldGaleCoreGameTests.register(event, environment);
+        RetoldEarthLabyrinthGameTests.register(event, environment);
         RetoldWildfireGameTests.register(event, environment);
         RetoldRuinedPortalGameTests.register(event, environment);
         RetoldStructureRemovalGameTests.register(event, environment);

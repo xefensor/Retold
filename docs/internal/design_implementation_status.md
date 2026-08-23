@@ -72,7 +72,8 @@ Implemented or strongly represented:
 Largest missing or partial design areas:
 
 - full four-element progression
-- Earth element guardian/path plus Wildfire and Air encounter tuning
+- Earth Labyrinth room modules, statue, guardian, reward, and ritual wiring beyond the initial
+  generated two-level maze, plus natural maze verification and Wildfire/Air encounter tuning
 - deciding Stage 1 Nether star / Wither End portal activation
 - remaining Aender late-game rewards and in-dimension teleportation system
 - complete tools/armor/ores progression rework
@@ -218,8 +219,8 @@ Largest missing or partial design areas:
 | Ocean ruins only near shore | Not implemented |
 | Strongholds kept to 3 | Not implemented / unclear | Still planned. |
 | Villages spawn farther/scarcer | Not implemented / unclear | `NoVillageNearWorldSpawnMixin` exists, but full village scarcity design not confirmed here. |
-| Jungle/desert pyramids as boss tombs | Deferred/TBD | Maybe still planned, but design is not final. |
-| Four element temples/challenges | Partial | Water/ocean and Air Temple paths exist. Air has floating islands, wind, Breezes, a WIP Gale Core that now drops Heavy Core, and a Stage 2 cartographer map. Fire deliberately uses a rare roaming Stage 2+ Wildfire rather than a temple and now provides Nether Reactor Core. Focused tests cover these initial paths, but Wildfire and Air pacing/presentation need natural verification. The Earth guardian/path is missing. Element order should be free. |
+| Jungle/desert pyramids as boss tombs | Partial | Newly generated Jungle Pyramids now use a compatible composite structure containing the initial Earth Labyrinth, while saved vanilla pyramid pieces remain unchanged. Additional Jungle Pyramid content and any Desert Pyramid boss tomb remain undecided. |
+| Four element temples/challenges | Partial | Water/ocean and Air Temple paths exist. Air has floating islands, wind, Breezes, a WIP Gale Core that now drops Heavy Core, and a Stage 2 cartographer map. Fire deliberately uses a rare roaming Stage 2+ Wildfire rather than a temple and now provides Nether Reactor Core. Focused tests cover these initial paths, but Wildfire and Air pacing/presentation need natural verification. Earth is confirmed as a deterministic randomized two-level labyrinth beneath every newly generated Jungle Pyramid, entered through its lever-puzzle room; existing pyramids remain untouched. `EarthJungleTempleStructure` preserves the vanilla structure id for locate/maps and creates a serialized temple wrapper plus labyrinth piece. `EarthLabyrinthPlanner` and `EarthLabyrinthGenerator` provide a deterministic connected 41- or 53-block cave maze whose floors are 64 and 71 blocks below the pyramid base. Access uses the unused center tile of the revealed vanilla chamber, then a narrow eight-block ladder shaft before any horizontal or broad carving begins, preserving the surrounding redstone puzzle. The maze uses fixed entrance/guardian anchors, loops, a long walkable switchback staircase, deterministically offset junctions, bent connecting routes, separated rough tunnel shells, irregular junction caverns, depth-aware natural stone, and multiple ladder links. Focused tests cover topology, registry replacement, serialization compatibility, access routing, tunnel shells, and placed geometry. Natural multi-seed and chunk-border generation, collision behavior, palette/readability, and existing-world behavior still need direct verification. Room modules, the statue/entity, encounter persistence, combat, reward, and ritual wiring remain missing. Element order should be free. |
 | Sunflowers point to significant structure | Not implemented |
 
 ## Ocean Monument And Water Element

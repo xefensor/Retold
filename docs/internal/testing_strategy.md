@@ -508,6 +508,21 @@ path at a deterministic successful candidate, verifies that no Dried Ghast is ge
 confirms that the block itself remains placeable. This narrow worldgen hook does not justify mob or
 TPS selectors; naturally verify fresh Nether fossils across multiple seeds.
 
+For the pure Earth Labyrinth topology, run the JUnit
+`cz.xefensor.retold.worldgen.earth.EarthLabyrinthPlannerTest`. It samples deterministic layout
+variation and requires 512 seeds to keep both levels, every cell, and the guardian chamber reachable
+from the fixed entrance, with multiple stairs, loops, adjacent unique passages, and the intended
+41- or 53-block footprint; it also guards stable world/structure-position seed derivation. Run the
+exact `retold:jungle_pyramids_use_earth_labyrinth_structure`,
+`retold:earth_labyrinth_pieces_round_trip_without_upgrading_old_pyramids`,
+`retold:earth_labyrinth_staircase_leaves_puzzle_room_safely`, and
+`retold:earth_labyrinth_piece_places_connected_maze_geometry` GameTests for registry replacement,
+new/old serialized-piece compatibility, safe lever-room egress, and representative placed cavern,
+tunnel interior/shell, ladder, and entrance geometry. These tests do not prove natural placement. Verify multiple
+fresh seeds, both footprint sizes, all pyramid orientations, height extremes, chunk borders, caves,
+neighboring structures, and an upgraded-world pyramid before describing world generation as fully
+verified. Protected collision and ownership behavior must be added and tested with the guardian.
+
 For sparse Nether forests, run the exact
 `retold:nether_forests_use_sparse_desert_vegetation` selector. It reads the modified biome registry,
 verifies that both forests replaced every targeted dense vanilla placement with the Retold sparse
