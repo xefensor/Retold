@@ -12,6 +12,7 @@ import cz.xefensor.retold.combat.RetoldTargetSource;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.gametest.framework.BuiltinTestFunctions;
 import net.minecraft.gametest.framework.FunctionGameTestInstance;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -26,6 +27,7 @@ import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 
@@ -57,6 +59,13 @@ public final class RetoldDamageFleeGameTests {
                 new InlineGameTest(
                         testData,
                         RetoldDamageFleeGameTests::passiveMobsFleeEverySuccessfulDamageSource
+                )
+        );
+        event.registerTest(
+                id("land_mob_flee_paths_do_not_enter_water"),
+                new InlineGameTest(
+                        testData,
+                        RetoldDamageFleeGameTests::landMobFleePathsDoNotEnterWater
                 )
         );
         event.registerTest(
@@ -170,6 +179,81 @@ public final class RetoldDamageFleeGameTests {
         }
 
         helper.succeed();
+    }
+
+    private static void landMobFleePathsDoNotEnterWater(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+            }
+        }
+
+        var sheep = helper.spawn(EntityTypes.SHEEP, 8, 2, 8);
+
+        for (int x = 3; x <= 7; x++) {
+            for (int z = 7; z <= 9; z++) {
+                helper.setBlock(new BlockPos(x, 2, z), Blocks.WATER);
+            }
+        }
+
+        helper.runAfterDelay(2, () -> {
+            Vec3 danger = helper.absoluteVec(new Vec3(10.5D, 2.0D, 8.5D));
+            Vec3 directDestination = helper.absoluteVec(new Vec3(2.5D, 2.0D, 8.5D));
+            BlockPos destination = RetoldFleeMovement.chooseDestination(
+                    sheep,
+                    danger,
+                    directDestination,
+                    8.0D
+            );
+
+            helper.assertFalse(
+                    level.getFluidState(destination).is(FluidTags.WATER),
+                    "Land flight must replace a water destination with a dry alternative"
+            );
+
+            RetoldAiControl.claim(
+                    sheep,
+                    RetoldAiControlMode.FLEE,
+                    level.getGameTime(),
+                    40
+            );
+            boolean started = RetoldFleeMovement.moveTo(
+                    sheep,
+                    destination,
+                    1.2D,
+                    level.getGameTime(),
+                    1,
+                    1.0D
+            );
+            Path path = sheep.getNavigation().getPath();
+
+            helper.assertTrue(
+                    !started || path != null,
+                    "A started land-flight route must expose its path for water validation"
+            );
+
+            if (!started) {
+                helper.assertTrue(
+                        sheep.getNavigation().isDone(),
+                        "A rejected water-crossing route must leave navigation stopped"
+                );
+                helper.succeed();
+                return;
+            }
+
+            for (int index = path.getNextNodeIndex(); index < path.getNodeCount(); index++) {
+                BlockPos nodePos = path.getNodePos(index);
+                helper.assertFalse(
+                        level.getFluidState(nodePos).is(FluidTags.WATER)
+                                || level.getFluidState(nodePos.below()).is(FluidTags.WATER),
+                        "Land flight path node " + nodePos + " must not enter or cross water"
+                );
+            }
+
+            helper.succeed();
+        });
     }
 
     private static void badlyWoundedWildPredatorsFleeAttackers(

@@ -15,6 +15,8 @@ import net.minecraft.world.entity.monster.Guardian;
  * Global rules that must apply regardless of which vanilla or Retold system owns combat.
  */
 public final class RetoldMobTargetPolicy {
+    private static final int RECENT_DIRECT_ATTACK_TICKS = 20 * 5;
+
     private RetoldMobTargetPolicy() {
     }
 
@@ -43,6 +45,10 @@ public final class RetoldMobTargetPolicy {
         }
 
         if (shouldBlockToleratedFactionHostility(attacker, target, source)) {
+            return true;
+        }
+
+        if (shouldBlockNeutralVillageDefenderHostility(attacker, target, source)) {
             return true;
         }
 
@@ -102,5 +108,37 @@ public final class RetoldMobTargetPolicy {
         return attackerFaction == RetoldFaction.UNDEAD
                 || attackerFaction == RetoldFaction.SLIMES
                 || attackerFaction == RetoldFaction.AQUATIC_HOSTILES;
+    }
+
+    private static boolean shouldBlockNeutralVillageDefenderHostility(
+            Mob attacker,
+            Entity target,
+            RetoldTargetSource source
+    ) {
+        if (!RetoldFactionMembers.isVillageDefender(attacker)
+                || !(target instanceof LivingEntity livingTarget)) {
+            return false;
+        }
+
+        RetoldFaction targetFaction = RetoldFactionMembers.getFaction(livingTarget);
+
+        if (targetFaction != RetoldFaction.NETHER_REMNANTS
+                && targetFaction != RetoldFaction.ENDERS) {
+            return false;
+        }
+
+        if (source == RetoldTargetSource.RETALIATION
+                || source == RetoldTargetSource.OWNER_DEFENSE
+                || source == RetoldTargetSource.FACTION_ASSIST
+                || source == RetoldTargetSource.TERRITORY_ATTACK) {
+            return false;
+        }
+
+        LivingEntity recentAttacker = attacker.getLastHurtByMob();
+        int attackAge = attacker.tickCount - attacker.getLastHurtByMobTimestamp();
+
+        return recentAttacker != livingTarget
+                || attackAge < 0
+                || attackAge > RECENT_DIRECT_ATTACK_TICKS;
     }
 }

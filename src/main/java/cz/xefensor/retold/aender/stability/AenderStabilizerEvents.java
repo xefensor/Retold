@@ -92,10 +92,10 @@ public final class AenderStabilizerEvents {
         AenderStabilityData stabilityData = AenderStabilityData.get(level);
 
         stabilityData.removeStabilizer(center);
-        invalidateReleasedHaloChunks(level, stabilityData, center);
+        deferReleasedHaloChunks(level, stabilityData, center);
     }
 
-    private static void invalidateReleasedHaloChunks(
+    private static void deferReleasedHaloChunks(
             ServerLevel level,
             AenderStabilityData stabilityData,
             ChunkPos center
@@ -111,13 +111,13 @@ public final class AenderStabilizerEvents {
                 }
 
                 /*
-                 * Stable chunks are marked current while protected. When the last
-                 * stabilizer releases them, they need to rejoin volatile terrain.
+                 * Removing stability drops the forcefield immediately, but terrain
+                 * replacement must not be visible to a player still tracking any
+                 * released chunk. The persistent deferred marker survives unloads
+                 * and restarts until the watcher-aware reality tick releases it.
                  */
                 ChunkAccess chunk = level.getChunk(chunkX, chunkZ);
-                AenderVolatility.forgetGeneratedMark(chunk);
-
-                AenderRealityTickEvents.enqueueIfNeeded(level, chunk);
+                AenderVolatility.markDeferredRelease(chunk);
             }
         }
     }

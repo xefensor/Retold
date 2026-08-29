@@ -453,6 +453,19 @@ ms/tick. Idle/rest was the 7.915 ms/tick peak. Positive storage work recorded 96
 searches in dropped-food/forage, while the other active phases recorded no broad block-position
 work. The complete profile matrix was not selected because only the Villager storage owner changed.
 
+### Dry-Land Flight Focused Rerun
+
+The exact `retold:mob_tps_cow` and `retold:mob_tps_wolf` selectors were rerun on 2026-08-23 after
+urgent ground flight began using bounded land-position sampling and rejecting paths that enter
+water when the mob starts on land. These profiles cover a passive grazer and a predator using the
+shared flight adapter; the complete matrix was not selected because ordinary movement, shared scan
+caches, and work-budget primitives did not change.
+
+All ten 50-mob phases passed below 50 ms/tick. Cow averaged 4.327 idle/rest, 3.853
+dropped-food/forage, 2.638 hunt/targeting, 5.806 danger/social, and 3.083 habitat/day-night
+ms/tick. Wolf averaged 4.624, 4.549, 5.476, 4.753, and 2.921 ms/tick in the same phase order.
+Cow danger/social was the combined 5.806 ms/tick peak.
+
 ## Results
 
 The table below records the original clean baseline described above; later rerun summaries are

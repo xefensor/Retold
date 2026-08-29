@@ -4,11 +4,11 @@ import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
-import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -17,7 +17,6 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.animal.feline.Cat;
 import net.minecraft.world.entity.monster.Creeper;
-import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Map;
@@ -96,7 +95,9 @@ public final class RetoldCreeperAwareness {
             return;
         }
 
-        if (mob instanceof Zombie) {
+        RetoldFaction faction = RetoldFactionMembers.getFaction(mob);
+
+        if (mob instanceof Creeper || faction == RetoldFaction.UNDEAD) {
             stopReaction(mob);
             return;
         }
@@ -323,7 +324,15 @@ public final class RetoldCreeperAwareness {
 
         mob.setSprinting(true);
         if (mob instanceof PathfinderMob pathfinderMob) {
-            RetoldBehaviorMovement.throttledMoveTo(
+            destinationPos = RetoldFleeMovement.chooseDestination(
+                    pathfinderMob,
+                    state.lastThreatPos == null
+                            ? null
+                            : Vec3.atCenterOf(state.lastThreatPos),
+                    destination,
+                    fleeDistance
+            );
+            RetoldFleeMovement.moveTo(
                     pathfinderMob,
                     destinationPos,
                     speed,

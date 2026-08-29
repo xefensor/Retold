@@ -183,8 +183,9 @@ an implementation claim. The completion matrix below and
 
 - No mob deliberately targets or attacks a creeper. Cats hiss and retreat from creepers, and
   creepers avoid cats. When a creeper ignites, mobile creatures flee with species-dependent
-  awareness and reaction delay; zombies do not run. Village defenders also flee an igniting
-  creeper instead of trying to fight it.
+  awareness and reaction delay; Creepers and Undead do not run. Village defenders also flee an
+  igniting creeper instead of trying to fight it. Ground creatures beginning on land choose dry
+  escape destinations and refuse a flee path that enters water.
 - Hunger never overrides alliance, ownership, duty, urgent self-preservation, or creeper safety.
 - Direct violence and an unmistakable active threat bypass a territorial warning. Accidental
   allied damage is ignored unless it becomes repeated or clearly deliberate.
@@ -257,7 +258,9 @@ an implementation claim. The completion matrix below and
   increases monument pressure. Ordinary vanilla Mob and Brain targets cannot bypass Guardian
   tolerance, while explicit Retold-owned retaliation remains available.
 - Village defenders are pacifist-purpose protectors: they attack actual danger to a village,
-  protected player, or allied creature, not arbitrary political enemies.
+  protected player, or allied creature, not arbitrary political enemies. In particular, idle
+  Nether Remnants and Enders are neutral; a recent direct attack or explicit retaliation,
+  owner-defense, faction-assist, or territory-defense source still permits a response.
 - Witches and Illagers normally ignore one another. Witches assist Illagers during raids but are
   not normal territory members. The permanent loose-ally identity is separate from combat
   alignment: a witch must have an active raid, and assist partners must belong to the same raid.
@@ -1428,7 +1431,7 @@ Use this matrix before calling the mob AI system done.
 | --- | --- | --- |
 | Target ownership | Retold-owned targets go through `RetoldCombatTargets` / `RetoldFactionTargetMemory`. | Direct `setTarget`, `setAggressive`, `ATTACK_TARGET`, and `ANGRY_AT` writes only exist in low-level guard helpers, and debug shows source/current target ownership. |
 | Invalid players | Creative and spectator players are never valid retained targets. | `/retoldbehavior get` shows no lasting target or brain target for creative/spectator players. |
-| Creeper safety | No mob deliberately targets or directly melees a creeper; mobile non-zombies flee an active fuse and cats avoid creepers before ignition. | Vanilla, Retold-owned, brain-memory, retained-target, and direct-melee paths reject creepers. Cached awareness produces delayed high-priority flight for pathfinding/flying mobs, and cat retreat preserves vanilla creeper avoidance. |
+| Creeper safety | No mob deliberately targets or directly melees a creeper; mobile non-Undead, non-Creeper mobs flee an active fuse and cats avoid creepers before ignition. | Vanilla, Retold-owned, brain-memory, retained-target, and direct-melee paths reject creepers. Cached awareness produces delayed high-priority flight for pathfinding/flying mobs, ground flight refuses water-crossing paths when starting on land, and cat retreat preserves vanilla creeper avoidance. |
 | Ordinary predator self-defense | Healthy ordinary predators retaliate after successful damage from a valid living attacker. | Real-damage coverage includes wild Wolf, tamed Wolf, Fox, Cat, Ocelot, Dolphin, Spider, and Cave Spider; target and `ATTACK` control use `RETALIATION` ownership, ownership continues after transient damage memory clears, and tame-owner safety is preserved. |
 | Wounded predator disengagement | Wild ordinary predators flee a living attacker for ten seconds when a successful hit leaves them below 25% health. | Hunt/retaliation targets and ownership clear before reasoned `FLEEING` control begins; the exact boundary and tamed, Undead, boss, and territory exemptions are covered, all seven profile species enter the same bounded continuation, and affected exact TPS selectors remain below 50 ms/tick. |
 | Mob griefing | Mob-caused terrain edits obey `mobGriefing`; consuming dropped items does not count as terrain editing. | Retold forage, weak-barrier, and Gale Core paths use `RetoldMobGriefing`, vanilla creeper explosions remain behind NeoForge's entity-griefing hook, and each destructive owner has regression GameTest coverage. |
