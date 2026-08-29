@@ -365,20 +365,50 @@ public final class AenderRealityTickEvents {
         Set<Long> currentlyActive = hasPlayers ? collectPlayerLoadedRegions(level) : Set.of();
         Set<Long> departed = ACTIVE_REGIONS.update(currentlyActive, hasPlayers);
 
-        if (departed.isEmpty()) {
-            return;
-        }
-
         for (long key : departed) {
             AenderVolatility.advanceRegion(level, unpackX(key), unpackZ(key));
         }
 
+        int released = releaseUnwatchedStabilizerChunks(level);
+
+        if (departed.isEmpty() && released == 0) {
+            return;
+        }
+
         int queuedForBlanking = queueUnwatchedStaleChunksForBlanking(level);
         Retold.LOGGER.debug(
-                "Advanced {} unattended Aender region columns and queued {} loaded stale chunks for blanking",
+                "Advanced {} unattended Aender region columns, released {} deferred stabilizer chunks, and queued {} loaded stale chunks for blanking",
                 departed.size(),
+                released,
                 queuedForBlanking
         );
+    }
+
+    private static int releaseUnwatchedStabilizerChunks(ServerLevel level) {
+        AenderStabilityData stability = AenderStabilityData.get(level);
+        int released = 0;
+
+        for (ChunkPos pos : AenderVolatility.retainedChunkPositions()) {
+            ChunkAccess chunk = getLoadedChunk(level, pos.x(), pos.z());
+
+            if (chunk == null) {
+                continue;
+            }
+
+            boolean stable = stability.isStable(pos);
+            boolean watched = !level.getChunkSource().chunkMap.getPlayers(pos, false).isEmpty();
+            boolean deferred = AenderVolatility.isDeferredRelease(chunk);
+
+            if (!AenderDeferredReleasePolicy.shouldRelease(stable, watched, deferred)) {
+                continue;
+            }
+
+            if (AenderVolatility.releaseDeferredMark(chunk)) {
+                released++;
+            }
+        }
+
+        return released;
     }
 
     private static Set<Long> collectPlayerLoadedRegions(ServerLevel level) {

@@ -1143,6 +1143,14 @@ public final class RetoldControlledFleeEvents {
                     speed,
                     WARREN_FLEE_MIN_SPEED
             );
+        } else {
+            Vec3 dangerPos = prey.position().subtract(safeDirection.scale(4.0D));
+            targetPos = RetoldFleeMovement.chooseDestination(
+                    prey,
+                    dangerPos,
+                    target,
+                    fleeDistance
+            );
         }
 
         FleeMemory memory = getActiveFleeMemory(prey, gameTime);
@@ -1173,7 +1181,7 @@ public final class RetoldControlledFleeEvents {
         BlockPos finalTargetPos = targetPos;
         double finalSpeed = speed;
 
-        RetoldBehaviorMovement.throttledMoveTo(
+        RetoldFleeMovement.moveTo(
                 prey,
                 finalTargetPos,
                 finalSpeed,

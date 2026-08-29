@@ -113,6 +113,12 @@ public final class RetoldAenderGameTests {
         registerTest(
                 event,
                 environment,
+                "aender_stabilizer_release_preserves_terrain_until_eligible",
+                RetoldAenderGameTests::stabilizerReleasePreservesTerrainUntilEligible
+        );
+        registerTest(
+                event,
+                environment,
                 "aender_terrain_blocks_have_survival_data",
                 RetoldAenderGameTests::terrainBlocksHaveSurvivalData
         );
@@ -487,6 +493,74 @@ public final class RetoldAenderGameTests {
                 AenderVolatility.advanceTransientRealityForTest();
             }
         });
+    }
+
+    private static void stabilizerReleasePreservesTerrainUntilEligible(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        BlockPos testPos = helper.absolutePos(new BlockPos(7, 2, 7));
+        ChunkPos chunkPos = new ChunkPos(testPos.getX() >> 4, testPos.getZ() >> 4);
+        ChunkAccess chunk = level.getChunk(chunkPos.x(), chunkPos.z());
+        BlockPos sentinel = sentinelPos(level, chunkPos);
+
+        try {
+            AenderChunkRealityData deferredData = AenderChunkRealityData.deferredRelease(42L);
+            Tag encoded = AenderChunkRealityData.CODEC.encodeStart(NbtOps.INSTANCE, deferredData)
+                    .getOrThrow(IllegalStateException::new);
+            AenderChunkRealityData decoded = AenderChunkRealityData.CODEC.parse(NbtOps.INSTANCE, encoded)
+                    .getOrThrow(IllegalStateException::new);
+            helper.assertValueEqual(
+                    decoded,
+                    deferredData,
+                    "A deferred stabilizer release must survive chunk attachment serialization"
+            );
+
+            CompoundTag legacyCurrent = new CompoundTag();
+            legacyCurrent.putLong("signature", 17L);
+            AenderChunkRealityData decodedLegacy = AenderChunkRealityData.CODEC
+                    .parse(NbtOps.INSTANCE, legacyCurrent)
+                    .getOrThrow(IllegalStateException::new);
+            helper.assertFalse(
+                    decodedLegacy.deferredRelease(),
+                    "Existing current chunk attachments must not migrate into deferred release"
+            );
+
+            AenderVolatility.retainForChunk(chunk);
+            AenderVolatility.markGenerated(chunk);
+            level.setBlock(sentinel, Blocks.DIAMOND_BLOCK.defaultBlockState(), 3);
+
+            AenderVolatility.markDeferredRelease(chunk);
+
+            helper.assertTrue(
+                    AenderVolatility.isDeferredRelease(chunk),
+                    "A released stabilizer chunk must persist its deferred state"
+            );
+            helper.assertFalse(
+                    AenderVolatility.needsRegeneration(chunk),
+                    "A deferred release must not enter regeneration while watched"
+            );
+            helper.assertTrue(
+                    level.getBlockState(sentinel).is(Blocks.DIAMOND_BLOCK),
+                    "Deferring release must preserve the watched chunk's terrain and edits"
+            );
+
+            helper.assertTrue(
+                    AenderVolatility.releaseDeferredMark(chunk),
+                    "The watcher lifecycle must be able to release a deferred chunk"
+            );
+            helper.assertTrue(
+                    AenderVolatility.needsRegeneration(chunk),
+                    "An eligible released chunk must rejoin ordinary volatile regeneration"
+            );
+            helper.assertTrue(
+                    level.getBlockState(sentinel).is(Blocks.DIAMOND_BLOCK),
+                    "Eligibility alone must not mutate terrain before the blanking queue owns it"
+            );
+
+            helper.succeed();
+        } finally {
+            AenderVolatility.markGenerated(chunk);
+            level.setBlock(sentinel, Blocks.AIR.defaultBlockState(), 3);
+        }
     }
 
     private static void terrainBlocksHaveSurvivalData(GameTestHelper helper) {

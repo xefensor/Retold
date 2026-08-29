@@ -151,19 +151,61 @@ public final class AenderVolatility {
         chunk.markUnsaved();
     }
 
+    /**
+     * Persists a released stabilizer halo without making its terrain eligible
+     * for replacement while a client can still see the chunk.
+     */
+    public static synchronized void markDeferredRelease(ChunkAccess chunk) {
+        long signature = chunkEpochSignature(chunk);
+        CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), signature);
+        chunk.setData(
+                AenderAttachments.CHUNK_REALITY,
+                AenderChunkRealityData.deferredRelease(signature)
+        );
+        chunk.markUnsaved();
+    }
+
+    public static synchronized boolean isDeferredRelease(ChunkAccess chunk) {
+        AenderChunkRealityData persisted = chunk.getExistingDataOrNull(AenderAttachments.CHUNK_REALITY);
+        return persisted != null && persisted.deferredRelease();
+    }
+
+    /**
+     * Converts a deferred release into the ordinary stale state after its last
+     * watcher leaves. The existing blanking and regeneration queues own all
+     * terrain mutation after this boundary.
+     */
+    public static synchronized boolean releaseDeferredMark(ChunkAccess chunk) {
+        if (!isDeferredRelease(chunk)) {
+            return false;
+        }
+
+        forgetGeneratedMark(chunk);
+        return true;
+    }
+
     public static synchronized boolean wasGeneratedThisSession(ChunkAccess chunk) {
         return !needsRegeneration(chunk);
     }
 
     public static synchronized boolean needsRegeneration(ChunkAccess chunk) {
+        AenderChunkRealityData persisted = chunk.getExistingDataOrNull(AenderAttachments.CHUNK_REALITY);
+        long currentSignature = chunkEpochSignature(chunk);
+
+        if (persisted != null && persisted.deferredRelease()) {
+            if (persisted.signature() != currentSignature) {
+                return true;
+            }
+
+            CHUNK_GENERATION_SIGNATURES.put(chunkKey(chunk), persisted.signature());
+            return false;
+        }
+
         Long previous = CHUNK_GENERATION_SIGNATURES.get(chunkKey(chunk));
 
         if (previous != null) {
-            return previous.longValue() != chunkEpochSignature(chunk);
+            return previous.longValue() != currentSignature;
         }
-
-        AenderChunkRealityData persisted = chunk.getExistingDataOrNull(AenderAttachments.CHUNK_REALITY);
-        long currentSignature = chunkEpochSignature(chunk);
 
         if (persisted == null) {
             /*

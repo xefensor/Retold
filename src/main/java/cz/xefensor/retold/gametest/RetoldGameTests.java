@@ -238,6 +238,12 @@ public final class RetoldGameTests {
         registerTest(
                 event,
                 environment,
+                "village_defenders_ignore_neutral_piglins_and_endermen_until_attacked",
+                RetoldGameTests::villageDefendersIgnoreNeutralPiglinsAndEndermenUntilAttacked
+        );
+        registerTest(
+                event,
+                environment,
                 "silverfish_and_endermites_are_unrelated",
                 RetoldGameTests::silverfishAndEndermitesAreUnrelated
         );
@@ -250,8 +256,8 @@ public final class RetoldGameTests {
         registerTest(
                 event,
                 environment,
-                "ignited_creeper_causes_delayed_flight_except_zombies",
-                RetoldGameTests::ignitedCreeperCausesDelayedFlightExceptZombies
+                "ignited_creeper_causes_delayed_flight_except_creepers_and_undead",
+                RetoldGameTests::ignitedCreeperCausesDelayedFlightExceptCreepersAndUndead
         );
         registerTest(
                 event,
@@ -1299,7 +1305,43 @@ public final class RetoldGameTests {
         });
     }
 
-    private static void ignitedCreeperCausesDelayedFlightExceptZombies(
+    private static void villageDefendersIgnoreNeutralPiglinsAndEndermenUntilAttacked(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        var defender = helper.spawn(EntityTypes.IRON_GOLEM, 2, 2, 2);
+        var piglin = helper.spawn(EntityTypes.PIGLIN, 4, 2, 2);
+        var enderman = helper.spawn(EntityTypes.ENDERMAN, 6, 2, 2);
+
+        defender.setTarget(piglin);
+        helper.assertTrue(
+                defender.getTarget() == null,
+                "A Village Defender must not target an idle neutral Piglin"
+        );
+
+        defender.setTarget(enderman);
+        helper.assertTrue(
+                defender.getTarget() == null,
+                "A Village Defender must not target an idle neutral Enderman"
+        );
+
+        helper.assertTrue(
+                defender.hurtServer(
+                        level,
+                        level.damageSources().mobAttack(piglin),
+                        1.0F
+                ),
+                "The Piglin must deal real damage before defender retaliation is tested"
+        );
+        defender.setTarget(piglin);
+        helper.assertTrue(
+                defender.getTarget() == piglin,
+                "A Village Defender must still retaliate against a neutral mob that attacked it"
+        );
+        helper.succeed();
+    }
+
+    private static void ignitedCreeperCausesDelayedFlightExceptCreepersAndUndead(
             GameTestHelper helper
     ) {
         ServerLevel level = helper.getLevel();
@@ -1308,6 +1350,8 @@ public final class RetoldGameTests {
         var cow = helper.spawn(EntityTypes.COW, 1, 2, 1);
         var ironGolem = helper.spawn(EntityTypes.IRON_GOLEM, 1, 2, 3);
         Zombie zombie = helper.spawn(EntityTypes.ZOMBIE, 2, 2, 3);
+        var skeleton = helper.spawn(EntityTypes.SKELETON, 3, 2, 3);
+        var otherCreeper = helper.spawn(EntityTypes.CREEPER, 3, 2, 5);
         var ghast = helper.spawn(EntityTypes.GHAST, 1, 4, 5);
 
         creeper.ignite();
@@ -1324,6 +1368,10 @@ public final class RetoldGameTests {
         RetoldCreeperAwareness.tick(level, ironGolem, gameTime + 3L, false);
         RetoldCreeperAwareness.tick(level, zombie, gameTime, true);
         RetoldCreeperAwareness.tick(level, zombie, gameTime + 20L, true);
+        RetoldCreeperAwareness.tick(level, skeleton, gameTime, true);
+        RetoldCreeperAwareness.tick(level, skeleton, gameTime + 20L, true);
+        RetoldCreeperAwareness.tick(level, otherCreeper, gameTime, true);
+        RetoldCreeperAwareness.tick(level, otherCreeper, gameTime + 20L, true);
         RetoldCreeperAwareness.tick(level, ghast, gameTime, true);
         RetoldCreeperAwareness.tick(level, ghast, gameTime + 8L, false);
 
@@ -1341,11 +1389,19 @@ public final class RetoldGameTests {
         );
         helper.assertFalse(
                 RetoldCreeperAwareness.isReacting(zombie),
-                "Zombie-family mobs must hold their ground instead of fleeing creepers"
+                "Zombies must hold their ground instead of fleeing creepers"
         );
-        helper.assertTrue(
+        helper.assertFalse(
+                RetoldCreeperAwareness.isReacting(skeleton),
+                "Other Undead families must hold their ground instead of fleeing creepers"
+        );
+        helper.assertFalse(
+                RetoldCreeperAwareness.isReacting(otherCreeper),
+                "Creepers must not flee another creeper's active fuse"
+        );
+        helper.assertFalse(
                 RetoldCreeperAwareness.isReacting(ghast),
-                "Mobile flying mobs without Pathfinder navigation must also flee creepers"
+                "Flying Undead must hold their ground instead of fleeing creepers"
         );
         helper.succeed();
     }

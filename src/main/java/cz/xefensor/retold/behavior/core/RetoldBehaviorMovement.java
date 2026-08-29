@@ -7,6 +7,7 @@ import cz.xefensor.retold.behavior.performance.RetoldAiLod;
 import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -228,7 +229,8 @@ public final class RetoldBehaviorMovement {
                 gameTime,
                 minIntervalTicks,
                 repathDistanceSquared,
-                0
+                0,
+                false
         );
     }
 
@@ -251,7 +253,39 @@ public final class RetoldBehaviorMovement {
                 gameTime,
                 minIntervalTicks,
                 repathDistanceSquared,
-                1
+                1,
+                false
+        );
+    }
+
+    /**
+     * Starts ordinary ground navigation only when the resulting route stays out of water.
+     * Land mobs use this for urgent Retold flight so a direct danger vector cannot make them
+     * choose drowning as the apparently shortest escape.
+     */
+    public static boolean throttledMoveToAvoidingWater(
+            PathfinderMob mob,
+            BlockPos target,
+            double speed,
+            long gameTime,
+            int minIntervalTicks,
+            double repathDistanceSquared
+    ) {
+        if (target == null) {
+            return false;
+        }
+
+        return throttledMoveTo(
+                mob,
+                target.getX() + 0.5D,
+                target.getY(),
+                target.getZ() + 0.5D,
+                speed,
+                gameTime,
+                minIntervalTicks,
+                repathDistanceSquared,
+                1,
+                true
         );
     }
 
@@ -264,7 +298,8 @@ public final class RetoldBehaviorMovement {
             long gameTime,
             int minIntervalTicks,
             double repathDistanceSquared,
-            int reachRange
+            int reachRange,
+            boolean avoidWater
     ) {
         if (mob == null) {
             return false;
@@ -279,6 +314,7 @@ public final class RetoldBehaviorMovement {
                         && distanceSquared(x, y, z, memory.x, memory.y, memory.z) <= repathDistanceSquared
                         && Math.abs(speed - memory.speed) < 0.001D
                         && memory.reachRange == reachRange
+                        && memory.avoidWater == avoidWater
         ) {
             RetoldBehaviorPerf.recordPathRequest(true);
             return true;
@@ -294,6 +330,7 @@ public final class RetoldBehaviorMovement {
                                 z,
                                 speed,
                                 reachRange,
+                                avoidWater,
                                 gameTime + Math.max(1, minIntervalTicks)
                         )
                 );
@@ -326,6 +363,13 @@ public final class RetoldBehaviorMovement {
             );
         });
 
+        if (started[0]
+                && avoidWater
+                && pathUsesWater(mob, mob.getNavigation().getPath())) {
+            RetoldAiControl.withNavigationBypass(mob.getNavigation()::stop);
+            started[0] = false;
+        }
+
         if (started[0]) {
             PATH_MEMORIES.put(
                     mob,
@@ -335,6 +379,7 @@ public final class RetoldBehaviorMovement {
                             z,
                             speed,
                             reachRange,
+                            avoidWater,
                             gameTime + Math.max(1, minIntervalTicks)
                     )
             );
@@ -343,6 +388,23 @@ public final class RetoldBehaviorMovement {
         }
 
         return started[0];
+    }
+
+    private static boolean pathUsesWater(PathfinderMob mob, Path path) {
+        if (mob == null || path == null) {
+            return false;
+        }
+
+        for (int index = path.getNextNodeIndex(); index < path.getNodeCount(); index++) {
+            BlockPos nodePos = path.getNodePos(index);
+
+            if (mob.level().getFluidState(nodePos).is(FluidTags.WATER)
+                    || mob.level().getFluidState(nodePos.below()).is(FluidTags.WATER)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static boolean claimAndMoveToBlock(
@@ -583,6 +645,7 @@ public final class RetoldBehaviorMovement {
             double z,
             double speed,
             int reachRange,
+            boolean avoidWater,
             long nextPathAt
     ) {
     }
