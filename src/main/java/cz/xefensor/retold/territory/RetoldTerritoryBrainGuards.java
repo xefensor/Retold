@@ -3,6 +3,7 @@ package cz.xefensor.retold.territory;
 import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
 import cz.xefensor.retold.combat.RetoldMobTargetPolicy;
+import cz.xefensor.retold.combat.RetoldTargetRangePolicy;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -108,6 +109,15 @@ public final class RetoldTerritoryBrainGuards {
         }
 
         if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
+            clearInvalidAttackState(mob, target);
+            return true;
+        }
+
+        if (RetoldTargetRangePolicy.shouldBlockTargetAssignment(
+                mob,
+                target,
+                null
+        )) {
             clearInvalidAttackState(mob, target);
             return true;
         }

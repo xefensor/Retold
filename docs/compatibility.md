@@ -126,6 +126,13 @@ false so Retold's defaults and entries from other compatibility packs remain ava
 
 ## Faction Entity Tags
 
+`retold:shared_defense_species` is an additive exact-species defense tag. When a tagged entity takes
+real health damage, nearby adult entities of that same type may protect it if they hear the call at
+close range or see the attacker. Retold defaults this tag to Wolves and Polar Bears. Tamed tagged
+animals cooperate only when both are tame with the same owner; sitting allies remain unavailable.
+Adding an entity type means its ordinary adult mobs can acquire and pursue attackers, so passive
+species that should flee together rather than fight must not be included.
+
 Compatibility datapacks can classify an entity type into one Retold faction by appending it to one
 of these tags:
 
@@ -149,10 +156,19 @@ of these tags:
 | `retold:factions/enders` | Ender faction relationships. |
 | `retold:alliances/illager_loose_allies` | Permanent non-hostile Illager alignment with combat cooperation only while both entities share the same active raid. This does not grant Illager territory membership. |
 
-Faction describes diplomacy, target selection, assistance, retaliation, and configured territory
-membership. It does not assign a Retold mob profile or take over the entity's daily-life AI. A
+Faction describes diplomacy, target selection, retaliation, configured territory membership, and
+shared defense for explicitly cooperative factions. Broad Undead, Enders, Guardians, and other
+specialist identities retain their narrower species, stage, or encounter owners instead of gaining
+generic faction-wide defense. Faction membership does not assign a Retold mob profile or take over
+the entity's daily-life AI. A
 compatibility pack may therefore classify a third-party mob without opting it into hunger,
 foraging, homes, or another profile. Unknown and untagged entity types remain unfactioned.
+
+Target distance remains bounded even when a compatibility pack adds a faction identity. Mobs with
+a Retold profile use that profile's acquisition and retention limits. Unknown or unprofiled mobs
+fall back to their declared `FOLLOW_RANGE`, clamped to 12–48 blocks for acquisition and at most
+64 blocks for retention. A compatibility addon that needs a deliberate longer-range specialist
+should provide a Retold profile or a narrow code integration rather than inflating faction scans.
 
 Add an entity type exactly as for the block example, using the entity-type path. For example, this
 classifies `examplemod:ashen_guard` as an Undead entity:

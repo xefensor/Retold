@@ -25,6 +25,10 @@ public final class RetoldBehaviorPerf {
     private static final LongAdder AI_POSITION_SCAN_BUDGET_SKIPS = new LongAdder();
     private static final LongAdder PATH_REQUESTS = new LongAdder();
     private static final LongAdder PATH_SKIPS = new LongAdder();
+    private static final LongAdder GROUND_PATH_FAILURES = new LongAdder();
+    private static final LongAdder GROUND_PATH_BACKOFFS = new LongAdder();
+    private static final LongAdder GROUND_PATH_STUCK = new LongAdder();
+    private static final LongAdder GROUND_PATH_RECOVERIES = new LongAdder();
     private static final LongAdder SIGHT_REQUESTS = new LongAdder();
     private static final LongAdder SIGHT_CACHE_HITS = new LongAdder();
     private static final LongAdder SIGHT_BUDGET_SKIPS = new LongAdder();
@@ -117,6 +121,22 @@ public final class RetoldBehaviorPerf {
         }
     }
 
+    public static void recordGroundPathFailure() {
+        GROUND_PATH_FAILURES.increment();
+    }
+
+    public static void recordGroundPathBackoff() {
+        GROUND_PATH_BACKOFFS.increment();
+    }
+
+    public static void recordGroundPathStuck() {
+        GROUND_PATH_STUCK.increment();
+    }
+
+    public static void recordGroundPathRecovery() {
+        GROUND_PATH_RECOVERIES.increment();
+    }
+
     public static void recordSightCache(boolean cacheHit) {
         SIGHT_REQUESTS.increment();
 
@@ -195,6 +215,10 @@ public final class RetoldBehaviorPerf {
         AI_POSITION_SCAN_BUDGET_SKIPS.reset();
         PATH_REQUESTS.reset();
         PATH_SKIPS.reset();
+        GROUND_PATH_FAILURES.reset();
+        GROUND_PATH_BACKOFFS.reset();
+        GROUND_PATH_STUCK.reset();
+        GROUND_PATH_RECOVERIES.reset();
         SIGHT_REQUESTS.reset();
         SIGHT_CACHE_HITS.reset();
         SIGHT_BUDGET_SKIPS.reset();
@@ -226,6 +250,10 @@ public final class RetoldBehaviorPerf {
         long aiPositionScanBudgetSkips = AI_POSITION_SCAN_BUDGET_SKIPS.sum();
         long pathRequests = PATH_REQUESTS.sum();
         long pathSkips = PATH_SKIPS.sum();
+        long groundPathFailures = GROUND_PATH_FAILURES.sum();
+        long groundPathBackoffs = GROUND_PATH_BACKOFFS.sum();
+        long groundPathStuck = GROUND_PATH_STUCK.sum();
+        long groundPathRecoveries = GROUND_PATH_RECOVERIES.sum();
         long sightRequests = SIGHT_REQUESTS.sum();
         long sightCacheHits = SIGHT_CACHE_HITS.sum();
         long sightBudgetSkips = SIGHT_BUDGET_SKIPS.sum();
@@ -262,6 +290,9 @@ public final class RetoldBehaviorPerf {
                 + "\nPath requests: " + pathRequests
                 + "\nPath skips: " + pathSkips
                 + " (" + percentText(pathSkips, pathRequests) + ")"
+                + "\nGround path failures/backoffs/stuck/recoveries: "
+                + groundPathFailures + "/" + groundPathBackoffs + "/"
+                + groundPathStuck + "/" + groundPathRecoveries
                 + "\nSight requests: " + sightRequests
                 + "\nSight cache hits: " + sightCacheHits
                 + " (" + percentText(sightCacheHits, sightRequests) + ")"

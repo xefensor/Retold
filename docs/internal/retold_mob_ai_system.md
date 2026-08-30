@@ -132,8 +132,10 @@ Main faction design:
   membership takes precedence over `retold:alliances/illager_loose_allies` with a warning.
 - Classification is cached by entity type and invalidated after server tag reload. Faction target
   and retaliation goals are added or removed for loaded mobs as their effective membership changes.
-- Faction membership is independent from mob profiles: it supplies diplomacy, assist, retaliation,
-  and territory identity without assigning daily-life behavior to an unknown third-party mob.
+- Faction membership is independent from mob profiles: it supplies diplomacy, selective shared
+  defense, retaliation, and territory identity without assigning daily-life behavior to an unknown
+  third-party mob. Only explicitly social factions use the generic successful-hit help call;
+  Undead families, Enders, Guardians, and other specialist identities retain their narrower owners.
 - Nether Remnants: piglins, piglin brutes, blazes
 - Illagers: pillagers, vindicators, evokers, illusioners, ravagers, vexes
 - Witch: permanent loose-ally identity, active Illager combat alignment only during a raid, and
@@ -192,11 +194,33 @@ an implementation claim. The completion matrix below and
 - Intelligent creatures use believable sight, hearing, scent, communication, memory, target
   inertia, and occasional mistakes rather than perfect shared knowledge. Some species may rely
   on more senses than others.
+- Combat awareness has a species/profile maximum for both mob and player targets. Ordinary
+  acquisition remains within 12–24 blocks, Stage 1 Zombies use 12 and Skeletons 14, and their
+  Stage 2 limits expand to 18 and 22. A retained target receives a bounded pursuit margin, while
+  retaliation, owner defense, and territory attack may acquire within that same retention range.
+  Phantoms, Ghasts, Wildfires, Withers, and the Ender Dragon retain explicit longer specialist
+  limits. Faction assistance and Brain memories cannot bypass the receiving mob's own boundary.
+- A mob that can see another mob actively targeting it within 24 blocks may react before the first
+  hit. Shared prey flee; healthy ordinary predators defend themselves; other combat-capable faction
+  members may countertarget when faction, ownership, warning, and existing-duty rules allow it.
+  Wolves and Polar Bears can also warn available nearby members of their exact species. Failed
+  perception is retried no more than once every five ticks, a wall blocks the response, and a
+  `THREAT_RESPONSE` countertarget cannot recursively recruit the original attacker's side. Actual
+  damage upgrades the intended victim's matching response to `RETALIATION`. This rule reads a mob's
+  real attack target; it does not infer player intent from a held weapon, crosshair, or animation.
 - Healthy ordinary predators defend themselves after successful damage from a valid living attacker.
   Wolves, Foxes, Cats, Ocelots, Dolphins, Spiders, and Cave Spiders use five-second recent-attacker
   memory and explicit `RETALIATION` target ownership; the owned response may continue after the
   one-time vanilla damage memory clears. Tamed animals never retaliate against their owner, and
   global player-mode, alliance, and Creeper exclusions remain authoritative.
+- A successful damaging hit can recruit nearby adult social defenders. The additive
+  `retold:shared_defense_species` tag defaults to Wolves and Polar Bears and matches exact species;
+  tamed Wolves cooperate only with standing Wolves owned by the same entity. Nether Remnants,
+  Illagers, Spider families, Silverfish, Endermites, Hoglins, Breezes, and Village Defenders use
+  their active faction alignment. A five-tick cached 32-block query admits at most eight idle allies
+  that are within eight blocks of the victim or can see the attacker. The victim never recruits
+  itself, the attacker's side is not alerted merely for attacking, another live target or Retold
+  control is preserved, and Wolf responders retain owned combat until resolution.
 - The implemented first serious-wound rule applies to wild ordinary predators: after real damage
   from a living attacker leaves one below 25% health, it abandons ordinary hunting or retaliation
   and flees that attacker for ten seconds. Exactly 25% does not trigger the rule. Tamed defenders,
@@ -227,6 +251,13 @@ an implementation claim. The completion matrix below and
   uses normal faction-assist ownership and never becomes perfect shared knowledge. Zombies should
   remain comparatively simple and do not sprint merely because another creature recognized a
   danger.
+- Skeletons, Strays, and Bogged also treat another current Undead member intersecting their
+  eye-to-target segment as a blocked firing lane. Their twelve-tick ranged owner keeps attack
+  control, uses the shared cached entity query, and requests a budgeted lateral/back-step route;
+  only a real unreachable result permits one opposite-side attempt. A last-moment
+  `AbstractSkeleton.performRangedAttack` guard suppresses the blocked arrow without replacing the
+  vanilla bow draw or cooldown. Clear lanes, non-Undead bystanders, and other ranged mob families
+  retain their normal shot behavior.
 - Slimes and magma cubes do not attack one another. Only members at or above their configured
   hunt-hunger threshold attack other living creatures indiscriminately except creepers. Dropping
   below that threshold clears their target and ends combat. They consume defeated prey to relieve
@@ -293,8 +324,8 @@ an implementation claim. The completion matrix below and
 - Blazes can fight fire-immune Undead rivals when they meet in the Nether. A faction-scoped target
   exception lets mobs attack enemy Ghasts despite vanilla's blanket Mob-versus-Ghast rejection,
   without admitting allied or unrelated attackers. Wildfire-to-Ghast acquisition and retention use
-  the leader's full 64-block follow range; other faction matchups keep the shared 40-block acquire
-  and 48-block release boundaries. A narrow invulnerability hook lets Blaze- and
+  the leader's full 64-block follow range; other faction matchups use the attacker's central
+  species/profile-aware acquisition and retention boundaries. A narrow invulnerability hook lets Blaze- and
   Wildfire-owned Small Fireballs inflict their direct damage on Wither Skeletons and Ghasts while
   both retain ordinary fire and lava immunity. The Wildfire is a Stage 2+ Nether Remnant roaming
   miniboss that naturally arrives with three to five Blazes. Its dedicated 600-tick encounter
@@ -513,8 +544,8 @@ an implementation claim. The completion matrix below and
   coordination baseline, and Stage 3 adds no bonus before its existing Undead spawn cancellation.
 - Wither Skeletons spawn in fortresses and naturally but rarely in Soul Sand Valleys. The valley
   uses a data-driven weight-one solitary biome entry; their territory profile still requires a
-  fortress anchor, so they do not guard the valley. Phantoms are rare nightmare-like demons that
-  can appear alone or in groups at night or during storms under open sky, independently of insomnia.
+  fortress anchor, so they do not guard the valley. Phantoms are rare solitary nightmare-like demons
+  that can appear at night or during storms under open sky, independently of insomnia.
 - Endermen retain vanilla gaze aggression in Stage 1 and become peaceful unless attacked in
   Stages 2 and 3. Vanilla block carrying remains. Aender Eye gameplay beyond the prototype is
   undesigned.
@@ -560,7 +591,7 @@ an implementation claim. The completion matrix below and
   membership supplies bounded faction-owned targeting against Undead, including Ghasts, and
   alliance with Blazes. Ghasts are the one extended pairing: Wildfires acquire and retain them at
   up to 64 blocks, matching the leader's ranged-combat envelope, while non-Ghast faction targets
-  keep the shared 40/48-block bounds.
+  use the Wildfire's explicit 40/48-block ordinary-combat bounds.
   They guarantee the Nether Reactor Core Fire offering. Zombified Piglins are no longer fire-immune,
   allowing Blaze and Wildfire fireballs to damage and continue burning them, while Wildfires are
   explicitly fire-immune themselves. Four reinforced persisted shields absorb damage independently,
@@ -710,6 +741,14 @@ General rules:
   `RetoldBehaviorMovement`; supported free-flying mobs use a bounded three-dimensional path and may
   apply native flight physics only toward the next safe path node. Direct target-vector steering is
   not an acceptable substitute for route finding.
+- Shared ground movement reports `MOVING`, `DEFERRED`, `RETRYING`, `UNREACHABLE`, or `UNSUPPORTED`
+  to behavior owners. LOD cadence and the global 16-start path budget produce only `DEFERRED`; they
+  never count against a route. A real navigation rejection uses bounded 10/20/40/80-tick backoff,
+  while less than half a block of progress across 40 ticks marks the current route stuck. Three
+  real failures or one sustained stall produces `UNREACHABLE`. Progress resets failure history,
+  and an expired backoff permits a new attempt so a door or changed terrain can recover naturally.
+  This outcome memory applies only to ordinary ground navigation; aquatic specialists, free flight,
+  and Cube Mob steering retain their dedicated adapters.
 - Clear control when the behavior is no longer valid.
 - Do not directly force targets from high-level behavior unless using the Retold target helpers.
 - Do not let vanilla target assignment bypass warning or controlled hunting rules.
@@ -955,6 +994,16 @@ Flee:
   high-priority flee control for mobile pathfinding and flying mobs; zombie-family mobs do not flee
 - creeper flight interrupts existing combat and guard movement and retains a short last-known danger
   memory so a creature does not stop at the edge of its scan radius
+- urgent flight uses a straight away corridor on clear ground without adding fresh lateral drift or
+  invoking a broad randomized land-position picker on each eight-tick think refresh
+- the selected safe destination remains committed while its route is active or inside its initial
+  20-tick commitment and the danger direction remains materially aligned; a genuine direct-route
+  rejection can try the entity's deterministic preferred side and its opposite, but work-budget
+  deferral cannot trigger either detour
+- an already matching active route is adopted and speed changes update it without replacing its
+  path; reaching within 1.5 blocks after navigation ends, water invalidation, route failure after
+  commitment, or a large direction change permits reselection, while the shared 40-tick no-progress
+  recovery still runs before reuse
 
 Regroup:
 
@@ -979,6 +1028,14 @@ Combat target ownership:
 - `RetoldCombatTargets`
 - `RetoldFactionTargetMemory`
 - `RetoldTargetSource`
+- `RetoldTargetRangePolicy`
+
+`RetoldTargetRangePolicy` is the final distance ceiling for vanilla `Mob#setTarget`, Brain
+`ATTACK_TARGET`/`ANGRY_AT` writes, and Retold-owned combat. Profile-aware acquisition and retention
+limits replace the former generic 40/48-block faction envelope. A staggered five-tick cleanup
+releases Mob and Brain targets that leave retention range, including their aggression, navigation,
+and source ownership. Unknown or unprofiled modded mobs use their `FOLLOW_RANGE`, clamped to a
+12–48-block acquisition boundary and a maximum 64-block retention boundary.
 
 `RetoldAiTargets` synchronizes `ATTACK_TARGET` for brain-backed Retold combatants that do not read
 the ordinary `Mob` target field, currently Axolotls and Piglins. Axolotl-to-Guardian assignments
@@ -997,6 +1054,39 @@ with `RETALIATION` ownership. Existing owned retaliation can continue after the 
 memory clears. The central target policy, `canAttack`, tame-owner safety, and wounded-predator flight
 gate are checked before assignment, so this replacement cannot bypass alliance, Creeper, player-mode,
 or below-25% escape rules.
+
+Ordinary combat-capable profiles also retain bounded actual post-mitigation damage evidence for up
+to five seconds. `RetoldThreatRetargeting` records at most eight attackers and sixteen hits per
+attacker without a scan or tick subscriber. Threat score is twice the largest hit plus half the
+recent total; a challenger must beat the current target by 20% plus one point, and a successful
+switch starts a one-second lock. The replacement uses `RETALIATION` ownership and remains subordinate
+to `FLEE`, `SHELTER`, `OWNER_DEFENSE`, and `TERRITORY_ATTACK`. The central player, tame-owner,
+faction, Ghast, and Creeper gates still apply. Passive/specialized defense profiles do not opt in,
+while `SPECIAL_VANILLA` and `APEX_OR_BOSS` retain their dedicated target logic.
+
+Periodic owners may refresh a combat claim without changing its target. An exact live target and
+`RetoldTargetSource` match is an idempotent success in `RetoldFactionTargetMemory`: it does not
+rewrite the Mob/Brain target, and `RetoldCombatTargets` does not force `aggressive=true` again.
+This leaves vanilla melee, bow, and crossbow goals responsible for temporary weapon pose and active
+item-use state instead of making a refresh visibly lower and raise the weapon or risk restarting a
+goal. A different target or source remains a real assignment, and explicit `aggressive=false`
+requests remain authoritative.
+
+Controlled combat consumes the shared ground outcome. `BEHAVIOR_COMBAT`, `FACTION_COMBAT`, and
+other ordinary sources release an unreachable opponent and suppress that exact candidate for five
+seconds, allowing a different eligible enemy to win the next bounded scan. `RETALIATION` and
+`OWNER_DEFENSE` release the unusable live route but retain urgency through a shorter two-second
+pause before the same threat can be reconsidered. Controlled hunting instead
+clears the live prey target, retains its sensory memory, and spends three seconds using the existing
+last-known-position search pattern; an unreachable search route fails the hunt normally.
+
+Panda bamboo feeding consumes the same ground outcome without performing an extra reachability
+probe. Once a stalk becomes unreachable, the Panda releases `PANDA_BAMBOO` movement and records the
+exact block in `RetoldBlockTargetSearch` for 30 seconds. Each Panda retains at most four of these
+temporary exclusions; the ordinary bounded bamboo scan skips them and can select another stalk,
+while LOD or global path-budget deferrals never exclude food. Like the Sniffer and Bee specialists,
+the Panda profile is excluded from generic random food-search movement so that fallback cannot
+intermittently starve its dedicated owner of control.
 
 Important target rule:
 
@@ -1161,6 +1251,7 @@ LOD affects:
 - behavior timing intervals
 - cache lifetimes
 - path start cadence
+- ground-path failures, retry backoffs, stuck detections, and behavior recoveries
 
 Important mobs stay `FULL`, including mobs with:
 
@@ -1430,14 +1521,20 @@ Use this matrix before calling the mob AI system done.
 | Area | Expected behavior | Done when |
 | --- | --- | --- |
 | Target ownership | Retold-owned targets go through `RetoldCombatTargets` / `RetoldFactionTargetMemory`. | Direct `setTarget`, `setAggressive`, `ATTACK_TARGET`, and `ANGRY_AT` writes only exist in low-level guard helpers, and debug shows source/current target ownership. |
+| Species-aware target distance | A mob cannot acquire or retain a mob or player at a distance that contradicts its profile, while genuine ranged specialists keep their identity. | Raw Mob targets, Brain memories, Retold-owned assignments, faction scans, and relayed targets share `RetoldTargetRangePolicy`; ordinary acquisition stays within 12–24 blocks, retaliation and retention remain bounded, Stage pressure preserves the Undead radii, explicit specialist limits remain covered, and the exact boundary test passes. |
+| Target refresh stability | Refreshing an unchanged live Retold target/source does not restart target or weapon-pose state. | Exact ownership refresh is idempotent, active item use and a vanilla-lowered aggressive pose survive, explicit non-aggressive requests still apply, and genuine target/source changes remain observable. |
+| Threat retargeting | Ordinary combat-capable profiles can replace a retained target when another recent attacker demonstrates materially greater actual damage. | Five-second bounded damage evidence, burst-weighted scoring, 20% plus one-point hysteresis, and a one-second lock prevent trivial churn; assignment uses `RETALIATION`, protected duties and flight remain authoritative, specialist profiles retain their own selectors, and focused policy plus real-damage coverage passes. |
+| Ground navigation recovery | Repeated impossible routes back off and resolve without treating work-budget denial as failure. | Ground outcomes distinguish deferral from rejection, progress resets failure history, sustained no-progress becomes stuck, combat resolves by source urgency, hunting uses last-known search, Panda feeding selects another non-excluded stalk, debug counters expose every outcome, and the focused combat, hunting, budget-deferral, and Panda regressions pass. |
+| Flee route stability | Urgent flight does not zigzag because ordinary think refreshes stay in a straight escape corridor rather than alternating randomized side destinations or restarting an unchanged path. | Ordinary, wounded-predator, Creeper, and Cat flight share committed safe-destination memory; aligned refreshes retain it, speed changes adopt or update a matching active path in place, and actual route rejection can make at most two deterministic side attempts while deferral remains neutral. Water/reached/direction/stuck boundaries still force reconsideration, the exact corridor and active-route tests plus adjacent flight/recovery regressions pass, and exact Cow/Wolf/Salmon/Cat TPS runs remain below 50 ms/tick with a 6.472 ms/tick peak. |
 | Invalid players | Creative and spectator players are never valid retained targets. | `/retoldbehavior get` shows no lasting target or brain target for creative/spectator players. |
 | Creeper safety | No mob deliberately targets or directly melees a creeper; mobile non-Undead, non-Creeper mobs flee an active fuse and cats avoid creepers before ignition. | Vanilla, Retold-owned, brain-memory, retained-target, and direct-melee paths reject creepers. Cached awareness produces delayed high-priority flight for pathfinding/flying mobs, ground flight refuses water-crossing paths when starting on land, and cat retreat preserves vanilla creeper avoidance. |
 | Ordinary predator self-defense | Healthy ordinary predators retaliate after successful damage from a valid living attacker. | Real-damage coverage includes wild Wolf, tamed Wolf, Fox, Cat, Ocelot, Dolphin, Spider, and Cave Spider; target and `ATTACK` control use `RETALIATION` ownership, ownership continues after transient damage memory clears, and tame-owner safety is preserved. |
+| Visible attack-intent response | An intended mob victim reacts to a visible mob attacker before taking damage without gaining perfect knowledge or abandoning a more urgent duty. | The shared target hook rechecks failed perception at most every five ticks, requires the attacker's real valid target, cached sight, the same level, and a 24-block boundary. Shared prey use `FLEE`, ordinary predators use controlled `ATTACK`, eligible faction members use `THREAT_RESPONSE`, and exact-species Wolves/Polar Bears can warn bounded available witnesses. Walls prevent reaction, response targets cannot counter-rally the attacker's side, and a later real hit promotes matching ownership to `RETALIATION`. The exact behavior and adjacent regressions pass; all 83 isolated 50-mob TPS tests and 415 phases sustain 20 TPS with an 8.311 ms/tick peak. |
 | Wounded predator disengagement | Wild ordinary predators flee a living attacker for ten seconds when a successful hit leaves them below 25% health. | Hunt/retaliation targets and ownership clear before reasoned `FLEEING` control begins; the exact boundary and tamed, Undead, boss, and territory exemptions are covered, all seven profile species enter the same bounded continuation, and affected exact TPS selectors remain below 50 ms/tick. |
 | Mob griefing | Mob-caused terrain edits obey `mobGriefing`; consuming dropped items does not count as terrain editing. | Retold forage, weak-barrier, and Gale Core paths use `RetoldMobGriefing`, vanilla creeper explosions remain behind NeoForge's entity-griefing hook, and each destructive owner has regression GameTest coverage. |
 | Loaded starvation | Every mob with a positive Retold hunger interval can lose health and die at 100 hunger; Cube Mobs retain their separate response. | Ordinary `PathfinderMob`, Bat, and Villager hunger ticks share `RetoldStarvationBehavior`, profiles with hunger disabled are excluded, feeding below 100 stops pulses, and Cube Mob splitting remains covered separately. |
 | Unloaded reconciliation | Returning hunger-aware mobs reconcile no more than seven days through bounded real transactions. | The deduplicated queue attempts at most 16 mobs per tick; daily food order is feeder, accessible forage, then compatible reachable wild prey for untamed predators. Fresh scans and bounded route probes prevent barrier bypass. Critical pulses become one damage/Cube transaction, one Farmer per tick can process real owned crops and storage, and one returning chunk per tick delegates a daily attempt to vanilla spawning. Named/tamed mobs retain a one-health floor. |
-| Faction assist | Nearby allies can help only when target gating allows it. Witches cooperate with Illagers only inside the same active raid. | Assist does not bypass warning-stage players in territory; Witch/Illager GameTests cover ordinary neutrality, same-raid assistance, different/no-raid rejection, and raid-exit target cleanup. |
+| Shared defense and faction assist | Configured social species answer successful-damage calls, while cooperative active factions can also answer when an enemy actively targets a member. Only the threatened side is notified, and nearby allies can help only when target gating and existing duties allow it. Witches cooperate with Illagers only inside the same active raid. | The exact integrated defense test covers Wolf, Polar Bear, same-owner tame packs, baby/sitting/different-owner exclusions, target-side and damage-side cross-species Nether Remnant response, source ownership, controlled Wolf engagement, caller exclusion, busy allies, attacker-side non-rally, and specialist-faction exclusion. Assist is cached, capped at eight responders, and does not bypass warning-stage players; Witch/Illager tests retain ordinary neutrality, same-raid assistance, different/no-raid rejection, and raid-exit cleanup. Exact 50-Wolf and 50-Piglin runs sustain 20 TPS with 6.282 and 7.583 ms/tick peaks. |
 | Raid progression | Bad Omen and vanilla raid creation cannot begin a raid before Stage 3; active raids are not cancelled by the start gate. | The authoritative saved stage is checked both before Bad Omen conversion and at `Raids.createOrExtendRaid`; the live creation path has a Stage 2 rejection GameTest and the natural Stage 3 omen flow is verified in-game. |
 | Territory warning | Nether Remnants and Illagers warn before attack in configured structures. | Bastion, fortress, outpost, and mansion all show warning progression before attack. |
 | Retaliation | Directly attacking a guard can still trigger immediate retaliation. | Player hit on guard bypasses warning only for retaliation, not passive sight. |
@@ -1466,9 +1563,9 @@ Use this matrix before calling the mob AI system done.
 | Hive colony | bee | Flower foraging retains its bounded specialized search. Successful Bee damage, tagged-hive breaking, and unsmoked full-hive harvest are the only Retold colony-defense triggers. The victim uses `RETALIATION`; one cached bounded 18-block incident scan recruits available Bees with `FACTION_ASSIST`. Both hold `HIVE_COLONY` attack ownership until the threat is invalid or beyond 36 blocks. Smoke, Creative/Spectator targets, friendly Bees, and another live target are excluded. Event assignment starts no synchronous path; staggered species ticks refresh ownership and request movement. Focused behavior coverage exercises real damage, source ownership, recruitment, busy-target preservation, prompt cleanup, smoke, player-mode exclusions, harvest, and breaking. The five-phase 50-Bee run peaks at 7.103 ms/tick. Natural hive release, crowded colonies, multiplayer, and dedicated servers remain unverified. |
 | Nether hungry | piglin, hoglin, strider | Hunger behavior plus faction/territory interactions for Piglins. Lava passively sustains Striders without being consumed, Warped Fungus remains fallback food, and Piglins receive meal credit from Hoglins they kill. |
 | Undead hungry | zombie, zombie villager, husk, drowned, zombified piglin | Hunger/horde behavior, faction targeting, and undead tolerance. Stage 1 uses 10-block same-family sharing and 12-block notice; Stage 2 expands these to 22 and 18 blocks, permits stable one-in-three cross-family assistance within 12 blocks when the incident is heard or seen, and adds about 25% to already-present tagged natural-spawn weights under vanilla caps. A non-undead, non-Creeper living victim killed by one of these mobs provides a meal. Proactive hungry-target scoring has no player bonus. The five exact Stage 2 50-mob runs peak at 6.046 ms/tick. |
-| Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop, and no player bonus when choosing a firing position. Stage 1 uses 10-block same-family sharing and 14-block notice; Stage 2 expands these to 24 and 22 blocks, uses the same bounded imperfect cross-family assistance contract, and shares the tagged natural-spawn weight bonus. The three exact Stage 2 50-mob runs peak at 4.952 ms/tick. |
+| Undead tolerant | skeleton, stray, bogged | Ranged behavior, faction targeting, no hunger loop, and no player bonus when choosing a firing position. Stage 1 uses 10-block same-family sharing and 14-block notice; Stage 2 expands these to 24 and 22 blocks, uses the same bounded imperfect cross-family assistance contract, and shares the tagged natural-spawn weight bonus. A cached eye-line check makes the shooter hold an arrow blocked by an Undead ally and request a budgeted lateral/back-step angle under existing `UNDEAD_RANGED` ownership. The exact shot/reposition test and neighboring coordination, target-parity, and weapon-pose regressions pass. The latest focused 50-mob Skeleton, Stray, and Bogged runs peak at 3.512, 3.612, and 3.963 ms/tick; natural crowded formations and terrain navigation remain unverified. |
 | Undead mount | skeleton horse, zombie horse, camel husk | Ownerless mounts retain Undead diplomacy and use a bounded cached 24-block scan, sight/close-awareness checks, source-aware faction targets, six-tick dispatch, throttled paths, and real melee damage. A persisted owner reference removes the generic faction identity. Claimed mounts never scan for prey; successful damage and five-second owner interaction memories alone start source-aware retaliation or owner defense under `UNDEAD_MOUNT` attack ownership. Mounting claims an ownerless already-tame riderless Skeleton Horse or Camel Husk, while Zombie Horse keeps vanilla bucking/taming. Two focused tests cover all three claim/faction boundaries, real damage, defense, cleanup, and non-hunting. Fifteen focused 50-mob phases pass below 50 ms/tick with a 5.843 ms/tick overall peak; natural pursuit, riding, multiplayer, dedicated-server, and save/reload behavior remain unverified. |
-| Phantom stalker | phantom | Vanilla retains the hostile-spawn gamerule, 60–120-second custom-spawner cadence, dark-sky gate, spectator exclusion, placement validation, and generated group size. At lowest event priority, Retold preserves explicit decisions from other mods and replaces only a default per-player insomnia decision: skylight dimensions require open sky, the Retold night-or-storm context, vanilla local difficulty, and a one-in-eight rarity result. The existing bounded stalker uses owned faction-combat targets without arbitrary player priority and retains Undead diplomacy. Two focused tests cover zero-insomnia eligibility, policy boundaries, event compatibility, and closer ordinary prey versus an Undead neighbor and player. Natural frequency, storms, movement/combat, multiplayer, and dedicated servers remain unverified. |
+| Phantom stalker | phantom | Vanilla retains the hostile-spawn gamerule, 60–120-second custom-spawner cadence, dark-sky gate, spectator exclusion, and placement validation. At lowest event priority, Retold preserves explicit decisions and spawn counts from other mods and replaces only a default per-player insomnia decision: skylight dimensions require open sky, the Retold night-or-storm context, vanilla local difficulty, and a one-in-sixteen rarity result; an approved Retold attempt produces exactly one Phantom. The bounded stalker uses owned faction-combat targets without arbitrary player priority and retains Undead diplomacy. Because vanilla's private player-oriented swoop can circle a Retold-selected ordinary prey indefinitely, the owning adapter records a per-Phantom attack phase: vanilla circling remains intact, and the active dive receives constant-time line-of-sight and collision-checked velocity steering through a narrow travel hook. Successful vanilla or fallback damage is the authoritative strike-completion signal; it releases target ownership and creates an eight-second recovery claim. The species owner rejects Retold reacquisition during that interval, while the common target guard rejects vanilla assignment, including if another control owner replaces the recovery claim. Three focused tests pass together for zero-insomnia eligibility, solitary Retold spawning, policy boundaries, event compatibility, closer ordinary prey versus an Undead neighbor and player, completed damage, and non-repeating recovery. All five 50-Phantom phases hold 20 TPS with a 3.866 ms/tick peak. Natural frequency, storms, terrain-heavy swoops, multiplayer, and dedicated servers remain unverified. |
 | Ghast artillery | ghast | Artillery targeting and faction exclusions without an arbitrary player score bonus. |
 | Zoglin rampager | zoglin | Undead faction identity, rampage targeting, and owned attack targets without an arbitrary player score bonus. Raw same-Undead Mob/Brain targets are rejected or cleared unless explicitly owned as retaliation. The latest affected 50-Zoglin run peaks at 5.091 ms/tick. |
 | Slime hungry | slime, magma cube | `RetoldSlimeHungerCombat` gates target assignment, retained combat, swarm assistance, and every contact-damage path at the profile hunt threshold; only hungry Cube Mobs use faction targeting and `RetoldCubeMobContactDamage`. The central live-faction policy rejects ordinary same-family Mob/Brain targets while retaining explicit Retold-owned retaliation. A non-Cube, non-Creeper living victim killed by either species relieves hunger. The contact hook also lets hungry size-one members use vanilla `dealDamage`, while fed members remain harmless. Independently, `RetoldMobRules.wantsDroppedFood` gives this profile an unconditional item appetite: `RetoldFoodBehaviorEvents` and `RetoldSwarmScavengerEvents` seek items even at zero hunger. `RetoldCubeMobMovement` translates shared movement requests into Cube Mob controller headings and hop speed while the narrow random-direction mixin prevents vanilla wandering from overwriting an owned direction. `RetoldSlimeSplitBehavior` gives every split child half of its parent's current hunger through NeoForge's standard mob-split event and the explicit starvation path. `RetoldSlimeStarvationBehavior` scales each hunger gain as `ceil(size / 2)`, splits size-two-or-larger Cube Mobs into two half-size children at 100 hunger with 50 hunger each, preserves swallowed storage once, starts their merge cooldown, and kills size-one members through normal death. `RetoldSlimeItemStorage` swallows any complete dropped stack, persists exact stack components, returns contents through death drops, and grows Cube Mobs one size at a time up to size 10 with exponentially doubling costs from 16 through 4,096 items. Cached same-species/same-size idle merging through `RetoldSlimeMergeBehavior` remains restricted to natural sizes 1-to-2-to-4 with a persisted cooldown and transfers swallowed contents. The latest focused Slime and Magma Cube runs peak at 4.488 and 5.665 ms/tick. |
@@ -1476,7 +1573,7 @@ Use this matrix before calling the mob AI system done.
 | Bat colony | bat | Persisted hunger and `BAT_ROOST` homes are supported for this non-pathfinding `Mob`. A loaded home must remain a dark supported ceiling cell; legacy ground homes and broken supports are repaired upward around the previous anchor. Up to 12 nearby Bats share the resulting broad 16-horizontal/8-vertical colony anchor. Daylight clears food and combat directives, then each awake Bat searches upward within eight horizontal and 32 vertical blocks for a personal currently dark supported ceiling cell. Discovery checks the founding column first and exits at the first valid nearby support instead of scoring the full volume; individual Bats then reserve distinct supported cells around that anchor. In-flight destinations plus settling and occupied cells remain reserved, and an already-stacked sleeper with the higher entity ID drops clear before rerouting. The explicit-center cache and selected five-second route remain reusable while the Bat travels. A bounded vanilla `FlyingPathNavigation` route leads toward that slot; Retold flight ownership then performs a collision-checked final approach with minimum lift, holds the Bat against vanilla wandering, and completes its individual 8-to-40-tick settling delay. Vanilla resting-to-awake disturbances and unrelated danger clear shelter state and hold the Bat in owned panic flight for ten seconds before settling can resume. At night, a hungry Bat prefers a reachable dropped Spider Eye, then joins compatible hungry members in a party capped at five. Party-wide sensing and coordination run at most once per eight ticks, incomplete parties retry recruitment once per 40 ticks, the direction lasts 20 seconds, and unchanged routes and four-tick separation vectors are reused. Frightened, feeding, and sheltering Bats remain outside parties. Feeding, search, hunt, dodge, and panic destinations require reachable paths. Close bites deal one damage; local separation, individual arthropod dodges, and selective delayed unrelated-danger panic remain in effect. Isolated coverage verifies legacy/broken-home repair, tall-cave ceiling acquisition, distinct destinations and occupied slots, repair of a stacked pair, eight awake Bats completing a real-tick daytime return, a ten-second disturbance recovery window, party behavior, and a 64-Bat day/night workload that must remain below 50 ms/tick. Clientless GameTest players are now excluded from login payload synchronization, and broken-roost coverage retries across shared AI budget windows while still requiring a different valid dark supported ceiling, shelter ownership, and a real flying path. The latest focused selection passed 7/7, including the 64-Bat workload at 10.658 ms/tick; the post-ecology complete suite passed 150/150. The developer reported the ordered natural Bat acceptance pass works on 2026-08-03; dedicated-server, multiplayer, profiler, and existing-world verification remain unconfirmed. |
 | Protective neutral | polar bear | `RetoldNeutralWildlifeEvents` uses cached cub/threat scans. Passive cub intruders receive a 40-tick standing/sound warning with no attack target; the stationary warning keeps the bear's body, head, and look control aimed at the intruder. The intruder can withdraw; staying escalates to owned defense, while actual attacks bypass the warning. Vanilla proactive cub-proximity targeting is blocked. GameTests cover the state boundaries; natural navigation and warning readability still need in-game verification. |
 | Armadillo defensive | armadillo | Defensive/flee behavior plus active hunger. A bounded cached soil search drives low-priority movement to exposed eligible ground; reaching it produces a visible non-destructive grub dig, hunger relief, and a 30-second forage cooldown. |
-| Panda bamboo | panda | Its dedicated bounded search approaches bamboo and atomically removes the reached block without drops before applying hunger relief. Consumption obeys the shared entity-griefing policy. Two isolated GameTests cover natural approach/removal and `mobGriefing=false`; the focused Panda survival case passes and all five 50-Panda TPS phases remain below 50 ms/tick with a 9.305 ms/tick peak. Natural tall-grove selection and long-term grove depletion remain unverified. |
+| Panda bamboo | panda | Its dedicated bounded search approaches bamboo and atomically removes the reached block without drops before applying hunger relief; generic random food-search movement defers to this specialist owner. A proven-unreachable stalk is excluded for 30 seconds from that Panda's search through a bounded four-entry cache, allowing a farther reachable alternative without treating LOD or path-budget denial as failure. Consumption obeys the shared entity-griefing policy. Three isolated GameTests cover natural approach/removal, unreachable-target replacement, and `mobGriefing=false`; the focused Panda survival case passes and all five 50-Panda TPS phases remain below 50 ms/tick with a 4.024 ms/tick peak. Natural tall-grove selection and long-term grove depletion remain unverified. |
 | Parrot forager | parrot | Loaded hunger uses the shared dropped-food and bounded crop-forage owner with flying navigation, feeding pose, caches, work budgets, and destructive `mobGriefing` policy. Tamed entity and shoulder Parrots first recognize a recent owner attacker, then use a staggered cached 18-block scan for a visible or close-heard mob actively targeting the living non-Creative/non-Spectator owner. The transient sound-and-particle warning takes no combat or movement ownership. Focused coverage verifies diet/griefing, false-positive rejection, threat memory, pacifist behavior, shoulder persistence, profile loading, crop survival, and five 50-Parrot phases below 50 ms/tick with a 4.005 ms/tick peak. Natural flight, crop choice, warning readability, multiplayer, and dedicated-server behavior remain unverified. |
 | Sniffer forager | sniffer | Its specialized diggable-ground owner is protected from generic search ownership; paths target air above the ground and use a large-body completion radius before applying forage relief. |
 | Turtle beach | turtle | Beach/home behavior plus active hunger and seagrass forage. |

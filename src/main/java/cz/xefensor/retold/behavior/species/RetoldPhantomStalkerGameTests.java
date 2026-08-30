@@ -18,6 +18,7 @@ import net.minecraft.world.entity.animal.cow.Cow;
 import net.minecraft.world.entity.monster.Phantom;
 import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerSpawnPhantomsEvent;
@@ -49,6 +50,13 @@ public final class RetoldPhantomStalkerGameTests {
                 "phantoms_do_not_prioritize_players_over_nearer_prey",
                 RetoldPhantomStalkerGameTests::phantomsDoNotPrioritizePlayers
         );
+        registerTest(
+                event,
+                environment,
+                "phantom_stalker_completes_swoop_attack",
+                240,
+                RetoldPhantomStalkerGameTests::phantomStalkerCompletesSwoopAttack
+        );
     }
 
     private static void spawnPressureIsInsomniaIndependent(GameTestHelper helper) {
@@ -63,6 +71,12 @@ public final class RetoldPhantomStalkerGameTests {
         );
 
         try {
+            helper.assertValueEqual(
+                    RetoldPhantomStalkerEvents.SPAWN_RARITY_ATTEMPTS,
+                    16,
+                    "Phantom pressure must retain the rare one-in-sixteen attempt gate"
+            );
+
             helper.setTime(6_000L);
             PlayerSpawnPhantomsEvent daytime = spawnEvent(player);
             RetoldPhantomStalkerEvents.applySpawnPolicy(
@@ -93,7 +107,7 @@ public final class RetoldPhantomStalkerGameTests {
                     "The Retold rarity gate must reject ordinary eligible attempts"
             );
 
-            PlayerSpawnPhantomsEvent rareAttempt = spawnEvent(player);
+            PlayerSpawnPhantomsEvent rareAttempt = spawnEvent(player, 4);
             RetoldPhantomStalkerEvents.applySpawnPolicy(
                     rareAttempt,
                     level,
@@ -103,10 +117,11 @@ public final class RetoldPhantomStalkerGameTests {
             );
             helper.assertTrue(
                     rareAttempt.getResult() == PlayerSpawnPhantomsEvent.Result.ALLOW
+                            && rareAttempt.getPhantomsToSpawn() == 1
                             && player.getStats().getValue(
                             Stats.CUSTOM.get(Stats.TIME_SINCE_REST)
                     ) == 0,
-                    "A rare open-sky night attempt must be allowed without insomnia"
+                    "A rare open-sky night attempt must allow exactly one Phantom without insomnia"
             );
 
             helper.assertValueEqual(
@@ -132,7 +147,7 @@ public final class RetoldPhantomStalkerGameTests {
                     "An eligible attempt must retain the local-difficulty gate"
             );
 
-            PlayerSpawnPhantomsEvent externalDecision = spawnEvent(player);
+            PlayerSpawnPhantomsEvent externalDecision = spawnEvent(player, 4);
             externalDecision.setResult(PlayerSpawnPhantomsEvent.Result.ALLOW);
             RetoldPhantomStalkerEvents.applySpawnPolicy(
                     externalDecision,
@@ -145,6 +160,11 @@ public final class RetoldPhantomStalkerGameTests {
                     externalDecision.getResult(),
                     PlayerSpawnPhantomsEvent.Result.ALLOW,
                     "Retold must preserve another mod's explicit Phantom spawn decision"
+            );
+            helper.assertValueEqual(
+                    externalDecision.getPhantomsToSpawn(),
+                    4,
+                    "Retold must preserve another mod's explicit Phantom spawn count"
             );
 
             externalDecision.setResult(PlayerSpawnPhantomsEvent.Result.DENY);
@@ -194,8 +214,68 @@ public final class RetoldPhantomStalkerGameTests {
         }
     }
 
+    private static void phantomStalkerCompletesSwoopAttack(GameTestHelper helper) {
+        Phantom phantom = helper.spawn(EntityTypes.PHANTOM, 0, 10, 0);
+        Cow prey = helper.spawn(EntityTypes.COW, 0, 2, 0);
+        ChunkPos ticketCenter = phantom.chunkPosition();
+        float startingHealth = prey.getHealth();
+        int[] strikeTimestamp = {Integer.MIN_VALUE};
+
+        setForcedChunks(helper.getLevel(), ticketCenter, true);
+        prey.setNoAi(true);
+        prey.setNoGravity(true);
+        helper.setTime(18_000L);
+        RetoldPhantomStalkerEvents.keepTarget(
+                phantom,
+                prey,
+                helper.getLevel().getGameTime()
+        );
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        prey.getHealth() < startingHealth,
+                        "A Phantom stalker must turn its production-selected target into a completed swoop attack"
+                                + "; target=" + (phantom.getTarget() == prey)
+                                + ", tickCount=" + phantom.tickCount
+                                + ", distance=" + phantom.distanceTo(prey)
+                                + ", phantomPos=" + phantom.position()
+                                + ", preyPos=" + prey.position()
+                ))
+                .thenExecute(() -> strikeTimestamp[0] = prey.getLastHurtByMobTimestamp())
+                .thenIdle(40)
+                .thenExecute(() -> helper.assertTrue(
+                        prey.getLastHurtByMobTimestamp() == strikeTimestamp[0]
+                                && phantom.getTarget() == null,
+                        "A completed Phantom strike must release its target and enter recovery instead of dealing repeated contact damage"
+                                + "; strikeTimestamp=" + strikeTimestamp[0]
+                                + ", currentTimestamp=" + prey.getLastHurtByMobTimestamp()
+                                + ", target=" + phantom.getTarget()
+                ))
+                .thenExecute(() -> setForcedChunks(helper.getLevel(), ticketCenter, false))
+                .thenSucceed();
+    }
+
+    private static void setForcedChunks(
+            ServerLevel level,
+            ChunkPos center,
+            boolean forced
+    ) {
+        for (int chunkX = center.x() - 1; chunkX <= center.x() + 1; chunkX++) {
+            for (int chunkZ = center.z() - 1; chunkZ <= center.z() + 1; chunkZ++) {
+                level.setChunkForced(chunkX, chunkZ, forced);
+            }
+        }
+    }
+
     private static PlayerSpawnPhantomsEvent spawnEvent(ServerPlayer player) {
         return new PlayerSpawnPhantomsEvent(player, 1);
+    }
+
+    private static PlayerSpawnPhantomsEvent spawnEvent(
+            ServerPlayer player,
+            int phantomsToSpawn
+    ) {
+        return new PlayerSpawnPhantomsEvent(player, phantomsToSpawn);
     }
 
     private static void registerTest(
@@ -204,10 +284,20 @@ public final class RetoldPhantomStalkerGameTests {
             String path,
             Consumer<GameTestHelper> test
     ) {
+        registerTest(event, environment, path, 120, test);
+    }
+
+    private static void registerTest(
+            RegisterGameTestsEvent event,
+            Holder<TestEnvironmentDefinition<?>> environment,
+            String path,
+            int timeoutTicks,
+            Consumer<GameTestHelper> test
+    ) {
         event.registerTest(
                 id(path),
                 new InlineGameTest(
-                        new TestData<>(environment, EMPTY_STRUCTURE, 120, 0, true),
+                        new TestData<>(environment, EMPTY_STRUCTURE, timeoutTicks, 0, true),
                         test
                 )
         );

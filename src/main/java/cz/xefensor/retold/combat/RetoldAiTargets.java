@@ -101,6 +101,39 @@ public final class RetoldAiTargets {
         }
     }
 
+    public static void clearAllMatchingTargetReferences(
+            Mob mob,
+            LivingEntity target,
+            boolean stopNavigation
+    ) {
+        if (mob == null || target == null) {
+            return;
+        }
+
+        if (mob.getTarget() == target) {
+            RetoldFactionTargetGuards.setTargetIgnoringGuard(mob, null);
+        }
+
+        if (getBrainAttackTargetSafely(mob) == target) {
+            eraseMemorySafely(mob, MemoryModuleType.ATTACK_TARGET);
+        }
+
+        if (getAngryAtSafely(mob).filter(target.getUUID()::equals).isPresent()) {
+            eraseMemorySafely(mob, MemoryModuleType.ANGRY_AT);
+        }
+
+        boolean hasAnotherTarget = mob.getTarget() != null
+                || getBrainAttackTargetSafely(mob) != null;
+
+        if (!hasAnotherTarget) {
+            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(mob, false);
+
+            if (stopNavigation && mob instanceof PathfinderMob pathfinderMob) {
+                pathfinderMob.getNavigation().stop();
+            }
+        }
+    }
+
     public static LivingEntity getBrainAttackTargetSafely(Mob mob) {
         try {
             return mob.getBrain()

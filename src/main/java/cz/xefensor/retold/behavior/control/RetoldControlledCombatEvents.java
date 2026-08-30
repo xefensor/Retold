@@ -2,6 +2,7 @@ package cz.xefensor.retold.behavior.control;
 
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
+import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
@@ -25,14 +26,20 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 public final class RetoldControlledCombatEvents {
+    private static final Map<PathfinderMob, UnreachableTargetMemory> UNREACHABLE_TARGETS =
+            new WeakHashMap<>();
     private static final int COMBAT_THINK_INTERVAL_TICKS = 10;
     private static final int COMBAT_SCAN_CACHE_TICKS = 5;
     private static final int COMBAT_PATH_INTERVAL_TICKS = 6;
     private static final int ATTACK_CONTROL_TICKS = 20 * 4;
     private static final int RETALIATION_MEMORY_TICKS = 20 * 5;
     private static final int OWNER_THREAT_MEMORY_TICKS = 20 * 5;
+    private static final int URGENT_UNREACHABLE_TARGET_PAUSE_TICKS = 20 * 2;
+    private static final int ORDINARY_UNREACHABLE_TARGET_PAUSE_TICKS = 20 * 5;
 
     private static final double OWNER_THREAT_RADIUS_BLOCKS = 28.0D;
     private static final double OWNER_THREAT_RADIUS_SQUARED =
@@ -100,11 +107,20 @@ public final class RetoldControlledCombatEvents {
 
         LivingEntity retaliationThreat = findRetaliationThreat(mob);
 
+        if (isTemporarilyUnreachable(mob, retaliationThreat, gameTime)) {
+            retaliationThreat = null;
+        }
+
         if (
                 retaliationThreat != null
                         && (
                         !RetoldAiControl.isControlledAs(mob, RetoldAiControlMode.ATTACK)
                                 || mob.getTarget() != retaliationThreat
+                                || !RetoldFactionTargetMemory.isOwnedByAny(
+                                mob,
+                                retaliationThreat,
+                                RetoldTargetSource.RETALIATION
+                        )
                 )
         ) {
             beginAttack(
@@ -118,6 +134,10 @@ public final class RetoldControlledCombatEvents {
         }
 
         LivingEntity ownerThreat = findOwnerThreat(mob);
+
+        if (isTemporarilyUnreachable(mob, ownerThreat, gameTime)) {
+            ownerThreat = null;
+        }
 
         if (ownerThreat != null && !isCurrentOwnerDefenseTarget(mob, ownerThreat)) {
             beginAttack(
@@ -141,7 +161,8 @@ public final class RetoldControlledCombatEvents {
         if (isSpider(mob)) {
             LivingEntity playerThreat = findSpiderPlayerTarget(
                     level,
-                    mob
+                    mob,
+                    gameTime
             );
 
             if (playerThreat != null) {
@@ -169,7 +190,8 @@ public final class RetoldControlledCombatEvents {
 
         LivingEntity enemy = findAutonomousEnemy(
                 level,
-                mob
+                mob,
+                gameTime
         );
 
         if (enemy == null) {
@@ -221,6 +243,7 @@ public final class RetoldControlledCombatEvents {
         RetoldBehaviorTargets.clearTargetAndAggression(killer, killed, false);
 
         killer.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(killer);
         RetoldAiControl.clear(killer);
 
         /*
@@ -362,7 +385,8 @@ public final class RetoldControlledCombatEvents {
 
     private static LivingEntity findAutonomousEnemy(
             ServerLevel level,
-            PathfinderMob mob
+            PathfinderMob mob,
+            long gameTime
     ) {
         if (!isWolf(mob)) {
             return null;
@@ -382,6 +406,10 @@ public final class RetoldControlledCombatEvents {
 
         for (LivingEntity candidate : candidates) {
             if (!isValidWolfEnemy(mob, candidate)) {
+                continue;
+            }
+
+            if (isTemporarilyUnreachable(mob, candidate, gameTime)) {
                 continue;
             }
 
@@ -431,7 +459,8 @@ public final class RetoldControlledCombatEvents {
 
     private static LivingEntity findSpiderPlayerTarget(
             ServerLevel level,
-            PathfinderMob spider
+            PathfinderMob spider,
+            long gameTime
     ) {
         if (spider.getLightLevelDependentMagicValue() >= 0.5F) {
             return null;
@@ -447,6 +476,10 @@ public final class RetoldControlledCombatEvents {
 
         for (Player candidate : candidates) {
             if (!isValidSpiderPlayerTarget(spider, candidate)) {
+                continue;
+            }
+
+            if (isTemporarilyUnreachable(spider, candidate, gameTime)) {
                 continue;
             }
 
@@ -561,6 +594,100 @@ public final class RetoldControlledCombatEvents {
         );
     }
 
+    public static boolean beginSharedDefense(
+            PathfinderMob defender,
+            LivingEntity attacker,
+            long gameTime
+    ) {
+        if (defender == null
+                || attacker == null
+                || !RetoldMobRules.canUseOrdinaryPredatorSystems(defender)
+                || RetoldControlledFleeEvents.isWoundedPredatorFleeing(defender)
+                || !RetoldBehaviorCoordinator.isValidAssignmentTarget(defender, attacker)
+                || defender.distanceToSqr(attacker) > ATTACK_KEEP_RADIUS_SQUARED
+                || isTemporarilyUnreachable(defender, attacker, gameTime)) {
+            return false;
+        }
+
+        LivingEntity currentTarget = defender.getTarget();
+
+        if (currentTarget != null
+                && currentTarget != attacker
+                && RetoldBehaviorCoordinator.isAliveInSameLevel(defender, currentTarget)) {
+            return false;
+        }
+
+        if (RetoldAiControl.isControlled(defender)
+                && (!RetoldAiControl.isControlledAs(
+                defender,
+                RetoldAiControlMode.ATTACK
+        ) || currentTarget != attacker)) {
+            return false;
+        }
+
+        beginAttack(
+                defender,
+                attacker,
+                getEnemyAttackSpeed(defender, attacker),
+                gameTime,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+
+        return defender.getTarget() == attacker
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                defender,
+                attacker,
+                RetoldTargetSource.FACTION_ASSIST
+        );
+    }
+
+    public static boolean beginVisibleThreatDefense(
+            PathfinderMob defender,
+            LivingEntity attacker,
+            long gameTime
+    ) {
+        if (defender == null
+                || attacker == null
+                || !RetoldMobRules.canUseOrdinaryPredatorSystems(defender)
+                || RetoldControlledFleeEvents.isWoundedPredatorFleeing(defender)
+                || !RetoldBehaviorCoordinator.isValidAssignmentTarget(defender, attacker)
+                || defender.distanceToSqr(attacker) > ATTACK_KEEP_RADIUS_SQUARED
+                || isTemporarilyUnreachable(defender, attacker, gameTime)) {
+            return false;
+        }
+
+        LivingEntity currentTarget = defender.getTarget();
+
+        if (currentTarget != null
+                && currentTarget != attacker
+                && RetoldBehaviorCoordinator.isAliveInSameLevel(defender, currentTarget)) {
+            return false;
+        }
+
+        if (RetoldAiControl.isControlled(defender)
+                && (!RetoldAiControl.isControlledAs(
+                defender,
+                RetoldAiControlMode.ATTACK
+        ) || currentTarget != attacker)) {
+            return false;
+        }
+
+        beginAttack(
+                defender,
+                attacker,
+                getEnemyAttackSpeed(defender, attacker),
+                gameTime,
+                RetoldTargetSource.THREAT_RESPONSE
+        );
+
+        return defender.getTarget() == attacker
+                && RetoldFactionTargetMemory.isOwnedByAny(
+                defender,
+                attacker,
+                RetoldTargetSource.THREAT_RESPONSE
+        );
+    }
+
     private static void continueAttack(
             PathfinderMob attacker,
             long gameTime
@@ -601,7 +728,8 @@ public final class RetoldControlledCombatEvents {
                 30.0F
         );
 
-        RetoldBehaviorMovement.throttledMoveTo(
+        RetoldBehaviorMovement.MovementOutcome movement =
+                RetoldBehaviorMovement.throttledMoveToWithOutcome(
                 attacker,
                 target,
                 getEnemyAttackSpeed(attacker, target),
@@ -609,6 +737,56 @@ public final class RetoldControlledCombatEvents {
                 COMBAT_PATH_INTERVAL_TICKS,
                 2.0D * 2.0D
         );
+
+        if (movement.shouldRecover()) {
+            recoverFromUnreachableAttack(attacker, target, gameTime);
+        }
+    }
+
+    private static void recoverFromUnreachableAttack(
+            PathfinderMob attacker,
+            LivingEntity target,
+            long gameTime
+    ) {
+        RetoldTargetSource source = RetoldFactionTargetMemory.getSource(attacker, target);
+        boolean urgent = source == RetoldTargetSource.RETALIATION
+                || source == RetoldTargetSource.FACTION_ASSIST
+                || source == RetoldTargetSource.THREAT_RESPONSE
+                || source == RetoldTargetSource.OWNER_DEFENSE
+                || source == RetoldTargetSource.TERRITORY_ATTACK;
+        int pauseTicks = urgent
+                ? URGENT_UNREACHABLE_TARGET_PAUSE_TICKS
+                : ORDINARY_UNREACHABLE_TARGET_PAUSE_TICKS;
+
+        UNREACHABLE_TARGETS.put(
+                attacker,
+                new UnreachableTargetMemory(target, gameTime + pauseTicks)
+        );
+        RetoldBehaviorPerf.recordGroundPathRecovery();
+        stopAttack(attacker);
+    }
+
+    private static boolean isTemporarilyUnreachable(
+            PathfinderMob attacker,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (attacker == null || target == null) {
+            return false;
+        }
+
+        UnreachableTargetMemory memory = UNREACHABLE_TARGETS.get(attacker);
+
+        if (memory == null) {
+            return false;
+        }
+
+        if (gameTime >= memory.expiresAt || !memory.target.isAlive()) {
+            UNREACHABLE_TARGETS.remove(attacker);
+            return false;
+        }
+
+        return memory.target == target;
     }
 
     private static boolean isStillValidAttackTarget(
@@ -634,7 +812,9 @@ public final class RetoldControlledCombatEvents {
         if (RetoldFactionTargetMemory.isOwnedByAny(
                 attacker,
                 target,
-                RetoldTargetSource.RETALIATION
+                RetoldTargetSource.RETALIATION,
+                RetoldTargetSource.FACTION_ASSIST,
+                RetoldTargetSource.THREAT_RESPONSE
         )) {
             return true;
         }
@@ -689,6 +869,7 @@ public final class RetoldControlledCombatEvents {
         RetoldBehaviorTargets.setTargetAndAggression(attacker, null, false);
 
         attacker.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(attacker);
 
         RetoldAiControl.clear(attacker);
     }
@@ -710,5 +891,11 @@ public final class RetoldControlledCombatEvents {
 
     private static boolean isSpider(PathfinderMob mob) {
         return mob instanceof Spider;
+    }
+
+    private record UnreachableTargetMemory(
+            LivingEntity target,
+            long expiresAt
+    ) {
     }
 }

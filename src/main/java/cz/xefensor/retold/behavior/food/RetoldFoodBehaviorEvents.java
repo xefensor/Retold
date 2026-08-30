@@ -297,6 +297,7 @@ public final class RetoldFoodBehaviorEvents {
                 || !RetoldMobRules.hasActiveSearchDrive(state)
                 || RetoldMobRules.canUseNaturalPreyHuntingSystems(mob)
                 || RetoldMobRules.isAquaticSchool(mob)
+                || RetoldMobRules.isPandaBamboo(mob)
                 || RetoldMobRules.isSnifferForager(mob)
                 || RetoldMobRules.isHiveColony(mob)) {
             stopOwnedFoodSearch(mob);

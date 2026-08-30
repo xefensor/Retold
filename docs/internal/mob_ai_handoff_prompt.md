@@ -35,6 +35,13 @@ Current position:
   Guardians. Explicit Retold-owned retaliation remains available at this generic boundary. The
   focused relationship selector passes; latest exact Cube Mob and Guardian-family TPS peaks are
   4.488, 5.665, 4.580, and 5.040 ms/tick respectively.
+- `RetoldTargetRangePolicy` now applies species/profile-aware acquisition and retention ceilings to
+  raw Mob targets, Brain memories, Retold-owned combat, faction scans, and relayed assistance.
+  Ordinary acquisition is 12–24 blocks; Stage 1/2 Zombies use 12/18 and Skeletons 14/22, urgent
+  defense receives a bounded retention margin, and genuine long-range specialists retain explicit
+  exceptions. Unknown modded mobs use clamped `FOLLOW_RANGE`. The exact boundary and focused
+  adjacent behavior regressions pass; natural mixed combat, multiplayer, and dedicated servers
+  remain unverified.
 - There are 82 data-driven mob profiles. Zombie Nautilus is the newest unmanaged
   `SPECIAL_VANILLA` profile; Skeleton Horse, Zombie Horse, and Camel Husk are the newest
   `UNDEAD_MOUNT` profiles.
@@ -56,6 +63,14 @@ Current position:
   close-range fake-Flint-and-Steel path for Nitwits.
   Every completed Retold feed now stops the mob for two seconds and
   turns it toward the remembered food position, with urgent ownership able to interrupt.
+- Shared urgent flight now keeps aligned eight-tick refreshes in a straight escape corridor without
+  fresh lateral randomness, adopts matching active paths, and updates their speed without rebuilding
+  them. A genuinely rejected direct dry route can try at most two deterministic side detours; work
+  deferral remains neutral. Ordinary prey, wounded predators, Creeper awareness, and Cat retreat
+  clear the shared destination memory when their reaction ends, while water validation and the
+  existing 40-tick stuck recovery remain authoritative. Both exact route regressions and
+  representative Cow/Wolf/Salmon/Cat TPS runs pass with a 6.472 ms/tick peak, but natural obstacle,
+  crowd, and circling-attacker behavior still needs developer verification.
 - `animal_feeder` is a one-slot wooden trough crafted from five planks. Right-click with compatible
   food inserts one item; sneak-right-click with compatible food inserts as much of the held stack
   as fits; sneak-right-click with an empty hand or incompatible item retrieves it. Hungry managed non-monster land animals use
@@ -165,11 +180,26 @@ Current position:
   multiplayer, and dedicated-server behavior remain unverified.
 - Phantom spawning no longer depends on insomnia when Retold handles a still-default NeoForge
   decision. Vanilla retains its hostile-spawn gamerule, 60–120-second cadence, dark-sky gate,
-  spectator exclusion, placement checks, and generated group size; Retold requires open sky,
-  night-or-storm context, local difficulty, and a one-in-eight rarity result. Explicit decisions
-  from other mods remain untouched. Stalking no longer gives players an arbitrary score bonus and
-  keeps Undead diplomacy. Both exact focused tests pass; natural frequency, storms, multiplayer,
+  spectator exclusion, and placement checks; Retold requires open sky, night-or-storm context,
+  local difficulty, and a one-in-sixteen rarity result, then limits its approved attempt to one
+  Phantom. Explicit decisions and spawn counts from other mods remain untouched. Stalking no longer
+  gives players an arbitrary score bonus and keeps Undead diplomacy. Three exact focused tests pass;
+  natural frequency, storms, multiplayer,
   and dedicated servers remain unverified.
+- A target-holding mob now gives its intended mob victim a bounded chance to react before damage.
+  Within 24 blocks and cached victim-to-attacker sight, shared prey flee, healthy ordinary
+  predators defend, eligible combat-faction victims countertarget through `THREAT_RESPONSE`, and
+  Wolves or Polar Bears can warn available members of their exact species. Failed perception is
+  retried at most every five ticks, walls block it, existing duties remain protected, the response
+  cannot counter-rally the original attacker's side, and later real damage promotes the response to
+  `RETALIATION`. This reads real mob target state and does not infer player intent from weapons or
+  crosshairs. The exact pre-hit test and adjacent defense/faction/warning regressions pass.
+- Generic post-hit social defense triggers only after the victim takes real health damage. Wolves and
+  Polar Bears use exact-species membership through `retold:shared_defense_species`; Nether
+  Remnants, Illagers, Spider families, Silverfish, Endermites, Hoglins, Breezes, and Village
+  Defenders use cooperative faction alignment. One cached 32-block scan recruits at most eight
+  idle adult allies with close hearing or sight. The caller, the attacker's side, babies, busy or
+  controlled allies, sitting/differently owned Wolves, and specialist factions are excluded.
 - Zoglins and wild Zombie Nautiluses are explicit members of the data-driven Undead faction;
   taming removes a Zombie Nautilus's generic faction identity. Zombie-horde, Skeleton-ranged,
   Ghast-artillery, and Zoglin-rampage proactive scorers no longer give players an arbitrary bonus.
@@ -187,6 +217,14 @@ Current position:
   25% of its original weight; vanilla caps, placement, and pack sizes remain authoritative. Its
   exact stage-boundary test passes. Stat buffs are intentionally absent; natural spawn composition
   and mixed-crowd balance remain unverified.
+- Skeletons, Strays, and Bogged now hold a real ranged shot when another Undead intersects the
+  shooter-eye-to-target-eye segment. The ranged owner keeps `UNDEAD_RANGED` control and requests a
+  budgeted lateral/back-step route, trying the opposite side only after a genuine unreachable
+  result; moving the ally clear restores vanilla arrow creation. The exact firing-lane test and
+  neighboring coordination, target-parity, and weapon-pose regressions pass. Latest 50-mob
+  Skeleton, Stray, and Bogged reruns peak at 3.512, 3.612, and 3.963 ms/tick. Natural crowded
+  formations, elevation, obstacle-heavy repositioning, modded ranged-attack compatibility,
+  multiplayer, and dedicated servers remain unverified.
 - Withers now use a specialized ten-tick bounded cached selector instead of Retold's generic
   forced-faction loop. Recent attackers and creatures actively targeting the Wither outrank merely
   nearby prey, current-target inertia limits churn, players receive no categorical bonus, and the

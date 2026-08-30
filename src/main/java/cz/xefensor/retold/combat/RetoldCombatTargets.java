@@ -32,6 +32,12 @@ public final class RetoldCombatTargets {
             return false;
         }
 
+        boolean stableRefresh = RetoldFactionTargetMemory.isCurrentOwnedBy(
+                mob,
+                target,
+                source
+        );
+
         boolean applied = RetoldFactionTargetMemory.trySetTarget(
                 mob,
                 target,
@@ -42,10 +48,12 @@ public final class RetoldCombatTargets {
             return false;
         }
 
-        RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
-                mob,
-                aggressive
-        );
+        if (!stableRefresh || !aggressive) {
+            RetoldFactionTargetGuards.setAggressiveIgnoringGuard(
+                    mob,
+                    aggressive
+            );
+        }
 
         if (faceTarget) {
             mob.getLookControl().setLookAt(

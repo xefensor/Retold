@@ -69,7 +69,8 @@ Use the exact `retold:` test ID for the changed contract. For example:
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:animal_feeder_uses_paths_without_mob_griefing"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:starvation_kills_and_ignores_non_hunger_mobs"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:hunger_survival_panda"
-./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:panda_bamboo_breaks_and_feeds"
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:panda_bamboo_naturally_eats_and_breaks_block"
+./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:panda_replaces_unreachable_bamboo_target"
 ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:bats_find_high_ceiling_and_search_in_five_member_parties"
 ```
 
@@ -284,13 +285,16 @@ species. Do not rerun the 48-test group; run another exact habitat case only whe
 contract changed. Add only affected exact species TPS IDs when profile cadence, scans, or paths can
 cost more.
 
-For Panda bamboo consumption, run the exact natural-consumption or griefing-denial test. Its two
-cases use separate environments because the entity-griefing gamerule and nearby bamboo fixtures are world-shared; combining them in
-one concurrent environment can create false contention. The natural case requires production AI to
-lower hunger and remove the exact nearby bamboo block, while the denial case requires
+For Panda bamboo consumption, run the exact natural-consumption, unreachable-target replacement,
+or griefing-denial test. Its cases use separate environments where necessary because the
+entity-griefing gamerule and nearby bamboo fixtures are world-shared; combining them in one
+concurrent environment can create false contention. The natural case requires production AI to
+lower hunger and remove the exact nearby bamboo block, the route-recovery case requires the enclosed
+nearest stalk to be replaced in the bounded search while both it and the reachable alternative
+remain unchanged, and the denial case requires
 `mobGriefing=false` to preserve both block and hunger. Add `retold:hunger_survival_panda` when the
 meal transaction changes and `retold:mob_tps_panda` when its scan, movement, or tick path changes.
-Do not expand this species-local transaction to either complete suite.
+Do not expand these species-local contracts to either complete suite.
 
 For missing natural food-acquisition routes, run the exact kill-meal or exclusion test, then run the
 exact `retold:hunger_survival_<mob>` case for each changed
@@ -347,9 +351,43 @@ For Phantom pressure, run the exact
 `retold:phantom_spawn_pressure_is_insomnia_independent` test when the spawn event, rarity,
 time/weather, cover, difficulty, or compatibility boundary changes. Run
 `retold:phantoms_do_not_prioritize_players_over_nearer_prey` when stalk-target scoring or Undead
-diplomacy changes. These event-time and score-order changes do not by themselves justify
-`retold:mob_tps_phantom`; add that exact TPS selector only when repeated dispatch cadence, scan or
-sight caching, ownership continuation, movement, or path work changes.
+diplomacy changes. Run `retold:phantom_stalker_completes_swoop_attack` when owned attack flight,
+contact damage, target release, or recovery timing changes. Event-time and score-order changes do
+not by themselves justify `retold:mob_tps_phantom`; add that exact TPS selector only when repeated
+dispatch cadence, scan or sight caching, ownership continuation, movement, or path work changes.
+
+For generic social defense, run the exact
+`retold:successful_attacks_recruit_only_social_allies` test when the successful-damage trigger,
+`retold:shared_defense_species` membership, cooperative-faction list, responder availability,
+hearing/sight boundary, cap, or assist ownership changes. Run
+`retold:visible_attack_intent_triggers_pre_hit_response` when pre-hit victim perception, the
+24-block/sight boundary, prey flight, ordinary-predator defense, faction countertargeting,
+exact-species witness warning, counter-rally suppression, or promotion to retaliation changes.
+Pair it with `retold:successful_attacks_recruit_only_social_allies`,
+`retold:ordinary_predators_defend_themselves_after_damage`,
+`retold:passive_mobs_flee_every_successful_damage_source`,
+`retold:faction_tags_drive_targeting_and_retaliation`,
+`retold:village_defenders_ignore_neutral_piglins_and_endermen_until_attacked`, and
+`retold:territory_warning_gates_attack_until_escalation` when the shared pre-hit target hook or
+source policy changes. Because that hook executes for every target-holding `PathfinderMob`, a
+change to its cadence, cache use, or per-tick classification is a documented reason for the full
+per-species TPS matrix; a test-fixture-only or constant-only change is not. Run
+`retold:witches_only_assist_illagers_in_same_active_raid` when conditional Illager cooperation
+changes and `retold:endermen_only_coordinate_shared_defense_in_stage_3` when the specialist
+exclusion or Enderman stage boundary changes. Add an exact affected-species TPS selector only when
+scan cadence, cache use, continuation, or responder movement work changes.
+
+For the shared target-distance ceiling, run the exact
+`retold:mob_target_ranges_are_species_aware_and_bounded` selector. It covers raw Mob targets for
+mobs and Survival players, Stage 1/2 Zombie and Skeleton limits, Brain-backed Piglin writes,
+source-aware retaliation, retained-target release, receiver-side Undead assistance, and the
+long-range Ghast exception. Pair it with exact Undead, Phantom, Wildfire, Wither, faction,
+visible-intent, village-defender, territory, and threat-retargeting selectors when the central hook
+or specialist boundaries change. The staggered retention check is shared tick work, so validate
+deliberately chosen representatives with separate exact TPS IDs: Zombie, Skeleton, Piglin, Ghast,
+Phantom, Wither, Warden, Ender Dragon, and Wildfire for the current policy. Do not use a target
+wildcard or the complete matrix; broad fixture environments can overlap and do not represent a
+production failure.
 
 For cross-family Undead target parity, run the exact
 `retold:undead_targeting_does_not_prioritize_players` selector. It covers Zoglin and Zombie
@@ -387,6 +425,19 @@ scan/sight work, or repeated continuation path changes, add the eight exact
 restore the previous saved stage during cleanup. Do not select unrelated profiles unless a shared
 cache, sight, budget, or ownership primitive changes.
 
+For ranged Undead firing-lane tactics, run the exact
+`retold:ranged_undead_hold_fire_and_reposition_around_allies` selector. It invokes the real
+Skeleton ranged-attack method to cover arrow suppression while an Undead ally intersects the
+eye-to-target segment, retained `UNDEAD_RANGED` attack control, lateral/back-step destination
+selection, reopening the lane, and preserved arrow creation afterward. Pair it with
+`retold:undead_stage_two_expands_coordination`,
+`retold:undead_targeting_does_not_prioritize_players`, and
+`retold:owned_target_refresh_does_not_reassert_weapon_pose` when the shared ranged owner, target
+validity, or bow lifecycle changes. Because the firing-lane query and repositioning run repeatedly,
+also run the exact `retold:mob_tps_skeleton`, `retold:mob_tps_stray`, and
+`retold:mob_tps_bogged` selectors; the Zombie-family and unrelated ranged profiles are unnecessary
+unless a shared cache, target, movement, or ownership primitive changes.
+
 For Stage 2 natural-spawn pressure, run the exact
 `retold:undead_stage_two_increases_natural_spawn_weights` selector. It covers all eight default tag
 members, Stage 1 and Stage 3 non-application, the rounded 25% Stage 2 bonus, preservation of the
@@ -418,6 +469,24 @@ defense. Because the rule adds repeated path-backed continuation, run the seven 
 `retold:mob_tps_dolphin`, `retold:mob_tps_spider`, and `retold:mob_tps_cave_spider` selectors; the
 danger fixture lowers wild ordinary predators through the threshold with real damage. Do not select
 the other 75 profiles unless a shared cache, movement, dispatcher, or work-budget primitive changes.
+
+For shared flee-route stability, run the exact
+`retold:flee_destinations_stay_in_escape_corridor` and
+`retold:flee_routes_remain_committed_while_navigation_is_valid` selectors. They separately cover
+the straight escape corridor retained across an eight-tick think refresh and an unchanged active
+path retained while flee speed changes. The adjacent water selector exercises the bounded
+deterministic detour because its straight corridor is blocked; movement-budget deferral must remain
+neutral instead of being interpreted as a reason to alternate sides. Pair them with
+`retold:passive_mobs_flee_every_successful_damage_source`,
+`retold:land_mob_flee_paths_do_not_enter_water`,
+`retold:visible_attack_intent_triggers_pre_hit_response`,
+`retold:ignited_creeper_causes_delayed_flight_except_creepers_and_undead`,
+`retold:cats_retreat_from_unignited_creepers`,
+`retold:badly_wounded_wild_predators_flee_attackers`, and
+`retold:ground_navigation_detects_no_progress_and_recovers_combat` when the shared destination or
+path-reuse contract changes. Use exact Cow, Wolf, Salmon, and Cat TPS selectors as the representative
+land prey, wounded predator, aquatic prey, and Creeper-retreat set; do not select the complete matrix
+unless a broader scan, cache, dispatcher, LOD, or work-budget primitive also changes.
 
 For Wither threat selection, run the exact `retold:wither_prioritizes_serious_threats` selector.
 It covers Ghast, Zoglin, and wild Zombie Nautilus diplomacy, primary/side-head rejection and

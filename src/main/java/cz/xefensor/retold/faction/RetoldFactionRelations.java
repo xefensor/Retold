@@ -4,12 +4,23 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 
 public final class RetoldFactionRelations {
     private static final Map<RetoldFaction, Set<RetoldFaction>> TARGET_FACTIONS =
             new EnumMap<>(RetoldFaction.class);
+    private static final Set<RetoldFaction> SHARED_DEFENSE_FACTIONS = EnumSet.of(
+            RetoldFaction.NETHER_REMNANTS,
+            RetoldFaction.ILLAGERS,
+            RetoldFaction.ARTHROPODS,
+            RetoldFaction.SILVERFISH,
+            RetoldFaction.ENDERMITES,
+            RetoldFaction.NETHER_BEASTS,
+            RetoldFaction.BREEZES,
+            RetoldFaction.VILLAGE_DEFENDERS
+    );
 
     static {
         TARGET_FACTIONS.put(
@@ -280,6 +291,15 @@ public final class RetoldFactionRelations {
         }
 
         return false;
+    }
+
+    /**
+     * Generic target-side and successful-hit defense is limited to factions with ordinary social
+     * cooperation. Undead families, Enders, monument Guardians, and other specialist factions
+     * retain their narrower species, stage, or encounter-specific communication rules.
+     */
+    public static boolean supportsSharedDefense(RetoldFaction faction) {
+        return faction != null && SHARED_DEFENSE_FACTIONS.contains(faction);
     }
 
     /*

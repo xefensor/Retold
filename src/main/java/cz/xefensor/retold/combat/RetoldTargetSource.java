@@ -6,5 +6,6 @@ public enum RetoldTargetSource {
     FACTION_COMBAT,
     OWNER_DEFENSE,
     TERRITORY_ATTACK,
+    THREAT_RESPONSE,
     RETALIATION
 }

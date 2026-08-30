@@ -367,6 +367,22 @@ The later Stage 2 natural-spawn weight hook changes only NeoForge's potential-sp
 does not add loaded-mob tick work, so these eight exact coordination benchmarks were not repeated.
 Its separate exact test covers the stage, tag, category, weight, and preserved-spawn-data boundaries.
 
+### Ranged Undead Firing-Lane Focused Runs
+
+Allied firing-lane avoidance adds a cached bounded entity query and possible lateral/back-step path
+request only to Skeleton, Stray, and Bogged ranged combat. Their three exact selectors were rerun on
+2026-08-30; Zombie-family coordination and shared cache/budget primitives were unchanged, so the
+other profiles were not selected.
+
+| Mob | Idle/rest | Dropped food/forage | Hunt/targeting | Danger/social | Habitat/day-night | Peak |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Skeleton | 3.512 | 2.305 | 3.442 | 2.502 | 1.273 | 3.512 |
+| Stray | 3.575 | 2.344 | 3.612 | 2.819 | 1.443 | 3.612 |
+| Bogged | 3.963 | 2.242 | 3.648 | 2.215 | 1.301 | 3.963 |
+
+All fifteen phases sustained 20 TPS below the 50 ms/tick gate. Bogged idle/rest was the
+3.963 ms/tick overall peak; absolute wall-clock values remain host-load-dependent.
+
 ### Wounded-Predator Flight Focused Runs
 
 The damage phase now lowers all seven wild ordinary predator profiles through their strict 25%
@@ -456,8 +472,9 @@ work. The complete profile matrix was not selected because only the Villager sto
 ### Dry-Land Flight Focused Rerun
 
 The exact `retold:mob_tps_cow` and `retold:mob_tps_wolf` selectors were rerun on 2026-08-23 after
-urgent ground flight began using bounded land-position sampling and rejecting paths that enter
-water when the mob starts on land. These profiles cover a passive grazer and a predator using the
+the initial urgent-ground-flight implementation added bounded land-position sampling and rejected
+paths that enter water when the mob starts on land. The later stable flee-route rerun below
+supersedes that selector with straight corridors and deterministic detours. These profiles cover a passive grazer and a predator using the
 shared flight adapter; the complete matrix was not selected because ordinary movement, shared scan
 caches, and work-budget primitives did not change.
 
@@ -465,6 +482,51 @@ All ten 50-mob phases passed below 50 ms/tick. Cow averaged 4.327 idle/rest, 3.8
 dropped-food/forage, 2.638 hunt/targeting, 5.806 danger/social, and 3.083 habitat/day-night
 ms/tick. Wolf averaged 4.624, 4.549, 5.476, 4.753, and 2.921 ms/tick in the same phase order.
 Cow danger/social was the combined 5.806 ms/tick peak.
+
+### Visible Attack-Intent Complete Matrix Rerun
+
+The complete 83-profile matrix was selected on 2026-08-30 because visible attack-intent
+perception adds a bounded check to the shared target-holding `PathfinderMob` tick path rather than
+to one species-local dispatcher. All 83 tests and 415 phases passed in 2.675 minutes, every phase
+remained below the 50 ms/tick gate, and all results reported sustainable 20 TPS. Bat
+habitat/day-night was the 8.311 ms/tick overall peak; Villager idle/rest and danger/social followed
+at 7.747 and 7.711 ms/tick. The exact pre-hit behavior test and adjacent defense, flight, faction,
+village-defender, and territory-warning regressions remain the correctness evidence; this matrix
+establishes only the isolated 50-mob performance boundary.
+
+### Species-Aware Target-Distance Focused Runs
+
+The exact Zombie, Skeleton, Piglin, Ghast, Phantom, Wither, Warden, Ender Dragon, and Wildfire selectors were run
+separately on 2026-08-30 after the shared target hook gained profile-aware assignment checks and a
+staggered five-tick retention cleanup. These deliberately cover both Mob and Brain targeting,
+Stage-scaled Undead, managed and unmanaged profiles, and every current long-range specialist
+category touched by the policy. The complete matrix was not selected because the maintained
+strategy requires exact representative selectors for shared changes.
+
+All 45 phases sustained 20 TPS and remained below 50 ms/tick. Peak phases were Zombie 5.037,
+Skeleton 4.802, Piglin 8.178, Ghast 5.604, Phantom 4.807, Wither 6.638, Warden 5.111, Ender Dragon
+2.480, and Wildfire 6.194 ms/tick. Piglin hunt/targeting was the combined 8.178 ms/tick peak. The exact target-distance test and the
+focused Undead, Phantom, Wildfire, Wither, faction, visible-intent, village-defender, territory,
+and threat-retargeting tests remain the correctness evidence.
+
+### Stable Flee-Route Focused Runs
+
+The exact Cow, Wolf, Salmon, and Cat selectors were run separately on 2026-08-30 after the
+developer confirmed that destination commitment alone still allowed consecutive randomized
+segments to alternate sides. Shared urgent flight now uses a straight escape corridor on clear
+ground, retains matching active paths across speed updates, and tests only bounded deterministic
+detours after actual route rejection. They represent land prey, wounded-predator continuation,
+aquatic prey, and Cat/Creeper retreat. The complete matrix was not selected because the change adds
+no scan, dispatcher cadence, LOD, or work-budget expansion and the maintained strategy calls for
+these exact representatives.
+
+All 20 phases sustained 20 TPS and remained below 50 ms/tick. Cow averaged 4.269 idle/rest, 4.918
+dropped-food/forage, 2.909 hunt/targeting, 6.472 danger/social, and 3.376 habitat/day-night ms/tick.
+Wolf averaged 5.287, 4.403, 5.996, 5.932, and 3.782; Salmon averaged 5.552, 3.561, 5.141,
+5.577, and 2.592; Cat averaged 4.194, 4.036, 5.350, 5.859, and 2.875 ms/tick in the same phase
+order. Cow danger/social was the combined 6.472 ms/tick peak. The two exact stability tests and
+focused damage, water, visible-intent, Creeper, Cat, wounded-predator, and stuck-recovery regressions
+remain the correctness evidence.
 
 ## Results
 

@@ -218,6 +218,8 @@ public final class RetoldTags {
             );
     public static final TagKey<EntityType<?>> STAGE_2_UNDEAD_SPAWN_PRESSURE =
             entityTypeTag("stage_2_undead_spawn_pressure");
+    public static final TagKey<EntityType<?>> SHARED_DEFENSE_SPECIES =
+            entityTypeTag("shared_defense_species");
     public static final TagKey<EntityType<?>> FACTION_NETHER_REMNANTS =
             entityTypeTag("factions/nether_remnants");
     public static final TagKey<EntityType<?>> FACTION_ILLAGERS =
