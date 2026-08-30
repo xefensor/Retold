@@ -37,6 +37,7 @@ public final class RetoldPandaBambooEvents {
     private static final int BAMBOO_BLOCK_SEARCH_CACHE_TICKS = 35;
     private static final int FEED_CONTROL_TICKS = 20 * 5;
     private static final int RETURN_CONTROL_TICKS = 20 * 6;
+    private static final int UNREACHABLE_BAMBOO_RETRY_TICKS = 20 * 30;
 
     private static final int BAMBOO_FEED_PRIORITY = RetoldAiPriorities.below(RetoldAiPriorities.FEED, 3);
     private static final int RETURN_PRIORITY = RetoldAiPriorities.above(RetoldAiPriorities.REGROUP, 3);
@@ -355,7 +356,8 @@ public final class RetoldPandaBambooEvents {
             BlockPos bamboo,
             long gameTime
     ) {
-        RetoldBehaviorMovement.claimAndMoveToBlock(
+        RetoldBehaviorMovement.MovementOutcome movement =
+                RetoldBehaviorMovement.claimAndMoveToBlockWithOutcome(
                 panda,
                 bamboo,
                 RetoldAiControlMode.FEED,
@@ -367,6 +369,16 @@ public final class RetoldPandaBambooEvents {
                 PANDA_FEED_SPEED,
                 false
         );
+
+        if (movement.shouldRecover()) {
+            RetoldBlockTargetSearch.markBambooUnreachable(
+                    panda,
+                    bamboo,
+                    gameTime,
+                    UNREACHABLE_BAMBOO_RETRY_TICKS
+            );
+            stopControl(panda);
+        }
     }
 
     static boolean tryNibbleBamboo(

@@ -46,6 +46,8 @@
     "MobHurtTargetMixin",
     "AbstractCubeMobPushMixin",
     "BatAiMixin",
+    "AbstractSkeletonRangedAttackMixin",
+    "PhantomAiMixin",
     "BlockItemGolemCostMixin",
     "SummonedEntityTriggerMixin",
     "CubeMobMoveControlInvoker",

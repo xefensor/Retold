@@ -220,7 +220,7 @@ public final class RetoldUndeadTargetParityGameTests {
         var closeFamilyRecruit = helper.spawn(EntityTypes.HUSK, 9, 3, 3);
         var distantFamilyRecruit = helper.spawn(EntityTypes.DROWNED, 18, 3, 3);
         PathfinderMob crossFamilyRecruit = spawnOccasionalRangedResponder(helper);
-        var target = helper.spawn(EntityTypes.COW, 23, 3, 3);
+        var target = helper.spawn(EntityTypes.COW, 11, 3, 3);
 
         source.setNoAi(true);
         closeFamilyRecruit.setNoAi(true);

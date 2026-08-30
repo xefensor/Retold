@@ -27,6 +27,7 @@ import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
@@ -66,6 +67,20 @@ public final class RetoldDamageFleeGameTests {
                 new InlineGameTest(
                         testData,
                         RetoldDamageFleeGameTests::landMobFleePathsDoNotEnterWater
+                )
+        );
+        event.registerTest(
+                id("flee_routes_remain_committed_while_navigation_is_valid"),
+                new InlineGameTest(
+                        testData,
+                        RetoldDamageFleeGameTests::fleeRoutesRemainCommittedWhileNavigationIsValid
+                )
+        );
+        event.registerTest(
+                id("flee_destinations_stay_in_escape_corridor"),
+                new InlineGameTest(
+                        testData,
+                        RetoldDamageFleeGameTests::fleeDestinationsStayInEscapeCorridor
                 )
         );
         event.registerTest(
@@ -199,13 +214,12 @@ public final class RetoldDamageFleeGameTests {
         }
 
         helper.runAfterDelay(2, () -> {
-            Vec3 danger = helper.absoluteVec(new Vec3(10.5D, 2.0D, 8.5D));
             Vec3 directDestination = helper.absoluteVec(new Vec3(2.5D, 2.0D, 8.5D));
             BlockPos destination = RetoldFleeMovement.chooseDestination(
                     sheep,
-                    danger,
                     directDestination,
-                    8.0D
+                    8.0D,
+                    level.getGameTime()
             );
 
             helper.assertFalse(
@@ -253,6 +267,157 @@ public final class RetoldDamageFleeGameTests {
             }
 
             helper.succeed();
+        });
+    }
+
+    private static void fleeRoutesRemainCommittedWhileNavigationIsValid(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+
+        for (int x = 0; x <= 20; x++) {
+            for (int z = 0; z <= 20; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+            }
+        }
+
+        var sheep = helper.spawn(EntityTypes.SHEEP, 10, 2, 10);
+
+        helper.runAfterDelay(2, () -> {
+            try {
+                long gameTime = level.getGameTime();
+                Vec3 firstDirectDestination = helper.absoluteVec(
+                        new Vec3(5.5D, 2.0D, 10.5D)
+                );
+                Vec3 slightlyAdjustedDestination = helper.absoluteVec(
+                        new Vec3(5.5D, 2.0D, 11.5D)
+                );
+                BlockPos firstDestination = RetoldFleeMovement.chooseDestination(
+                        sheep,
+                        firstDirectDestination,
+                        8.0D,
+                        gameTime
+                );
+
+                RetoldAiControl.claim(
+                        sheep,
+                        RetoldAiControlMode.FLEE,
+                        gameTime,
+                        40
+                );
+                BlockPos start = sheep.blockPosition();
+                Path firstPath = new Path(
+                        List.of(
+                                new Node(start.getX(), start.getY(), start.getZ()),
+                                new Node(
+                                        firstDestination.getX(),
+                                        firstDestination.getY(),
+                                        firstDestination.getZ()
+                                )
+                        ),
+                        firstDestination,
+                        true
+                );
+
+                RetoldAiControl.withNavigationBypass(
+                        () -> sheep.getNavigation().moveTo(firstPath, 1.1D)
+                );
+                helper.assertTrue(
+                        sheep.getNavigation().getPath() == firstPath,
+                        "The flee-route fixture must begin its seeded navigation path"
+                );
+
+                BlockPos refreshedDestination = RetoldFleeMovement.chooseDestination(
+                        sheep,
+                        slightlyAdjustedDestination,
+                        8.0D,
+                        gameTime + 8
+                );
+                helper.assertValueEqual(
+                        refreshedDestination,
+                        firstDestination,
+                        "A fleeing mob must retain its safe destination across ordinary think ticks"
+                );
+
+                helper.assertTrue(
+                        RetoldFleeMovement.moveTo(
+                                sheep,
+                                refreshedDestination,
+                                1.45D,
+                                gameTime + 8,
+                                1,
+                                4.0D
+                        ),
+                        "A flee speed update must keep the existing route active"
+                );
+                helper.assertTrue(
+                        sheep.getNavigation().getPath() == firstPath,
+                        "Changing flee speed must not replace an unchanged navigation path"
+                );
+
+                helper.succeed();
+            } finally {
+                cleanup(sheep);
+            }
+        });
+    }
+
+    private static void fleeDestinationsStayInEscapeCorridor(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+
+        for (int x = 0; x <= 20; x++) {
+            for (int z = 0; z <= 20; z++) {
+                helper.setBlock(new BlockPos(x, 1, z), Blocks.STONE);
+            }
+        }
+
+        var sheep = helper.spawn(EntityTypes.SHEEP, 10, 2, 10);
+
+        helper.runAfterDelay(2, () -> {
+            try {
+                long gameTime = level.getGameTime();
+                Vec3 firstDirection = helper.absoluteVec(new Vec3(2.5D, 2.0D, 10.5D));
+                Vec3 adjustedDirection = helper.absoluteVec(new Vec3(2.5D, 2.0D, 11.5D));
+                BlockPos firstDestination = RetoldFleeMovement.chooseDestination(
+                        sheep,
+                        firstDirection,
+                        8.0D,
+                        gameTime
+                );
+                BlockPos refreshedDestination = RetoldFleeMovement.chooseDestination(
+                        sheep,
+                        adjustedDirection,
+                        8.0D,
+                        gameTime + 8
+                );
+
+                helper.assertValueEqual(
+                        refreshedDestination,
+                        firstDestination,
+                        "Land flight must retain its corridor across ordinary think ticks"
+                );
+                Vec3 intendedDirection = firstDirection.subtract(sheep.position()).normalize();
+                Vec3 chosenDirection = Vec3.atCenterOf(firstDestination)
+                        .subtract(sheep.position());
+                double lateralOffset = Math.abs(
+                        intendedDirection.x * chosenDirection.z
+                                - intendedDirection.z * chosenDirection.x
+                );
+
+                helper.assertTrue(
+                        intendedDirection.dot(chosenDirection) > 3.0D,
+                        "A clear flee destination must continue forward from the threat"
+                );
+                helper.assertTrue(
+                        lateralOffset <= 1.0D,
+                        "A clear flee destination must stay in a straight escape corridor"
+                );
+                helper.succeed();
+            } finally {
+                cleanup(sheep);
+            }
         });
     }
 
@@ -537,6 +702,7 @@ public final class RetoldDamageFleeGameTests {
     }
 
     private static void cleanup(PathfinderMob mob) {
+        RetoldFleeMovement.clearDestination(mob);
         RetoldAiControl.clear(mob);
         RetoldMobStates.remove(mob);
         mob.discard();

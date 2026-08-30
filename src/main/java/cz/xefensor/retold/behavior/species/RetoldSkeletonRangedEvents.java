@@ -15,6 +15,7 @@ import cz.xefensor.retold.faction.RetoldFactionMembers;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
@@ -42,6 +43,10 @@ public final class RetoldSkeletonRangedEvents {
 
     private static final double RANGED_MOVE_SPEED = 0.92D;
     private static final double BACKPEDAL_BLOCKS = 8.0D;
+    private static final double FIRING_LANE_SCAN_RADIUS_BLOCKS = 40.0D;
+    private static final double FIRING_LANE_MARGIN_BLOCKS = 0.35D;
+    private static final double FIRING_LANE_SIDE_STEP_BLOCKS = 4.5D;
+    private static final double FIRING_LANE_BACK_STEP_BLOCKS = 1.5D;
 
     private RetoldSkeletonRangedEvents() {
     }
@@ -261,11 +266,15 @@ public final class RetoldSkeletonRangedEvents {
         );
     }
 
-    private static void maintainRange(
+    static void maintainRange(
             PathfinderMob skeleton,
             LivingEntity target,
             long gameTime
     ) {
+        if (!(skeleton.level() instanceof ServerLevel level)) {
+            return;
+        }
+
         if (!RetoldBehaviorCombat.claimAttackControl(
                 skeleton,
                 RetoldAiControlOwner.UNDEAD_RANGED,
@@ -282,6 +291,16 @@ public final class RetoldSkeletonRangedEvents {
                 30.0F,
                 30.0F
         );
+
+        if (findBlockingUndeadAlly(
+                level,
+                skeleton,
+                target,
+                gameTime
+        ) != null) {
+            moveToClearFiringLane(skeleton, target, gameTime);
+            return;
+        }
 
         double distanceSquared = skeleton.distanceToSqr(target);
 
@@ -340,6 +359,141 @@ public final class RetoldSkeletonRangedEvents {
                 RANGED_PATH_INTERVAL_TICKS,
                 1.5D * 1.5D
         );
+    }
+
+    private static void moveToClearFiringLane(
+            PathfinderMob skeleton,
+            LivingEntity target,
+            long gameTime
+    ) {
+        Vec3 destination = clearFiringLaneDestination(skeleton, target);
+        RetoldBehaviorMovement.MovementOutcome outcome =
+                RetoldBehaviorMovement.throttledMoveToWithOutcome(
+                        skeleton,
+                        destination.x,
+                        skeleton.getY(),
+                        destination.z,
+                        RANGED_MOVE_SPEED,
+                        gameTime,
+                        RANGED_PATH_INTERVAL_TICKS,
+                        1.5D * 1.5D
+                );
+
+        if (!outcome.shouldRecover()) {
+            return;
+        }
+
+        double alternateSide = Math.floorMod(skeleton.getId(), 2) == 0
+                ? -1.0D
+                : 1.0D;
+        Vec3 alternate = clearFiringLaneDestination(
+                skeleton,
+                target,
+                alternateSide
+        );
+        RetoldBehaviorMovement.throttledMoveToWithOutcome(
+                skeleton,
+                alternate.x,
+                skeleton.getY(),
+                alternate.z,
+                RANGED_MOVE_SPEED,
+                gameTime,
+                RANGED_PATH_INTERVAL_TICKS,
+                1.5D * 1.5D
+        );
+    }
+
+    static Vec3 clearFiringLaneDestination(
+            PathfinderMob skeleton,
+            LivingEntity target
+    ) {
+        double side = Math.floorMod(skeleton.getId(), 2) == 0 ? 1.0D : -1.0D;
+        return clearFiringLaneDestination(skeleton, target, side);
+    }
+
+    private static Vec3 clearFiringLaneDestination(
+            PathfinderMob skeleton,
+            LivingEntity target,
+            double side
+    ) {
+        Vec3 towardTarget = target.position().subtract(skeleton.position());
+        towardTarget = new Vec3(towardTarget.x, 0.0D, towardTarget.z);
+
+        if (towardTarget.lengthSqr() <= 0.0001D) {
+            towardTarget = new Vec3(1.0D, 0.0D, 0.0D);
+        } else {
+            towardTarget = towardTarget.normalize();
+        }
+
+        Vec3 lateral = new Vec3(-towardTarget.z, 0.0D, towardTarget.x);
+        return skeleton.position()
+                .add(lateral.scale(FIRING_LANE_SIDE_STEP_BLOCKS * side))
+                .subtract(towardTarget.scale(FIRING_LANE_BACK_STEP_BLOCKS));
+    }
+
+    public static boolean shouldHoldFire(
+            PathfinderMob skeleton,
+            LivingEntity target
+    ) {
+        if (!(skeleton.level() instanceof ServerLevel level)
+                || !isRangedUndead(skeleton)
+                || !isValidRangedTarget(skeleton, target)) {
+            return false;
+        }
+
+        return findBlockingUndeadAlly(
+                level,
+                skeleton,
+                target,
+                level.getGameTime()
+        ) != null;
+    }
+
+    static LivingEntity findBlockingUndeadAlly(
+            ServerLevel level,
+            PathfinderMob skeleton,
+            LivingEntity target,
+            long gameTime
+    ) {
+        if (level == null
+                || skeleton == null
+                || target == null
+                || !RetoldBehaviorCoordinator.isAliveInSameLevel(skeleton, target)) {
+            return null;
+        }
+
+        Vec3 shotStart = skeleton.getEyePosition();
+        Vec3 shotEnd = target.getEyePosition();
+
+        if (shotStart.distanceToSqr(shotEnd) <= 0.0001D) {
+            return null;
+        }
+
+        for (LivingEntity candidate : RetoldAiScanCache.nearby(
+                level,
+                skeleton,
+                LivingEntity.class,
+                FIRING_LANE_SCAN_RADIUS_BLOCKS,
+                gameTime,
+                RANGED_SCAN_CACHE_TICKS
+        )) {
+            if (candidate == skeleton
+                    || candidate == target
+                    || !RetoldBehaviorCoordinator.isAliveInSameLevel(skeleton, candidate)
+                    || !RetoldFactionMembers.isUndead(candidate)) {
+                continue;
+            }
+
+            AABB firingObstacle = candidate.getBoundingBox().inflate(
+                    FIRING_LANE_MARGIN_BLOCKS
+            );
+
+            if (firingObstacle.clip(shotStart, shotEnd).isPresent()) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private static boolean isValidRangedSource(

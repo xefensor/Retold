@@ -1164,6 +1164,9 @@ High-level systems:
   fail-closed conflict handling, reload-aware cached membership, and a separate
   `retold:alliances/illager_loose_allies` extension point; faction identity remains independent of
   datapack mob profiles
+- successful-damage shared defense for explicitly cooperative factions plus exact-species
+  `retold:shared_defense_species` membership, using bounded cached perception, responder caps,
+  source-owned targets, and specialist exclusions
 - separate neutral Silverfish and Endermite identities, with same-entity-type enforcement in the
   small-arthropod swarm owner so their shared profile cannot create cross-species coordination
 - owned Polar Bear cub defense with a cancellable standing/sound warning before proactive attack
@@ -1188,12 +1191,19 @@ High-level systems:
   `retold:squid_foods` tag; the default raw-fish diet does not enable living-prey hunting
 - ten-second serious-wound flight for wild ordinary predator profiles below 25% health, with
   hunt/retaliation release plus explicit tamed, Undead, boss, and territory-duty exemptions
+- committed urgent-flight destinations shared by passive, wounded-predator, Creeper, and Cat
+  reactions, with a straight escape corridor on clear ground, aligned think refreshes retaining the
+  route, matching active paths accepting speed updates, and at most two deterministic dry detours
+  after genuine route rejection while water rejection and stuck recovery remain authoritative
 - persisted broad Bat roost identity with upward personal ceiling-slot searches and staggered
   settling, plus dropped Spider Eye preference, night-only five-member directional hunting parties,
   shared arthropod detection, separated attack flight, fearless arthropod-combat dodges, and cached
   selective delayed panic
 - territory warning and reputation
 - target ownership
+- species/profile-aware target acquisition and retention ceilings shared by vanilla Mob targets,
+  Brain memories, Retold-owned combat, faction scans, and relayed assistance; unknown modded mobs
+  fall back to a bounded form of their declared `FOLLOW_RANGE`
 - invalid player target cleanup
 - AI performance scheduling, caches, LOD, and budgets
 - first-stage unloaded metabolism reconciliation through the existing persisted mob timestamp and a

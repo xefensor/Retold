@@ -3,6 +3,7 @@ package cz.xefensor.retold.combat;
 import cz.xefensor.retold.behavior.control.RetoldAiControl;
 import cz.xefensor.retold.behavior.control.RetoldAiControlMode;
 import cz.xefensor.retold.behavior.profiles.RetoldMobRules;
+import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerEvents;
 
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
@@ -20,6 +21,9 @@ public final class RetoldFactionTargetGuards {
 
     private static final ThreadLocal<Boolean> SOURCE_VALIDATED_TARGET =
             ThreadLocal.withInitial(() -> false);
+
+    private static final ThreadLocal<RetoldTargetSource> TARGET_SOURCE =
+            new ThreadLocal<>();
 
     private static final ThreadLocal<Boolean> IGNORE_AGGRESSIVE_GUARD =
             ThreadLocal.withInitial(() -> false);
@@ -44,6 +48,18 @@ public final class RetoldFactionTargetGuards {
         }
 
         if (RetoldAiTargets.isInvalidPlayerTarget(target)) {
+            return true;
+        }
+
+        if (RetoldTargetRangePolicy.shouldBlockTargetAssignment(
+                mob,
+                target,
+                TARGET_SOURCE.get()
+        )) {
+            return true;
+        }
+
+        if (RetoldPhantomStalkerEvents.shouldBlockTargetDuringRecovery(mob)) {
             return true;
         }
 
@@ -103,6 +119,7 @@ public final class RetoldFactionTargetGuards {
 
         boolean previous = IGNORE_TARGET_GUARD.get();
         boolean previousSourceValidation = SOURCE_VALIDATED_TARGET.get();
+        RetoldTargetSource previousSource = TARGET_SOURCE.get();
         boolean sourceValidated = source != null
                 && !RetoldMobTargetPolicy.shouldBlockDeliberateHostility(
                 mob,
@@ -111,12 +128,19 @@ public final class RetoldFactionTargetGuards {
         );
         IGNORE_TARGET_GUARD.set(true);
         SOURCE_VALIDATED_TARGET.set(sourceValidated);
+        TARGET_SOURCE.set(source);
 
         try {
             mob.setTarget(target);
         } finally {
             IGNORE_TARGET_GUARD.set(previous);
             SOURCE_VALIDATED_TARGET.set(previousSourceValidation);
+
+            if (previousSource == null) {
+                TARGET_SOURCE.remove();
+            } else {
+                TARGET_SOURCE.set(previousSource);
+            }
         }
     }
 

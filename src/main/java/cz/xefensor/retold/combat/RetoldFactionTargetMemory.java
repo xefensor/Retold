@@ -46,6 +46,16 @@ public final class RetoldFactionTargetMemory {
             return false;
         }
 
+        /*
+         * Periodic combat owners refresh their claim even when neither target nor source changed.
+         * Rewriting the same Mob/Brain target redispatches target-change hooks and needlessly
+         * interferes with transient vanilla combat state, so a live exact ownership match is
+         * already a successful assignment.
+         */
+        if (isCurrentOwnedBy(mob, target, source)) {
+            return true;
+        }
+
         RetoldFactionTargetGuards.setTargetIgnoringGuard(
                 mob,
                 target,
@@ -153,6 +163,30 @@ public final class RetoldFactionTargetMemory {
         }
 
         return ownership.source;
+    }
+
+    public static boolean isCurrentOwnedBy(
+            Mob mob,
+            LivingEntity target,
+            RetoldTargetSource source
+    ) {
+        if (mob == null || target == null || source == null) {
+            return false;
+        }
+
+        TargetOwnership ownership = TARGET_OWNERS.get(mob);
+
+        if (ownership == null
+                || ownership.target != target
+                || ownership.source != source) {
+            return false;
+        }
+
+        LivingEntity currentTarget = mob.getTarget();
+        LivingEntity brainTarget = RetoldAiTargets.getBrainAttackTargetSafely(mob);
+
+        return isCurrentOwnedTarget(mob, ownership, currentTarget)
+                || isCurrentOwnedTarget(mob, ownership, brainTarget);
     }
 
     public static String debugOwnershipText(Mob mob) {

@@ -6,6 +6,7 @@ import cz.xefensor.retold.behavior.control.RetoldAiControlOwner;
 import cz.xefensor.retold.behavior.control.RetoldAiPriorities;
 import cz.xefensor.retold.behavior.performance.RetoldAiScanCache;
 import cz.xefensor.retold.behavior.performance.RetoldAiSightCache;
+import cz.xefensor.retold.behavior.performance.RetoldBehaviorPerf;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorCoordinator;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorTargets;
@@ -48,6 +49,7 @@ public final class RetoldControlledHuntingEvents {
     private static final int HUNT_CONTROL_TICKS = 20 * 4;
     private static final int FEED_LOCK_AFTER_KILL_TICKS = 20 * 8;
     private static final int HUNT_TRAIL_MEMORY_TICKS = 20 * 10;
+    private static final int UNREACHABLE_PREY_SEARCH_TICKS = 20 * 3;
 
     private static final double PREY_SEARCH_RADIUS_BLOCKS = 18.0D;
     private static final double PREY_SEARCH_RADIUS_SQUARED =
@@ -615,7 +617,8 @@ public final class RetoldControlledHuntingEvents {
                 return;
             }
 
-            RetoldBehaviorMovement.throttledMoveTo(
+            RetoldBehaviorMovement.MovementOutcome movement =
+                    RetoldBehaviorMovement.throttledMoveToWithOutcome(
                     hunter,
                     prey,
                     getHuntSpeed(
@@ -626,6 +629,10 @@ public final class RetoldControlledHuntingEvents {
                     HUNT_PATH_INTERVAL_TICKS,
                     2.5D * 2.5D
             );
+
+            if (movement.shouldRecover()) {
+                beginUnreachablePreySearch(hunter, prey, gameTime);
+            }
 
             return;
         }
@@ -823,12 +830,13 @@ public final class RetoldControlledHuntingEvents {
             long gameTime
     ) {
         LivingEntity target = hunter.getTarget();
+        HuntMemory memory = HUNT_MEMORIES.get(hunter);
 
-        if (isValidHuntPrey(hunter, target, gameTime)) {
+        if (isValidHuntPrey(hunter, target, gameTime)
+                && (memory == null
+                || !memory.isPreyTemporarilyUnreachable(target, gameTime))) {
             return target;
         }
-
-        HuntMemory memory = HUNT_MEMORIES.get(hunter);
 
         if (memory == null || memory.isExpired(gameTime)) {
             return null;
@@ -839,7 +847,8 @@ public final class RetoldControlledHuntingEvents {
                 memory
         );
 
-        if (isValidHuntPrey(hunter, remembered, gameTime)) {
+        if (isValidHuntPrey(hunter, remembered, gameTime)
+                && !memory.isPreyTemporarilyUnreachable(remembered, gameTime)) {
             return remembered;
         }
 
@@ -886,9 +895,32 @@ public final class RetoldControlledHuntingEvents {
                         horizontalMovement,
                         gameTime,
                         gameTime + HUNT_TRAIL_MEMORY_TICKS,
-                        0
+                        0,
+                        Long.MIN_VALUE
                 )
         );
+    }
+
+    private static void beginUnreachablePreySearch(
+            PathfinderMob hunter,
+            LivingEntity prey,
+            long gameTime
+    ) {
+        HuntMemory memory = HUNT_MEMORIES.get(hunter);
+
+        if (memory == null || !memory.preyId().equals(prey.getUUID())) {
+            rememberPrey(hunter, prey, gameTime);
+            memory = HUNT_MEMORIES.get(hunter);
+        }
+
+        if (memory != null) {
+            memory.unreachableUntil = gameTime + UNREACHABLE_PREY_SEARCH_TICKS;
+        }
+
+        RetoldBehaviorTargets.setTargetAndAggression(hunter, null, false);
+        hunter.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(hunter);
+        RetoldBehaviorPerf.recordGroundPathRecovery();
     }
 
     private static void moveToRememberedSearchPoint(
@@ -956,7 +988,8 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(true);
 
-        RetoldBehaviorMovement.throttledMoveTo(
+        RetoldBehaviorMovement.MovementOutcome movementOutcome =
+                RetoldBehaviorMovement.throttledMoveToWithOutcome(
                 hunter,
                 target.x,
                 target.y,
@@ -969,6 +1002,10 @@ public final class RetoldControlledHuntingEvents {
                 HUNT_PATH_INTERVAL_TICKS,
                 2.0D * 2.0D
         );
+
+        if (movementOutcome.shouldRecover()) {
+            stopHunt(hunter, gameTime);
+        }
     }
 
     private static boolean hasEasyFoodNearby(
@@ -1064,6 +1101,7 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(false);
         hunter.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(hunter);
     }
 
     private static void stopHunt(
@@ -1084,6 +1122,7 @@ public final class RetoldControlledHuntingEvents {
 
         hunter.setSprinting(false);
         hunter.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(hunter);
     }
 
     private static void endHuntForInactivePeriod(PathfinderMob hunter) {
@@ -1093,6 +1132,7 @@ public final class RetoldControlledHuntingEvents {
         RetoldBehaviorTargets.setTargetAndAggression(hunter, null, false);
         hunter.setSprinting(false);
         hunter.getNavigation().stop();
+        RetoldBehaviorMovement.clearGroundPathState(hunter);
     }
 
     private static boolean canHuntAtCurrentTime(
@@ -1224,6 +1264,7 @@ public final class RetoldControlledHuntingEvents {
         private final long lastSeenAt;
         private final long expiresAt;
         private int searchStep;
+        private long unreachableUntil;
 
         private HuntMemory(
                 UUID preyId,
@@ -1231,7 +1272,8 @@ public final class RetoldControlledHuntingEvents {
                 Vec3 lastKnownMovement,
                 long lastSeenAt,
                 long expiresAt,
-                int searchStep
+                int searchStep,
+                long unreachableUntil
         ) {
             this.preyId = preyId;
             this.lastKnownPos = lastKnownPos;
@@ -1239,6 +1281,7 @@ public final class RetoldControlledHuntingEvents {
             this.lastSeenAt = lastSeenAt;
             this.expiresAt = expiresAt;
             this.searchStep = searchStep;
+            this.unreachableUntil = unreachableUntil;
         }
 
         private UUID preyId() {
@@ -1259,6 +1302,15 @@ public final class RetoldControlledHuntingEvents {
 
         private boolean isExpired(long gameTime) {
             return gameTime > expiresAt;
+        }
+
+        private boolean isPreyTemporarilyUnreachable(
+                LivingEntity prey,
+                long gameTime
+        ) {
+            return prey != null
+                    && preyId.equals(prey.getUUID())
+                    && gameTime < unreachableUntil;
         }
     }
 }

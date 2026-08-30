@@ -154,6 +154,12 @@ public final class RetoldTamedDefenderGameTests {
                     "Owned self-defense must continue after one-time damage memory clears"
             );
 
+            RetoldCombatTargets.clearTargetReferencesAndAggression(
+                    ownerSafeWolf,
+                    attacker,
+                    true
+            );
+            RetoldAiControl.clear(ownerSafeWolf);
             helper.assertTrue(
                     ownerSafeWolf.hurtServer(
                             level,

@@ -1,6 +1,7 @@
 package cz.xefensor.retold.behavior.species;
 
 import cz.xefensor.retold.Retold;
+import cz.xefensor.retold.behavior.performance.RetoldBlockTargetSearch;
 import cz.xefensor.retold.behavior.profiles.RetoldMobState;
 import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 
@@ -43,6 +44,11 @@ public final class RetoldPandaBambooGameTests {
                         id("isolated_panda_bamboo_griefing"),
                         new TestEnvironmentDefinition.AllOf()
                 );
+        Holder<TestEnvironmentDefinition<?>> recoveryEnvironment =
+                event.registerEnvironment(
+                        id("isolated_panda_bamboo_recovery"),
+                        new TestEnvironmentDefinition.AllOf()
+                );
 
         registerTest(
                 event,
@@ -55,6 +61,12 @@ public final class RetoldPandaBambooGameTests {
                 griefingEnvironment,
                 "panda_bamboo_consumption_respects_mob_griefing",
                 RetoldPandaBambooGameTests::pandaBambooConsumptionRespectsMobGriefing
+        );
+        registerTest(
+                event,
+                recoveryEnvironment,
+                "panda_replaces_unreachable_bamboo_target",
+                RetoldPandaBambooGameTests::pandaReplacesUnreachableBambooTarget
         );
     }
 
@@ -145,12 +157,102 @@ public final class RetoldPandaBambooGameTests {
         }
     }
 
+    private static void pandaReplacesUnreachableBambooTarget(
+            GameTestHelper helper
+    ) {
+        ServerLevel level = helper.getLevel();
+        BlockPos blockedBamboo = new BlockPos(5, 2, 5);
+        BlockPos reachableBamboo = new BlockPos(8, 2, 9);
+        buildLargeHabitat(helper);
+        helper.setBlock(blockedBamboo, Blocks.BAMBOO);
+        helper.setBlock(reachableBamboo, Blocks.BAMBOO);
+        encloseBamboo(helper, blockedBamboo);
+
+        Panda panda = helper.spawn(EntityTypes.PANDA, 8, 2, 5);
+        panda.setMainGene(Panda.Gene.NORMAL);
+        panda.setHiddenGene(Panda.Gene.NORMAL);
+        panda.setAttributes();
+        long gameTime = level.getGameTime();
+        BlockPos absoluteBlocked = helper.absolutePos(blockedBamboo);
+        BlockPos absoluteReachable = helper.absolutePos(reachableBamboo);
+        BlockPos firstTarget = RetoldBlockTargetSearch.findBamboo(
+                level,
+                panda,
+                12,
+                4,
+                gameTime,
+                35
+        );
+        helper.assertTrue(
+                absoluteBlocked.equals(firstTarget),
+                "The nearer enclosed bamboo must be the initial bounded-search target; target="
+                        + firstTarget
+        );
+
+        RetoldBlockTargetSearch.markBambooUnreachable(
+                panda,
+                absoluteBlocked,
+                gameTime,
+                20 * 30
+        );
+        BlockPos replacement = RetoldBlockTargetSearch.findBamboo(
+                level,
+                panda,
+                12,
+                4,
+                gameTime,
+                35
+        );
+
+        helper.assertTrue(
+                absoluteReachable.equals(replacement),
+                "A proven-unreachable bamboo target must be replaced by the reachable alternative; target="
+                        + replacement
+        );
+        helper.assertTrue(
+                level.getBlockState(absoluteBlocked).is(Blocks.BAMBOO)
+                        && level.getBlockState(absoluteReachable).is(Blocks.BAMBOO),
+                "Target replacement must not consume either bamboo block"
+        );
+        cleanup(panda, null);
+        helper.succeed();
+    }
+
     private static void buildHabitat(GameTestHelper helper) {
         for (int x = 1; x <= 8; x++) {
             for (int z = 1; z <= 8; z++) {
                 helper.setBlock(x, 1, z, Blocks.DIRT);
                 helper.setBlock(x, 2, z, Blocks.AIR);
                 helper.setBlock(x, 3, z, Blocks.AIR);
+            }
+        }
+    }
+
+    private static void buildLargeHabitat(GameTestHelper helper) {
+        for (int x = 0; x <= 14; x++) {
+            for (int z = 0; z <= 14; z++) {
+                helper.setBlock(x, 1, z, Blocks.DIRT);
+                helper.setBlock(x, 2, z, Blocks.AIR);
+                helper.setBlock(x, 3, z, Blocks.AIR);
+            }
+        }
+    }
+
+    private static void encloseBamboo(
+            GameTestHelper helper,
+            BlockPos bamboo
+    ) {
+        for (int x = bamboo.getX() - 2; x <= bamboo.getX() + 2; x++) {
+            for (int z = bamboo.getZ() - 2; z <= bamboo.getZ() + 2; z++) {
+                if (x != bamboo.getX() - 2
+                        && x != bamboo.getX() + 2
+                        && z != bamboo.getZ() - 2
+                        && z != bamboo.getZ() + 2) {
+                    continue;
+                }
+
+                helper.setBlock(x, 2, z, Blocks.STONE);
+                helper.setBlock(x, 3, z, Blocks.STONE);
             }
         }
     }

@@ -9,6 +9,7 @@ import cz.xefensor.retold.behavior.control.RetoldControlledCombatEvents;
 import cz.xefensor.retold.behavior.control.RetoldTamedDefenderGameTests;
 import cz.xefensor.retold.behavior.breeding.RetoldAnimalBreedingGameTests;
 import cz.xefensor.retold.behavior.core.RetoldBehaviorMovement;
+import cz.xefensor.retold.behavior.core.RetoldNavigationRecoveryGameTests;
 import cz.xefensor.retold.behavior.ecology.RetoldUnloadedEcosystemGameTests;
 import cz.xefensor.retold.behavior.flee.RetoldCreeperAwareness;
 import cz.xefensor.retold.behavior.flee.RetoldDamageFleeGameTests;
@@ -47,16 +48,21 @@ import cz.xefensor.retold.behavior.species.RetoldPolarBearWarningGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderEcologyGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSpiderLairGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSlimeMergeGameTests;
+import cz.xefensor.retold.behavior.species.RetoldSkeletonTacticsGameTests;
 import cz.xefensor.retold.behavior.species.RetoldSwarmScavengerEvents;
-import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
+import cz.xefensor.retold.combat.RetoldAiTargets;
 import cz.xefensor.retold.combat.RetoldCombatTargets;
+import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
+import cz.xefensor.retold.combat.RetoldTargetRangeGameTests;
+import cz.xefensor.retold.combat.RetoldThreatRetargetGameTests;
 import cz.xefensor.retold.compatibility.RetoldWorldProtectionGameTests;
 import cz.xefensor.retold.enderman.RetoldEndermanDefense;
 import cz.xefensor.retold.enchanting.RetoldEnchantingGameTests;
 import cz.xefensor.retold.faction.RetoldFaction;
 import cz.xefensor.retold.faction.RetoldFactionMembers;
 import cz.xefensor.retold.faction.RetoldFactionRelations;
+import cz.xefensor.retold.event.RetoldFactionAssistGameTests;
 import cz.xefensor.retold.event.RetoldPlayerSyncEvents;
 import cz.xefensor.retold.event.RetoldElderGuardianEvents;
 import cz.xefensor.retold.event.RetoldEndProgressionEvents;
@@ -125,10 +131,12 @@ import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -216,6 +224,12 @@ public final class RetoldGameTests {
                 environment,
                 "mobs_cannot_target_or_melee_creepers",
                 RetoldGameTests::mobsCannotTargetOrMeleeCreepers
+        );
+        registerTest(
+                event,
+                environment,
+                "owned_target_refresh_does_not_reassert_weapon_pose",
+                RetoldGameTests::ownedTargetRefreshDoesNotReassertWeaponPose
         );
         registerTest(
                 event,
@@ -322,6 +336,9 @@ public final class RetoldGameTests {
         RetoldAiPerformanceGameTests.register(event);
         RetoldPerMobTpsGameTests.register(event);
         RetoldAiSightCacheGameTests.register(event, environment);
+        RetoldNavigationRecoveryGameTests.register(event, environment);
+        RetoldThreatRetargetGameTests.register(event, environment);
+        RetoldTargetRangeGameTests.register(event);
         RetoldDamageFleeGameTests.register(event, environment);
         RetoldWeakBarrierGameTests.register(event, environment);
         RetoldFoodSearchGameTests.register(event);
@@ -347,6 +364,8 @@ public final class RetoldGameTests {
         RetoldPolarBearWarningGameTests.register(event, environment);
         RetoldWolfPackHungerGameTests.register(event, environment);
         RetoldTamedDefenderGameTests.register(event, environment);
+        RetoldFactionAssistGameTests.register(event, environment);
+        RetoldSkeletonTacticsGameTests.register(event, environment);
         RetoldSpiderEcologyGameTests.register(event);
         RetoldSpiderLairGameTests.register(event);
         RetoldSlimeMergeGameTests.register(event);
@@ -1048,6 +1067,81 @@ public final class RetoldGameTests {
         helper.succeed();
     }
 
+    private static void ownedTargetRefreshDoesNotReassertWeaponPose(
+            GameTestHelper helper
+    ) {
+        var skeleton = helper.spawn(EntityTypes.SKELETON, 2, 2, 2);
+        var target = helper.spawn(EntityTypes.COW, 6, 2, 2);
+
+        try {
+            skeleton.setItemInHand(
+                    InteractionHand.MAIN_HAND,
+                    new ItemStack(Items.BOW)
+            );
+            helper.assertTrue(
+                    RetoldCombatTargets.applyAttackTarget(
+                            skeleton,
+                            target,
+                            RetoldTargetSource.FACTION_COMBAT
+                    ),
+                    "The armed-mob fixture must acquire its owned target"
+            );
+            helper.assertTrue(
+                    skeleton.isAggressive(),
+                    "A real target assignment must still begin the aggressive weapon pose"
+            );
+
+            RetoldAiTargets.setAggression(skeleton, false);
+            skeleton.startUsingItem(InteractionHand.MAIN_HAND);
+            helper.assertTrue(
+                    skeleton.isUsingItem(),
+                    "The armed-mob fixture must begin an observable weapon use"
+            );
+
+            helper.assertTrue(
+                    RetoldCombatTargets.applyAttackTarget(
+                            skeleton,
+                            target,
+                            RetoldTargetSource.FACTION_COMBAT
+                    ),
+                    "Refreshing the same owned target must remain a successful no-op"
+            );
+            helper.assertTrue(
+                    !skeleton.isAggressive(),
+                    "A same-target refresh must not raise a weapon that vanilla combat lowered"
+            );
+            helper.assertTrue(
+                    skeleton.isUsingItem(),
+                    "A same-target refresh must not interrupt an in-progress weapon use"
+            );
+            helper.assertTrue(
+                    skeleton.getTarget() == target
+                            && RetoldFactionTargetMemory.getSource(skeleton, target)
+                            == RetoldTargetSource.FACTION_COMBAT,
+                    "The stable refresh must preserve target and source ownership"
+            );
+
+            helper.assertTrue(
+                    RetoldCombatTargets.applyAttackTarget(
+                            skeleton,
+                            target,
+                            RetoldTargetSource.RETALIATION
+                    ),
+                    "A real ownership transition must still be applied"
+            );
+            helper.assertTrue(
+                    skeleton.isAggressive()
+                            && RetoldFactionTargetMemory.getSource(skeleton, target)
+                            == RetoldTargetSource.RETALIATION,
+                    "A source change must remain observable and may reassert combat pose"
+            );
+            helper.succeed();
+        } finally {
+            skeleton.discard();
+            target.discard();
+        }
+    }
+
     private static void indiscriminateFactionsFollowLivingTargetRules(
             GameTestHelper helper
     ) {
@@ -1287,6 +1381,13 @@ public final class RetoldGameTests {
         undeadMount.setTamed(true);
         undeadMount.setOwner(owner);
         helper.runAfterDelay(2, () -> {
+            /*
+             * Dispatch the real event bus path explicitly so this assertion remains isolated
+             * from the test server's entity-tick scheduling.
+             */
+            NeoForge.EVENT_BUS.post(
+                    new EntityTickEvent.Post(undeadMount)
+            );
             helper.assertTrue(
                     RetoldFactionMembers.getFaction(undeadMount) == null,
                     "A tamed undead mount must not retain indiscriminate Undead hostility"

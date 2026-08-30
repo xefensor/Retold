@@ -130,6 +130,7 @@ public final class RetoldMobTargetPolicy {
         if (source == RetoldTargetSource.RETALIATION
                 || source == RetoldTargetSource.OWNER_DEFENSE
                 || source == RetoldTargetSource.FACTION_ASSIST
+                || source == RetoldTargetSource.THREAT_RESPONSE
                 || source == RetoldTargetSource.TERRITORY_ATTACK) {
             return false;
         }

@@ -19,6 +19,7 @@ import cz.xefensor.retold.behavior.species.RetoldHiveColonyEvents;
 import cz.xefensor.retold.behavior.species.RetoldParrotForagerEvents;
 import cz.xefensor.retold.behavior.species.RetoldPhantomStalkerEvents;
 import cz.xefensor.retold.behavior.species.RetoldUndeadMountEvents;
+import cz.xefensor.retold.combat.RetoldThreatRetargeting;
 import cz.xefensor.retold.villager.RetoldVillageReputationEvents;
 import cz.xefensor.retold.villager.RetoldVillageAnimalEvents;
 import net.neoforged.bus.api.EventPriority;
@@ -51,6 +52,7 @@ public final class RetoldBehaviorModule {
         gameEventBus.addListener(RetoldControlledFleeEvents::onLivingDamage);
         gameEventBus.addListener(RetoldDolphinPodEvents::onLivingDamage);
         gameEventBus.addListener(RetoldHiveColonyEvents::onLivingDamage);
+        gameEventBus.addListener(RetoldPhantomStalkerEvents::onLivingDamage);
         gameEventBus.addListener(RetoldUndeadMountEvents::onLivingDamage);
         gameEventBus.addListener(
                 EventPriority.LOWEST,
@@ -69,6 +71,10 @@ public final class RetoldBehaviorModule {
                 RetoldHiveColonyEvents::onHiveBreak
         );
         gameEventBus.addListener(RetoldAnimalBreeding::onLivingDamage);
+        gameEventBus.addListener(
+                EventPriority.LOWEST,
+                RetoldThreatRetargeting::onLivingDamage
+        );
         gameEventBus.addListener(RetoldBehaviorModule::addServerReloadListeners);
     }
 

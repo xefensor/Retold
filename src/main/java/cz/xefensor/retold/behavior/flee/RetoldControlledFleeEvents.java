@@ -141,6 +141,24 @@ public final class RetoldControlledFleeEvents {
         return mob != null && isFleeingPrey(mob);
     }
 
+    public static boolean beginVisibleThreatFlee(
+            PathfinderMob prey,
+            LivingEntity threat,
+            long gameTime
+    ) {
+        if (!usesSharedFleeBehavior(prey)
+                || threat == null
+                || threat == prey
+                || !RetoldBehaviorCoordinator.isAliveInSameLevel(prey, threat)) {
+            return false;
+        }
+
+        rememberThreat(prey, threat, gameTime);
+        fleeFromThreat(prey, threat, gameTime);
+
+        return RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE);
+    }
+
     public static void onLivingDamage(LivingDamageEvent.Post event) {
         if (event.getHealthDamage() <= 0.0F
                 || !(event.getEntity() instanceof PathfinderMob prey)
@@ -248,6 +266,7 @@ public final class RetoldControlledFleeEvents {
 
         if (!isFleeingPrey(prey)) {
             FLEE_MEMORIES.remove(prey);
+            RetoldFleeMovement.clearDestination(prey);
             stopWoundedPredatorFlee(prey, gameTime);
             return;
         }
@@ -331,6 +350,7 @@ public final class RetoldControlledFleeEvents {
 
         if (RetoldAiControl.isControlledAs(prey, RetoldAiControlMode.FLEE)) {
             RetoldAiControl.clearIfControlledAs(prey, RetoldAiControlMode.FLEE);
+            RetoldFleeMovement.clearDestination(prey);
             prey.setSprinting(false);
             prey.getNavigation().stop();
             markFleeEnded(
@@ -844,6 +864,7 @@ public final class RetoldControlledFleeEvents {
             long gameTime
     ) {
         FLEE_MEMORIES.remove(predator);
+        RetoldFleeMovement.clearDestination(predator);
 
         if (!RetoldAiControl.clearIfControlledAsByWithReason(
                 predator,
@@ -927,7 +948,8 @@ public final class RetoldControlledFleeEvents {
         }
 
         /*
-         * Small herd spread, but still mostly same direction.
+         * Give a herd modest, stable lane separation without rerolling a left/right bias each time
+         * panic is remembered. Entity identity keeps the lane consistent across repeated incidents.
          */
         Vec3 side = new Vec3(
                 -copiedDirection.z,
@@ -935,7 +957,7 @@ public final class RetoldControlledFleeEvents {
                 copiedDirection.x
         );
 
-        double sideDrift = (prey.getRandom().nextDouble() - 0.5D) * 0.28D;
+        double sideDrift = (Math.floorMod(prey.getId(), 7) - 3) * 0.04D;
 
         Vec3 finalDirection = copiedDirection
                 .add(side.scale(sideDrift));
@@ -998,6 +1020,7 @@ public final class RetoldControlledFleeEvents {
 
         if (memory.isExpired(gameTime)) {
             FLEE_MEMORIES.remove(prey);
+            RetoldFleeMovement.clearDestination(prey);
             return null;
         }
 
@@ -1063,25 +1086,6 @@ public final class RetoldControlledFleeEvents {
             away = away.normalize();
         }
 
-        Vec3 side = new Vec3(
-                -away.z,
-                0.0D,
-                away.x
-        );
-
-        double sideDrift = memory.fromHerdPanic()
-                ? (prey.getRandom().nextDouble() - 0.5D) * 0.26D
-                : (prey.getRandom().nextDouble() - 0.5D) * 0.38D;
-
-        Vec3 rememberedDirection = away
-                .add(side.scale(sideDrift));
-
-        if (rememberedDirection.lengthSqr() <= 0.0001D) {
-            rememberedDirection = away;
-        } else {
-            rememberedDirection = rememberedDirection.normalize();
-        }
-
         double fleeDistance = memory.fromHerdPanic()
                 ? HERD_PANIC_FLEE_DISTANCE_BLOCKS
                 : MEMORY_FLEE_DISTANCE_BLOCKS;
@@ -1093,7 +1097,7 @@ public final class RetoldControlledFleeEvents {
 
         moveInFleeDirection(
                 prey,
-                rememberedDirection,
+                away,
                 fleeDistance,
                 speed,
                 gameTime
@@ -1115,17 +1119,8 @@ public final class RetoldControlledFleeEvents {
             safeDirection = safeDirection.normalize();
         }
 
-        Vec3 side = new Vec3(
-                -safeDirection.z,
-                0.0D,
-                safeDirection.x
-        );
-
-        double sideOffset = (prey.getRandom().nextDouble() - 0.5D) * 4.5D;
-
         Vec3 target = prey.position()
-                .add(safeDirection.scale(fleeDistance))
-                .add(side.scale(sideOffset));
+                .add(safeDirection.scale(fleeDistance));
 
         BlockPos targetPos = new BlockPos(
                 (int) Math.floor(target.x),
@@ -1144,12 +1139,11 @@ public final class RetoldControlledFleeEvents {
                     WARREN_FLEE_MIN_SPEED
             );
         } else {
-            Vec3 dangerPos = prey.position().subtract(safeDirection.scale(4.0D));
             targetPos = RetoldFleeMovement.chooseDestination(
                     prey,
-                    dangerPos,
                     target,
-                    fleeDistance
+                    fleeDistance,
+                    gameTime
             );
         }
 
@@ -1214,6 +1208,7 @@ public final class RetoldControlledFleeEvents {
 
         prey.setSprinting(false);
         prey.getNavigation().stop();
+        RetoldFleeMovement.clearDestination(prey);
 
         RetoldAnimalHomes.markUsed(
                 prey,

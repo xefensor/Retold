@@ -16,14 +16,19 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 public final class RetoldBlockTargetSearch {
     private static final int MIN_BLOCK_TARGET_CACHE_TICKS = 40;
+    private static final int MAX_BLOCKED_TARGETS_PER_ENTITY = 4;
 
     private static final Map<Entity, List<BlockTargetEntry>> TARGETS = new WeakHashMap<>();
+    private static final Map<Entity, List<BlockedTargetEntry>> BLOCKED_TARGETS =
+            new WeakHashMap<>();
 
     private RetoldBlockTargetSearch() {
     }
@@ -174,6 +179,22 @@ public final class RetoldBlockTargetSearch {
                 Double.MAX_VALUE,
                 gameTime,
                 cacheTicks
+        );
+    }
+
+    /** Temporarily excludes one proven-unreachable bamboo block from this mob's bounded search. */
+    public static synchronized void markBambooUnreachable(
+            PathfinderMob mob,
+            BlockPos target,
+            long gameTime,
+            int retryTicks
+    ) {
+        markTemporarilyBlocked(
+                mob,
+                BlockSearchMode.BAMBOO,
+                target,
+                gameTime,
+                retryTicks
         );
     }
 
@@ -410,6 +431,11 @@ public final class RetoldBlockTargetSearch {
                 mob,
                 ignored -> new ArrayList<>()
         );
+        Set<BlockPos> blockedTargets = blockedTargets(
+                mob,
+                mode,
+                gameTime
+        );
 
         entries.removeIf(entry -> gameTime >= entry.expiresAt);
 
@@ -420,6 +446,7 @@ public final class RetoldBlockTargetSearch {
                             && entry.horizontalRadius == horizontalRadius
                             && entry.verticalRadius == verticalRadius
                             && Double.compare(entry.maxDistanceSquared, maxDistanceSquared) == 0
+                            && (entry.target == null || !blockedTargets.contains(entry.target))
                             && isCachedTargetStillValid(level, entry.mode, entry.target)
             ) {
                 RetoldBehaviorPerf.recordBlockSearchCache(true);
@@ -442,7 +469,8 @@ public final class RetoldBlockTargetSearch {
                 mode,
                 horizontalRadius,
                 verticalRadius,
-                maxDistanceSquared
+                maxDistanceSquared,
+                blockedTargets
         );
 
         entries.removeIf(entry ->
@@ -472,7 +500,8 @@ public final class RetoldBlockTargetSearch {
             BlockSearchMode mode,
             int horizontalRadius,
             int verticalRadius,
-            double maxDistanceSquared
+            double maxDistanceSquared,
+            Set<BlockPos> blockedTargets
     ) {
         if (mode == BlockSearchMode.BAT_ROOST) {
             return scanBatRoost(
@@ -509,6 +538,10 @@ public final class RetoldBlockTargetSearch {
                         continue;
                     }
 
+                    if (blockedTargets.contains(mutable)) {
+                        continue;
+                    }
+
                     if (mode == BlockSearchMode.COBWEB_PLACEMENT
                             && mutable.equals(mob.blockPosition())) {
                         continue;
@@ -534,6 +567,72 @@ public final class RetoldBlockTargetSearch {
 
         RetoldBehaviorPerf.recordBlockTargetPositionsChecked(positionsChecked);
         return best;
+    }
+
+    private static void markTemporarilyBlocked(
+            Entity mob,
+            BlockSearchMode mode,
+            BlockPos target,
+            long gameTime,
+            int retryTicks
+    ) {
+        if (mob == null || mode == null || target == null) {
+            return;
+        }
+
+        List<BlockedTargetEntry> blocked = BLOCKED_TARGETS.computeIfAbsent(
+                mob,
+                ignored -> new ArrayList<>()
+        );
+        blocked.removeIf(entry -> gameTime >= entry.expiresAt
+                || (entry.mode == mode && entry.target.equals(target)));
+
+        while (blocked.size() >= MAX_BLOCKED_TARGETS_PER_ENTITY) {
+            blocked.remove(0);
+        }
+
+        BlockPos immutableTarget = target.immutable();
+        blocked.add(new BlockedTargetEntry(
+                mode,
+                immutableTarget,
+                gameTime + Math.max(1, retryTicks)
+        ));
+
+        List<BlockTargetEntry> cached = TARGETS.get(mob);
+
+        if (cached != null) {
+            cached.removeIf(entry -> entry.mode == mode
+                    && immutableTarget.equals(entry.target));
+        }
+    }
+
+    private static Set<BlockPos> blockedTargets(
+            Entity mob,
+            BlockSearchMode mode,
+            long gameTime
+    ) {
+        List<BlockedTargetEntry> blocked = BLOCKED_TARGETS.get(mob);
+
+        if (blocked == null) {
+            return Set.of();
+        }
+
+        blocked.removeIf(entry -> gameTime >= entry.expiresAt);
+
+        if (blocked.isEmpty()) {
+            BLOCKED_TARGETS.remove(mob);
+            return Set.of();
+        }
+
+        Set<BlockPos> targets = new HashSet<>();
+
+        for (BlockedTargetEntry entry : blocked) {
+            if (entry.mode == mode) {
+                targets.add(entry.target);
+            }
+        }
+
+        return targets;
     }
 
     private static BlockPos scanBatRoost(
@@ -928,6 +1027,13 @@ public final class RetoldBlockTargetSearch {
             double maxDistanceSquared,
             long expiresAt,
             BlockPos target
+    ) {
+    }
+
+    private record BlockedTargetEntry(
+            BlockSearchMode mode,
+            BlockPos target,
+            long expiresAt
     ) {
     }
 }

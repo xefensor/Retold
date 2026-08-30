@@ -326,11 +326,9 @@ public final class RetoldCreeperAwareness {
         if (mob instanceof PathfinderMob pathfinderMob) {
             destinationPos = RetoldFleeMovement.chooseDestination(
                     pathfinderMob,
-                    state.lastThreatPos == null
-                            ? null
-                            : Vec3.atCenterOf(state.lastThreatPos),
                     destination,
-                    fleeDistance
+                    fleeDistance,
+                    gameTime
             );
             RetoldFleeMovement.moveTo(
                     pathfinderMob,
@@ -377,6 +375,10 @@ public final class RetoldCreeperAwareness {
         }
 
         REACTIONS.remove(mob);
+
+        if (mob instanceof PathfinderMob pathfinderMob) {
+            RetoldFleeMovement.clearDestination(pathfinderMob);
+        }
 
         if (RetoldAiControl.clearIfControlledAsByWithReason(
                 mob,

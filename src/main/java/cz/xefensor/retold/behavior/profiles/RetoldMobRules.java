@@ -50,6 +50,13 @@ public final class RetoldMobRules {
         return RetoldAiTickContext.profile(entity).predator();
     }
 
+    public static boolean isSharedDefenseSpecies(Entity entity) {
+        return entity != null
+                && entity.getType().builtInRegistryHolder().is(
+                RetoldTags.SHARED_DEFENSE_SPECIES
+        );
+    }
+
     public static RetoldMobProfile profile(Entity entity) {
         return RetoldAiTickContext.profile(entity);
     }
