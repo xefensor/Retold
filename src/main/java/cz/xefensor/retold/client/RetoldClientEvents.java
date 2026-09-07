@@ -7,6 +7,7 @@ import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
+import cz.xefensor.retold.client.render.EarthGuardianRenderer;
 import cz.xefensor.retold.client.render.WildfireRenderer;
 import cz.xefensor.retold.client.render.WildfireModel;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
@@ -96,6 +97,10 @@ public final class RetoldClientEvents {
         event.registerEntityRenderer(
                 RetoldEntityTypes.WILDFIRE.get(),
                 WildfireRenderer::new
+        );
+        event.registerEntityRenderer(
+                RetoldEntityTypes.EARTH_GUARDIAN.get(),
+                EarthGuardianRenderer::new
         );
         event.registerEntityRenderer(
                 RetoldEntityTypes.AENDER_BOAT.get(),

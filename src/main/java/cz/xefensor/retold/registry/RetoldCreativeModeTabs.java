@@ -141,6 +141,11 @@ public final class RetoldCreativeModeTabs {
     private static void addSpawnEggs(BuildCreativeModeTabContentsEvent event) {
         insertAfter(event, Items.BLAZE_SPAWN_EGG, RetoldBlocks.WILDFIRE_SPAWN_EGG.get());
         insertAfter(event, Items.BREEZE_SPAWN_EGG, RetoldBlocks.GALE_CORE_SPAWN_EGG.get());
+        insertAfter(
+                event,
+                Items.IRON_GOLEM_SPAWN_EGG,
+                RetoldBlocks.EARTH_GUARDIAN_SPAWN_EGG.get()
+        );
         insertAfter(event, Items.ENDERMAN_SPAWN_EGG, RetoldBlocks.AENDER_EYE_SPAWN_EGG.get());
     }
 

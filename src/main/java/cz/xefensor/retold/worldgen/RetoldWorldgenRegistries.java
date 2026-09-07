@@ -4,6 +4,9 @@ import com.mojang.serialization.MapCodec;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.worldgen.air.AirTemplePiece;
 import cz.xefensor.retold.worldgen.air.AirTempleStructure;
+import cz.xefensor.retold.worldgen.earth.EarthJungleTemplePiece;
+import cz.xefensor.retold.worldgen.earth.EarthJungleTempleStructure;
+import cz.xefensor.retold.worldgen.earth.EarthLabyrinthPiece;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.levelgen.DensityFunction;
 import net.minecraft.world.level.levelgen.structure.StructureType;
@@ -45,6 +48,33 @@ public final class RetoldWorldgenRegistries {
             STRUCTURE_PIECE_TYPES.register(
                     "air_temple",
                     () -> (StructurePieceType.ContextlessType) AirTemplePiece::new
+            );
+
+    public static final DeferredHolder<
+            StructureType<?>,
+            StructureType<EarthJungleTempleStructure>
+            > EARTH_JUNGLE_TEMPLE_STRUCTURE =
+            STRUCTURE_TYPES.register(
+                    "earth_jungle_temple",
+                    () -> () -> EarthJungleTempleStructure.CODEC
+            );
+
+    public static final DeferredHolder<
+            StructurePieceType,
+            StructurePieceType
+            > EARTH_JUNGLE_TEMPLE_PIECE =
+            STRUCTURE_PIECE_TYPES.register(
+                    "earth_jungle_temple",
+                    () -> (StructurePieceType.ContextlessType) EarthJungleTemplePiece::new
+            );
+
+    public static final DeferredHolder<
+            StructurePieceType,
+            StructurePieceType
+            > EARTH_LABYRINTH_PIECE =
+            STRUCTURE_PIECE_TYPES.register(
+                    "earth_labyrinth",
+                    () -> (StructurePieceType.ContextlessType) EarthLabyrinthPiece::new
             );
 
     private RetoldWorldgenRegistries() {

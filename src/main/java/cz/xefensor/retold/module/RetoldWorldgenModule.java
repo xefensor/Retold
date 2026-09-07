@@ -5,6 +5,7 @@ import cz.xefensor.retold.worldgen.RetoldWorldgenRegistries;
 import cz.xefensor.retold.worldgen.air.AirTempleDiscoveryEvents;
 import cz.xefensor.retold.worldgen.air.GaleCoreAttackEvents;
 import cz.xefensor.retold.worldgen.air.wind.AirTempleWindEvents;
+import cz.xefensor.retold.worldgen.earth.EarthGuardianEvents;
 import cz.xefensor.retold.worldgen.fire.RetoldRemnantFireDamage;
 import cz.xefensor.retold.worldgen.fire.WildfireSpawnEvents;
 import cz.xefensor.retold.worldgen.portal.RetoldNetherPortalDrainEvents;
@@ -29,6 +30,7 @@ public final class RetoldWorldgenModule {
         gameEventBus.register(RetoldWorldSpawnCache.class);
         gameEventBus.register(AirTempleDiscoveryEvents.class);
         gameEventBus.register(AirTempleWindEvents.class);
+        gameEventBus.register(EarthGuardianEvents.class);
         gameEventBus.register(GaleCoreAttackEvents.class);
         gameEventBus.register(RetoldRemnantFireDamage.class);
         gameEventBus.register(WildfireSpawnEvents.class);

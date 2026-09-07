@@ -30,6 +30,26 @@ Retold is still built around:
   colored nylium and rare fungal landmarks instead of dense trees and undergrowth
 - beds not skipping night
 - rain extinguishing normal torches
+- every newly generated Jungle Pyramid containing a deterministic randomized two-level Earth
+  Labyrinth reached through its lever-puzzle room, while already-generated pyramids remain untouched
+- the Earth Guardian beginning as an indestructible Stage 1 statue, awakening on a Stage 2 chamber
+  visit, sensing players through vibrations, roaming the maze, and permanently relocating any
+  loaded block—including player blocks, block entities, Bedrock, and terrain outside the labyrinth—
+  to open paths and build defenses; only administrative griefing/protection policy may deny edits;
+  once awake it becomes damageable and attacks remembered positions through a telegraphed ceiling
+  collapse, a persistent 3×3 pool of real lava replacing the ground beneath the marked position,
+  or a 3×3 floor collapse up to four blocks deep with ordinary fall damage,
+  without acquiring a sight target (floor-to-lava direction confirmed 2026-09-07)
+- labyrinth side rooms containing traps, some treasure, and naturally spawning mobs in darkness,
+  without dedicated spawners; the Earth Guardian drops Lodestone as the Earth egg sacrifice
+  (confirmed 2026-09-07), with ordinary recipe/chest acquisition removed
+- the full-sized Earth Guardian carving its own traversable tunnels and physical ramps between
+  floors rather than relying on boss-sized pregenerated stairs (confirmed 2026-09-07)
+- faster multi-block tunnel excavation and deliberate wall building from relocated material
+  (confirmed 2026-09-08), superseding the initial one-block-per-second implementation
+- the Earth Guardian pursuing more aggressively into close-range melee while retaining its
+  environmental attacks (confirmed 2026-09-08); this supersedes the earlier environment-only
+  attack restriction, not vibration-based tracking or administrative protection rules
 
 ## High Priority
 
@@ -40,10 +60,13 @@ These are the strongest next design-aligned areas:
    torch-maintenance, and trade-stock loops in ordinary, multiplayer, dedicated-server, and existing
    villages; identify remaining coordination and survival gaps; then design and implement the next
    coherent village-society slice.
-2. Finish the six-sacrifice Dragon Egg ritual after all paths are survival-obtainable.
-3. Add the missing Earth item/challenge path; verify and tune the initial roaming Wildfire Fire
-   path, implemented Life and Death acquisition boundaries, cartographer Air Temple discovery map,
-   and Air Temple/Gale Core path.
+2. Verify the newly completed six-sacrifice Dragon Egg gate in fresh, upgraded, and multiplayer worlds.
+3. Complete the missing Earth path from its generated labyrinth and persisted vibration-investigating,
+   terrain-relocating guardian: verify and tune its initial arrow-trap/treasure side rooms,
+   environmental hazards, Lodestone reward, and natural dark-area spawning. Also
+   naturally verify the maze across seeds, borders, and upgraded worlds, and verify and tune the
+   initial roaming Wildfire Fire path, implemented Life and Death acquisition boundaries,
+   cartographer Air Temple discovery map, and Air Temple/Gale Core path.
 4. Decide whether Stage 1 needs Wither/Nether star End portal activation.
 5. Add remaining Aender in-dimension teleportation and late-game travel/building rewards.
 6. Replace the provisional `dev_aender_portal_frame` name/assets when the final portal-frame design is chosen.
@@ -346,7 +369,8 @@ These areas are not finished forever, but the current direction is acceptable fo
 Do not implement these without asking the developer first:
 
 - Stage 1 Wither/Nether star requirement before End access
-- jungle/desert pyramids as boss tombs
+- Desert Pyramids or additional pyramid boss tombs beyond the confirmed Jungle Pyramid Earth
+  Labyrinth
 - Nether dragon role in the ending
 - Aender dragon role in the ending
 - New Game+ / world ending ideas

@@ -63,4 +63,8 @@ Asset License. Minecraft and the Wildfire texture are copyright Mojang Studios/M
 
 The Aender portal references the installed `minecraft:block/nether_portal` texture and creates a green sprite at resource-load time. Retold does not package a copied or modified Minecraft portal texture.
 
+The provisional Earth Guardian renderer references Minecraft's installed Iron Golem model and
+texture at runtime, and its spawn-egg definition references the installed Iron Golem Spawn Egg
+model. Retold packages no copied or modified pixels for this placeholder presentation.
+
 If an asset's authorship, source, license, or status is unclear, do not redistribute or reuse it separately. Contact the developer first.
