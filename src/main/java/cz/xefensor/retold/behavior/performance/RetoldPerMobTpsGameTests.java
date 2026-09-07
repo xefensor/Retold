@@ -11,6 +11,7 @@ import cz.xefensor.retold.behavior.profiles.RetoldMobStates;
 import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.villager.RetoldVillagerCommunalSupply;
+import cz.xefensor.retold.worldgen.earth.EarthGuardian;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -122,6 +123,7 @@ public final class RetoldPerMobTpsGameTests {
             "dolphin",
             "donkey",
             "drowned",
+            "earth_guardian",
             "elder_guardian",
             "ender_dragon",
             "enderman",
@@ -228,7 +230,7 @@ public final class RetoldPerMobTpsGameTests {
             GameTestHelper helper,
             String mobPath
     ) {
-        Identifier entityId = mobPath.equals("wildfire")
+        Identifier entityId = mobPath.equals("wildfire") || mobPath.equals("earth_guardian")
                 ? Identifier.fromNamespaceAndPath(Retold.MODID, mobPath)
                 : Identifier.withDefaultNamespace(mobPath);
 
@@ -331,6 +333,15 @@ public final class RetoldPerMobTpsGameTests {
             mob.setInvulnerable(true);
             mob.setSilent(true);
             stabilizeDimensionSpecificMob(mob);
+
+            if (mob instanceof EarthGuardian earthGuardian) {
+                earthGuardian.finalizeSpawn(
+                        level,
+                        level.getCurrentDifficultyAt(earthGuardian.blockPosition()),
+                        EntitySpawnReason.COMMAND,
+                        null
+                );
+            }
 
             if (mob instanceof AbstractCubeMob cubeMob) {
                 cubeMob.setSize(4, true);

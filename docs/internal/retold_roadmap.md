@@ -33,8 +33,23 @@ Retold is still built around:
 - every newly generated Jungle Pyramid containing a deterministic randomized two-level Earth
   Labyrinth reached through its lever-puzzle room, while already-generated pyramids remain untouched
 - the Earth Guardian beginning as an indestructible Stage 1 statue, awakening on a Stage 2 chamber
-  visit, sensing players through vibrations, roaming the whole maze, and permanently relocating
-  maze-owned blocks to open its own paths and build defenses
+  visit, sensing players through vibrations, roaming the maze, and permanently relocating any
+  loaded block—including player blocks, block entities, Bedrock, and terrain outside the labyrinth—
+  to open paths and build defenses; only administrative griefing/protection policy may deny edits;
+  once awake it becomes damageable and attacks remembered positions through a telegraphed ceiling
+  collapse, a persistent 3×3 pool of real lava replacing the ground beneath the marked position,
+  or a 3×3 floor collapse up to four blocks deep with ordinary fall damage,
+  without acquiring a sight target (floor-to-lava direction confirmed 2026-09-07)
+- labyrinth side rooms containing traps, some treasure, and naturally spawning mobs in darkness,
+  without dedicated spawners; the Earth Guardian drops Lodestone as the Earth egg sacrifice
+  (confirmed 2026-09-07), with ordinary recipe/chest acquisition removed
+- the full-sized Earth Guardian carving its own traversable tunnels and physical ramps between
+  floors rather than relying on boss-sized pregenerated stairs (confirmed 2026-09-07)
+- faster multi-block tunnel excavation and deliberate wall building from relocated material
+  (confirmed 2026-09-08), superseding the initial one-block-per-second implementation
+- the Earth Guardian pursuing more aggressively into close-range melee while retaining its
+  environmental attacks (confirmed 2026-09-08); this supersedes the earlier environment-only
+  attack restriction, not vibration-based tracking or administrative protection rules
 
 ## High Priority
 
@@ -45,9 +60,10 @@ These are the strongest next design-aligned areas:
    torch-maintenance, and trade-stock loops in ordinary, multiplayer, dedicated-server, and existing
    villages; identify remaining coordination and survival gaps; then design and implement the next
    coherent village-society slice.
-2. Finish the six-sacrifice Dragon Egg ritual after all paths are survival-obtainable.
-3. Complete the missing Earth path from its initial generated labyrinth: add themed room modules,
-   the dormant/blind terrain-relocating guardian, decide its artifact, and wire the offering. Also
+2. Verify the newly completed six-sacrifice Dragon Egg gate in fresh, upgraded, and multiplayer worlds.
+3. Complete the missing Earth path from its generated labyrinth and persisted vibration-investigating,
+   terrain-relocating guardian: verify and tune its initial arrow-trap/treasure side rooms,
+   environmental hazards, Lodestone reward, and natural dark-area spawning. Also
    naturally verify the maze across seeds, borders, and upgraded worlds, and verify and tune the
    initial roaming Wildfire Fire path, implemented Life and Death acquisition boundaries,
    cartographer Air Temple discovery map, and Air Temple/Gale Core path.

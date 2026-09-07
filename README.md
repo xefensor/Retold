@@ -19,7 +19,7 @@ Retold is independently developed and is not an official Minecraft product or so
 ## What Retold Changes
 
 - **Connected progression:** defeating the Ender Dragon changes the world instead of ending the game.
-- **Element paths:** Water and Air lead through the ocean monument and Air Temple, boss-tier Stage 2 Wildfires provide the Nether Reactor Core for Fire, and newly generated Jungle Pyramids contain the initial Earth Labyrinth maze. Earth's guardian and reward remain planned.
+- **Element paths:** Water and Air lead through the ocean monument and Air Temple, boss-tier Stage 2 Wildfires provide the Nether Reactor Core for Fire, and newly generated Jungle Pyramids contain the initial Earth Labyrinth and a blind Earth Guardian that permanently reshapes terrain and turns remembered vibration locations into ceiling collapses, real lava pools, or collapsing floors. The guardian drops Lodestone for the six-sacrifice egg ritual, while dark side branches contain traps and occasional treasure.
 - **The Aender:** a bright, unstable late-game dimension that replaces normal survival End progression after the dragon egg ritual.
 - **Living mobs:** hunger, homes, ranges, factions, territory, hunting, fleeing, warnings, and group behavior.
 - **Discovery-first crafting:** recipe knowledge and villager teaching replace a recipe-book-first experience.
@@ -56,7 +56,7 @@ Only the locations linked above are official downloads. Version settings are def
 The current build includes the survival spine, Water and Air progression, staged world changes, Aender foundations, recipe discovery, and the Retold mob-behavior framework. Major unfinished areas include:
 
 - wider seed, upgraded-world, server, and multiplayer verification of the cartographer Air Temple map, plus further Gale Core tuning
-- the Earth Labyrinth guardian, reward, room content, and natural-world maze verification, plus Wildfire presentation/balance verification
+- Earth Labyrinth trap/treasure room tuning, guardian final presentation, and natural-world maze/vibration/combat/terrain-shaping and six-sacrifice progression verification, plus Wildfire presentation/balance verification
 - original replacements for provisional Aender assets and naming
 - Aender travel networks and late-game rewards
 - broader progression, combat, village, and world-generation work

@@ -47,6 +47,28 @@ GameTests. It is the normal final code-quality check, not something to repeat af
 
 ## Focused GameTests
 
+For Earth Guardian pursuit with real maze geometry and simultaneous terrain combat, use
+`retold:earth_guardian_pursues_into_generated_maze`. It embeds the production-generated lower
+maze in host stone, moves a mock Survival source along a walkable generated route, dispatches
+real `STEP` events, and runs forty-tick encounter repair with griefing and environmental attacks
+enabled. It requires the guardian to move beyond the central arena toward the player after
+observing a real lava eruption on the trail. No direct vibration injection, protected attack pad,
+guardian teleport assistance, or fire immunity is used. Failure diagnostics include the blocking state.
+On 2026-09-08 this failed twice before the fluid fix at 2,400 ticks on an unchanged lava source,
+then passed after whole-state fluid removal; the final strengthened run completed at guardian
+tick 239, approximately 19.1 blocks from center, with `lavaSeen=true`.
+The exact `retold:earth_guardian_relocates_fluids_without_stalling` selector also passed, covering
+source water/lava, flowing lava, waterlogged slabs, empty-source duplicate prevention,
+exact-state spending, protection denial, and disabled griefing.
+Both selectors were run individually with
+`bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`.
+This is real Minecraft server gameplay with a mock event source, not a connected-client,
+subjective visual, natural multi-seed, upper-floor, existing-world, or multiplayer playtest.
+No TPS rerun is required for this local mutation fix: cadence, scans, navigation requests, and
+budgets are unchanged, and the existing griefing-disabled benchmark would not exercise it.
+The pass also completed `bash ./gradlew build` (compilation, JUnit, PMD, assembly) and
+`git diff --check` successfully.
+
 Use the exact `retold:` test ID for the changed contract. For example:
 
 ```bash
@@ -80,13 +102,132 @@ implementer records the exact GameTest command and result for the change before 
 
 For Dragon Egg ritual changes, select the exact contract affected:
 `retold:world_data_tracks_ritual_progress` covers distinct offering bits and the current hatch
-threshold; `retold:dragon_egg_accepts_final_and_legacy_offerings` covers the four active item
-identities, Survival consumption, duplicate rejection, and upgraded-world aliases;
+threshold; `retold:dragon_egg_accepts_final_and_legacy_offerings` covers all six item
+identities, Survival consumption, duplicate rejection, upgraded-world aliases, and actual hatching;
+`retold:lodestone_is_exclusive_to_earth_guardian` covers real boss-death loot, recipe removal, and
+both vanilla chest bypasses;
 `retold:gale_core_drops_heavy_core` and `retold:elder_guardian_drops_heart_of_the_sea` cover the two
 implemented guardian rewards; and `retold:buried_treasure_excludes_heart_of_the_sea` covers the
 removed alternative acquisition route. Run only the exact changed contracts, then verify a real
 Stage 2 egg interaction in-game when the hatch threshold, crack presentation, or Stage 3 transition
 flow changes.
+
+For Earth side-room changes, run `EarthLabyrinthRoomsTest` and the exact
+`retold:earth_rooms_keep_loot_and_fire_across_chunk_border` integration test. Generation placement
+changes also need `retold:earth_labyrinth_piece_places_connected_maze_geometry`; saved content
+version changes need `retold:earth_labyrinth_pieces_round_trip_without_upgrading_old_pyramids`.
+These cover deterministic side branches, container/no-refill rules, real redstone firing across a
+chunk boundary, generated room placement, and old-start version retention. They do not establish
+natural spawn rates, full multi-seed chunked worldgen, balance, or visual approval. Generation-only
+content and death-time loot do not require a per-mob TPS rerun.
+
+The 2026-09-07 room/reward pass ran each following ID individually with
+`bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`;
+all six exact tests passed:
+
+- `lodestone_is_exclusive_to_earth_guardian`
+- `earth_rooms_keep_loot_and_fire_across_chunk_border`
+- `dragon_egg_accepts_final_and_legacy_offerings`
+- `world_data_tracks_ritual_progress`
+- `earth_labyrinth_pieces_round_trip_without_upgrading_old_pyramids`
+- `earth_labyrinth_piece_places_connected_maze_geometry`
+
+`bash ./gradlew test --tests "cz.xefensor.retold.worldgen.earth.EarthLabyrinthRoomsTest"` also passed
+512 deterministic room-selection seeds. Natural multi-seed/chunk-border worlds, natural mob rates,
+dedicated multiplayer, upgraded-world end-to-end completion, lava-exposed reward retrieval, and
+subjective visuals were not verified by these automated fixtures.
+The final `bash ./gradlew build` passed compilation, the full JUnit task, PMD, and assembly;
+`git diff --check` passed. No client/desktop visual test or unrelated TPS matrix was run.
+
+For Earth Guardian excavation/ramp changes, run each changed contract separately:
+`retold:earth_guardian_batches_excavation_with_protection` verifies a full twelve-block slice,
+the ten-tick pulse guard, Bedrock excavation, mid-pulse denial, and griefing denial.
+`retold:earth_guardian_builds_conserved_trailing_walls` verifies the production wall trigger,
+3×3 geometry, exact state consumption, the forty-tick cooldown, griefing, protected cells,
+and occupied-cell rejection. Batch/backfill/wall changes also require the exact ascent and descent
+selectors because walls must preserve the active stair workspace and support placement must
+recover if movement drift occupies the next step. Run the moving-footstep tunnel selector for
+pursuit integration and the single guardian TPS selector for cadence/search-cost changes.
+The 2026-09-08 batch/wall policy selectors passed individually. The ascent selector exposed a
+real occupied-support stall, then passed after actual-feet replanning. One initial descent run
+timed out with a healthy entity already removed; two subsequent exact reruns passed without a
+removal-behavior change. Temporary tracing in the second rerun showed only normal successful-test
+cleanup and was removed afterward. The earlier removal cause remains unestablished; do not claim
+an in-world death/despawn fix or fully established long-session traversal reliability from this pass.
+The final moving-footstep tunnel selector also passed, as did the exact 50-guardian TPS selector
+(7.281 ms/tick peak, 20 TPS in all five phases). Each selector was run separately with
+`bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`.
+No complete GameTest suite or unrelated TPS species was selected. The griefing-disabled TPS
+fixture does not establish the cost of many simultaneous mutation bursts or wall physics.
+The batch/wall pass also passed `bash ./gradlew build` (compilation, JUnit, PMD, assembly)
+and `git diff --check`. No connected-client, multiplayer, natural-world, or subjective visual
+verification was performed.
+
+`retold:earth_guardian_follows_real_steps_into_tunnel` covers a moving mock Survival player using
+actual `level.gameEvent` footstep dispatch, dynamic listener registration, vibration travel, and
+full-sized pursuit/ceiling excavation through a three-block-high tunnel. It does not call the
+guardian's vibration callback directly. The destination is protected from block mutation while
+attack windups remain enabled. The exact selector failed before the moving-clue fix at 2,000 ticks
+and passed afterward on 2026-09-07. This fixture is not a connected-client or natural maze test.
+The exact `retold:mob_tps_earth_guardian` rerun also passed, peaking at 9.649 ms/tick with 50
+subjects and 20 TPS in all five phases; no unrelated selectors or full matrix were run.
+The moving-clue pass also passed `bash ./gradlew build` (compilation, JUnit, PMD, assembly)
+and `git diff --check`.
+
+For fixed-clue body clearance, elevation, and mutation policy, use:
+`retold:earth_guardian_carves_low_tunnel`, `retold:earth_guardian_carves_ascending_ramp`,
+`retold:earth_guardian_carves_descending_ramp`, and
+`retold:earth_guardian_ramp_conserves_and_respects_protection`. The traversal fixtures use real
+server entity ticks and a continuously refreshed synthetic vibration; ascent/descent cover the
+full fourteen-block floor separation but protect an off-route attack pad to isolate locomotion.
+The policy test checks independent break/place denial, a mid-construction griefing change, exact
+support-state reuse, the 128-state cap/reload, and saved ramp heading. It does not prove a natural
+mid-climb reload, real-player vibration dispatch, idle cross-floor patrol, or combined combat.
+Run `retold:mob_tps_earth_guardian` for repeated search/navigation changes; that baseline still
+disables griefing, so it does not profile fully occupied reserves, active excavation/backfill,
+or long-session fluid spread. No unrelated species matrix is warranted.
+
+The 2026-09-07 traversal pass runs those four exact IDs individually with the same
+`bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`
+command. The final ramp fixtures reserve enough entity-ticking chunk rings for their full footprint;
+merely loaded chunks had left a healthy guardian unticked near the far landing in an earlier fixture.
+Protected attack pads are intentional isolation, not evidence of guardian fire/lava immunity.
+All four exact traversal/policy IDs passed, as did the exact 50-guardian TPS selector, with a
+7.302 ms/tick peak and 20 TPS in all five phases. Natural combined combat, traversal pacing,
+dedicated multiplayer, and subjective visual approval remain unverified.
+The traversal pass also completed `bash ./gradlew build` (JUnit, PMD, compilation, assembly) and
+`git diff --check` successfully.
+
+For Earth Guardian source-repair changes, use the exact
+`retold:earth_guardian_foundation_spawns_and_persists_lifecycle` test for initial placement,
+stationary anchoring, uninterrupted awakening, repeated roaming repair, entity-state preservation,
+reload rebinding, and defeated suppression. Use
+`retold:earth_guardian_physically_investigates_vibrations` for real pursuit crossing a 40-tick
+repair without moving the entity or replacing its path/owner. Both were run individually with
+`bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`
+on 2026-09-07 and passed after the center-teleport fix; the extended foundation test first failed
+against the unconditional chamber placement. This fix changes neither scan cadence nor search
+scope, so no TPS rerun is warranted. Natural dungeon pursuit, actual chunk unload/reload, and
+connected multiplayer remain unverified; reload coverage directly restores entity state.
+The source-repair pass also passed `bash ./gradlew build` (compilation, JUnit, PMD, assembly)
+and `git diff --check`.
+
+For Earth Guardian melee-plus-environmental combat, use the exact
+`retold:earth_guardian_melee_respects_contact_and_cooldown` selector for heard-source, player-mode,
+reach, fresh-wall, real-damage, cooldown/save-load, and dormant-state guards. Use
+`retold:earth_guardian_pursues_during_hazards_and_melees` for real-tick approach during the 30-tick
+warning, released ceiling debris, and automatic melee damage in the same encounter. The fixture
+waits for physical navigation readiness after chunk preparation; test time is not entity time.
+Its mock player has a synthetic packet listener with vanilla client-loading invulnerability cleared,
+not a connected client. Changed pursuit speed/arrival and warning movement also warrant the exact
+moving-footstep tunnel regression and the single `retold:mob_tps_earth_guardian` selector. These
+do not establish natural combined balance, multiplayer, subjective strike presentation, or lava safety.
+On 2026-09-08 the two combat selectors and the moving-footstep tunnel selector passed individually
+using `bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:<id>"`.
+The exact 50-guardian TPS run also passed all five phases at 20 TPS, peaking at 13.915 ms/tick.
+It disables griefing and does not measure fifty simultaneous close-player melee strikes.
+The combat pass also passed `bash ./gradlew build` (compilation, JUnit, PMD, assembly) and
+`git diff --check`. No game client, connected multiplayer, or subjective visual checks were run.
 
 For the Fire path, `retold:wildfire_uses_independent_stage_two_spawner` covers the dedicated
 Stage 2 Nether owner, ordinary-monster-cap independence, and normal placement boundary;
@@ -511,17 +652,68 @@ TPS selectors; naturally verify fresh Nether fossils across multiple seeds.
 For the pure Earth Labyrinth topology, run the JUnit
 `cz.xefensor.retold.worldgen.earth.EarthLabyrinthPlannerTest`. It samples deterministic layout
 variation and requires 512 seeds to keep both levels, every cell, and the guardian chamber reachable
-from the fixed entrance, with multiple stairs, loops, adjacent unique passages, and the intended
-41- or 53-block footprint; it also guards stable world/structure-position seed derivation. Run the
+from the fixed entrance, with four or five arena-safe stairs, loops, adjacent unique passages, and
+the intended 77- or 101-block footprint; it also guards stable world/structure-position seed
+derivation. Run the
 exact `retold:jungle_pyramids_use_earth_labyrinth_structure`,
 `retold:earth_labyrinth_pieces_round_trip_without_upgrading_old_pyramids`,
 `retold:earth_labyrinth_staircase_leaves_puzzle_room_safely`, and
 `retold:earth_labyrinth_piece_places_connected_maze_geometry` GameTests for registry replacement,
 new/old serialized-piece compatibility, safe lever-room egress, and representative placed cavern,
-tunnel interior/shell, ladder, and entrance geometry. These tests do not prove natural placement. Verify multiple
+tunnel interior/shell, ladder, entrance geometry, and the huge guardian arena's 31-block core and
+ten-block vertical clearance.
+These tests do not prove natural placement. Verify multiple
 fresh seeds, both footprint sizes, all pyramid orientations, height extremes, chunk borders, caves,
 neighboring structures, and an upgraded-world pyramid before describing world generation as fully
-verified. Protected collision and ownership behavior must be added and tested with the guardian.
+verified. Run exact `retold:earth_guardian_foundation_spawns_and_persists_lifecycle` for guardian
+registration/spawn-egg mapping, structure ownership, duplicate repair, Stage 1 dormancy, Stage 2
+Survival-player awakening, entity save/load, authoritative encounter state, and the permanent
+defeat boundary. This foundation deliberately does not test sensing, combat, or mutation.
+Run exact `retold:earth_guardian_tracks_weighted_vibrations_without_sight` for accepted
+Survival-player sources, weighted multiplayer clue replacement, direct-damage investigation,
+absence of sight targeting, `EARTH_GUARDIAN` movement ownership, and remembered-clue save/load.
+Vanilla vibration dispatch and particle networking cannot be exercised with clientless mock players;
+verify real connected-player steps, sneaking, occlusion, projectiles, and simultaneous sources on a
+dedicated server before describing the sensory path as fully verified.
+Run exact `retold:earth_guardian_physically_investigates_vibrations` for actual movement toward a
+remembered clue outside attack range with guardian ownership and no sight target. Run exact
+`retold:earth_guardian_physically_patrols_maze` for physical idle patrol inside a bounded maze fixture.
+These tests cover the production navigation handoff; complex generated routes and vertical links
+still need natural-world verification. Changes to this path also select the exact guardian TPS case.
+Run exact `retold:earth_guardian_uses_environmental_attacks` for rejected direct melee, the fixed-location 30-tick
+warning, pending-hazard save/load, real protection-approved ceiling blocks with clear fall paths
+becoming damaging falling debris, open-sky and obstructed-collapse fallback to lava, 3×3 floor
+conversion including Bedrock and containers, independent break/place protection denial, griefing
+disabled during windup, absence of scripted damage/ignition/launch, and no sight target. The synthetic
+test drives the attack clock directly. Run exact
+`retold:earth_guardian_ceiling_debris_hits_on_server_ticks` for ordinary entity ticking through the
+full harmless warning and release, a target that moves after lock-on, physical falling-block travel,
+and a real `minecraft:falling_block` damage source at the original location. Run exact
+`retold:earth_guardian_lava_ground_burns_on_server_ticks` for real lava placement after the warning,
+a victim sinking into the replaced floor and taking vanilla `minecraft:lava` damage, retained source
+blocks, and safe ground after moving away from the locked patch. Run exact
+`retold:earth_guardian_floor_collapse_causes_real_fall` for the bounded 3×3-by-four-block pit,
+Bedrock/container removal, protected-column preservation, fixed target after moving away,
+pending floor-warning save/load, legacy next-attack migration, and real `minecraft:fall` damage
+on landing. The synthetic environmental test also checks the ceiling/lava/floor rotation and
+disabling griefing during the floor warning. These tests do not establish
+particle or sound readability, arena ceiling depletion, accumulated lava spread/fire or encounter
+balance, connected-player networking, multiplayer, or claim-plugin integration.
+Run exact `retold:earth_guardian_relocates_any_loaded_block` for the intentionally unrestricted
+block policy. It proves that an outside-bound Chest/block entity and Bedrock are valid material,
+that an outside vibration triggers excavation, that the exact block states pass through the
+persisted 64-block reserve without duplication, and that independent `MOB_BREAK`/`MOB_PLACE`
+protection denials remain authoritative. The synthetic fixture does not establish natural pursuit
+cadence, maximum escape/destruction reach, fluid or unusual-state behavior, block-entity data loss,
+many accumulated edits, client readability, multiplayer contention, or real claim-plugin behavior.
+Verify those in a disposable generated world with `mobGriefing` both enabled and disabled before
+describing unrestricted terrain shaping as naturally verified.
+Run exact `retold:mob_tps_earth_guardian` when listener, memory, patrol, investigation, attack, or
+terrain-edit cadence or work changes. The 50-active-guardian run passes all five phases below
+50 ms/tick after adding the floor-collapse rotation, with a 10.104 ms/tick hunt/targeting peak on 2026-09-07.
+Command-spawned guardians share the same terrain controller and bounded hazard checks, but this
+benchmark disables `mobGriefing`: actual mutation and accumulated fluid-spread cost still need
+separate natural-world profiling.
 
 For sparse Nether forests, run the exact
 `retold:nether_forests_use_sparse_desert_vegetation` selector. It reads the modified biome registry,

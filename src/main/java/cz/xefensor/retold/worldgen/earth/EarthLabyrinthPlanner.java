@@ -12,9 +12,9 @@ import java.util.Set;
 
 /** Pure deterministic topology planning for the Earth Labyrinth. */
 final class EarthLabyrinthPlanner {
-    private static final int SMALL_SIDE_CELLS = 7;
-    private static final int LARGE_SIDE_CELLS = 9;
-    private static final int MIN_VERTICAL_CONNECTIONS = 2;
+    private static final int SMALL_SIDE_CELLS = 13;
+    private static final int LARGE_SIDE_CELLS = 17;
+    private static final int MIN_VERTICAL_CONNECTIONS = 4;
     private static final int CLOSED_EDGES_PER_LOOP = 18;
 
     private EarthLabyrinthPlanner() {
@@ -212,7 +212,8 @@ final class EarthLabyrinthPlanner {
                 EarthLabyrinthLayout.Cell upper = new EarthLabyrinthLayout.Cell(x, z, 0);
                 EarthLabyrinthLayout.Cell lower = new EarthLabyrinthLayout.Cell(x, z, 1);
 
-                if (!upper.equals(entrance) && !lower.equals(guardian)) {
+                if (!upper.equals(entrance)
+                        && !isInsideGuardianArena(lower, guardian)) {
                     candidates.add(upper);
                 }
             }
@@ -245,6 +246,17 @@ final class EarthLabyrinthPlanner {
         }
 
         return List.copyOf(stairs);
+    }
+
+    private static boolean isInsideGuardianArena(
+            EarthLabyrinthLayout.Cell cell,
+            EarthLabyrinthLayout.Cell guardian
+    ) {
+        return cell.level() == guardian.level()
+                && Math.abs(cell.x() - guardian.x())
+                <= EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS
+                && Math.abs(cell.z() - guardian.z())
+                <= EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS;
     }
 
     private static boolean isSeparatedFromExistingStair(

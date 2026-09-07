@@ -102,7 +102,7 @@ The main event registration is intentionally explicit. When adding a new system,
 | `villager` | villager teaching, trade refresh, communal food/supply, livestock tending, property reputation, golem construction, and torch maintenance |
 | `worldgen` | worldgen registry and structure tags |
 | `worldgen/air` | Air Temple structure, wind zone, Breeze spawning, and Gale Core encounter |
-| `worldgen/earth` | composite Jungle Pyramid generation, deterministic Earth Labyrinth planning and placement; guardian remains planned |
+| `worldgen/earth` | composite Jungle Pyramid generation, deterministic Earth Labyrinth planning/placement, and persisted Earth Guardian foundation |
 | `worldgen/delayed` | stage-delayed structure generation and mob suppression |
 
 `NetherFogColorMixin` is a client-only atmospheric base-color hook. In the vanilla Nether dimension,
@@ -320,8 +320,8 @@ Current ritual model:
 
 - Dragon kill advances the world to Stage 2.
 - In Stage 2, the dragon egg accepts implemented ritual artifacts by item identity.
-- Heavy Core represents Air, Heart of the Sea represents Water, Totem of Undying represents Life,
-  and Nether Star represents Death. The registered `air_element` and `water_element` items are
+- Heavy Core represents Air, Heart of the Sea represents Water, Lodestone represents Earth,
+  Nether Reactor Core represents Fire, Totem of Undying represents Life, and Nether Star represents Death. The registered `air_element` and `water_element` items are
   legacy aliases retained for existing-world compatibility and are hidden from the ordinary
   Creative ingredients tab.
 - Acquisition order should be free; no path should require another path first unless the developer changes the design.
@@ -329,13 +329,13 @@ Current ritual model:
   `RetoldWorldData` persists the mask under the legacy `offered_elements` field so old saves retain
   offered Water/Air progress.
 - The dragon egg crack overlay reflects the currently required offering count.
-- The egg accepts Fire as well, but is currently removed and Stage 3 starts when Water, Air, Life,
-  and Death are offered. Change that threshold to all six only when Earth is survival-obtainable.
+- The egg is removed and Stage 3 starts through `RetoldStageManager.setStage` only after all six
+  offerings. Stable saved bits preserve older progress; existing Stage 3 worlds are not downgraded.
 - Ritual stacks do not carry hidden source provenance. Unwanted alternative acquisition routes are
   removed or stage-gated instead; Trial Chambers are disabled and buried treasure no longer yields
   a Heart of the Sea.
 
-Current limitation:
+Current acquisition paths (presentation and natural-world verification remain incomplete):
 
 - Water uses the Ocean Monument/Elder Guardian path and the Heart of the Sea reward.
 - Air uses the WIP Air Temple/Gale Core path and the Heavy Core reward. The encounter is not final and still needs tuning/testing.
@@ -361,25 +361,113 @@ Current limitation:
   owner makes up to 16 loaded-ground probes 48 to 96 blocks from one active player, independently
   of biome mob weights and the ordinary monster cap. It retains Peaceful, `doMobSpawning`, normal
   placement/despawn, player-distance, and 128-horizontal/64-vertical Wildfire-exclusion rules. The
-  core is accepted and persisted but deliberately remains outside the hatch threshold.
+  core is accepted, persisted, and required for hatching.
+- Earth Guardians use `retold:entities/earth_guardian` loot to drop one Lodestone under normal
+  mob-loot rules. `RetoldEndProgressionEvents` removes the vanilla `minecraft:lodestone` recipe
+  after resource layering, since false-conditioned overrides fall through to vanilla in 26.2.
+  `RetoldRemoveLodestoneLootModifier` removes only Lodestone from data-selected Ruined Portal and
+  Bastion Bridge chest tables. Existing items and placed Lodestones remain usable; intentionally
+  added datapack recipes/loot remain an integration boundary, not a provenance restriction.
 - Earth is confirmed as a deterministic randomized two-level labyrinth beneath every newly
   generated Jungle Pyramid, entered through the existing lever-puzzle room. Already-generated
   pyramids remain untouched. The `minecraft:jungle_pyramid` data definition retains its registry id
   but selects `EarthJungleTempleStructure` for new starts; each start serializes an
   `EarthJungleTemplePiece` compatible with vanilla placement plus an `EarthLabyrinthPiece`. The
   latter regenerates its layout from a stable world/structure-position seed and performs
-  chunk-bounded placement through `EarthLabyrinthGenerator`. The initial carved-cave network is 41
-  or 53 blocks wide, with its floors 64 and 71 blocks below the pyramid base. Its logical nodes use
+  chunk-bounded placement through `EarthLabyrinthGenerator`. The initial carved-cave network is 77
+  or 101 blocks wide, with its floors 64 and 78 blocks below the pyramid base. Its logical nodes use
   six-block spacing but receive deterministic inward-bounded X/Z offsets, and each open graph edge
   becomes a bent cardinal path through a clamped intermediate point. Stone-lined passage shells
   preserve closed barriers while irregular three-block-wide interiors, junction caverns, and the
   depth-aware Stone/Deepslate/Andesite/Tuff palette avoid a regular cobblestone-grid appearance. It
   has fixed entrance and guardian anchors, extra loops, a
-  protected long switchback route from the lever room, and two or three ladder connections. Room
-  modules, the statue, and the blind guardian remain unimplemented. The guardian is designed to
-  awaken on a Stage 2 chamber visit, roam by vibration, and permanently relocate a bounded reserve
-  of maze-owned blocks while respecting griefing and world-protection policy. Its artifact and egg
-  wiring remain undecided.
+  protected long switchback route from the lever room, and four or five ladder connections placed
+  outside the arena. `EarthLabyrinthRooms` selects up to six separated dead-end rooms per floor
+  without changing the topology random stream. `EarthLabyrinthRoomPlacement` places finite-ammunition
+  vanilla pressure-plate/dispenser traps and occasional chests after carving, strictly within each
+  chunk. Both inventories use Retold-owned loot tables; existing containers are never refilled.
+  Rooms introduce no light sources, spawners, or spawn overrides. `ContentVersion=1` is persisted
+  for new starts; absent versions keep older/partially generated starts at empty-room version 0.
+  The lower maze wraps around a rough central
+  guardian arena with a guaranteed 31-block-wide core and ten blocks of headroom; its surrounding
+  shell can vary out to 33 blocks across. The wider level separation keeps the arena ceiling below
+  the complete upper maze. `retold:earth_guardian` is registered as an unmanaged boss-profile
+  entity with a spawn egg and provisional runtime Iron Golem renderer. A bounded loaded-structure
+  scan resolves only serialized `EarthLabyrinthPiece` sources, spawns or repairs exactly one
+  persistent guardian initially at the fixed lower chamber, and ignores saved vanilla Jungle Pyramid starts.
+  Rebinding the same encounter is idempotent: a roaming guardian keeps its position, velocity,
+  path, and ongoing state. Only first binding or the dormant/awakening states use the chamber anchor;
+  repeated 40-tick source checks do not reapply an unchanged lifecycle, including after entity reload.
+  `EarthGuardianEncounterData` persists `DORMANT`, `AWAKENING`, `ROAMING`, or `DEFEATED` by chamber
+  key, while the entity separately saves its ownership, bounds, awakening timer, vibration listener,
+  strongest remembered clue, and bounded material reserve. It is immovable,
+  portal-blocked, boss-bar-hidden, and indestructible in Stage 1. A Survival-player chamber visit
+  in Stage 2 begins a three-second awakening and reveals the boss bar. The resulting `ROAMING`
+  state runs a vanilla dynamic vibration listener and persists its strongest remembered player
+  clue. Direct damage, explosions/projectiles, block changes, container actions, ground impact, and
+  movement use descending weights; Minecraft's vibration tag, occlusion, travel, and careful-step
+  rules remain authoritative. The guardian patrols or pathfinds to the remembered position through
+  `EARTH_GUARDIAN` AI ownership without acquiring a sight target.
+  Investigation uses `RetoldBehaviorMovement.throttledMoveToExact` for owned navigation,
+  shared path budget, path reuse, and failure backoff, with at least 20 entity ticks between requests.
+  When navigation stops, `EarthGuardianRoute` prepares a loaded-only short walking segment:
+  three-wide clearance for the full body (four blocks tall horizontally, five on ramps),
+  one-block elevation steps with extended landings, and solid full-block support taken from the
+  existing reserve. Missing solid material can be excavated beside, never out of, the planned floor.
+  Excavation/support/backfill share at most 12 edits per ten-tick pulse. A full reserve backfills entity-clear
+  trailing air up to eight blocks behind and twelve above the current feet, covering the higher
+  tunnel left during descent. Large-mob path-node alignment must not shift each successive segment
+  sideways. Ramp direction/target height are serialized; short work segments are reconstructed
+  from actual position and revalidated if walking stops. Cleared vibration memory ends the work.
+  A changing vibration clue does not discard an unfinished segment: construction and walking
+  commit to its short landing, then choose the next segment using the latest remembered clue.
+  Otherwise ordinary moving footsteps repeatedly restart navigation at the tunnel entrance.
+  Backfill and wall placement exclude the entire active segment, including its floor. If residual
+  movement carries the guardian into an unplaced raised support, the next segment is rebuilt
+  from its actual feet instead of retrying a permanently occupied support cell.
+  The shared movement helper uses exact waypoints so the mob physically steps down past a ledge.
+  Patrol starts its selected path through `RetoldAiControl.withNavigationBypass`. Clues remain valid within the
+  listener radius even outside the persisted labyrinth bounds. While following one, the controller
+  batches existing one-edit primitives and stops immediately on a no-progress result, avoiding
+  repeated denied/unloaded scans within the pulse. `EarthGuardianWalls` uses spare pulse budget
+  for a supported 3×3 trailing wall, three to six blocks behind the committed travel direction,
+  no more often than every forty ticks. It requires at least 18 stored states, spends only
+  full-collision states, and checks every cell's placement policy and entity clearance. Walls
+  are deferred until the active walking segment is ready and at least nine edits remain in the
+  shared pulse budget. There is deliberately no excavation whitelist, ownership/provenance check, block
+  entity exclusion, hardness check, or labyrinth boundary: player builds, mechanisms, containers,
+  fluids, and normally indestructible states are valid. Excavation retains the exact `BlockState` in
+  a 128-block entity-persisted reserve and placement consumes it, preventing unlimited material
+  creation; block-entity NBT is not retained, so relocated containers are newly empty instances.
+  Fluid-bearing states are explicitly replaced with air during excavation, rather than using
+  vanilla destruction, which preserves contained fluid and cannot remove a lava source. This
+  lets route repair clear eruption pools; source, flowing, and waterlogged states enter the
+  reserve whole. Ordinary dry blocks retain the existing destruction path. Neither branch
+  bypasses mutation protection or grants fire immunity.
+  Placement still rejects an occupied cell. Every edit passes `RetoldMobGriefing` plus
+  `RetoldWorldProtection`, preserving server-owner and claim-integration authority. The guardian
+  becomes damageable on entering `ROAMING`. `EarthGuardianMelee` supplies contact strikes against
+  only the remembered player: loaded entity UUID lookup, Survival/alive/same-level checks,
+  vanilla melee reach, administrative AI ownership, and a fresh budgeted wall check gate the
+  existing Iron Golem damage/animation. Contact checks run every five ticks and strike attempts
+  have a saved 30-tick cooldown. No live mob target is assigned. Investigation speed is 1.4
+  (previously 1.05), with a 1.2-block clue-arrival threshold that stops movement without erasing
+  contact memory; normal clue expiry still applies. Remembered
+  clues within 24 blocks can begin a persisted
+  30-tick warning at a fixed floor position. The persisted rotation converts up to five
+  protected-safe ceiling blocks with clear vertical fall paths into damaging `FallingBlockEntity`
+  debris or replaces up to nine loaded non-air blocks in a 3×3 supporting layer beneath the locked
+  target with real lava sources. Each replacement checks both break and place protection before
+  using normal block updates. Sources persist; Minecraft owns fluid flow, contact damage, and fire,
+  with no scripted damage, ignition, launch, or lava-particle burst. Subsequent vanilla fluid spread
+  has no guardian attribution. The third attack removes a 3×3 patch up to four blocks deep,
+  creating a permanent pit with ordinary falling and landing damage. Each column stops at a denied
+  block; at most 36 loaded blocks are removed without drops, independently of the relocation reserve.
+  After the pit the rotation returns to ceiling collapse; old saved lava-preference flags migrate to
+  the equivalent next attack, and existing pending attack ids remain valid.
+  Dust at the selected overhead blocks communicates the ceiling collapse; a collapse without valid,
+  unobstructed ceiling material falls back to lava. The windup preserves pursuit and contact melee but pauses terrain edits,
+  and it never assigns a sight target. Lodestone supplies the now-required Earth offering.
 - Normal survival reaches Stage 3 through the currently implemented Water, Air, Life, and Death
   paths.
 

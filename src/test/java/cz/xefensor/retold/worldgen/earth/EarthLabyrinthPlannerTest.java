@@ -47,7 +47,7 @@ class EarthLabyrinthPlannerTest {
         }
 
         assertTrue(distinctLayouts.size() > 56, "Pyramid seeds must produce varied topologies");
-        assertEquals(Set.of(41, 53), widths);
+        assertEquals(Set.of(77, 101), widths);
         assertNotEquals(
                 EarthLabyrinthPlanner.generate(10L),
                 EarthLabyrinthPlanner.generate(11L)
@@ -98,14 +98,30 @@ class EarthLabyrinthPlannerTest {
                     EarthLabyrinthLayout.CellKind.GUARDIAN_CHAMBER,
                     layout.kindAt(layout.guardianChamber())
             );
-            assertTrue(layout.verticalPassageCount() >= 2L);
-            assertTrue(layout.verticalPassageCount() <= 3L);
+            assertTrue(layout.verticalPassageCount() >= 4L);
+            assertTrue(layout.verticalPassageCount() <= 5L);
+            for (EarthLabyrinthLayout.Passage passage : layout.passages()) {
+                if (!passage.isVertical()) {
+                    continue;
+                }
+
+                EarthLabyrinthLayout.Cell lower = passage.first().level() == 1
+                        ? passage.first()
+                        : passage.second();
+                assertTrue(
+                        Math.abs(lower.x() - layout.guardianChamber().x())
+                                > EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS
+                                || Math.abs(lower.z() - layout.guardianChamber().z())
+                                > EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS,
+                        "Vertical links must stay outside the guardian arena"
+                );
+            }
             assertTrue(
                     layout.passages().size() >= cellCount,
                     "Extra passages and stairs must give every labyrinth at least one loop"
             );
-            assertTrue(layout.footprintWidthBlocks() >= 40);
-            assertTrue(layout.footprintWidthBlocks() <= 60);
+            assertTrue(layout.footprintWidthBlocks() >= 77);
+            assertTrue(layout.footprintWidthBlocks() <= 101);
         }
     }
 

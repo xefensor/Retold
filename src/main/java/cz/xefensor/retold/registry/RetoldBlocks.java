@@ -246,6 +246,13 @@ public final class RetoldBlocks {
             properties -> new SpawnEggItem(properties.spawnEgg(RetoldEntityTypes.WILDFIRE.get()))
     );
 
+    public static final DeferredItem<SpawnEggItem> EARTH_GUARDIAN_SPAWN_EGG = ITEMS.registerItem(
+            "earth_guardian_spawn_egg",
+            properties -> new SpawnEggItem(
+                    properties.spawnEgg(RetoldEntityTypes.EARTH_GUARDIAN.get())
+            )
+    );
+
     public static final DeferredBlock<AnimalFeederBlock> ANIMAL_FEEDER = BLOCKS.register(
             "animal_feeder",
             registryName -> new AnimalFeederBlock(

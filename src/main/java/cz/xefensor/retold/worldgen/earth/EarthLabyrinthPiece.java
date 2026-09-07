@@ -20,6 +20,7 @@ public final class EarthLabyrinthPiece extends StructurePiece {
     private final BlockPos connection;
     private final Direction egressDirection;
     private final long layoutSeed;
+    private final int contentVersion;
 
     EarthLabyrinthPiece(
             int centerX,
@@ -40,6 +41,7 @@ public final class EarthLabyrinthPiece extends StructurePiece {
         this.connection = connection.immutable();
         this.egressDirection = egressDirection;
         this.layoutSeed = layoutSeed;
+        this.contentVersion = EarthLabyrinthRooms.CONTENT_VERSION;
     }
 
     public EarthLabyrinthPiece(CompoundTag tag) {
@@ -57,6 +59,8 @@ public final class EarthLabyrinthPiece extends StructurePiece {
         );
         this.egressDirection = Direction.from2DDataValue(tag.getIntOr("EgressDirection", 0));
         this.layoutSeed = tag.getLongOr("LayoutSeed", 0L);
+        // Old/partially generated starts retain their original empty-room content.
+        this.contentVersion = tag.getIntOr("ContentVersion", 0);
     }
 
     private static BoundingBox createBoundingBox(
@@ -102,6 +106,7 @@ public final class EarthLabyrinthPiece extends StructurePiece {
         tag.putInt("ConnectionZ", connection.getZ());
         tag.putInt("EgressDirection", egressDirection.get2DDataValue());
         tag.putLong("LayoutSeed", layoutSeed);
+        tag.putInt("ContentVersion", contentVersion);
     }
 
     @Override
@@ -122,11 +127,25 @@ public final class EarthLabyrinthPiece extends StructurePiece {
                 pyramidBaseY,
                 connection,
                 egressDirection,
-                layoutSeed
+                layoutSeed,
+                contentVersion
         );
     }
 
     long layoutSeed() {
         return layoutSeed;
+    }
+
+    EarthLabyrinthSource guardianSource() {
+        EarthLabyrinthLayout layout = EarthLabyrinthPlanner.generate(layoutSeed);
+        BlockPos chamberFloor = EarthLabyrinthGenerator.cellCenter(
+                layout,
+                layout.guardianChamber(),
+                centerX,
+                centerZ,
+                pyramidBaseY,
+                layoutSeed
+        );
+        return new EarthLabyrinthSource(chamberFloor.above(), this.boundingBox);
     }
 }

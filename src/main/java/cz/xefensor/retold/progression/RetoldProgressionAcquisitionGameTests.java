@@ -72,6 +72,8 @@ public final class RetoldProgressionAcquisitionGameTests {
     ) {
         TestData<Holder<TestEnvironmentDefinition<?>>> testData =
                 new TestData<>(environment, EMPTY_STRUCTURE, 40, 0, true);
+        event.registerTest(retoldId("lodestone_is_exclusive_to_earth_guardian"),
+                new InlineGameTest(testData, RetoldProgressionAcquisitionGameTests::lodestoneAcquisition));
         event.registerTest(
                 retoldId("tool_progression_alternative_acquisition_respects_tiers"),
                 new InlineGameTest(
@@ -88,6 +90,35 @@ public final class RetoldProgressionAcquisitionGameTests {
                                 ::buriedTreasureExcludesHeartOfTheSea
                 )
         );
+    }
+
+    private static void lodestoneAcquisition(GameTestHelper helper) {
+        helper.assertTrue(helper.getLevel().getServer().getRecipeManager().byKey(
+                ResourceKey.create(Registries.RECIPE, Identifier.withDefaultNamespace("lodestone"))).isEmpty(),
+                "The ordinary Lodestone crafting recipe must be disabled");
+        for (String table : List.of("chests/ruined_portal", "chests/bastion_bridge")) {
+            for (long seed = 0; seed < 128; seed++) {
+                List<ItemStack> loot = chestLoot(helper, table, seed);
+                helper.assertTrue(!loot.isEmpty(), "Non-artifact chest rewards must remain");
+                helper.assertFalse(loot.stream().anyMatch(stack -> stack.is(Items.LODESTONE)),
+                        "Vanilla chest loot must not bypass the Earth Guardian");
+            }
+        }
+        var level = helper.getLevel();
+        var boss = helper.spawn(cz.xefensor.retold.registry.RetoldEntityTypes.EARTH_GUARDIAN.get(),
+                4.0D, 3.0D, 4.0D, net.minecraft.world.entity.EntitySpawnReason.COMMAND);
+        try {
+            boss.hurtServer(level, level.damageSources().genericKill(), Float.MAX_VALUE);
+            var drops = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    boss.getBoundingBox().inflate(2.0D));
+            helper.assertValueEqual(drops.stream().filter(drop -> drop.getItem().is(Items.LODESTONE))
+                    .mapToInt(drop -> drop.getItem().getCount()).sum(), 1,
+                    "An actual guardian death must drop exactly one Lodestone");
+            drops.forEach(net.minecraft.world.entity.Entity::discard);
+        } finally {
+            boss.discard();
+        }
+        helper.succeed();
     }
 
     private static void buriedTreasureExcludesHeartOfTheSea(

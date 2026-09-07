@@ -568,17 +568,17 @@ public final class RetoldGameTests {
             );
             helper.assertValueEqual(
                     data.offeredRequiredOfferingCount(),
-                    2,
-                    "Life and Death must count toward the temporary hatch threshold"
+                    4,
+                    "Every distinct offering must count toward hatching"
             );
             helper.assertValueEqual(
                     data.requiredOfferingCount(),
-                    4,
-                    "The temporary hatch threshold must require four offerings"
+                    6,
+                    "The completed acquisition paths must require all six offerings"
             );
             helper.assertFalse(
                     data.hasAllRequiredOfferings(),
-                    "Life and Death alone must not complete the current ritual"
+                    "Four offerings must not complete the ritual"
             );
 
             data.offer(RetoldRitualOffering.AIR);
@@ -589,7 +589,7 @@ public final class RetoldGameTests {
             data.offer(RetoldRitualOffering.WATER);
             helper.assertTrue(
                     data.hasAllRequiredOfferings(),
-                    "Water, Air, Life, and Death must complete the current ritual"
+                    "All six offerings must complete the ritual"
             );
             helper.assertValueEqual(
                     data.offeredRequiredOfferingCount(),
@@ -604,6 +604,17 @@ public final class RetoldGameTests {
 
             BlockPos.MutableBlockPos mutableEggPos =
                     new BlockPos.MutableBlockPos(3, 5, 7);
+            for (RetoldRitualOffering missing : RetoldRitualOffering.values()) {
+                data.clearOfferings();
+                for (RetoldRitualOffering offering : RetoldRitualOffering.values()) {
+                    if (offering != missing) {
+                        data.offer(offering);
+                    }
+                }
+                helper.assertFalse(data.hasAllRequiredOfferings(), "Every artifact must gate hatching: " + missing);
+                data.offer(missing);
+                helper.assertTrue(data.hasAllRequiredOfferings(), "Any element may finish the ritual: " + missing);
+            }
             data.setDragonEggPos(mutableEggPos);
             mutableEggPos.set(9, 9, 9);
             helper.assertValueEqual(
@@ -689,6 +700,13 @@ public final class RetoldGameTests {
             data.clearOfferings();
             data.clearDragonEggPos();
             ItemStack heart = new ItemStack(Items.HEART_OF_THE_SEA);
+            ItemStack earlyEarth = new ItemStack(Items.LODESTONE, 2);
+            RetoldEndProgressionEvents.onDragonEggRightClick(useOnEgg(player, earlyEarth, eggPos));
+            PlayerInteractEvent.RightClickBlock duplicateEarth = useOnEgg(player, earlyEarth, eggPos);
+            RetoldEndProgressionEvents.onDragonEggRightClick(duplicateEarth);
+            helper.assertTrue(earlyEarth.getCount() == 1
+                    && duplicateEarth.getCancellationResult() == InteractionResult.FAIL,
+                    "Earth may be offered first, but duplicate Lodestone must not be consumed");
             PlayerInteractEvent.RightClickBlock heartUse = useOnEgg(
                     player,
                     heart,
@@ -770,8 +788,18 @@ public final class RetoldGameTests {
             helper.assertTrue(
                     data.getStage() == RetoldWorldStage.STAGE_2
                             && level.getBlockState(eggPos).is(Blocks.DRAGON_EGG),
-                    "Fire must remain outside the hatch threshold until Earth exists"
+                    "Three offerings must not hatch the egg"
             );
+            RetoldEndProgressionEvents.onDragonEggRightClick(useOnEgg(player, new ItemStack(Items.HEAVY_CORE), eggPos));
+            RetoldEndProgressionEvents.onDragonEggRightClick(useOnEgg(player, new ItemStack(Items.HEART_OF_THE_SEA), eggPos));
+            helper.assertTrue(data.getStage() == RetoldWorldStage.STAGE_2
+                    && level.getBlockState(eggPos).is(Blocks.DRAGON_EGG), "Five offerings must leave the egg intact");
+            ItemStack lodestone = new ItemStack(Items.LODESTONE, 2);
+            RetoldEndProgressionEvents.onDragonEggRightClick(useOnEgg(player, lodestone, eggPos));
+            helper.assertTrue(lodestone.getCount() == 1 && data.hasOffering(RetoldRitualOffering.EARTH),
+                    "Exactly one Lodestone must be sacrificed for Earth");
+            helper.assertTrue(data.getStage() == RetoldWorldStage.STAGE_3
+                    && level.getBlockState(eggPos).isAir(), "The sixth offering must hatch the egg into Stage 3");
             helper.succeed();
         } finally {
             player.discard();
@@ -785,7 +813,7 @@ public final class RetoldGameTests {
             } else {
                 data.setDragonEggPos(originalEggPos);
             }
-            data.setStage(originalStage);
+            RetoldStageManager.setStage(level, originalStage);
         }
     }
 

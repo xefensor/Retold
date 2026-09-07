@@ -13,10 +13,10 @@ This concise public roadmap may change as features are designed and tested. Deta
 
 ## Next
 
-- Build on the initial generated Earth Labyrinth beneath newly generated Jungle Pyramids: add its
-  themed room modules, dormant statue, and blind terrain-relocating guardian. The final Earth
-  sacrifice remains undecided.
-- Complete the intended six-sacrifice Dragon Egg ritual in any order once the Earth path is survival-obtainable.
+- Build on the generated Earth Labyrinth and its vibration-investigating, terrain-relocating
+  persisted Earth Guardian: verify and tune the initial trap/treasure side rooms, natural dark-area
+  spawns, environmental hazards, and Lodestone reward.
+- Verify the six-sacrifice Dragon Egg ritual in any order, including upgraded worlds and multiplayer.
 - Verify and tune the implemented Life path around Evokers and Totems of Undying and the Death path around the Wither and Nether Star.
 - Add Aender in-dimension transportation and meaningful late-game building or travel rewards.
 - Audit survival removal or replacement of incompatible modern structures and progression.
@@ -32,7 +32,6 @@ See [`docs/element-ritual.md`](docs/element-ritual.md) for the current ritual, a
 ## Open Decisions
 
 - Whether Stage 1 should require the Wither or a Nether Star before End access, given the Nether Star's intended Stage 2 Death-sacrifice role.
-- Whether Lodestone remains the final Earth sacrifice.
 - The final roles of Nether and Aender dragons.
 - Whether Desert Pyramids or additional structures should receive boss tombs beyond the confirmed
   Jungle Pyramid Earth Labyrinth, and whether a world ending or New Game+ belongs in Retold.

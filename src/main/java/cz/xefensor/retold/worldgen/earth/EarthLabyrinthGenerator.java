@@ -16,7 +16,6 @@ import java.util.List;
 /** Chunk-bounded placement of the initial carved-tunnel Earth Labyrinth. */
 final class EarthLabyrinthGenerator {
     private static final int CHAMBER_RADIUS = 2;
-    private static final int GUARDIAN_CHAMBER_RADIUS = 3;
     private static final int INTERIOR_RADIUS = 1;
 
     private EarthLabyrinthGenerator() {
@@ -32,6 +31,14 @@ final class EarthLabyrinthGenerator {
             Direction egressDirection,
             long layoutSeed
     ) {
+        generate(level, chunkBounds, centerX, centerZ, pyramidBaseY, connection, egressDirection,
+                layoutSeed, EarthLabyrinthRooms.CONTENT_VERSION);
+    }
+
+    static void generate(
+            WorldGenLevel level, BoundingBox chunkBounds, int centerX, int centerZ, int pyramidBaseY,
+            BlockPos connection, Direction egressDirection, long layoutSeed, int contentVersion
+    ) {
         EarthLabyrinthLayout layout = EarthLabyrinthPlanner.generate(layoutSeed);
         Placement placement = Placement.centered(
                 layout,
@@ -43,6 +50,7 @@ final class EarthLabyrinthGenerator {
 
         generateHorizontalPassageShells(level, chunkBounds, layoutSeed, layout, placement);
         generateCaveNodes(level, chunkBounds, layoutSeed, placement);
+        generateGuardianChamber(level, chunkBounds, layoutSeed, placement);
         carveHorizontalPassages(level, chunkBounds, layoutSeed, layout, placement);
         generateVerticalConnections(level, chunkBounds, layoutSeed, layout, placement);
         generatePuzzleRoomShaft(
@@ -60,6 +68,11 @@ final class EarthLabyrinthGenerator {
                 egressDirection,
                 placement.cellCenter(layout.entrance())
         );
+        if (contentVersion >= 1) {
+            for (EarthLabyrinthRooms.Room room : EarthLabyrinthRooms.plan(layout, layoutSeed)) {
+                EarthLabyrinthRoomPlacement.place(level, chunkBounds, room, placement.cellCenter(room.cell()));
+            }
+        }
     }
 
     private static void generateHorizontalPassageShells(
@@ -104,19 +117,20 @@ final class EarthLabyrinthGenerator {
             Placement placement
     ) {
         for (EarthLabyrinthLayout.Cell cell : placement.layout().cells()) {
+            if (isInsideGuardianArena(placement.layout(), cell)) {
+                continue;
+            }
+
             BlockPos center = placement.cellCenter(cell);
-            boolean guardianChamber = placement.layout().kindAt(cell)
-                    == EarthLabyrinthLayout.CellKind.GUARDIAN_CHAMBER;
-            int radius = guardianChamber ? GUARDIAN_CHAMBER_RADIUS : CHAMBER_RADIUS;
 
             for (int yOffset = 0;
                  yOffset < EarthLabyrinthDimensions.CHAMBER_HEIGHT;
                  yOffset++) {
-                for (int zOffset = -radius;
-                     zOffset <= radius;
+                for (int zOffset = -CHAMBER_RADIUS;
+                     zOffset <= CHAMBER_RADIUS;
                      zOffset++) {
-                    for (int xOffset = -radius;
-                         xOffset <= radius;
+                    for (int xOffset = -CHAMBER_RADIUS;
+                         xOffset <= CHAMBER_RADIUS;
                          xOffset++) {
                         BlockPos target = center.offset(xOffset, yOffset, zOffset);
                         setBlock(
@@ -128,8 +142,7 @@ final class EarthLabyrinthGenerator {
                                         target,
                                         xOffset,
                                         yOffset,
-                                        zOffset,
-                                        guardianChamber
+                                        zOffset
                                 )
                                         ? Blocks.CAVE_AIR.defaultBlockState()
                                         : wallState(layoutSeed, target)
@@ -140,22 +153,49 @@ final class EarthLabyrinthGenerator {
         }
     }
 
+    private static void generateGuardianChamber(
+            WorldGenLevel level,
+            BoundingBox chunkBounds,
+            long layoutSeed,
+            Placement placement
+    ) {
+        BlockPos center = placement.cellCenter(placement.layout().guardianChamber());
+        int shellRadius = EarthLabyrinthDimensions.GUARDIAN_CHAMBER_SHELL_RADIUS;
+
+        for (int yOffset = 0;
+             yOffset < EarthLabyrinthDimensions.GUARDIAN_CHAMBER_HEIGHT;
+             yOffset++) {
+            for (int zOffset = -shellRadius; zOffset <= shellRadius; zOffset++) {
+                for (int xOffset = -shellRadius; xOffset <= shellRadius; xOffset++) {
+                    BlockPos target = center.offset(xOffset, yOffset, zOffset);
+                    setBlock(
+                            level,
+                            chunkBounds,
+                            target,
+                            isGuardianChamberInterior(
+                                    layoutSeed,
+                                    target,
+                                    xOffset,
+                                    yOffset,
+                                    zOffset
+                            )
+                                    ? Blocks.CAVE_AIR.defaultBlockState()
+                                    : wallState(layoutSeed, target)
+                    );
+                }
+            }
+        }
+    }
+
     private static boolean isCaveNodeInterior(
             long layoutSeed,
             BlockPos target,
             int xOffset,
             int yOffset,
-            int zOffset,
-            boolean guardianChamber
+            int zOffset
     ) {
         if (yOffset < 1 || yOffset > 3) {
             return false;
-        }
-
-        if (guardianChamber) {
-            int distanceSquared = xOffset * xOffset + zOffset * zOffset;
-            return distanceSquared < 4
-                    || distanceSquared <= 5 && roughValue(layoutSeed, target, 3L) != 0L;
         }
 
         if (Math.abs(xOffset) > INTERIOR_RADIUS || Math.abs(zOffset) > INTERIOR_RADIUS) {
@@ -165,6 +205,38 @@ final class EarthLabyrinthGenerator {
         boolean corner = Math.abs(xOffset) == INTERIOR_RADIUS
                 && Math.abs(zOffset) == INTERIOR_RADIUS;
         return !corner || roughValue(layoutSeed, target, 3L) != 0L;
+    }
+
+    private static boolean isGuardianChamberInterior(
+            long layoutSeed,
+            BlockPos target,
+            int xOffset,
+            int yOffset,
+            int zOffset
+    ) {
+        if (yOffset < 1
+                || yOffset > EarthLabyrinthDimensions.GUARDIAN_CHAMBER_INTERIOR_HEIGHT) {
+            return false;
+        }
+
+        int distanceSquared = xOffset * xOffset + zOffset * zOffset;
+        int interiorRadius = EarthLabyrinthDimensions.GUARDIAN_CHAMBER_INTERIOR_RADIUS;
+        int roughRadius = EarthLabyrinthDimensions.GUARDIAN_CHAMBER_ROUGH_RADIUS;
+        return distanceSquared <= interiorRadius * interiorRadius
+                || distanceSquared <= roughRadius * roughRadius
+                && roughValue(layoutSeed, target, 3L) != 0L;
+    }
+
+    private static boolean isInsideGuardianArena(
+            EarthLabyrinthLayout layout,
+            EarthLabyrinthLayout.Cell cell
+    ) {
+        EarthLabyrinthLayout.Cell guardian = layout.guardianChamber();
+        return cell.level() == guardian.level()
+                && Math.abs(cell.x() - guardian.x())
+                <= EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS
+                && Math.abs(cell.z() - guardian.z())
+                <= EarthLabyrinthDimensions.GUARDIAN_ARENA_CELL_RADIUS;
     }
 
     private static void carveHorizontalPassages(

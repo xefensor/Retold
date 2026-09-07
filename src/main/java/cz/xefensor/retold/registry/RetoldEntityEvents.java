@@ -2,6 +2,7 @@ package cz.xefensor.retold.registry;
 
 import cz.xefensor.retold.aender.entity.AenderEye;
 import cz.xefensor.retold.worldgen.air.GaleCore;
+import cz.xefensor.retold.worldgen.earth.EarthGuardian;
 import cz.xefensor.retold.worldgen.fire.Wildfire;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -16,6 +17,10 @@ public final class RetoldEntityEvents {
         event.put(RetoldEntityTypes.AENDER_EYE.get(), AenderEye.createAttributes().build());
         event.put(RetoldEntityTypes.GALE_CORE.get(), GaleCore.createAttributes().build());
         event.put(RetoldEntityTypes.WILDFIRE.get(), Wildfire.createAttributes().build());
+        event.put(
+                RetoldEntityTypes.EARTH_GUARDIAN.get(),
+                EarthGuardian.createAttributes().build()
+        );
     }
 
     public static void registerSpawnPlacements(RegisterSpawnPlacementsEvent event) {
