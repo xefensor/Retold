@@ -1,0 +1,291 @@
+{
+  "date": "2026-10-23",
+  "generator": "Built-in image_gen tool",
+  "authorization": "Developer requested redoing and improving the uncommitted asset/rendering pass.",
+  "author": "OpenAI image generation, directed and mechanically packed by Codex under Xefensor direction",
+  "license": "LICENSE-ASSETS.md",
+  "status": "Original generated development artwork; final subjective in-game approval pending.",
+  "processing": "Nearest-neighbor reduction to native pixel dimensions; binary alpha for sprites/leaves and exact retained Steel coverage masks. Steel and Guardian use newly generated material-panel sheets, limited palettes and distinct per-face crops mechanically packed into unchanged UVs. Gale front/back plate artwork is revised while the previous restrained rim stays. No Minecraft texture pixels are copied.",
+  "local_working_artifacts": "output/imagegen/revision-2026-10-23 and output/imagegen/polish-2026-10-23 are ignored, preserved locally, absent from a clean checkout, and unused by the build and tests.",
+  "packing_helper": "output/imagegen/revision-2026-10-23/pack-art.py (initial pass); active Steel and Guardian overrides use the per-source packing_helper paths below.",
+  "sources": [
+    {
+      "name": "flint",
+      "prompt": "Use case: precise-object-edit. Asset type: Retold Minecraft inventory item sprite, native 16x16 pixels. Edit target is the attached local flint_multi_tool.png; improve its silhouette. Replace the thin knife-like sliver with a sturdy palm-sized knapped flint handstone. Compact asymmetrical almond/wedge shape, 9 to 10 logical pixels wide and 12 logical pixels tall, thicker blunt lower grip, tapered upper point, a few deliberate angular flake scars and a readable cutting edge. No handle, binding, wood, metal, pupils, ornament or glow. Use a restrained six-color natural charcoal/neutral grey palette with a warm dark outline, medium grey faces, only a few pale edge pixels. Exactly 16x16 logical pixel art, displayed enlarged as sharp uniform pixel squares, transparent background, one logical pixel clear margin. Center the handstone; its shape should occupy most of the available width, have a clear useful grip, and remain readable at native size. No antialiasing, gradients, blur, text, grid lines, photorealism or copied vanilla artwork.",
+      "source": "output/imagegen/revision-2026-10-23/sources/flint.png",
+      "outputs": [
+        "src/main/resources/assets/retold/textures/item/flint_multi_tool.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/item/flint_multi_tool.png",
+          "size": [
+            16,
+            16
+          ],
+          "sha256": "c3978aee594e968abc4c2ad430886f53ceb1cdbc29aca0c9d811427bf6ed75c2"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-23",
+      "generator": "Built-in image_gen tool",
+      "author": "OpenAI image generation, directed and mechanically packed by Codex under Xefensor direction",
+      "status": "Original generated development artwork; final subjective in-game approval pending.",
+      "name": "steel_material_polish",
+      "prompt": "Use case: precise-object-edit.\nAsset type: one flat material-panel sheet for the existing original Retold STEEL ARMOR game texture. The first supplied image is the CURRENT UV texture reference, and the second is its current OFFLINE EQUIPMENT RENDER for material/design reference only. Improve the same cool silver steel set, preserving its simple unornamented Minecraft-compatible plate armor identity and a tone darker/cooler than iron.\n\nOutput ONE WIDE RECTANGULAR PANEL SHEET, a crisp hard-edged 4-COLUMN by 2-ROW arrangement of eight equal SQUARE panels, edge to edge, NO gutters, labels, lines or margins. Canvas has 64 x 32 logical square pixels, displayed enlarged. Every panel is 16 x 16 logical pixels. This is raw material artwork to crop and mechanically pack into existing armor UVs, NOT a humanoid illustration, NOT an unfolded UV atlas.\n\nTop row left to right:\n1. Helmet front material: narrow pale steel brow, darker cheek walls, calm midtone; recognizable broad brow and two cheeks. The actual face opening is preserved later by the original alpha mask. Keep the useful front design in the central 8x8 pixels.\n2. Helmet BACK material: closed, calm steel with a quiet dark lower neck guard and two pale corner edges; absolutely NO visor, face opening, eyes or front-face details.\n3. Chest FRONT: a clear simple collar at upper edge, broad calm blue-grey breastplate, restrained pale edge at shoulders, darker lower hem. Design occupies central 8 pixels wide by 12 tall.\n4. Chest BACK: a simple broad calm back plate, different from the front: no collar opening, no V neck, no breastplate motif; just narrow shoulder edge and restrained dark lower hem. Design occupies central 8x12.\n\nBottom row left to right:\n5. ARM: one narrow vertical bracer panel, central 4x12 logical pixels: lighter shoulder cap at top, quiet middle, subtle dark wrist seam at bottom; no breastplate details.\n6. LEGGING: narrow vertical solid greave panel central 4x12: one quiet knee edge, calm shin, darker lower ankle; do not put wrist/collar details here.\n7. BOOT: narrow vertical steel boot panel central 4x12: restrained toe cap and darkest sole occupying its lower quarter; upper area calm steel.\n8. PLAIN STEEL: quiet 16x16 material swatch for sides and tops, almost flat cool grey-blue with just a few 2-3 pixel broad stepped metal tones, no panel borders or ornaments.\n\nColor palette: ONLY these seven flat colors or extremely close shades: deepest blue grey #394957, shadow #526374, mid shadow #6a7d8d, base steel #8296a6, light steel #9aabba, edge #b5c4ce, brightest edge #d7e0e5. Keep broad calm shapes. Deliberate sparse pixel clusters. The lightest color is a one-pixel edge accent, not a large white patch. No colored cyan/blue diagnostic pixels. All eight panels use the SAME coherent material.\n\nConstraints: original artwork only, opaque sheet. No random speckling, mottling, microtexture, gradients, bloom, PBR, gloss, gold, rivet spam, insignia, rust or fancy fantasy detailing. No text, numbers, letters, grid, labels, perspective, model render, character, skin or transparent holes. Crisp Minecraft-scale pixel art, flat hard uniformly square logical pixels, NO antialiasing. The final artist intent is cleaner planes and distinct FRONT/BACK surfaces, not additional complexity.",
+      "source": "output/imagegen/polish-2026-10-23/steel/steel-panels-source.png",
+      "source_original": "/home/xela/.codex/generated_images/01a1696f-16c7-7170-b9f8-c77c64668e81/exec-bd46c1c2-f5d9-4308-8f6f-263c6243de7d.png",
+      "source_sha256": "55ec83795fa1df437d78343239125058f46ab36cb40ee8065063f8d532159c9a",
+      "packing_helper": "output/imagegen/polish-2026-10-23/steel/pack-steel.py",
+      "processing": [
+        "Point reduction of generated eight-panel artwork to a 64x32 sheet.",
+        "ImageMagick +dither -remap to the seven exact steel palette colors: #394957, #526374, #6a7d8d, #8296a6, #9aabba, #b5c4ce, #d7e0e5.",
+        "Crop generated material panels, resample with point filtering and pack individual front/back/side/top faces into the unchanged adult and 26.2 baby equipment UVs.",
+        "Keep chest front/back and helmet front/back distinct; separate generated bracer, greave and boot materials.",
+        "Apply exact pre-polish alpha channel from archived existing PNGs using CopyOpacity. No Minecraft pixels, new art drawing, geometry, stats or gameplay changes."
+      ],
+      "outputs": [
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid/steel.png",
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid_leggings/steel.png",
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid_baby/steel.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid/steel.png",
+          "size": [
+            64,
+            32
+          ],
+          "sha256": "24e6f84c7fcc6f7a512c1b5c5da5f8d95d72b06ec57058201f77bd64f8c248ee"
+        },
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid_leggings/steel.png",
+          "size": [
+            64,
+            32
+          ],
+          "sha256": "e6f7ea606f0008a5d3cc924a1b2be2d356cbee568b173498ec2ee4b35ed409c3"
+        },
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid_baby/steel.png",
+          "size": [
+            64,
+            64
+          ],
+          "sha256": "9745fb2d02f089e794aa13d464557f1a5d2f03f90ff5cbfbdf91bcf758d96349"
+        }
+      ],
+      "supersedes": "steel_atlas",
+      "validation": {
+        "alpha_identical_to_previous_outputs": true,
+        "opaque_palette_colors": {
+          "src/main/resources/assets/retold/textures/entity/equipment/humanoid/steel.png": 7,
+          "src/main/resources/assets/retold/textures/entity/equipment/humanoid_leggings/steel.png": 5,
+          "src/main/resources/assets/retold/textures/entity/equipment/humanoid_baby/steel.png": 7
+        },
+        "adult_chest_front_differs_from_back": true,
+        "in_game_review": false
+      }
+    },
+    {
+      "date": "2026-10-23",
+      "generator": "Built-in image_gen tool",
+      "author": "OpenAI image generation, directed and mechanically packed by Codex under Xefensor direction",
+      "status": "Original generated development artwork; final subjective in-game approval pending.",
+      "name": "guardian_material_polish",
+      "prompt": "Use case: precise-object-edit. Reference image is the existing flat Retold Earth Guardian atlas, used only for established warm grey stone, sparse muted olive moss, closed blind face and ancient carved-statue character. Rebuild its artwork as ONE MATERIAL PANEL SHEET for this single guardian asset, NOT a finished UV map and NOT a character illustration. Exact 64x32 logical pixel canvas enlarged to a crisp 2:1 sheet. Four equal edge-to-edge vertical columns, each exactly16 logical pixels wide and32 high, no gutters, labels or outlines between them. COLUMN1, x0..15: upper16x16 is a square, flat, front-facing ancient carved stone face: heavy quiet brow, TWO CLOSED DARK HORIZONTAL SLITS with no eyeballs/pupils/glow, short broad squared nose, small recessed mouth, plain blocky cheek planes; the lower16x16 is quiet undecorated stone material. COLUMN2, x16..31: a tall monolithic chest surface, calm central12pixel-wide carved stone plane, slightly darker narrow side planes, a short shallow fracture low near one corner, a hint of moss at lower edge, NO breastplate rim, face, symbols or brickwork. COLUMN3, x32..47: solid tall rectangular stone limb panel, mostly uninterrupted warm grey plane, one restrained stepped fracture near the bottom quarter and sparse dark olive moss near that fracture, subtle top and bottom worn edges; no dense joint bands or outlines. COLUMN4, x48..63: plain reusable seamless stone surface, large calm midgrey areas with only a few connected 2-3pixel darker chips and one small olive moss cluster, NO diagonal camouflage. ALL ART must use the SAME tightly controlled seven flat shades: deepest crevice #3e443b, dark stone #62665b, mid stone #7e8173, light stone #999b89, edge #b1b09b, dark moss #555d3c, moss #70764e. Broad connected pixel clusters and quiet surfaces. No gradients, anti-aliasing, microtexture, random per-pixel noise, realistic stone photograph, perspective, lighting vignette, grid, text, icon, armor, iron-golem nose or copied Minecraft pixels. Entire sheet is opaque, every logical pixel is a hard uniform square. Preserve the old blind jungle-statue identity while making its carved planes readable.",
+      "reference": "src/main/resources/assets/retold/textures/entity/earth_guardian.png",
+      "source": "output/imagegen/polish-2026-10-23/guardian/source.png",
+      "source_original": "/home/xela/.codex/generated_images/01a1692a-3649-7b40-84a4-61fc76ab1c97/exec-9bf0351c-ae4f-4dbe-80aa-6f1e4b21286c.png",
+      "source_sha256": "5c21cdc6114bf6afd2834cfff4fb3271dc6c38f142c186704f78ac6c5147c7f1",
+      "packing_helper": "output/imagegen/polish-2026-10-23/guardian/pack.py",
+      "processing": "Nearest-neighbor 64x32 panel reduction, no-dither explicit seven-color remap, mechanical per-face crops/resizes into unchanged 128x64 model UVs. Front, back, sides and top use distinct generated material regions. Opaque atlas. No Minecraft pixels copied.",
+      "palette": [
+        "#3e443b",
+        "#62665b",
+        "#797a69",
+        "#999b89",
+        "#b1b09b",
+        "#4b5732",
+        "#626d3e"
+      ],
+      "outputs": [
+        "src/main/resources/assets/retold/textures/entity/earth_guardian.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/earth_guardian.png",
+          "size": [
+            128,
+            64
+          ],
+          "sha256": "5a859d61ffd75ea022661defc8970a9c449ac8f8d8bbe127049ee28644616b11"
+        }
+      ],
+      "supersedes": "guardian_atlas",
+      "validation": {
+        "opaque_palette_colors": 6,
+        "allowed_palette_colors": 7,
+        "mesh_unchanged": true,
+        "in_game_review": false
+      }
+    },
+    {
+      "name": "gale_plate",
+      "prompt": "Use case: stylized-concept. Asset type: one front material tile for Retold Gale Core's thin floating armor plate. The supplied atlas is only a palette reference, not the output layout. Generate ONE simple rectangle 5 logical pixels wide by8 logical pixels high, displayed enlarged with perfectly hard square pixels, edge to edge, no margin. Cool pale lavender silver outer rim exactly1 pixel thick on left/right/bottom, slightly lighter narrow upper edge, deeper muted purple-grey recessed center3pixels wide, calm broad flat interior with only one short restrained wear mark. Palette matches a purple Breeze: pale #b9bac9, mid#8c8ba8, inset#686987, deepest#525672; original restrained Minecraft scale. It is thin ceremonial armor, NOT face, gem, shield with crest, metal photograph or ornate decoration. No glow, gold, symbols, text, grid, gradation, shadow outside rectangle or copied game pixels. A single coherent flat UV plate tile, not a 3D object.",
+      "source": "output/imagegen/revision-2026-10-23/sources/gale_plate.png",
+      "outputs": [
+        "src/main/resources/assets/retold/textures/entity/gale_core.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/gale_core.png",
+          "size": [
+            32,
+            32
+          ],
+          "sha256": "4182d7e819609fdd9de4c5991fdf22d451a44279beb3ad3929bbb764a44e8842"
+        }
+      ]
+    },
+    {
+      "name": "aender_grass",
+      "prompt": "Use case: stylized-concept. Asset type: ONE original seamless Minecraft terrain texture, flat top surface of Retold Aender purple grass. Exactly16x16 logical pixels enlarged as perfectly crisp uniform squares, square opaque image filling all edges; no border. Restrained inverted-world palette: dusty medium purple #80558e, low #704d7f, occasional #91649d highlights, deepest#63466f. Natural small connected 2-3pixel foliage clusters and short bent 2pixel grass blades distributed irregularly, calm broad midtone coverage, restrained contrast, no single-pixel random salt-and-pepper noise. Seamless on all edges, equal detail at edges and center, no larger motif or tile border. The surface reads as fine purple living grass at vanilla pixel scale, not stone, woven fabric, bricks, moss camouflage or a noisy checkerboard. No perspective, sky, text, grid, gradients, gloss, lighting baked into tile, bloom or copied game pixels. Original development art for a Minecraft mod.",
+      "source": "output/imagegen/revision-2026-10-23/sources/aender_grass.png",
+      "outputs": [
+        "src/main/resources/assets/retold/textures/block/aender_grass_block_top.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/block/aender_grass_block_top.png",
+          "size": [
+            16,
+            16
+          ],
+          "sha256": "7b4e44061a9fad711b0b229a4f268e9f819453eafc9804dc772d206ba50c97a0"
+        }
+      ]
+    },
+    {
+      "name": "aender_leaves",
+      "prompt": "Use case: stylized-concept. Asset type: ONE original seamless cutout Minecraft leaf block texture for Retold Aender trees. Exactly16x16 logical pixels enlarged as hard uniform square pixels. Purple leaves only: middle dusty violet #775183, light#956aa0, shadow#60446f, a few dark#4c375a. Natural interlocking small 2-4pixel leaf clusters, some angular diagonal leaf edges, about12percent genuinely transparent one/two pixel gaps scattered irregularly, gaps continue across tile edges; avoid a centered isolated bush. Consistent midtone across edges and center so it tiles all ways. Restrained contrast and coherent leaf shapes, no white/lilac confetti, heavy dark outline, veins everywhere or checkerboard. Flat usable terrain texture, no isometric cube, decorative frame, text, grid lines, blur, antialias, gradients, glow or copied Minecraft art. True transparent gaps, no colored backdrop.",
+      "source": "output/imagegen/revision-2026-10-23/sources/aender_leaves.png",
+      "outputs": [
+        "src/main/resources/assets/retold/textures/block/aender_leaves.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/block/aender_leaves.png",
+          "size": [
+            16,
+            16
+          ],
+          "sha256": "14fc363a4925a896cb9edc06de960b1d56f1abb0ea54a3608f08757d3ba1ec6b"
+        }
+      ]
+    },
+    {
+      "name": "reactor",
+      "prompt": "Use case: stylized-concept. Asset type: ONE original Retold Nether Reactor Core inventory sprite. Exactly16x16 logical pixels enlarged as perfectly crisp uniform pixel squares on genuine transparent background. Compact cubic artifact with three readable planes seen obliquely, about12pixels wide and13pixels tall, clear1pixel margin. Charcoal structural edges, muted brass corner clamps#b29a4f, deep blue face inset#45617f and midblue#7292af, small recessed pale blue square core. Simple heavy manufactured ancient reactor, calm solid panels and clear consistent top-left light, not ornate. Seven flat colors, avoid multicolor noise, circular eye, fire, glow, glass shine, exaggerated perspective, extra prongs, text, grid, antialias or blur. Inspired conceptually by old Pocket Edition reactor only; entirely original geometry and texture arrangement, do not reproduce legacy Minecraft pixels.",
+      "source": "output/imagegen/revision-2026-10-23/sources/reactor.png",
+      "outputs": [
+        "src/main/resources/assets/retold/textures/item/nether_reactor_core.png"
+      ],
+      "packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/item/nether_reactor_core.png",
+          "size": [
+            16,
+            16
+          ],
+          "sha256": "c380a433517856bbd60bf0366d5dc4ad7665df15010da07a9093674d2ce70041"
+        }
+      ]
+    }
+  ],
+  "superseded_sources": [
+    {
+      "name": "aender_eye",
+      "prompt": "Use case: stylized-concept. Asset type: ONE original Retold Aender Eye entity sprite. EXACT16x16 logical pixel game sprite enlarged as hard uniform square pixels on genuine transparent background, 1pixel clear margin all around. Floating compact green magical eye, horizontal oval shape about13pixels wide by9pixels high. A thin pale grey-green stone rim with a few muted grey facets, broad quiet jade iris in medium green#5b9666 and shadow#3f6d50, narrow very dark vertical pupil#203b32, one tiny desaturated mint highlight. Readable as an ancient watchful eye, no lashes, thick silver diamond frame, gem jewelry, wings, blood, neon or excessive glow. Restrained7color original arrangement, no copying Eye of Ender pixels. No text, border, antialias, blur, gradients, large gloss or perspective. Classic Minecraft-size readability and crisp silhouette.",
+      "source": "output/imagegen/revision-2026-10-23/sources/aender_eye.png",
+      "status": "Superseded on 2026-10-23 at developer direction: Aender Eye directly reuses the installed vanilla Eye of Ender texture as an emissive billboard. Historical provenance only; no custom Eye texture is packaged.",
+      "historical_outputs": [
+        "src/main/resources/assets/retold/textures/entity/aender_eye.png"
+      ],
+      "historical_packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/aender_eye.png",
+          "size": [
+            16,
+            16
+          ],
+          "sha256": "3a62655993819aa329a73b37176c71923f2007c5ca5385defba24dd5167bb44f"
+        }
+      ]
+    },
+    {
+      "name": "steel_atlas",
+      "prompt": "Use case: precise-object-edit. Edit target: the supplied enlarged 64x32 UV texture atlas for original Minecraft-compatible Steel armor, NOT a character illustration. Output the same flat 2:1 rectangular UV sheet, exactly 64 by 32 logical pixels enlarged with sharp square pixels. Preserve existing canvas proportions and alpha coverage precisely. Improve the almost featureless metal with purposeful vanilla-scale armor craftsmanship: cool dark blue-grey edge shadows, one-pixel pale steel edge highlights, restrained stepped plate seams, a simple collar and breastplate, subtle darker waist band and boot soles. Quiet flat steel broad surfaces, only 5-7 cool steel shades, no random mottling, no rust, no glow, gold, rivet spam or insignia. Keep the material slightly darker than iron. Standard classic humanoid armor UV: head 0..31 x 0..15; torso 16..39 x16..31; right arm40..55 x16..31; leg0..15 x16..31. Front chest is x20..27,y20..31: put a narrow collar at y20, broad calm breastplate beneath, gentle bottom hem y30; front arm x44..47,y20..31 has a subtle shoulder edge and a wrist seam. Head front x8..15,y8..15: define a clean brow ridge and cheek plates around the existing transparent face opening. Never move the UV panels. No labels, text, drawn grid, rendered person, perspective or anti-aliasing. Original texture pixels only. This is a usable game texture sheet, not a presentation.",
+      "source": "output/imagegen/revision-2026-10-23/sources/steel_atlas.png",
+      "status": "Superseded by steel_material_polish on 2026-10-23. Historical exact prompt, source and packaged output hashes retained.",
+      "superseded_by": "steel_material_polish",
+      "historical_outputs": [
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid/steel.png",
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid_leggings/steel.png",
+        "src/main/resources/assets/retold/textures/entity/equipment/humanoid_baby/steel.png"
+      ],
+      "historical_packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid/steel.png",
+          "size": [
+            64,
+            32
+          ],
+          "sha256": "e21fb52eb10315dc2f3fa370e26b2aa52aab1fd946aa6ecdb675a2f1eb0567a3"
+        },
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid_leggings/steel.png",
+          "size": [
+            64,
+            32
+          ],
+          "sha256": "a347c74814c701ea3f4fed29923748a207ea2c7df745c4ec503aaea7d2d00b01"
+        },
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/equipment/humanoid_baby/steel.png",
+          "size": [
+            64,
+            64
+          ],
+          "sha256": "26ad92ee73eda0f794452b3ed1b309a39195c01ad9c41a032ac6b5ed59d18ec9"
+        }
+      ]
+    },
+    {
+      "name": "guardian_atlas",
+      "prompt": "Use case: precise-object-edit. Edit target: the supplied flat 128x64 logical-pixel texture atlas for Retold's original ancient blind jungle stone guardian. Output a flat 2:1 rectangular UV atlas with EXACTLY128x64 logical hard square pixels, enlarged. Preserve exact native placement: 8x8 face at x8..15,y8..15, stone body front at x6..17,y22..40, chest raised panel x1..10,y41..46, arm front x46..51,y6..33, shoulder front x72..79,y8..12, fist front x71..77,y23..30, leg front x45..49,y37..52. Improve the featureless camouflage material: calm warm grey carved stone overall, coherent gentle block-plane value changes and sparse short fractures at joints, subtle darker recessed panel borders where those named front regions end, sparse muted olive moss in creases. The face is solemn carved dead stone with a heavy brow, CLOSED dark horizontal blind slits, squared short nose, small recessed mouth; no pupils or luminous eyes, no iron golem nose, no teeth. The torso is a single ancient carved statue rather than cobblestone brick wall or moss camouflage. Each limb reads as solid worn stone, with a simple wrist/ankle edge, a few chips, largely quiet surfaces. 7 restrained grey/olive palette colors; no random per-pixel noise, excessive fine cracks, outlines around atlas panels, grid lines, text, labels, humanoid illustration, perspective, vignette or antialias. Entire canvas remains opaque stone. Original artwork only.",
+      "source": "output/imagegen/revision-2026-10-23/sources/guardian_atlas.png",
+      "status": "Superseded by guardian_material_polish on 2026-10-23. Historical exact prompt, source and packaged output hashes retained.",
+      "superseded_by": "guardian_material_polish",
+      "historical_outputs": [
+        "src/main/resources/assets/retold/textures/entity/earth_guardian.png"
+      ],
+      "historical_packaged_outputs": [
+        {
+          "path": "src/main/resources/assets/retold/textures/entity/earth_guardian.png",
+          "size": [
+            128,
+            64
+          ],
+          "sha256": "12257c4786bd88ac38f27d8ad816ec5c0538ff1f0b9b9eb5bdb91744b0713ed4"
+        }
+      ]
+    }
+  ],
+  "active_source_count": 7,
+  "active_output_count": 9,
+  "runtime_reuse": {
+    "aender_eye": "minecraft:textures/item/ender_eye.png from installed Minecraft resources, used directly as an emissive billboard including resource-pack texture replacements; no Retold Eye sprite packaged"
+  }
+}

@@ -27,7 +27,6 @@ import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.item.ToolMaterial;
 import net.minecraft.world.item.equipment.ArmorMaterial;
 import net.minecraft.world.item.equipment.ArmorType;
-import net.minecraft.world.item.equipment.EquipmentAssets;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ColoredFallingBlock;
@@ -80,7 +79,7 @@ public final class RetoldBlocks {
                     1.0F,
                     0.0F,
                     RetoldTags.STEEL_REPAIR_MATERIALS,
-                    EquipmentAssets.IRON
+                    RetoldEquipmentAssets.STEEL
             );
 
     public static final DeferredItem<Item> FLINT_MULTI_TOOL = ITEMS.registerItem(

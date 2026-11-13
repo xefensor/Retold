@@ -2,6 +2,7 @@ package cz.xefensor.retold.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import cz.xefensor.retold.command.showcase.RetoldShowcaseWorld;
 import cz.xefensor.retold.network.RetoldEndSkySeedSyncPayload;
 import cz.xefensor.retold.sky.RetoldEndSkyData;
 import cz.xefensor.retold.stage.RetoldStageManager;
@@ -10,6 +11,8 @@ import cz.xefensor.retold.stage.RetoldWorldStage;
 import cz.xefensor.retold.villager.RetoldVillageReputationStatus;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,6 +26,12 @@ public final class RetoldCommands {
         dispatcher.register(
                 Commands.literal("retold")
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+                        .then(Commands.literal("testworld")
+                                .executes(context -> createTestWorld(context.getSource(), null))
+                                .then(Commands.argument("origin", BlockPosArgument.blockPos())
+                                        .executes(context -> createTestWorld(context.getSource(),
+                                                BlockPosArgument.getBlockPos(context, "origin"))))
+                        )
                         .then(Commands.literal("stage")
                                 .then(Commands.literal("get")
                                         .executes(context -> getStage(context.getSource()))
@@ -52,6 +61,32 @@ public final class RetoldCommands {
                                 )
                         )
         );
+    }
+
+    private static int createTestWorld(CommandSourceStack source, BlockPos requestedOrigin) {
+        if (!(source.getEntity() instanceof ServerPlayer player)) {
+            source.sendFailure(Component.literal("Run this command as a player in an Overworld test world."));
+            return 0;
+        }
+        ServerLevel level = source.getLevel();
+        BlockPos origin = requestedOrigin;
+        if (origin == null) {
+            RetoldShowcaseWorld.Plan layout = RetoldShowcaseWorld.plan(BlockPos.ZERO);
+            origin = new BlockPos(player.getBlockX() - layout.width() / 2, level.getMaxY() - 18,
+                    player.getBlockZ() - layout.depth() / 2);
+        }
+        RetoldShowcaseWorld.Plan plan = RetoldShowcaseWorld.plan(origin);
+        RetoldShowcaseWorld.BuildResult result = RetoldShowcaseWorld.build(level, plan);
+        if (!result.created()) {
+            source.sendFailure(Component.literal(result.message()));
+            return 0;
+        }
+        BlockPos entrance = origin.offset(plan.width() / 2, 1, 2);
+        player.teleportTo(level, entrance.getX() + 0.5D, entrance.getY(), entrance.getZ() + 0.5D,
+                java.util.Set.of(), 0.0F, 0.0F, true);
+        source.sendSuccess(() -> Component.literal(result.message() + " Entrance: " + entrance.toShortString()
+                + ". Exhibits are passive; world stage and game rules are unchanged."), false);
+        return 1;
     }
 
     private static int getStage(CommandSourceStack source) {

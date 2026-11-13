@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-12",
+  "mode": "built-in image generation",
+  "direction": "Xefensor rejected the previous golem-like commander; use the installed vanilla Breeze model, head/wind/eyes materials, shader and keyframes; original cool circlet and four thin plates; actual Heavy Core visible",
+  "runtime_minecraft_resources": "Breeze body/wind/eyes and Heavy Core resolved from the installed game; no copied or modified Minecraft pixels/models in Retold",
+  "author": "OpenAI image generation, directed and mechanically processed by Codex under Xefensor direction",
+  "license": "Retold Asset License for original textures only; runtime Minecraft material remains Mojang/Microsoft",
+  "approval": "development art; in-game approval pending",
+  "sources": [
+    {
+      "name": "gale_plate",
+      "prompt": "Production texture for an original Minecraft Java mod mob: one small flat armor plate front, shown head-on, completely fills the rectangular canvas. EXACTLY 5 pixels wide and 8 pixels tall in logical pixel art, enlarged with crisp nearest neighbor square pixels. Vanilla Minecraft Breeze family palette: muted purplish blue (#7776a3), dusty violet shadow (#525171), pale grey lilac edge (#b0acc4). A narrow one-pixel pale border around a solid muted purple field, only two or three small shade patches; four or five colors total, chunky plain texels. No gold, no gem, no engraving, no bevel gradient, no 3D perspective, no realistic metal, no fine noise, no text, no margins. This is an original shield material used on four rectangular floating plates, not a picture of a creature. Opaque surface edge to edge.",
+      "source": "/home/xela/.codex/generated_images/01a13080-a478-7ad3-92b1-d96722e9441e/exec-83440f76-d5f8-4270-af3f-dea724aa2d1b.png",
+      "workspace_source": "output/imagegen/gale-core-breeze/sources/gale_plate.png"
+    },
+    {
+      "name": "gale_core_spawn_egg",
+      "prompt": "Original Minecraft-style inventory sprite for a Breeze commander spawn egg. One compact upright egg centered with transparent padding, logical 16 by 16 pixel icon enlarged with sharp nearest neighbor squares, about 10 pixels wide and 14 high. Simple familiar stepped egg outline, muted dark purplish blue egg with a few broad pale grey lavender spots and cool ivory spots. Match Minecraft Breeze purple and pale wind palette. Five or six flat colors, sparse blocky shading. No gold, no crown on the egg, no face, no decorative markings, no glow, no shadow outside the egg, no fine details, no antialiasing, no words. Transparent background.",
+      "source": "/home/xela/.codex/generated_images/01a13080-a478-7ad3-92b1-d96722e9441e/exec-ed2563c7-9f1d-48f6-ba93-5fe1bb3bf2be.png",
+      "workspace_source": "output/imagegen/gale-core-breeze/sources/gale_core_spawn_egg.png"
+    }
+  ],
+  "active_revision_reference": "retold_asset_revision_2026-10-23.json"
+}

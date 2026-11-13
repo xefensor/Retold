@@ -9,6 +9,7 @@ Retold is still built around:
 - three world stages
 - four classical element paths plus Life and Death, with all six sacrifices completable in any order
 - Aender replacing normal late End access while vanilla End remains command-accessible
+- static Aender material block textures with vanilla-scale detail and the original inverted-world color families: purple vegetation, blue soil/bark and desert stone, and cool stone; grass sides use organic fringes rather than straight bands (clarified 2026-10-12)
 - horizontal Aender portals using implemented 8:1 Overworld/Aender travel scaling
 - elytra remaining as an item but not being survival-obtainable through End Cities
 - recipe knowledge and villager teaching instead of a vanilla-style recipe-book restore
@@ -388,6 +389,16 @@ Do not add these unless the developer changes direction:
 - complete code/entity removal of sniffers or endermites just because survival spawning is removed
 - removal of Trail Ruins; they should remain part of normal world generation
 - removal of fossils; they should remain part of normal world generation
+
+## Equipment And Boss Art Direction
+
+The approved custom-art scope covers Steel equipment, Nether Reactor Core, Earth Guardian, Gale
+Core and Flint tools. Original development sprites, armor atlases and boss geometry are installed
+for review. Aender Eye uses the installed vanilla Eye of Ender appearance at developer direction;
+it does not need a dedicated Retold sprite. Earth Guardian remains a blind weathered statue. Gale Core retains the installed
+Breeze head, glowing face, wind and animations with a visible Heavy Core, shallow pale circlet
+and four thin floating plates. Final creative approval and natural encounter tuning remain open.
+Source records and historical credits are in [`ASSET_CREDITS.md`](../../ASSET_CREDITS.md).
 
 ## Roadmap Maintenance
 

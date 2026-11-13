@@ -5,7 +5,7 @@
       {
         "model": {
           "type": "minecraft:model",
-          "model": "minecraft:item/stone_spear"
+          "model": "retold:item/flint_spear"
         },
         "when": [
           "gui",
@@ -17,7 +17,7 @@
     ],
     "fallback": {
       "type": "minecraft:model",
-      "model": "minecraft:item/stone_spear_in_hand"
+      "model": "retold:item/flint_spear_in_hand"
     },
     "property": "minecraft:display_context"
   },

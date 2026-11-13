@@ -56,6 +56,7 @@ import cz.xefensor.retold.combat.RetoldFactionTargetMemory;
 import cz.xefensor.retold.combat.RetoldTargetSource;
 import cz.xefensor.retold.combat.RetoldTargetRangeGameTests;
 import cz.xefensor.retold.combat.RetoldThreatRetargetGameTests;
+import cz.xefensor.retold.command.showcase.RetoldShowcaseGameTests;
 import cz.xefensor.retold.compatibility.RetoldWorldProtectionGameTests;
 import cz.xefensor.retold.enderman.RetoldEndermanDefense;
 import cz.xefensor.retold.enchanting.RetoldEnchantingGameTests;
@@ -374,6 +375,7 @@ public final class RetoldGameTests {
         RetoldSnowballGameTests.register(event, environment);
         RetoldEnchantingGameTests.register(event, environment);
         RetoldToolProgressionGameTests.register(event, environment);
+        RetoldShowcaseGameTests.register(event, environment);
         RetoldProgressionAcquisitionGameTests.register(event, environment);
         RetoldRecipeCompatibilityGameTests.register(event, environment);
         RetoldTerritoryGameTests.register(event, environment);

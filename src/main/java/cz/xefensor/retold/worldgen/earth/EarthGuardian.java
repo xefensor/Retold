@@ -96,6 +96,10 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
             EarthGuardian.class,
             EntityDataSerializers.INT
     );
+    private static final EntityDataAccessor<Integer> AWAKENING_TICKS = SynchedEntityData.defineId(
+            EarthGuardian.class,
+            EntityDataSerializers.INT
+    );
 
     private final ServerBossEvent bossEvent = new ServerBossEvent(
             this.getUUID(),
@@ -157,6 +161,7 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
     protected void defineSynchedData(SynchedEntityData.Builder entityData) {
         super.defineSynchedData(entityData);
         entityData.define(LIFECYCLE, EarthGuardianLifecycle.DORMANT.ordinal());
+        entityData.define(AWAKENING_TICKS, 0);
     }
 
     @Override
@@ -191,13 +196,13 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
                 && isStageTwo(level)
                 && hasActivatingPlayer(level)) {
             transitionTo(level, EarthGuardianLifecycle.AWAKENING);
-            awakeningTicks = AWAKENING_DURATION_TICKS;
+            setAwakeningTicks(AWAKENING_DURATION_TICKS);
             return;
         }
 
         if (lifecycle == EarthGuardianLifecycle.AWAKENING) {
             if (awakeningTicks > 0) {
-                awakeningTicks--;
+                setAwakeningTicks(awakeningTicks - 1);
             }
 
             if (awakeningTicks == 0) {
@@ -230,7 +235,7 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
         }
 
         if (lifecycle == EarthGuardianLifecycle.AWAKENING && awakeningTicks <= 0) {
-            awakeningTicks = AWAKENING_DURATION_TICKS;
+            setAwakeningTicks(AWAKENING_DURATION_TICKS);
         }
 
         EarthGuardianEncounterData.get(level).setLifecycle(labyrinthKey, lifecycle);
@@ -251,6 +256,18 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
 
     public EarthGuardianLifecycle lifecycle() {
         return EarthGuardianLifecycle.bySerializedId(this.entityData.get(LIFECYCLE));
+    }
+
+    private void setAwakeningTicks(int ticks) {
+        awakeningTicks = ticks;
+        // Only this bounded transition sends updates. Tracking clients, including late joins,
+        // receive the saved encounter countdown instead of restarting a local animation clock.
+        this.entityData.set(AWAKENING_TICKS, ticks);
+    }
+
+    public float awakeningProgress(float partialTick) {
+        float remaining = this.entityData.get(AWAKENING_TICKS) - partialTick;
+        return Math.clamp(1.0F - remaining / AWAKENING_DURATION_TICKS, 0.0F, 1.0F);
     }
 
     public boolean isStructureBound() {
@@ -501,7 +518,7 @@ public final class EarthGuardian extends IronGolem implements VibrationSystem {
         melee.load(input);
         this.structureBound = input.getBooleanOr("retold_structure_bound", false);
         this.labyrinthKey = input.getLongOr("retold_labyrinth_key", 0L);
-        this.awakeningTicks = input.getIntOr("retold_awakening_ticks", 0);
+        setAwakeningTicks(input.getIntOr("retold_awakening_ticks", 0));
         this.vibrationMemoryTicks = input.getIntOr("retold_vibration_memory_ticks", 0);
         this.vibrationStrength = input.getIntOr("retold_vibration_strength", 0);
         this.environmentalAttackCooldownTicks = Math.max(

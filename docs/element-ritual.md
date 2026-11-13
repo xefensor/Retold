@@ -41,6 +41,10 @@ and Wither acquisition paths. Existing items from older worlds remain valid.
 
 ### Air — Gale Core
 
+Its development presentation uses the installed Breeze head, glowing face, wind and animations,
+with a pale circlet and four thin floating plates around a visible Heavy Core. The core uses the
+installed block model, including resource-pack overrides. Final in-game visual approval remains open.
+
 The existing Air Temple and Gale Core encounter remain the Air path. The Gale Core now drops the
 **Heavy Core**. The temporary custom Air Element remains registered and accepted only so existing
 worlds do not lose held progression items.
@@ -119,9 +123,10 @@ tunnels, irregular junction caverns, and ladder connections using a provisional 
 palette. It now registers `retold:earth_guardian`, spawns exactly one structure-owned guardian at
 the fixed chamber, and persists `DORMANT`, `AWAKENING`, `ROAMING`, and `DEFEATED` encounter state.
 The guardian is an immovable, indestructible Stage 1 statue; a Survival player entering its chamber
-in Stage 2 starts a three-second awakening and reveals its boss bar. The current Iron Golem model
-and texture are code-level placeholders. After awakening, it uses Minecraft's vibration system to
-patrol and investigate weighted remembered player clues without acquiring a sight target; the clue
+in Stage 2 starts a three-second awakening and reveals its boss bar. Its original development
+model is a blind weathered stone statue with dormant, awakening, walking, and melee poses; final
+model/palette and in-game visual approval remain pending. After awakening, it uses Minecraft's
+vibration system to patrol and investigate weighted remembered player clues without acquiring a sight target; the clue
 and listener state survive reloads. Vibration clues may originate outside the maze. While pursuing
 one, its terrain controller batches permanent changes: it excavates any loaded
 non-air block into a persisted 128-state reserve and later spends that exact material on an

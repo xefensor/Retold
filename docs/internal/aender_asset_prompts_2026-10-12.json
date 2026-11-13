@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-12",
+  "generator": "Built-in image_gen tool",
+  "status": "AI-generated development art; static material surfaces and original inversion palette; in-game visual approval pending",
+  "direction_reference": "docs/media/aender-original-palette.png",
+  "processing": "Nearest-neighbor reduction to native dimensions; binary cutout alpha; static 16x16 material faces with eight animation metadata files removed. Grass fringe pixels are keyed from the generated side source and composited over the exact soil tile; Aenderite mineral chips are keyed and composited over the exact stone tile. Generated wood/mineral material is packed into existing model UV layouts. Original plank art retained; developer-drawn sand replaced with original generated denim-blue sand at developer request. No Minecraft texture pixels used.",
+  "sources": [
+    {
+      "name": "aender_grass_block_top",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: grass_block_top. Dominant/average material color: #7d5489, with small lighter/darker shades of THAT SAME hue.\nMaterial: TOP of a grass block: muted medium purple-lilac grass, the original inversion of green grass. Fine irregular short grassy flecks and small overlapping tufts; reads as the close-up vanilla grass surface. A natural fine carpet, NOT a checkerboard, cobbled stone, large leaf blobs or smooth tiles. Purple throughout, no dirt, flowers or mint speckles.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_soil",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: soil. Dominant/average material color: #455784, with small lighter/darker shades of THAT SAME hue.\nMaterial: Aender DIRT/SOIL: original cool denim-blue inversion of brown dirt. Dominant dark blue, flecks of medium slate-blue, a few tiny darker and lighter blue crumbs and occasional tiny grey pebbles. Recognizable finely speckled vanilla dirt texture with 1-2 pixel earthy grains. It MUST be blue, never plum/purple/brown. No grass fringe.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_stone",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: stone. Dominant/average material color: #8996ac, with small lighter/darker shades of THAT SAME hue.\nMaterial: Aender STONE: original cool blue-grey inversion of Overworld stone. Flat fine low-contrast irregular mineral flecks, restrained horizontal broken seams, ordinary vanilla stone readability. Medium-light blue-grey, NOT pearl-white, giant mosaic chunks, shiny polished stone, brickwork or ores.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_grass_block_side",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: grass_block_side. Dominant/average material color: #455784, with small lighter/darker shades of THAT SAME hue.\nMaterial: SIDE of a grass block. Lower portion is original denim-blue speckled Aender dirt (#455784), NOT purple dirt. Purple-lilac grass (#7d5489) grows over the TOP edge. A ragged organic fringe extends downward by varying depths of 2, 3, 4, 5 or 6 logical pixels at different columns, with occasional one-pixel hanging tufts and small gaps BETWEEN tips. The complete top row is purple grass so it connects naturally to the top face. Lower boundary is clearly uneven and grassy, NEVER a straight horizontal stripe or plank band. Fine vanilla-style dirt speckles below the fringe. Opaque full square.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_log",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: log. Dominant/average material color: #424b71, with small lighter/darker shades of THAT SAME hue.\nMaterial: Tree LOG BARK SIDE: original dark navy/slate-blue bark, inversion of brown Overworld trunks, not pale lilac. Irregular vertical 1-2 pixel furrows, small broken branches in bark grain and blue-grey ridge highlights. Familiar vanilla log appearance with original pixel arrangement, no leaves, green/mint flecks or broad featureless stripes.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_log_top",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: log_top. Dominant/average material color: #464d73, with small lighter/darker shades of THAT SAME hue.\nMaterial: Tree LOG TOP cut-end: square of dark blue/navy wood with a one-pixel rough dark navy bark perimeter, fine irregular squared growth rings inside in medium slate-blue. Original inverted blue wood cross-section, not purple, pearl or large concentric decorative gemstone. Vanilla-scale grain.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "stripped_aender_log",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: stripped_log. Dominant/average material color: #7f608f, with small lighter/darker shades of THAT SAME hue.\nMaterial: STRIPPED LOG SIDE: original muted dusty-lilac cut wood with simple fine vertical fibers and small broken subtle grain. Reads as a vanilla stripped log, moderate variation, no pink glow, bark, planks or ornamental pattern.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "stripped_aender_log_top",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: stripped_log_top. Dominant/average material color: #715b8c, with small lighter/darker shades of THAT SAME hue.\nMaterial: STRIPPED LOG TOP: original muted lilac cut wood with fine irregular squared growth rings, full square has no bark border. Clear vanilla end-grain cut wood, not a lavender crystal or large tessellated mosaic.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_leaves",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: leaves. Dominant/average material color: #6c4f82, with small lighter/darker shades of THAT SAME hue.\nMaterial: LEAVES: original muted mid-purple inversion of green foliage. Dense opaque small irregular 1-3 pixel leaf clusters and dark purple recesses; familiar vanilla leaf texture rhythm, no checkerboard or huge pink blobs, no flower petals, green/mint speckles or crystals. Reads as actual leaves. Opaque as established in this block's model.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_sandstone",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: sandstone. Dominant/average material color: #5b6898, with small lighter/darker shades of THAT SAME hue.\nMaterial: SANDSTONE SIDE: original medium denim/periwinkle blue inversion of yellow sandstone. Fine gritty mineral texture and short irregular horizontal sediment layers, vanilla sandstone readability. Dominant #5b6898, distinctly BLUE rather than grey/lilac or white. No regular bricks.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_sandstone_top",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: sandstone_top. Dominant/average material color: #5d6ea0, with small lighter/darker shades of THAT SAME hue.\nMaterial: SANDSTONE TOP: medium cool periwinkle/denim blue, matching blue sandstone sides, muted #5d6ea0. Fine grained smoother mineral face with restrained broken fissures, no sediment stripes, grey-white stone, purple/pink tint or ornamental border.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_cactus_side",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: cactus_side. Dominant/average material color: #b6a5dc, with small lighter/darker shades of THAT SAME hue.\nMaterial: CACTUS SIDE: original pale lavender inversion of green cactus, ribbed succulent surface. Subtle irregular vertical lavender ribs, short one-pixel dark-violet spine marks and occasional pale highlights. Familiar vanilla cactus-face detail, NOT purple wood bark, a flat decorative striped wall, crystal or flower.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_cactus_top",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nNamed original palette swatch: cactus_top. Dominant/average material color: #b7a6dc, with small lighter/darker shades of THAT SAME hue.\nMaterial: CACTUS TOP: original pale lavender cactus flesh, tiny lavender radial/faceted succulent structure and dark-violet perimeter spine pixels, same identity as lavender cactus side. Ordinary vanilla plant readability, no green, rune, fancy white square gemstone or arbitrary glow.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_sapling",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels unless a16x32 door is explicitly requested. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background and window cutouts.\nAsset: A recognizable vanilla-style tree sapling sprite. Dark navy-blue trunk (#424b71) and a few thin branches support three small purple leaf clusters (#6c4f82), with muted lilac highlights. Original inverted-color tree palette, NOT a pale grey trunk, pink flowers or glittering crystals. About 12-14 pixels tall, clear leafy silhouette, 1-pixel transparent margins, no background or shadow.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_door",
+      "kind": "door",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels unless a16x32 door is explicitly requested. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background and window cutouts.\nAsset: A full wooden door texture in a 16x32 logical pixel portrait canvas, upper and lower halves align as one tall door. Original muted-purple plank colors (#6d4f82), fine straight horizontal board grain, simple dark-purple edge posts and one mid crossbar. Upper third has four small real transparent window openings, classic vanilla wooden-door readability, a tiny neutral grey latch near the right middle. Lower half is solid simple boards. No ornate bevels, pink/pearly frame or mint runes. Solid wood fills all outside edges with no external background or margins.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_trapdoor",
+      "kind": "trapdoor",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels unless a16x32 door is explicitly requested. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background and window cutouts.\nAsset: A square 16x16 wooden trapdoor face with original muted-purple timber (#6d4f82). A simple 2-pixel wood perimeter and one-pixel central crossbars around four small genuine transparent rectangular openings. Fine horizontal vanilla plank grain, two tiny grey hinge pixels on one edge. Solid perimeter fills the full canvas to its corners, no outer transparent margin, decorative bevel or render.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_boat",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels unless a16x32 door is explicitly requested. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background and window cutouts.\nAsset: One wooden boat inventory sprite in muted original-purple timber (#6d4f82), dark plum outline, simple visible plank seams, an open rectangular hull and one short paddle. Classic vanilla boat silhouette and modest oblique item angle; clearly a little wooden rowboat rather than a blob. Exact16x16 logical pixel sprite with 1-pixel transparent outer margins, no water, shadow or background.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_chest_boat",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background.\nAsset: One chest boat inventory sprite in muted original-purple timber (#6d4f82), dark plum outline, open angular rowboat hull and one short paddle, a clearly rectangular little chest inside with dark purple bands and a tiny neutral grey latch. Classic vanilla chest-boat silhouette and modest oblique item angle. Exact16x16 logical pixel sprite with 1-pixel transparent outer margins, no water, shadow or background.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_sign_item",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background.\nAsset: One classic vanilla standing wooden-sign inventory sprite: a rectangular muted-purple plank board (#6d4f82) with two quiet horizontal board seams, and a short dark blue/navy wood post (#424b71) descending at center. Empty board, no writing. Exact16x16 logical pixel sprite with 1-pixel transparent margins, no scenery, shadow or fancy ornament.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_hanging_sign_item",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original STATIC low-resolution Minecraft-compatible pixel-art asset. Match vanilla's pixel density, simple recognizable material shapes and restrained contrast, with the named ORIGINAL inverted-color Aender palette from the reference. Exactly16x16 logical uniform flat square pixels. No finer32/64 drawing, blur, gradients, antialiasing, bloom, PBR rendering, giant abstract mosaic patches, text, margins beyond those requested or copied Minecraft pixels. Genuine transparent background.\nAsset: One classic vanilla hanging wooden-sign inventory sprite: a rectangular muted-purple plank board (#6d4f82) with quiet horizontal grain in the lower half, two small grey-purple chain links reaching up from the board corners. Empty board with no lettering. Exact16x16 logical pixel sprite with 1-pixel transparent margins, no shadow, fancy ornament or background.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aenderite_ore",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original STATIC Minecraft-compatible 16x16 block texture, enlarged as crisp pixel art. Match the named color swatch in the supplied ORIGINAL Aender palette card. The design is the Overworld reflected through an inverted-color world; retain each material's established Aender color identity rather than making all blocks purple. Style should sit naturally beside vanilla: ordinary recognizable material, fine one-pixel and two-pixel detail, restrained contrast, limited 6-10 color ramps, hard pixel edges, unobtrusive seamless repetition. Exactly SIXTEEN BY SIXTEEN logical pixels, not a finer 32/64 pixel drawing reduced later. Every logical pixel is one uniform flat square. No blurred/photo texture, gradients, baked light, bloom, glossy/PBR shading, giant geometric mosaic chunks, fantasy ornament, noise at subpixel scale, text, borders, margins, perspective or block render. Opaque flat texture fills entire square canvas edge to edge. No animation frames or strips.\nMaterial: Aenderite ORE. Host rock MUST match the original cool blue-grey Aender stone swatch, dominant #8996ac with fine 1-2 pixel vanilla stone detail, NOT pearl-white/lilac stone. Three small scattered angular mint-green mineral clusters, each 2-4 connected logical pixels, darker muted teal edges and single pale mint highlights. Clear ordinary vanilla ore-block pattern with original deposits, no huge shiny gemstone, neon veins, runes or regular dot grid. Original pixel art only.",
+      "origin": "Built-in image_gen; corrected original palette and vanilla pixel style"
+    },
+    {
+      "name": "aender_chronolith",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Edit this original Aender Chronolith texture for clear 16x16 readability. Keep dark plum-violet mineral, reduce scattered isolated mint flecks, keep quiet background. Make the central mint hourglass-shaped carved rune visibly larger: SEVEN logical pixels wide and TEN logical pixels tall on a16x16 logical pixel square. Pale lilac top/bottom crossbars, muted mint interior, dark teal narrow waist, symmetrical readable hourglass. Strong material contrast at16pixels but no glow or bloom. Texture fills canvas edge-to-edge, opaque background, no text, labels, render perspective or margin. Exactly16x16 logical crisp square pixels.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "aender_stabilizer",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original production-source pixel-art asset for Retold's Aender, consistent with the approved material-study reference. Restrained dusty lilac/plum timber, pale mineral, and mint accents. Actual low-resolution pixel sprite style, crisp uniform squares, limited purposeful palette, no antialiasing, blur, bloom, realistic/PBR lighting, text, labels or watermark. Intended logical size 16x16; fill the canvas as specified.\nSpecific asset: Opaque Aender Stabilizer full block-face tile. Solid dark plum mineral base, clearly deliberate crafted technology represented by a squared concentric stepped socket containing a small steady mint diamond at center. Thin pale-lilac corner braces. Quiet strong geometric symmetry indicates anchoring/stability, distinct from Chronolith's hourglass. Restrained readable 16x16 pixels, not sci-fi chrome, no bloom or huge glowing edges.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "dev_aender_portal_frame",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one original production-source pixel-art asset for Retold's Aender, consistent with the approved material-study reference. Restrained dusty lilac/plum timber, pale mineral, and mint accents. Actual low-resolution pixel sprite style, crisp uniform squares, limited purposeful palette, no antialiasing, blur, bloom, realistic/PBR lighting, text, labels or watermark. Intended logical size 16x16; fill the canvas as specified.\nSpecific asset: Opaque Aender portal frame full block-face mineral tile. Pearly cool lavender stone with a thin inset dark plum square channel and small muted mint inlays at four corners; the center is quiet pale stone. Ancient functional portal masonry, tiny inlays, not a glowing full border or ornate decorative glyph. This block needs to read as a pale mineral unlike the dark crafted stabilizer. Flat 16x16 original pixels.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "raw_aenderite",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original production-source pixel-art asset for Retold's Aender, consistent with the approved material-study reference. Restrained dusty lilac/plum timber, pale mineral, and mint accents. Actual low-resolution pixel sprite style, crisp uniform squares, limited purposeful palette, no antialiasing, blur, bloom, realistic/PBR lighting, text, labels or watermark. Intended logical size 16x16; fill the canvas as specified.\nSpecific asset: One raw Aenderite item sprite on a genuine transparent 16x16 logical-pixel square. Centered irregular chunky unrefined mineral lump with dark teal facets and a few mint/sea-glass inclusions, muted pearly-grey stone still attached. Limited crisp pixels, one pixel of breathing room, no ground shadow, glossy gemstone, ore block, text or rendered 3D scene.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "aenderite_ingot",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original production-source pixel-art asset for Retold's Aender, consistent with the approved material-study reference. Restrained dusty lilac/plum timber, pale mineral, and mint accents. Actual low-resolution pixel sprite style, crisp uniform squares, limited purposeful palette, no antialiasing, blur, bloom, realistic/PBR lighting, text, labels or watermark. Intended logical size 16x16; fill the canvas as specified.\nSpecific asset: One refined Aenderite ingot item sprite on a genuine transparent 16x16 logical-pixel square. Centered low oblique classic ingot silhouette, flat mint-green top plane, desaturated teal side plane and deep teal underside outline, tiny pearly highlight. Industrial refined metal rather than glowing gemstone. Limited crisp pixels, one pixel breathing room, no shadow, labels, gradients or background.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "aender_eye_spawn_egg",
+      "kind": "sprite",
+      "alpha": true,
+      "prompt": "Create one original production-source pixel-art asset for Retold's Aender, consistent with the approved material-study reference. Restrained dusty lilac/plum timber, pale mineral, and mint accents. Actual low-resolution pixel sprite style, crisp uniform squares, limited purposeful palette, no antialiasing, blur, bloom, realistic/PBR lighting, text, labels or watermark. Intended logical size 16x16; fill the canvas as specified.\nSpecific asset: One Aender Eye spawn-egg inventory sprite, centered on genuine transparent 16x16 logical-pixel square. Simple upright rounded egg silhouette with dark teal shell, sparse muted mint oval flecks and one small lilac fleck, original arrangement. Recognizable spawn egg, not an eyeball or jewel. Crisp flat pixel art, one pixel breathing room, no ground, shadow, writing or photorealism.",
+      "origin": "Retained generated custom-device/mineral artwork; statically packed at native size"
+    },
+    {
+      "name": "aender_planks",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "No new generation: retain the original July Aender plank art and its clear vanilla board layout.",
+      "origin": "Original July 2026 AI-generated Aender wood-family texture"
+    },
+    {
+      "name": "aender_sand",
+      "kind": "tile",
+      "alpha": false,
+      "prompt": "Create one completely ORIGINAL static 16x16 logical-pixel Aender SAND texture for Retold, enlarged as crisp pixel art. Use the original Aender Sand color family shown in the supplied palette card: dominant deep muted denim blue #45517a, quiet darker #344263 and lighter slate-blue #596895 grains. This replaces the developer's hand-drawn texture; do not reproduce any hand-drawn pixel arrangement. The world uses an inverted Overworld palette, so familiar yellow/beige sand becomes dark denim blue. Match vanilla Minecraft's fine sand texture rhythm: tiny one-pixel grains, occasional paired pixels, low contrast, gently irregular natural distribution, no dirt pebbles, horizontal layers, large blocky mosaic clusters, bubbles, waves, footprints or ornament. Keep the sand visibly finer and calmer than speckled blue dirt. EXACTLY SIXTEEN BY SIXTEEN logical uniform square pixels, not a finer32/64 texture reduced later. Full opaque square, flat even lighting, seamless repeat on opposite edges, no edge border, margin, perspective, text, antialiasing, gradients, bloom, PBR rendering, or animation frames. No Minecraft texture pixels or extracted assets.",
+      "origin": "Built-in image_gen; replaces developer-drawn sand at developer request"
+    }
+  ],
+  "consistency_checks": {
+    "grass_exposed_soil_pixels": 200,
+    "ore_exposed_stone_pixels": 243,
+    "shared_plank_block_models": 18,
+    "shared_plank_atlas_pixels": 26410,
+    "all_static_material_faces": true,
+    "in_game_visual_review": "not performed"
+  },
+  "active_revision_reference": "retold_asset_revision_2026-10-23.json"
+}

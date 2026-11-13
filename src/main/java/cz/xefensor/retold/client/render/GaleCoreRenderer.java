@@ -1,39 +1,49 @@
 package cz.xefensor.retold.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import cz.xefensor.retold.client.RetoldClientEvents;
 import cz.xefensor.retold.worldgen.air.GaleCore;
-import net.minecraft.client.model.geom.ModelLayers;
-import net.minecraft.client.model.monster.breeze.BreezeModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
-import net.minecraft.client.renderer.entity.layers.BreezeEyesLayer;
-import net.minecraft.client.renderer.entity.layers.BreezeWindLayer;
-import net.minecraft.client.renderer.entity.state.BreezeRenderState;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 
-public class GaleCoreRenderer extends MobRenderer<GaleCore, BreezeRenderState, BreezeModel> {
+public class GaleCoreRenderer extends MobRenderer<GaleCore, GaleCoreRenderState, GaleCoreModel> {
+    private static final BlockDisplayContext CORE_DISPLAY_CONTEXT = BlockDisplayContext.create();
     private static final Identifier TEXTURE_LOCATION =
             Identifier.withDefaultNamespace("textures/entity/breeze/breeze.png");
+    private final BlockModelResolver blockModelResolver;
 
     public GaleCoreRenderer(EntityRendererProvider.Context context) {
-        super(context, new BreezeModel(context.bakeLayer(ModelLayers.BREEZE)), 1.35F);
-        this.addLayer(new BreezeWindLayer(this, context.getModelSet()));
-        this.addLayer(new BreezeEyesLayer(this, context.getModelSet()));
+        super(context, new GaleCoreModel(context.bakeLayer(RetoldClientEvents.GALE_CORE_LAYER)), 1.35F);
+        blockModelResolver = context.getBlockModelResolver();
+        addLayer(new GaleCoreHeavyCoreLayer(this));
+        addLayer(new GaleCoreDetailLayer(this, context.getModelSet()));
     }
 
     @Override
-    public Identifier getTextureLocation(BreezeRenderState state) {
+    protected AABB getBoundingBoxForCulling(GaleCore entity) {
+        // The enlarged Breeze wind and floating plates extend beyond its narrow collision box.
+        return super.getBoundingBoxForCulling(entity).inflate(0.75D);
+    }
+
+    @Override
+    public Identifier getTextureLocation(GaleCoreRenderState state) {
         return TEXTURE_LOCATION;
     }
 
     @Override
-    public BreezeRenderState createRenderState() {
-        return new BreezeRenderState();
+    public GaleCoreRenderState createRenderState() {
+        return new GaleCoreRenderState();
     }
 
     @Override
-    public void extractRenderState(GaleCore entity, BreezeRenderState state, float partialTicks) {
+    public void extractRenderState(GaleCore entity, GaleCoreRenderState state, float partialTicks) {
         super.extractRenderState(entity, state, partialTicks);
+        blockModelResolver.update(state.heavyCore, Blocks.HEAVY_CORE.defaultBlockState(), CORE_DISPLAY_CONTEXT);
         state.idle.copyFrom(entity.idle);
         state.shoot.copyFrom(entity.shoot);
         state.slide.copyFrom(entity.slide);
@@ -43,7 +53,7 @@ public class GaleCoreRenderer extends MobRenderer<GaleCore, BreezeRenderState, B
     }
 
     @Override
-    protected void scale(BreezeRenderState state, PoseStack poseStack) {
+    protected void scale(GaleCoreRenderState state, PoseStack poseStack) {
         poseStack.scale(2.25F, 2.25F, 2.25F);
     }
 }

@@ -203,6 +203,13 @@ order is dependency-aware: faction precedes territory, and territory precedes be
 
 ## Tool And Station Progression
 
+`RetoldEquipmentAssets.STEEL` is the equipment resource key used by the registered Steel armor
+material. `assets/retold/equipment/steel.json` owns its adult, leggings, and baby texture layers;
+normal equipment components and vanilla armor/trim rendering resolve them without interception.
+Original item sprites use standard generated/handheld parents, and Flint/Steel Spears retain the
+existing display-context selector with Retold 16x16 inventory and 32x32 held artwork. Stats, repair tags,
+recipes, and third-party component overrides are unaffected by this presentation layer.
+
 `RetoldToolProgressionEvents` owns the non-data opening rules: logs require a correct held tool,
 the Copper Pickaxe receives a Stone-specific speed penalty, Copper and Iron Pickaxes receive the
 Steel-tier Deepslate penalty, and exact vanilla Wooden/Stone tool recipes are removed during recipe
@@ -392,7 +399,7 @@ Current acquisition paths (presentation and natural-world verification remain in
   guardian arena with a guaranteed 31-block-wide core and ten blocks of headroom; its surrounding
   shell can vary out to 33 blocks across. The wider level separation keeps the arena ceiling below
   the complete upper maze. `retold:earth_guardian` is registered as an unmanaged boss-profile
-  entity with a spawn egg and provisional runtime Iron Golem renderer. A bounded loaded-structure
+  entity with a spawn egg and original development stone-statue renderer. A bounded loaded-structure
   scan resolves only serialized `EarthLabyrinthPiece` sources, spawns or repairs exactly one
   persistent guardian initially at the fixed lower chamber, and ignores saved vanilla Jungle Pyramid starts.
   Rebinding the same encounter is idempotent: a roaming guardian keeps its position, velocity,
@@ -514,6 +521,21 @@ Current behavior:
 - Breezes spawn on the island/tower at runtime and are immune to the temple wind.
 - The Gale Core spawns near the tower top and drops a Heavy Core on death.
 
+Client presentation uses `GaleCoreModel`, a `BreezeModel` subclass with the installed base geometry,
+texture and keyframe animations. `GaleCoreDetailLayer` uses installed `BREEZE_WIND`/`BREEZE_EYES`
+layers and vanilla wind/eye render types. `GaleCoreArmorModel` replaces the ordinary rods with four
+thin original plates and a shallow pale circlet, using a separate 32x32 atlas registered through
+`RetoldClientEvents.GALE_CORE_ARMOR_LAYER`. It poses its own Breeze model so deferred submission
+order cannot change its transforms. Plates follow breathing and shooting poses.
+
+`GaleCoreRenderer` resolves installed `Blocks.HEAVY_CORE` into `GaleCoreRenderState.heavyCore`;
+`GaleCoreHeavyCoreLayer` applies the animated body and center anchor before converting living-model
+coordinates to block coordinates and submitting the installed block layers. The core follows the
+rods' breathing height without their yaw spin. Breeze textures and Heavy Core block models retain
+normal resource-pack resolution and render-layer behavior. Original art/source records are in
+[`ASSET_CREDITS.md`](../../ASSET_CREDITS.md). Connected-world appearance, translucency and final
+visual acceptance remain pending developer review.
+
 Gale Core state:
 
 - Custom large Breeze-like entity with a boss bar.
@@ -586,6 +608,7 @@ Access behavior:
 Generation behavior:
 
 - Aender uses a custom chunk generator.
+- Material faces (grass, soil, stone, bark, leaves, and ore) use static 16x16 textures with no animation metadata, following the developer clarification on 2026-10-12. Their original inverted-world palettes and vanilla-scale detail are maintained in the asset prompt record; the runtime portal sprite is a separate effect.
 - Terrain is floating-island based.
 - Chunks are generated from sampled island data.
 - Fresh worlds select generator V3. It retains V2's merged vertical island intervals and chunk-halo decorations, then assigns a deterministic biome to each island in three dimensions.
@@ -1480,6 +1503,25 @@ Design rule:
 
 Monument defense is a purpose system, not ordinary animal AI. Guardian/elder guardian special behavior should be preserved.
 
+## Boss Presentation
+
+`RetoldClientEvents` registers original `EARTH_GUARDIAN_LAYER` and `GALE_CORE_LAYER` meshes.
+`EarthGuardianModel` consumes `EarthGuardianRenderState`, the synchronized lifecycle and melee
+attack ticks. `EarthGuardian.AWAKENING_TICKS` synchronizes the remaining server countdown through
+the existing entity-data channel. `awakeningProgress(partialTick)` interpolates it for the model;
+late observers use the remaining encounter time rather than restarting a client clock. The saved
+server countdown and 60-tick duration are unchanged. Lifecycle decisions and persistence remain
+server-owned. Earth/Gale renderers expand their culling bounds to include raised arms, wind and
+floating plates.
+
+The `clientModelTest` source set under `src/testClient/java` provides `RetoldBossModelChecks`.
+The `validateBossModels` Gradle task bakes actual model layers and checks poses, UV bounds,
+silhouettes and independent armor/core transforms without a game window or graphics device.
+It runs as part of `check`/`build`. Resource contracts have separate JUnit coverage in
+`RetoldAssetResourcesTest`; neither check depends on ignored generation artifacts. Exact results
+and visual limitations are recorded in [`testing_strategy.md`](testing_strategy.md#asset-and-boss-presentation-checks).
+Final visual approval remains pending.
+
 ## Aender Eye Entity
 
 Technical owners:
@@ -1496,7 +1538,7 @@ Entity:
 Behavior:
 
 - Custom ambient entity type with registered attributes/spawn placement.
-- Client renderer handles visual presentation.
+- Client renderer directly uses the installed `minecraft:textures/item/ender_eye.png` texture as an emissive billboard, including resource-pack texture replacements. No dedicated Retold Eye sprite is packaged.
 
 Design rule:
 
@@ -1597,6 +1639,8 @@ Technical owner:
 
 - `RetoldCommands`
 - `RetoldCommandEvents`
+- `command/showcase/RetoldShowcaseWorld`
+- `command/showcase/RetoldShowcaseEntities`
 - `RetoldBehaviorDebugEvents`
 
 Commands:
@@ -1606,10 +1650,32 @@ Commands:
 /retold stage set <1-3>
 /retold sky get
 /retold sky randomize
+/retold testworld [<x> <y> <z>]
 /retoldbehavior ...
 ```
 
 `/retold` is for general mod progression/debug controls.
+
+`/retold testworld` is player-only Overworld developer instrumentation under the existing level-2
+permission gate. `RetoldShowcaseWorld` reads the live Retold item/block/entity registries, plans an
+aerial content gallery, validates its entire empty volume plus per-position world and portal
+permissions, and then places supported exhibits, supplies, Steel armor stands, and workstations.
+It teleports the executing player to the entrance without changing stage, game mode, or game rules.
+The default footprint is centered on the player's horizontal position, at `level.getMaxY() - 18`.
+Explicit coordinates choose the minimum platform corner. Every footprint chunk must have its
+entity sections actually loaded and ticking before occupancy is accepted; incomplete activation
+rejects without edits or teleportation and asks the player to stay near the center and retry.
+The one-shot command adds no persistent tickets or queued build jobs. No existing gallery or terrain is cleared.
+See [`../test-world.md`](../test-world.md) for use and scope.
+
+`RetoldShowcaseEntities` gives exhibits the persisted `retold.showcase` entity tag, invulnerability,
+and persistence, skipping spawn finalization so boss escorts/encounters are not created.
+`RetoldCommandEvents` cancels server `EntityTickEvent.Pre` only for tagged exhibits, also suppressing
+their Post dispatchers; NoAI alone cannot stop Gale Core's direct movement or Guardian encounter
+ticks. Tagged mobs alone receive `MobDespawnEvent.DENY` so Peaceful does not remove them before Pre.
+This static developer display is outside the ordinary mob behavior pipeline; normal entities retain
+their existing ticks and despawn policy. Client rendering continues, and the live portal remains
+functional. The gallery does not establish natural AI, progression, structure, or visual approval.
 
 `/retoldbehavior` is for AI and territory debugging; see the AI doc.
 

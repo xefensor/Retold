@@ -1,0 +1,37 @@
+{
+  "mode": "Built-in image generation",
+  "date": "2026-10-12",
+  "direction": "Crowned Breeze commander, visible installed Heavy Core, Wildfire-inspired floating armor, original vanilla-scale art",
+  "runtime_resource": "minecraft:heavy_core model and textures resolved from installed Minecraft/resource packs; no vanilla pixels copied into mod resources",
+  "assets": [
+    {
+      "name": "gale_shell",
+      "prompt": "One ORIGINAL seamless16x16 logical pixel Minecraft wind elemental commander armor material, opaque square edges. Classic vanilla scale, quiet restrained flat pixel art enlarged crisp nearest-neighbor. Mostly muted dark lavender-grey #655f7c with grouped subtle patches #5b566e and #75708a, a few tiny pale wear marks #8c889e. Calm hard material for original Breeze-like head and floating armor, no randomnoise, camouflage, tilegrid, glow, eyes, symbols, text, blur, gradients, blue stone takeover or copiedMinecraftpixels. 5-6 colors max.",
+      "source": "output/imagegen/gale-core-commander/sources/gale_shell.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art following confirmed Breeze-commander direction; final visual approval pending"
+    },
+    {
+      "name": "gale_face",
+      "prompt": "One ORIGINAL8x8 logical pixel Minecraft Breeze commander FACE PANEL, crisp enlarged flat pixel squares, opaque square. Muted lavender-grey face background #655f7c/#5b566e/#75708a, TWO small bright warm ivory eyes #eee6c8 withtiny dark pupil pixels beneath a stern brow, small dark restrained mouth notch. Serious cunning wind elemental expression, readable original arrangement at8pixels, not humanoid nose, skull, smile, giant blackmouth or creeper. NOcrown embedded intoimage: crown and raised ivory windswept eyebrows are separate3Dgeometry. Classic vanilla restrained pixel art, 6-8flat colors, no antialias, glow, gradient or copiedBreeze texture.",
+      "source": "output/imagegen/gale-core-commander/sources/gale_face.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art following confirmed Breeze-commander direction; final visual approval pending"
+    },
+    {
+      "name": "gale_plate",
+      "prompt": "One ORIGINALMinecraft pixel armor shield FRONT PANEL for a Breeze commander. EXACT5logicalpixels wide and8logicalpixels tall, enlarged crisp hard pixel art. Opaque vertical rectangle with1logicalpixel muted warm brass #b8a36b/#897c58 edging, central darklavender-grey field #655f7c, subdued paleivory topedge #e0d3a4. Plain heavy floatingplate withone short restrained worn rivet mark, no emblem, letters, skull, jewel, neon, realism, gradients or copiedWildfire/Minecraftpixels. Vanilla readability. Functional wind-king armor, notgoldenluxury fantasyillustration. Fillentire rectangle.",
+      "source": "output/imagegen/gale-core-commander/sources/gale_plate.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art following confirmed Breeze-commander direction; final visual approval pending"
+    },
+    {
+      "name": "gale_core_spawn_egg",
+      "prompt": "One ORIGINALMinecraft spawn egg inventorysprite, EXACT16x16 logical pixels enlarged crisp pixel art onTRUEtransparentbackground. Compact rounded stepped egg10pixelswide14pixelshigh with1pixelmargin. Muted lavender-grey shell #655f7c/#75708a, small irregular paleivory windflecks #eee6c8, two restrained mutedbrass flecks #b8a36b echoing a crowned Breeze commander. Originaleggpattern, no face/crown/icon pastedon, no blur, glow, outlines, gradient or copiedvanillaeggpattern. 6flatcolorsmax.",
+      "source": "output/imagegen/gale-core-commander/sources/gale_core_spawn_egg.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art following confirmed Breeze-commander direction; final visual approval pending"
+    }
+  ],
+  "status": "superseded by gale_core_breeze_prompts_2026-10-12.json after developer rejection of style"
+}

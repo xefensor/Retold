@@ -5,7 +5,7 @@
       {
         "model": {
           "type": "minecraft:model",
-          "model": "minecraft:item/iron_spear"
+          "model": "retold:item/steel_spear"
         },
         "when": [
           "gui",
@@ -17,7 +17,7 @@
     ],
     "fallback": {
       "type": "minecraft:model",
-      "model": "minecraft:item/iron_spear_in_hand"
+      "model": "retold:item/steel_spear_in_hand"
     },
     "property": "minecraft:display_context"
   },

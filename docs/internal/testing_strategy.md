@@ -45,7 +45,86 @@ visual scenarios to the developer.
 `./gradlew build` runs compilation, JUnit tests, PMD, and assembly; it does not run NeoForge
 GameTests. It is the normal final code-quality check, not something to repeat after every edit.
 
+## Asset And Boss Presentation Checks
+
+The 2026-10-23 revision retains development status for the Aender/equipment/boss artwork. Exact
+source-to-output mappings are in
+[`retold_asset_revision_2026-10-23.json`](retold_asset_revision_2026-10-23.json), with authorship and
+the offline review image in [`ASSET_CREDITS.md`](../../ASSET_CREDITS.md).
+
+`validateBossModels` bakes the actual Earth/Gale layers from `src/testClient/java` without starting
+Minecraft or a graphics device. It checks synchronized awakening poses, pose resets, finite geometry,
+UV bounds, model extent against culling allowances, Breeze keyframe compatibility, and independent
+armor/Heavy Core transforms. Guardian bounds are checked at ten melee poses across eight yaw angles
+so raised arms fit the horizontal allowance while turning. It is wired into Gradle `check`, so the
+normal build also runs it.
+
+`RetoldAssetResourcesTest` covers packaged local references, Steel adult/leggings/baby UV coverage,
+native texture dimensions/binary alpha, static metadata removal, and spear display contexts.
+These checks use repository resources and installed classes, never ignored `output/` sources.
+Aender Eye directly samples installed `minecraft:textures/item/ender_eye.png` on its full-bright
+billboard; check the vanilla texture and resource-pack replacements in the developer visual pass.
+
+The following commands passed during the 2026-10-23 presentation work. After the Steel/Guardian
+material polish and replacement of the custom Eye sprite with the vanilla texture, the focused
+resource selector and full build were rerun. The two server selectors cover unchanged lifecycle
+and material rules and were not repeated for this final texture-only polish.
+
+```bash
+bash ./gradlew validateBossModels
+bash ./gradlew test --tests 'cz.xefensor.retold.client.assets.RetoldAssetResourcesTest'
+bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:earth_guardian_foundation_spawns_and_persists_lifecycle"
+bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:tool_progression_harvest_rules_enforce_material_ladder"
+bash ./gradlew build
+```
+
+The resource selector passed all four JUnit tests. The exact Earth lifecycle selector passed 1/1,
+including saved half-awakening, encounter rebinding, and interpolated synchronized progress.
+The exact Steel material-ladder selector passed 1/1. The final polished-resource build passed
+compilation, all 102 JUnit tests with no failures/errors/skips, `pmdMain`, `pmdTest`,
+`pmdClientModelTest`, `validateBossModels`, and assembly. Package inspection of
+`build/libs/retold-0.4.0.jar` confirmed all 65 Retold PNGs match their source bytes, including all
+nine active revision PNGs with matching provenance hashes and dimensions. No custom Eye sprite,
+local output artifacts, or client-model test code is packaged. Steel's adult, leggings, and baby
+alpha masks remain identical to the previous revision; the polished atlases use at most seven
+opaque colors. The Guardian atlas uses six colors from a seven-color material palette. These
+are resource/packing checks, not visual approval. The server fixture does not connect a rendering
+client or establish real late-join packet delivery.
+
+No client startup, connected-client rendering, multiplayer, shader/resource-pack check, or subjective
+visual test was performed for this revision. The tracked review image renders original Retold
+meshes/textures offline; it contains no extracted vanilla pixels and is not a game screenshot.
+Developer visual review remains required for tiling/cutouts, equipment scale and trims, boss poses,
+Gale translucency and Heavy Core presentation, lighting, resource reload and late joins. AI agents
+must not operate the game client or desktop UI to supply that subjective review.
+
 ## Focused GameTests
+
+For the developer content gallery, run these exact selectors separately, followed by one build:
+
+```bash
+bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:showcase_contains_live_registry_and_stable_exhibits"
+bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:showcase_rejects_occupied_and_protected_volume_without_edits"
+bash ./gradlew runGameTestServer --args="net.neoforged.fml.startup.GameTestServer --tests retold:loaded_mob_ai_work_remains_bounded"
+bash ./gradlew build
+```
+
+These cover the live catalog/supporting placements, persistent passive exhibits, and rejection
+before edits. They do not replace connected-client visual review, a real save/reload, multiplayer,
+or natural boss/progression tests. Use [`../test-world.md`](../test-world.md) for the manual gallery
+entry point. No broad mob TPS matrix is required for this developer-only tagged exhibit path.
+The exact `loaded_mob_ai_work_remains_bounded` selector supplies a representative 256-mob shared-work
+regression because the constant-time exhibit-tag check in `EntityTickEvent.Pre` also runs for ordinary
+untagged entities. This scoped global-hook check does not justify a complete per-mob TPS matrix.
+On 2026-10-23, both exact gallery selectors passed 1/1 on the final implementation. The catalog test
+checks all 52 items, 37 blocks, and six entity types, supporting placements, armor, 30 ticks of frozen
+exhibits, and saved exhibit tags. The rejection test covers occupied blocks, protection denial,
+preservation of an ordinary Cow, and unready remote entity sections without gallery edits.
+The exact shared-work selector passed 1/1 with 256 mobs over 200 ticks, averaging 17.548 ms per tick
+and satisfying its work budgets. The final `bash ./gradlew build` passed JUnit, all PMD checks,
+`validateBossModels`, and assembly; `build/libs/retold-0.4.0.jar` contains the new showcase helpers.
+No client/desktop UI was operated. Connected-client visuals, multiplayer, and an actual world
+save/reload remain unverified.
 
 For Earth Guardian pursuit with real maze geometry and simultaneous terrain combat, use
 `retold:earth_guardian_pursues_into_generated_maze`. It embeds the production-generated lower

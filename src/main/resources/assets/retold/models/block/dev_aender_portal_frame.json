@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cube_all",
   "textures": {
-    "all": "retold:block/aender_stone"
+    "all": "retold:block/dev_aender_portal_frame"
   }
 }

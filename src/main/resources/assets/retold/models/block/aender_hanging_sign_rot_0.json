@@ -2,6 +2,6 @@
   "parent": "minecraft:block/template_hanging_sign_rot_0",
   "textures": {
     "all": "retold:block/aender_hanging_sign",
-    "particle": "minecraft:block/stripped_oak_log"
+    "particle": "retold:block/stripped_aender_log"
   }
 }

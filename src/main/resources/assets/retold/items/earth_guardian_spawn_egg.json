@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:item/iron_golem_spawn_egg"
+    "model": "retold:item/earth_guardian_spawn_egg"
   }
 }

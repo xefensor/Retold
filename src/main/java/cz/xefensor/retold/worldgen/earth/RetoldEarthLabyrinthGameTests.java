@@ -592,12 +592,33 @@ public final class RetoldEarthLabyrinthGameTests {
                     EarthGuardianLifecycle.AWAKENING,
                     "Awakening must update authoritative encounter state"
             );
+            helper.assertValueEqual(guardian.awakeningProgress(0.0F), 0.0F,
+                    "The synchronized pose must begin at the dormant endpoint");
 
             for (int tick = 0; tick < EarthGuardian.AWAKENING_DURATION_TICKS; tick++) {
                 if (tick % 20 == 0) {
                     EarthGuardianSpawner.spawnIfNeeded(level, source);
                 }
                 guardian.tickGuardianState(level);
+                if (tick == EarthGuardian.AWAKENING_DURATION_TICKS / 2 - 1) {
+                    helper.assertValueEqual(guardian.awakeningProgress(0.0F), 0.5F,
+                            "The synchronized pose must track the authoritative countdown");
+                    helper.assertTrue(guardian.awakeningProgress(0.5F) > 0.5F
+                                    && guardian.awakeningProgress(0.5F) < 0.52F,
+                            "The awakening pose must interpolate between server ticks");
+                    restored = RetoldEntityTypes.EARTH_GUARDIAN.get().create(level, EntitySpawnReason.LOAD);
+                    helper.assertTrue(restored != null, "An awakening guardian must be reloadable");
+                    restored.readAdditionalSaveData(TagValueInput.create(
+                            ProblemReporter.DISCARDING, level.registryAccess(), saveAdditionalState(level, guardian)
+                    ));
+                    helper.assertValueEqual(restored.awakeningProgress(0.0F), 0.5F,
+                            "Restoring an awakening guardian must retain its synchronized pose");
+                    restored.configureForLabyrinth(level, source, EarthGuardianLifecycle.AWAKENING);
+                    helper.assertValueEqual(restored.awakeningProgress(0.0F), 0.5F,
+                            "Encounter rebinding must not restart the awakening pose");
+                    restored.discard();
+                    restored = null;
+                }
             }
 
             helper.assertValueEqual(
@@ -605,6 +626,8 @@ public final class RetoldEarthLabyrinthGameTests {
                     EarthGuardianLifecycle.ROAMING,
                     "The awakening timer must reach the future roaming state"
             );
+            helper.assertValueEqual(guardian.awakeningProgress(0.0F), 1.0F,
+                    "The synchronized pose must reach the roaming endpoint");
             helper.assertTrue(
                     !guardian.isNoAi() && !guardian.isInvulnerable(),
                     "Roaming must enable investigation and make the awakened boss damageable"
