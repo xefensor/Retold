@@ -149,6 +149,7 @@ jobs:
         with:
           modrinth-id: ${{ vars.MODRINTH_PROJECT_ID }}
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-unfeature-mode: none
 
           files: ${{ steps.artifact.outputs.jar }}
           name: Retold ${{ steps.version.outputs.version }}
