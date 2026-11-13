@@ -1,0 +1,7 @@
+{
+  "layers": {
+    "humanoid": [{ "texture": "retold:steel" }],
+    "humanoid_baby": [{ "texture": "retold:steel" }],
+    "humanoid_leggings": [{ "texture": "retold:steel" }]
+  }
+}

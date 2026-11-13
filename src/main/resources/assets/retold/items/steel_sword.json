@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:item/iron_sword"
+    "model": "retold:item/steel_sword"
   }
 }

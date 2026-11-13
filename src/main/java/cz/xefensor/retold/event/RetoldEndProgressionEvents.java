@@ -8,6 +8,7 @@ import cz.xefensor.retold.stage.RetoldWorldData;
 import cz.xefensor.retold.stage.RetoldWorldStage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -21,6 +22,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.dimension.end.EnderDragonFight;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.ModifyRecipeJsonsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -29,6 +31,13 @@ public final class RetoldEndProgressionEvents {
     private static final int DRAGON_EGG_CRACK_REFRESH_INTERVAL_TICKS = 20;
 
     private RetoldEndProgressionEvents() {
+    }
+
+    @SubscribeEvent
+    public static void onModifyRecipeJsons(ModifyRecipeJsonsEvent event) {
+        // A false-conditioned override falls through to the lower-priority vanilla recipe in 26.2.
+        // Remove the vanilla identity after resource layering; other datapack recipes remain opt-in.
+        event.getRecipeJsons().remove(Identifier.withDefaultNamespace("lodestone"));
     }
 
     @SubscribeEvent
@@ -153,6 +162,10 @@ public final class RetoldEndProgressionEvents {
     }
 
     private static RetoldRitualOffering getOfferingForStack(ItemStack stack) {
+        if (stack.is(Items.LODESTONE)) {
+            return RetoldRitualOffering.EARTH;
+        }
+
         if (stack.is(Items.HEART_OF_THE_SEA)
                 || stack.is(RetoldBlocks.WATER_ELEMENT)) {
             return RetoldRitualOffering.WATER;

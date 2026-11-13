@@ -4,6 +4,22 @@
 
 ## Coverage
 
+The 2026-09-08 batched-terrain/wall pass ran only `retold:mob_tps_earth_guardian`:
+4.670 ms/tick idle, 6.714 food, 7.281 hunt, 5.510 danger, and 3.690 habitat, with all 50 subjects
+active and 20 TPS in every phase. Griefing is disabled in this fixture, so the result does not
+profile simultaneous twelve-block mutation bursts, wall placement, or later fluid/physics updates.
+
+The 2026-09-08 aggressive Earth combat pass ran the exact `retold:mob_tps_earth_guardian`
+selector: all 50 subjects remained active at 20 TPS, with 11.376 ms/tick idle, 11.660 food,
+13.915 hunt, 12.533 danger, and 9.420 habitat. The benchmark keeps griefing disabled and does
+not exercise fifty simultaneous close-player melee strikes; the dedicated contact and combined
+combat tests cover correctness, not a large multiplayer combat profile.
+
+The 2026-09-07 moving-clue tunnel fix was checked with only the exact
+`retold:mob_tps_earth_guardian` selector. All 50 subjects remained active at 20 TPS in each phase:
+5.634 ms/tick idle, 7.282 food, 9.649 hunt, 7.881 danger, and 3.979 habitat. The fixture disables
+griefing, so this is not a measurement of sustained tunnel excavation or accumulated fluid flow.
+
 `RetoldPerMobTpsGameTests` registers one isolated GameTest for every loaded Retold mob profile. The current matrix registers 83 mob types; the latest complete baseline covers 75, while focused runs cover the eight later profiles and the original clean table below records the earlier 68-profile baseline. Each test creates 50 subjects in a habitat fixture suited to that species and measures five consecutive 80-server-tick phases after a 20-tick warmup:
 
 1. `idle_rest`: ordinary loaded behavior with no injected food or opponent.
@@ -527,6 +543,50 @@ Wolf averaged 5.287, 4.403, 5.996, 5.932, and 3.782; Salmon averaged 5.552, 3.56
 order. Cow danger/social was the combined 6.472 ms/tick peak. The two exact stability tests and
 focused damage, water, visible-intent, Creeper, Cat, wounded-predator, and stuck-recovery regressions
 remain the correctness evidence.
+
+### Earth Guardian Vibration, Environmental Combat, And Terrain-Guard Focused Run
+
+The exact `retold:mob_tps_earth_guardian` selector was refreshed on 2026-09-02 after the unmanaged
+Earth Guardian's terrain controller became unrestricted by block type, provenance, or labyrinth
+bounds and was rerun after replacing direct attacks with bounded ceiling-collapse and lava-eruption
+checks. Its vanilla
+vibration listener, persisted weighted clue memory, bounded patrol attempts, and owned investigation
+remain active. This keeps current registration at 84 tests and 420 phases. Fifty active roaming
+guardians sustained 20 TPS in every phase: 4.556 idle/rest, 6.229
+dropped-food/forage, 7.702 hunt/targeting, 7.194 danger/social, and 4.584 habitat/day-night ms/tick.
+Hunt/targeting was the 7.702 ms/tick peak. Command-spawned fixtures use the same terrain controller,
+but this benchmark disables `mobGriefing`, so it does not establish mutation or fluid-spread cost.
+The exact environmental-combat and relocation GameTests are the correctness evidence for warning,
+debris, eruption, and Chest/Bedrock outside-bound edits; natural accumulated destruction and combat readability still
+need profiling. The complete matrix was not selected because the changed path is Earth-Guardian-local.
+
+On 2026-09-07 the same exact selector passed after the lava attack changed to real floor replacement:
+5.160 idle/rest, 6.656 dropped-food/forage, 8.224 hunt/targeting, 7.340 danger/social, and
+4.367 habitat/day-night ms/tick, sustaining 20 TPS throughout. This remains an AI baseline with
+griefing disabled. `retold:earth_guardian_uses_environmental_attacks` verifies conversion/protection,
+and `retold:earth_guardian_lava_ground_burns_on_server_ticks` verifies actual lava contact damage;
+long encounters with accumulated flowing lava still need profiling in natural worlds.
+
+The subsequent floor-collapse rotation run on 2026-09-07 also passed all five phases at 20 TPS:
+8.214 idle/rest, 8.847 dropped-food/forage, 10.104 hunt/targeting, 9.507 danger/social, and
+5.911 habitat/day-night ms/tick. The same disabled-griefing limitation applies. The exact
+`retold:earth_guardian_floor_collapse_causes_real_fall` test supplies the pit/protection/save-load
+and physical fall-damage evidence; cumulative terrain destruction is not a measured workload here.
+
+After fixing the investigation/patrol navigation-ownership handoff on 2026-09-07, the exact
+selector passed again at 20 TPS in all five phases: 4.281 idle/rest, 6.321 dropped-food/forage,
+8.619 hunt/targeting, 8.614 danger/social, and 4.760 habitat/day-night ms/tick. Investigation now
+uses the shared path budget and retry helper. These host-dependent timings are not a controlled
+before/after speed comparison, and the disabled-griefing limitation remains. Separate real-tick
+approach and patrol regressions verify that navigation actually moves the guardian.
+
+After adding full-body excavation, supported ramps, and the 128-state reserve on 2026-09-07,
+the exact selector again passed all five phases at 20 TPS: 4.787 idle/rest, 7.098 food/forage,
+7.302 hunt/targeting, 6.532 danger/social, and 4.071 habitat/day-night ms/tick. The disabled-griefing
+fixture remains an AI baseline: it does not measure repeated full-reserve backfill scans, active
+excavation, fluid spread, or natural combined combat. Low-ceiling, full fourteen-block ascent and
+descent, and protection/conservation/save-state GameTests supply isolated correctness evidence.
+Host-dependent timings are not a controlled before/after speed comparison.
 
 ## Results
 

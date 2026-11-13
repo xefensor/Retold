@@ -3,6 +3,7 @@ package cz.xefensor.retold.registry;
 import cz.xefensor.retold.Retold;
 import cz.xefensor.retold.aender.entity.AenderEye;
 import cz.xefensor.retold.worldgen.air.GaleCore;
+import cz.xefensor.retold.worldgen.earth.EarthGuardian;
 import cz.xefensor.retold.worldgen.fire.Wildfire;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -46,6 +47,17 @@ public final class RetoldEntityTypes {
                     builder -> builder
                             .fireImmune()
                             .sized(1.0F, 3.0F)
+                            .clientTrackingRange(10)
+                            .updateInterval(3)
+            );
+
+    public static final DeferredHolder<EntityType<?>, EntityType<EarthGuardian>> EARTH_GUARDIAN =
+            ENTITY_TYPES.registerEntityType(
+                    "earth_guardian",
+                    EarthGuardian::new,
+                    MobCategory.MONSTER,
+                    builder -> builder
+                            .sized(1.6F, 3.2F)
                             .clientTrackingRange(10)
                             .updateInterval(3)
             );

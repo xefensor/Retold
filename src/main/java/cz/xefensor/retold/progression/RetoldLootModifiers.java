@@ -31,6 +31,13 @@ public final class RetoldLootModifiers {
                     () -> RetoldRemoveHeartOfTheSeaLootModifier.CODEC
             );
 
+    public static final DeferredHolder<
+            MapCodec<? extends IGlobalLootModifier>,
+            MapCodec<RetoldRemoveLodestoneLootModifier>
+            > REMOVE_LODESTONE = SERIALIZERS.register(
+                    "remove_lodestone", () -> RetoldRemoveLodestoneLootModifier.CODEC
+            );
+
     private RetoldLootModifiers() {
     }
 

@@ -41,3 +41,7 @@ run/
 **/src/generated/**/.cache/
 repo/
 !**/src/**/repo/
+
+### Local asset generation and root runtime logs ###
+/output/
+/logs/

@@ -36,7 +36,11 @@ The Aender is the dimension of change: an unstable, bright, strange, and dangero
 2. **Stage 2:** defeating the dragon makes the world more dangerous and begins the Dragon Egg ritual built around four classical elements plus Life and Death.
 3. **Stage 3:** completing the ritual hatches the egg, redirects normal End access to the Aender, and begins returning the Nether toward balance.
 
-The intended ritual uses six consumed artifacts: Heavy Core (Air), Heart of the Sea (Water), Nether Reactor Core (Fire), Lodestone (Earth), Nether Star (Death), and Totem of Undying (Life). Air, Water, Life, and Death currently control hatching; the implemented Fire offering is recorded but remains outside that threshold until the unfinished Earth path makes all six obtainable. See [`element-ritual.md`](element-ritual.md) for the current guardian and encounter direction.
+The intended ritual uses six consumed artifacts: Heavy Core (Air), Heart of the Sea (Water), Nether
+Reactor Core (Fire), Lodestone (Earth), Nether Star (Death), and Totem of Undying (Life).
+All six now control hatching. The Earth Guardian supplies Lodestone, while side branches contain
+initial arrow traps and treasure with no added lights or spawners. See [`element-ritual.md`](element-ritual.md) for the generated Jungle Pyramid labyrinth,
+persisted guardian lifecycle, blind terrain relocation, and implemented environmental combat direction.
 
 ## The Aender
 

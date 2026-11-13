@@ -121,6 +121,7 @@ configurations {
 dependencies {
     testImplementation platform('org.junit:junit-bom:6.1.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'com.google.code.gson:gson:2.14.0'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     // Example optional mod dependency with JEI
@@ -197,6 +198,27 @@ pmd {
 
 tasks.named('test', Test).configure {
     useJUnitPlatform()
+}
+
+// Bake and pose client models without creating a game window or requiring a graphics device.
+sourceSets {
+    clientModelTest {
+        java.srcDir 'src/testClient/java'
+        compileClasspath = sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath = output + compileClasspath + sourceSets.main.runtimeClasspath
+    }
+}
+
+tasks.register('validateBossModels', JavaExec) {
+    group = 'verification'
+    description = 'Checks boss model geometry, synchronized poses, and independent layer transforms.'
+    dependsOn tasks.named('clientModelTestClasses')
+    classpath = sourceSets.clientModelTest.runtimeClasspath
+    mainClass = 'cz.xefensor.retold.client.render.RetoldBossModelChecks'
+}
+
+tasks.named('check').configure {
+    dependsOn tasks.named('validateBossModels')
 }
 
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.

@@ -7,6 +7,10 @@ import cz.xefensor.retold.client.enchanting.RetoldClientEnchantmentKnowledge;
 import cz.xefensor.retold.client.enchanting.RetoldEnchantmentTooltip;
 import cz.xefensor.retold.client.recipe.RetoldClientRecipeKnowledge;
 import cz.xefensor.retold.client.render.GaleCoreRenderer;
+import cz.xefensor.retold.client.render.GaleCoreModel;
+import cz.xefensor.retold.client.render.GaleCoreArmorModel;
+import cz.xefensor.retold.client.render.EarthGuardianModel;
+import cz.xefensor.retold.client.render.EarthGuardianRenderer;
 import cz.xefensor.retold.client.render.WildfireRenderer;
 import cz.xefensor.retold.client.render.WildfireModel;
 import cz.xefensor.retold.client.render.RetoldAenderEyeRenderer;
@@ -39,6 +43,15 @@ public final class RetoldClientEvents {
     public static final ModelLayerLocation WILDFIRE_LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(Retold.MODID, "wildfire"),
             "main"
+    );
+    public static final ModelLayerLocation EARTH_GUARDIAN_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "earth_guardian"), "main"
+    );
+    public static final ModelLayerLocation GALE_CORE_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "gale_core"), "main"
+    );
+    public static final ModelLayerLocation GALE_CORE_ARMOR_LAYER = new ModelLayerLocation(
+            Identifier.fromNamespaceAndPath(Retold.MODID, "gale_core"), "armor"
     );
     private static final ModelLayerLocation AENDER_BOAT_LAYER = new ModelLayerLocation(
             Identifier.fromNamespaceAndPath(Retold.MODID, "boat/aender"),
@@ -98,6 +111,10 @@ public final class RetoldClientEvents {
                 WildfireRenderer::new
         );
         event.registerEntityRenderer(
+                RetoldEntityTypes.EARTH_GUARDIAN.get(),
+                EarthGuardianRenderer::new
+        );
+        event.registerEntityRenderer(
                 RetoldEntityTypes.AENDER_BOAT.get(),
                 context -> new BoatRenderer(context, AENDER_BOAT_LAYER)
         );
@@ -108,6 +125,9 @@ public final class RetoldClientEvents {
     }
 
     private static void registerLayerDefinitions(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(EARTH_GUARDIAN_LAYER, EarthGuardianModel::createBodyLayer);
+        event.registerLayerDefinition(GALE_CORE_LAYER, GaleCoreModel::createBodyLayer);
+        event.registerLayerDefinition(GALE_CORE_ARMOR_LAYER, GaleCoreArmorModel::createBodyLayer);
         event.registerLayerDefinition(WILDFIRE_LAYER, WildfireModel::createBodyLayer);
         event.registerLayerDefinition(AENDER_BOAT_LAYER, BoatModel::createBoatModel);
         event.registerLayerDefinition(AENDER_CHEST_BOAT_LAYER, BoatModel::createChestBoatModel);

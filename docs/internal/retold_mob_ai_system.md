@@ -1334,7 +1334,7 @@ dedicated-server observation, or profiler/JFR evidence.
 
 ### Per-Mob TPS Matrix
 
-`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 83 loaded
+`RetoldPerMobTpsGameTests` registers one independent 50-subject test for each of the 84 loaded
 mob profiles. Every species is measured through idle/rest, dropped-food/forage, hunt/target,
 danger/social, and habitat/day-night phases. Profile-appropriate fixtures provide water, caves,
 Nether ground, prey, threats, forage, hives, and other required stimuli. Each phase records real
@@ -1384,6 +1384,39 @@ After restricting recovery to cached lava columns at least three blocks deep, th
 still sustains 20 TPS in all five phases with a 4.876 ms/tick peak. The complete matrix remains
 unnecessary because the additional constant-depth validation stays inside the existing bounded,
 cached Wildfire block search.
+Earth Guardian expands current registration to 84 tests/420 phases. Its
+route helper now supplies bounded full-body excavation and supported walking ramps when ordinary
+navigation stops. Terrain work batches at most 12 edits per ten ticks, uses loaded chunks
+and normal mutation protection, retains a 128-state material reserve and a saved ramp heading,
+and routes exact walking waypoints through the shared path helper. It neither teleports nor
+obtains a sight target. Natural route pacing and simultaneous terrain combat remain unverified.
+Supported 3×3 trailing walls use only spare pulse budget and stored solid material, with a
+forty-tick cooldown. No-progress route steps end the batch immediately; denied work is not retried
+twelve times in a pulse. The 128-state reserve remains the hard material limit.
+The generated-maze pursuit regression exposed a separate fluid stall: vanilla destruction
+preserves lava sources, leaving route repair retrying one cell forever. Fluid-bearing excavation
+now removes the complete state to air under the same protection/reserve transaction. Real
+server ticks in generated lower-floor geometry verify continued pursuit after a lava eruption,
+using dispatched mock-player footsteps and periodic encounter repair. No listener range,
+memory, movement ownership, cadence, or path budget changes accompany this fix.
+Moving footsteps no longer discard a committed short excavation/walking segment. The guardian
+reaches its landing before using the newest clue for the next segment, avoiding repeated path
+restarts at low tunnel entrances. A real-dispatch moving-footstep regression reproduces the old
+stall and passes with this fix; its protected attack pad does not establish mixed hazard balance.
+The 2026-09-08 combat direction adds `EarthGuardianMelee`, which resolves only the heard source
+through the level's UUID lookup, checks contact every five ticks, and uses a fresh budgeted
+obstruction ray before a cooldown-limited strike. It does not scan for nearby players or assign
+a sight target. Investigation uses speed 1.4 and keeps approaching during hazard warnings;
+arrival preserves the clue until normal expiry. The 30-tick melee cooldown survives entity reload.
+The focused aggressive-combat TPS rerun passes all five phases at 20 TPS with a 13.915 ms/tick
+peak; this griefing-disabled fixture is not a many-player close-melee benchmark.
+The exact 50-guardian selector runs the active roaming state and passes all five phases below 50 ms/tick,
+peaking at 7.302 ms/tick for hunt/targeting after adding supported excavation routes.
+Command-spawned fixtures use the production terrain controller, dynamic listener, weighted memory,
+bounded patrol/investigation, and fixed-location hazard checks. This benchmark disables griefing,
+so actual block mutation, accumulated pits, and lava spread still need separate profiling.
+The complete matrix remains unnecessary because these paths are
+entity-local.
 The Stage 2 Undead-pressure rerun forces `UNDEAD_HUNGRY` and `UNDEAD_TOLERANT` benchmark fixtures
 to Stage 2, restores the previous saved stage during cleanup, and covers all eight affected species.
 All 40 exact phases passed below 50 ms/tick; Zombie hunt/targeting was the 6.046 ms/tick overall

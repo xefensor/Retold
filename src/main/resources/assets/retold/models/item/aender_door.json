@@ -1,1 +1,1 @@
-{ "parent": "minecraft:item/generated", "textures": { "layer0": "retold:block/aender_door_bottom" } }
+{ "parent": "minecraft:item/generated", "textures": { "layer0": "retold:item/aender_door" } }

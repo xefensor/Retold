@@ -1,6 +1,7 @@
 package cz.xefensor.retold.progression;
 
 import cz.xefensor.retold.registry.RetoldBlocks;
+import cz.xefensor.retold.registry.RetoldEquipmentAssets;
 import cz.xefensor.retold.registry.RetoldTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -793,6 +794,17 @@ public final class RetoldToolProgressionGameTests {
                         && steelHelmet.is(ItemTags.TRIMMABLE_ARMOR),
                 "Steel armor must support normal armor systems and trims"
         );
+
+        for (Item armor : List.of(
+                RetoldBlocks.STEEL_HELMET.get(), RetoldBlocks.STEEL_CHESTPLATE.get(),
+                RetoldBlocks.STEEL_LEGGINGS.get(), RetoldBlocks.STEEL_BOOTS.get()
+        )) {
+            var equippable = armor.getDefaultInstance().get(DataComponents.EQUIPPABLE);
+            helper.assertTrue(
+                    equippable != null && equippable.assetId().filter(RetoldEquipmentAssets.STEEL::equals).isPresent(),
+                    "Every Steel armor slot must use Retold's equipment asset"
+            );
+        }
 
         var enchantments = helper.getLevel()
                 .registryAccess()

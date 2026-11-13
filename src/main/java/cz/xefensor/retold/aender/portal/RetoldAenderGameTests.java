@@ -981,6 +981,12 @@ public final class RetoldAenderGameTests {
         assertConsecutiveItems(
                 helper,
                 CreativeModeTabs.SPAWN_EGGS,
+                Items.IRON_GOLEM_SPAWN_EGG,
+                RetoldBlocks.EARTH_GUARDIAN_SPAWN_EGG.get()
+        );
+        assertConsecutiveItems(
+                helper,
+                CreativeModeTabs.SPAWN_EGGS,
                 Items.ENDERMAN_SPAWN_EGG,
                 RetoldBlocks.AENDER_EYE_SPAWN_EGG.get()
         );
@@ -1009,6 +1015,13 @@ public final class RetoldAenderGameTests {
                         RetoldEntityTypes.GALE_CORE.get()
                 ),
                 "The Gale Core spawn egg must spawn Gale Cores"
+        );
+        helper.assertTrue(
+                SpawnEggItem.spawnsEntity(
+                        new ItemStack(RetoldBlocks.EARTH_GUARDIAN_SPAWN_EGG.get()),
+                        RetoldEntityTypes.EARTH_GUARDIAN.get()
+                ),
+                "The Earth Guardian spawn egg must spawn Earth Guardians"
         );
 
         helper.succeed();

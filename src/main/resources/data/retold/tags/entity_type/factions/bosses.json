@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "minecraft:ender_dragon"
+    "minecraft:ender_dragon",
+    "retold:earth_guardian"
   ]
 }

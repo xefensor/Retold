@@ -13,12 +13,11 @@ import java.util.Optional;
 import java.util.Set;
 
 public class RetoldWorldData extends SavedData {
-    /*
-     * Keep the hatch threshold on the four implemented acquisition paths until
-     * Fire and Earth make the full six-offering ritual survival-obtainable.
-     */
+    // All six acquisition paths now provide their artifacts; keep their saved bit positions stable.
     private static final Set<RetoldRitualOffering> CURRENT_REQUIRED_EGG_OFFERINGS = Set.of(
             RetoldRitualOffering.WATER,
+            RetoldRitualOffering.FIRE,
+            RetoldRitualOffering.EARTH,
             RetoldRitualOffering.AIR,
             RetoldRitualOffering.LIFE,
             RetoldRitualOffering.DEATH

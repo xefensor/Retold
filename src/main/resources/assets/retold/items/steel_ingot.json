@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:item/iron_ingot"
+    "model": "retold:item/steel_ingot"
   }
 }

@@ -4,8 +4,11 @@ This directory separates player-facing design information from detailed develope
 
 ## Public Project Documents
 
+- [`player-guide.md`](player-guide.md) — beginner handbook with survival walkthroughs, full recipe and lesson references, animal care, territory, progression, dimensions, and commands
+- [`klei-field-guide.md`](klei-field-guide.md) — eight-page ecology companion for Klei, with Survival essentials and a Creative playground; export and capture notes in [`internal/klei-outreach.md`](internal/klei-outreach.md)
 - [`design-overview.md`](design-overview.md) — world premise and design pillars
 - [`element-ritual.md`](element-ritual.md) — current Dragon Egg ritual, six sacrifices, and guardian direction
+- [`test-world.md`](test-world.md) — create a Retold item, block, entity, and equipment inspection gallery
 - [`../ROADMAP.md`](../ROADMAP.md) — concise public priorities
 - [`../CHANGELOG.md`](../CHANGELOG.md) — released and unreleased changes
 - [`../SUPPORT.md`](../SUPPORT.md) — help and problem reporting

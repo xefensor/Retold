@@ -1,0 +1,183 @@
+{
+  "mode": "Built-in image generation",
+  "date": "2026-10-12",
+  "processing": "ImageMagick alpha threshold before tight cropping, nearest-neighbor reduction, binary cutouts and original-material UV packing; no Minecraft texture pixels copied",
+  "assets": [
+    {
+      "name": "steel_ingot",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: One refined steel ingot in a familiar small oblique bar silhouette, three flat planes, muted cool steel with a single pale highlight along the top edge. Functional mundane metal, not a gemstone or magic crystal.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_ingot.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_sword",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A standard straight double-edged steel sword diagonally from lower-left grip to upper-right point. Thin straight blade, small crossguard, brown grip and compact pommel. Familiar simple vanilla sword silhouette, no oversized fantasy guard or curves.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_sword.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_pickaxe",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A conventional steel pickaxe inventory silhouette, angled brown handle rising from lower-left to upper-right and a two-ended arched blue-grey steel pick head across upper part. Distinct narrow mining pick tips, not an axe blade.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_pickaxe.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_axe",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A conventional steel axe inventory silhouette, diagonal brown handle and one broad cutting head near upper end, cool dark silver steel blade with a restrained pale cutting edge. Simple compact vanilla axe.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_axe.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_shovel",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A conventional steel shovel inventory silhouette: diagonal brown shaft with a rounded squared steel spade head at upper-right. Clear thin handle and compact shovel blade, ordinary vanilla tool proportions.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_shovel.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_hoe",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A conventional steel hoe inventory silhouette, diagonal brown handle and small right-angled cool steel farming head extending across upper part. Narrow hoe blade, no big axe shape.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_hoe.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_helmet",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A plain steel armor helmet inventory sprite: centered squared domed helmet with open face recess, cool dark silver metal and small pale brow highlight. Mundane functional vanilla plate helmet, no horns, gems, plume or full visor.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_helmet.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_chestplate",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nSpecific item: A plain steel armor chestplate inventory sprite: broad squared shoulders, a small neck opening, angular breastplate and narrowed waist. Cool dark silver metal with subtle pale edge highlights. Functional vanilla plate armor, no glowing emblem, cape or decorative spikes.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_chestplate.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_leggings",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nPlain steel armor leggings inventory sprite: short squared waist/belt connecting two clearly separated plate-covered legs. Cool dark silver metal with subtle light edges, unmistakable pants/greaves silhouette, no boots or cloth cape.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_leggings.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_boots",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nA pair of plain steel armor boots inventory sprite: two separated squared short boots with simple toe and shin plates. Cool dark silver with subtle pale edges; functional vanilla boots, no glowing trim or spikes.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_boots.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_spear",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nA straight slender spear inventory sprite diagonally from lower-left butt to upper-right tip, long muted brown wooden shaft, dark binding, compact narrow leaf-shaped steel spearhead. No trident or lance guard. Classic vanilla item readability.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_spear.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "flint_multi_tool",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nPrimitive original flint multi-tool. A single compact CHUNKY almond-like knapped handstone with an asymmetrical point, thicker grip end, notched shoulder and light flake edges. Shape occupies about10 logicalpixels wide and12logicalpixels tall. Dark grey natural flint #555b61/#80868b/#b3b8bb, 5colors max. A useful sturdy palm-sized cutting/scraping stone, not a long thin knife blade or ordinary narrow flint drop. NO HANDLE, wood, bindings, metal or magic.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/flint_multi_tool.png",
+      "superseded_prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nPrimitive shaped flint multi-tool: a hand-sized asymmetrical knapped flint blade with a sturdy thicker grip end, flaked sharp cutting edges and a blunt notched shoulder. Dark natural stone-grey (#555b61, #80868b, #b3b8bb), no handle, wood, metal, leather wrapping or magic. It is a shaped piece of flint, visibly more deliberate than an ordinary raw flint drop.",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "flint_spear",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT16x16 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nA primitive slender spear inventory sprite diagonally from lower-left butt to upper-right tip. Long muted brown wooden shaft, dark simple binding and small dark-grey knapped flint spearhead with a few pale flake edges. No metal, trident or oversized blade.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/flint_spear.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "steel_plate",
+      "prompt": "ONE original Minecraft armor metal UV material swatch. EXACT16x16 logical flat pixels enlarged to1024 square as large uniform crisp pixel squares, opaque toall edges. The entire swatch is mostly ONE near-uniform muted cool steel color #8d9ca5. 90 percent pixels same flat midtone. At most five tiny isolated2pixel wear marks #7e8c95 and three quiet1pixel highlights #a3b1b9. Extremely quiet smooth metal like vanilla mundane armor, NOT stone, NOT camouflage, NOT granular texture, NO borders, seams, grid, plate tiles, diamonds, noise, random mottling, shiny glossy realism, gradients, illustration or pixel artwork copied from Minecraft. The overall swatch should read almost flat calm steel with barelyvisible wear.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_plate.png",
+      "superseded_prompt": "Create one completely original seamless 16x16 logical-pixel Minecraft steel armor plate material tile, enlarged as crisp nearest-neighbor pixel art. Opaque square edge to edge. Restrained cool darker silver palette #687681 shadows #8d9ca5 mid #bcc9cf highlight #394953 darkest, six colors maximum. Mostly quiet flat blue-grey metal, subtly mottled metal pixels grouped in small clusters, tiny restrained wear marks; no decorative grid, studs, seams, icons, text, cracks, noise, glowing effects or glossy gradients. This tile supplies original metal pixels for plain vanilla-style armor UV regions. Do not copy Minecraft assets.",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "earth_stone",
+      "prompt": "Original vanilla Minecraft ancient stone statue material, EXACT16x16 logical pixels enlarged crisp opaque square tile, seamless edge to edge. Very restrained contrast: MOST pixels muted warm neutral stonegrey #7c8071, calm clustered patches #777b6d and #858979, about10tiny darker worn speckles #687164, at most5 olive moss pixels #53664a. Overall95 percent calm carved grey stone, not moss camouflage. No repetitive checkerboard, highcontrast randomnoise, blockgrout, eyes, outlines, symbols, gradients, blur, neon, copied Minecraft pixels. This covers large statue surfaces: quiet vanilla stone lets its original carved face and geometric joints remain readable.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/earth_stone.png",
+      "superseded_prompt": "Create one completely original seamless 16x16 logical-pixel Minecraft ancient jungle stone construct material tile, enlarged as crisp pixel art. Opaque edge-to-edge square, classic vanilla scale and restrained contrast. Warm grey weathered carved stone #7c8071 mid #545e55 shadows #a4a78d highlights, a few muted moss olive pixels #53664a tucked along sparse worn crevices. Mostly stone, at most 10 percent moss. Uneven small pixel clusters, stone carving material not cobblestone blocks, no visible square block grout grid, no face, symbols, eyes, vines hanging off, magical light, blur, gradients or Minecraft copied pixels.",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "earth_face",
+      "prompt": "Create one original 8x8 logical pixel face panel for an ancient blind Minecraft jungle stone statue, enlarged crisp square pixel art. Opaque square, weathered muted warm grey stone #7c8071 with #545e55 shadow carvings and #a4a78d tiny edge highlights. Strong quiet symmetrical carved brow, closed blind horizontal stone eye slits (no pupils), small broad squared nose ridge, solemn small mouth notch. Eyes remain dark dead stone, NO glowing eyes, green emeralds, skull teeth, smile, iron golem nose, outlines or decorative border. Six flat palette colors, no gradients or antialias. Readable at 8x8, original rather than copied.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/earth_face.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "gale_stone",
+      "prompt": "Original vanilla Minecraft floating mineral core stone material, EXACT16x16 logical pixels enlarged crisp opaque square tile, seamless edge to edge. Quiet calm blue-grey slate: MOST pixels #627785, subtle grouped patches #5b707d and #6c818e, two sparse very short pale desaturated cyan mineral veins #9bb4b7 (less than12 pixels total), at most6 dark wear pixels #506774. Restrainedcontrast vanilla rock texture, no dense mosaic, checkerboard, random noise, camouflage, decorative pattern, glow, face, symbols, gradients, blur or copied Minecraft artwork. Calm stone surfaces with a few readable mineral marks, not metal.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/gale_stone.png",
+      "superseded_prompt": "Create one completely original seamless 16x16 logical-pixel Minecraft floating wind mineral core stone material tile, enlarged crisp pixel art. Opaque square to edges. Quiet grey-blue slate #627785 shadows #425865, #94aab4 highlights, subtle restrained carved stone facets and a few pale desaturated cyan mineral veins #a7c4c5. Vanilla restrained contrast, flat 6 color pixel clusters, no glow, neon, purple Aender stone, ornate pattern, circular eye, text or copied Minecraft assets. Not metal.",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "superseded by gale_core_breeze_prompts_2026-10-12.json; vanilla Breeze materials now referenced at runtime"
+    },
+    {
+      "name": "gale_wind",
+      "prompt": "Create one original seamless16x16 logical-pixel Minecraft wind material tile, enlarged crisp pixel art. TRUE transparent background, no solid backing color. Sparse horizontal long broken pixel wisps in pale desaturated grey-blue #aac1c9 and pale cyan-white #d4e1e3, aroundhalf of thetile istransparent emptyair. Flat pixel streaks1pixel thick with occasional2pixel breaks and offset shorter1pixel highlights. Wisps shouldrunhorizontally to wraparound thin cubic windbands, andmeet left/rightedges naturally. No face, icons, greyboard, whitebackground, gradient, clouds puffillustration, glow, noise or copiedMinecraft pixels. Restrained vanilla breeze-like airy readability using completely original pixels. Exact16x16logicalgrid with largecrispuniformpixel squares.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/gale_wind.png",
+      "superseded_prompt": "Create one completely original seamless 16x16 logical-pixel Minecraft wind-band material tile, enlarged crisp pixel art. Opaque square to edges. Soft desaturated pale grey-blue #aac1c9 mid #d4e1e3 highlights #829faa shadow. Three gentle long broken horizontal directional streaks and tiny wisps in a restrained flat 5 color palette, classic vanilla pixel scale. No gradient, glow, alpha, lightning, noise, drawn icons or copied Minecraft pixels. This tile wraps narrow cubic wind bands on an original stone elemental.",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "superseded by gale_core_breeze_prompts_2026-10-12.json; vanilla Breeze materials now referenced at runtime"
+    },
+    {
+      "name": "nether_reactor_core",
+      "prompt": "Create one completely original 16x16 logical-pixel Minecraft inventory item sprite, enlarged crisp pixel art, transparent background. A small oblique cubic Nether Reactor Core inspired only conceptually by early Pocket Edition: dark charcoal frame, muted gold corner brackets #b69b48 and deep muted blue face panels #4c6b91 with a small pale blue central recess. Three clear visible cube planes, chunky compact simple vanilla pixels, seven flat colors maximum, 1px transparent margin. Original geometry and artwork, do not copy or reproduce any legacy texture, no red fire, glow, bevel gradients, text or wide outline.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/nether_reactor_core.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "earth_guardian_spawn_egg",
+      "prompt": "Create one completely original Minecraft spawn egg inventory sprite, EXACT16x16 logical pixels enlarged crisp pixel art, genuine transparent background. Compact conventional rounded stepped egg silhouette about10pixels wide and14pixels high, 1px transparent margin. Flat restrained6-8color palette, small irregular original shell flecks, no antialias, gradient, blur, eyes, face, letters, elaborate symbols, glow or copied vanilla egg pattern. Classic vanilla readability. Weathered warm stone-grey shell #7c8071/#a4a78d, darker olive moss flecks #53664a/#3d5140 to match an ancient blind jungle stone Guardian.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/earth_guardian_spawn_egg.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "gale_core_spawn_egg",
+      "prompt": "Create one completely original Minecraft spawn egg inventory sprite, EXACT16x16 logical pixels enlarged crisp pixel art, genuine transparent background. Compact conventional rounded stepped egg silhouette about10pixels wide and14pixels high, 1px transparent margin. Flat restrained6-8color palette, small irregular original shell flecks, no antialias, gradient, blur, eyes, face, letters, elaborate symbols, glow or copied vanilla egg pattern. Classic vanilla readability. Desaturated grey-blue mineral shell #627785/#94aab4, pale airy cyan-white flecks #aac1c9/#d4e1e3 to match a floating mineral Gale Core with pale wind bands.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/gale_core_spawn_egg.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "superseded by gale_core_breeze_prompts_2026-10-12.json; vanilla Breeze materials now referenced at runtime"
+    },
+    {
+      "name": "steel_spear_in_hand",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT32x32 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nDedicated held spear sprite, EXACT32x32 logical pixels. One long straight shaft diagonallyfromlower-lefttoupper-right, about30logicalpixels long, shaftONEpixelthick excepttiny2pixel gripbinding, mutedbrownwood #684b32/#98724a. Compact leaf-shaped coolbluegrey steelhead4pixelslongand2-3pixelswide nearupperright, smallpale cutting edge #bcc9cf, darkbinding. Leave1pixel transparentmargin. Sameplain steel material as vanilla-scale inventory equipment, no decorations, lanceguard, trident or oversizedhead. Shape mustread thin full-length spear when held.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/steel_spear_in_hand.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    },
+    {
+      "name": "flint_spear_in_hand",
+      "prompt": "Create one completely original Minecraft-compatible inventory item sprite for Retold. EXACT32x32 logical pixels enlarged as crisp pixel art, each logical pixel one flat uniform square. Classic vanilla proportions and readability, restrained 6-10 color palette, hard pixel edges, no blur, antialiasing, gradients, PBR/render sheen, huge mosaic shapes, bloom, neon, writing or copied Minecraft texture pixels. Genuine transparent background, 1 logical pixel breathing room. Steel palette: moderately dark cool silver/blue-grey (#687681 shadows, #8d9ca5 midtone, #bcc9cf restrained highlights, #394953 outline), distinctly darker than ordinary iron but unmistakably steel. Timber handles: muted brown (#684b32 and #98724a), no purple/Aender wood. Minimal neutral dark bindings.\nDedicated held primitive spear sprite, EXACT32x32 logical pixels. One long straight shaftdiagonallyfromlower-lefttoupper-right, about30logicalpixelslong, shaftONEpixelthickexcepttiny2pixelbinding, mutedbrownwood #684b32/#98724a. Compact knappedflint spearhead4pixelslong2-3pixelswide nearupperright, darknaturalgrey #555b61/#80868b withtinypale flakeedge #b3b8bb, darksimplebinding. Leave1pixel transparentmargin. NOmetal, trident, guard or magic. Shape mustreadthin full-length primitive spear when held.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/flint_spear_in_hand.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Original generated development art; final in-game visual approval pending"
+    }
+  ],
+  "active_revision_reference": "retold_asset_revision_2026-10-23.json",
+  "superseded_assets": [
+    {
+      "name": "aender_eye",
+      "prompt": "Create one completely original 16x16 logical-pixel Minecraft floating magical eye sprite, enlarged crisp pixel art, transparent background. Compact horizontally oval pale stone-grey eye rim, muted green jade iris #5b9666 and deep dark vertical pupil #1f3734, tiny pale mint highlight. Familiar simple Minecraft scale and restrained contrast, original pixel arrangement, no copy of Eye of Ender pixels, no surrounding fire, wings, eyelash, excessive glow, neon, blue or purple takeover. Preserve green-eye concept, 1px transparent margin. Crisp flat 6-8 color pixels, no blur or antialias.",
+      "source": "output/imagegen/retold-equipment-and-bosses/sources/aender_eye.png",
+      "author": "OpenAI image generation, directed and processed by Codex under Xefensor direction",
+      "status": "Historical generated development art; superseded on 2026-10-23 at developer direction by direct reuse of the installed vanilla Eye of Ender texture as an emissive billboard. No custom Eye texture is packaged."
+    }
+  ]
+}
