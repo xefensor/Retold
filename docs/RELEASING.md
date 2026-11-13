@@ -94,8 +94,22 @@ When all checks pass, the workflow publishes:
 
 Retold currently publishes every version as **alpha** on Modrinth and CurseForge, and as a prerelease on GitHub. This is intentional even when the version is a plain number such as `0.2.1`. When Retold is ready to move to beta or stable, update the explicit `release_type` assignment in both publishing workflows.
 
+Modrinth automatic unfeaturing is disabled. Version creation can succeed while the subsequent edit
+of older versions fails, leaving the combined publisher partially complete. A failure during
+unfeaturing does not imply that the new version is missing or that the token cannot upload.
+
 ## Manual Recovery
 
 The workflow can also be started from **Actions → Release → Run workflow**. Enter the version without the `v` prefix. The entered version must still match `mod_version`, and every normal validation and publishing step still runs.
 
-Use manual publishing only when the release tag workflow did not start. If a run partially publishes, first inspect GitHub, Modrinth, and CurseForge. Either upload the missing platform manually, or delete every version and GitHub release created by the failed run before retrying. The existing Git tag can remain in place.
+Use manual publishing only when the release tag workflow did not start. If a run partially
+publishes, inspect all three destinations before retrying; preserve the versions already uploaded.
+
+If Modrinth has the version but GitHub does not, run **Recover GitHub Release From Modrinth** on
+`master` with that version. It checks out the existing tag, downloads the primary published JAR,
+verifies its Modrinth SHA-512 and SHA-1 hashes, creates a SHA-256 checksum, and creates only the
+missing GitHub prerelease. It does not rebuild, edit Modrinth, or upload to CurseForge. Afterward,
+attach any separately prepared guide documents with `gh release upload`.
+
+If GitHub exists and another platform is missing, use **Backfill Existing Release**, enabling only
+the missing destination. Do not rerun the combined release workflow for a partial publication.

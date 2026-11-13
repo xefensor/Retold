@@ -1,0 +1,95 @@
+name: Recover GitHub Release From Modrinth
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version already published on Modrinth, without the v prefix'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: recover-github-release-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Validate version
+        shell: bash
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.-]+)?$ ]] || exit 1
+          [[ -n "$MODRINTH_PROJECT_ID" ]] || exit 1
+
+      - name: Checkout the existing release tag
+        uses: actions/checkout@v7
+        with:
+          ref: v${{ inputs.version }}
+          fetch-depth: 0
+
+      - name: Refuse to replace an existing GitHub release
+        shell: bash
+        run: |
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo 'The GitHub release already exists; inspect it instead of recreating it.' >&2
+            exit 1
+          fi
+          [[ "$(sed -n 's/^mod_version=//p' gradle.properties)" == "$VERSION" ]]
+
+      - name: Download and verify the published Modrinth artifact
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          from urllib.parse import quote, urlparse
+          from urllib.request import Request, urlopen
+          version = os.environ['VERSION']
+          project = os.environ['MODRINTH_PROJECT_ID']
+          headers = {'User-Agent': 'xefensor/Retold release recovery (https://github.com/xefensor/Retold)'}
+          endpoint = f'https://api.modrinth.com/v2/project/{quote(project, safe="")}/version/{quote(version, safe="")}'
+          with urlopen(Request(endpoint, headers=headers), timeout=60) as response:
+              data = json.load(response)
+          assert data['project_id'] == project and data['version_number'] == version
+          assert data['version_type'] == 'alpha' and 'neoforge' in data['loaders'] and '26.2' in data['game_versions']
+          files = data['files']
+          artifact = next((file for file in files if file.get('primary')), files[0])
+          name = f'retold-{version}.jar'
+          assert artifact['filename'] == name
+          assert urlparse(artifact['url']).scheme == 'https' and urlparse(artifact['url']).hostname == 'cdn.modrinth.com'
+          with urlopen(Request(artifact['url'], headers=headers), timeout=120) as response:
+              content = response.read()
+          assert hashlib.sha512(content).hexdigest() == artifact['hashes']['sha512']
+          assert hashlib.sha1(content).hexdigest() == artifact['hashes']['sha1']
+          destination = Path('release-assets'); destination.mkdir()
+          (destination / name).write_bytes(content)
+          checksum = hashlib.sha256(content).hexdigest()
+          (destination / (name + '.sha256')).write_text(f'{checksum}  {name}\n')
+          print(f'Verified Modrinth version {data["id"]}: {name}, SHA-256 {checksum}')
+          print(f'https://modrinth.com/mod/retold/version/{data["id"]}')
+          PY
+
+      - name: Extract the tagged release notes
+        shell: bash
+        run: |
+          awk -v version="$VERSION" '
+            index($0, "## " version " - ") == 1 { capture = 1; next }
+            capture && /^## / { exit }
+            capture { print }
+          ' CHANGELOG.md > release-notes.md
+          [[ -s release-notes.md ]]
+
+      - name: Create only the missing GitHub prerelease
+        shell: bash
+        run: |
+          gh release create "v$VERSION" --verify-tag --title "Retold $VERSION" --prerelease \
+            --notes-file release-notes.md "release-assets/retold-$VERSION.jar" \
+            "release-assets/retold-$VERSION.jar.sha256"
